@@ -12,9 +12,7 @@ from survey_kit.utilities.dataframe import summary
 from survey_kit.utilities.formula_builder import FormulaBuilder
 from survey_kit.imputation.utilities.lasso import Lasso
 import survey_kit.imputation.utilities.lightgbm_wrapper as rep_lgbm
-from survey_kit.imputation.utilities.lightgbm_wrapper import (
-    Tuner_optuna
-)
+from survey_kit.imputation.utilities.lightgbm_wrapper import Tuner_optuna
 
 from survey_kit.imputation.variable import Variable
 from survey_kit.imputation.parameters import Parameters
@@ -29,15 +27,12 @@ n_rows = 10_000
 impute_share = 0.25
 
 
-
-
 path = Path(__file__)
 sys.path.append(os.path.normpath(path.parent.parent))
 from scratch import path_scratch
 
 
 Config().data_root = path_scratch(temp_file_suffix=False)
-
 
 
 df = (
@@ -94,8 +89,17 @@ df = (
             ((c_var2 * 1.5 - c_var3 * 1 * c_var4 + c_e_hd2) > 0).alias("var_hd2"),
             -(c_var2 + c_var3 * 2 * (1 - c_var5) + c_e_reg1).alias("var_reg1"),
             (-(c_var3 + c_var4 * (1 - c_var5) + c_e_reg2) > 0).alias("var_reg2"),
-            ((c_var2-2*c_var3*c_var4*c_var5 + c_e_lgbm1)).alias("var_lgbm1"),
-            ((c_var2-2*c_var3*c_var4 - 1.5*c_var3*c_var5 + c_var4*c_var5 + c_e_lgbm2) > 0).alias("var_lgbm2")
+            (c_var2 - 2 * c_var3 * c_var4 * c_var5 + c_e_lgbm1).alias("var_lgbm1"),
+            (
+                (
+                    c_var2
+                    - 2 * c_var3 * c_var4
+                    - 1.5 * c_var3 * c_var5
+                    + c_var4 * c_var5
+                    + c_e_lgbm2
+                )
+                > 0
+            ).alias("var_lgbm2"),
         ]
     )
     .drop(columns_from_list(df=df, columns="epsilon*"))
@@ -105,7 +109,7 @@ df_original = df
 
 #   Set variables to missing according to the uniform random variables missing_
 clear_missing = []
-for prefixi in ["hd", "reg","lgbm"]:
+for prefixi in ["hd", "reg", "lgbm"]:
     for i in range(1, 3):
         vari = f"var_{prefixi}{i}"
         missingi = f"missing_{prefixi}{i}"
@@ -140,7 +144,7 @@ modeltype_binary = Variable.ModelType.HotDeck
 #           that determine what happens in the model
 parameters_hd1 = Parameters.HotDeck(  #   model_list - a list of variables to match
     #       donors and recipients
-    model_list=["var2", "var3", "var5", "var_reg2","var_lgbm2", "var_hd2"],
+    model_list=["var2", "var3", "var5", "var_reg2", "var_lgbm2", "var_hd2"],
     #   Drop the last variable sequentially
     #       until everyone has a match?
     sequential_drop=True,
@@ -169,7 +173,7 @@ vars_impute.append(v_hd1)
 #       Hot deck a binary variable
 #           Just doing the same basic stuff, but as the other type (HotDeck, rather than stat match)
 parameters_hd2 = Parameters.HotDeck(
-    model_list=["var2", "var3", "var5", "var_reg2","var_lgbm2", "var_hd1"],
+    model_list=["var2", "var3", "var5", "var_reg2", "var_lgbm2", "var_hd1"],
     sequential_drop=True,
     donate_list=["var_hd2"],
 )
@@ -229,172 +233,147 @@ v_reg2 = Variable(
 vars_impute.append(v_reg2)
 
 
-
-
-
-
-tuner = Tuner_optuna(n_trials=50,
-                     objective=rep_lgbm.Tuner.Objectives.mae,
-                     test_size=0.25)
+tuner = Tuner_optuna(
+    n_trials=50, objective=rep_lgbm.Tuner.Objectives.mae, test_size=0.25
+)
 
 #   Set the tuner parameters to the defaults
 tuner.parameters()
 
 #   Set the ranges of values as follows
-tuner.hyperparameters["num_leaves"] = [2,256]
-tuner.hyperparameters["max_depth"] = [2,256]
-tuner.hyperparameters["min_data_in_leaf"] = [10,250]
-tuner.hyperparameters["num_iterations"] = [25,200]
-tuner.hyperparameters["bagging_fraction"] = [0.5,1]
-tuner.hyperparameters["bagging_freq"] = [1,5]
-
+tuner.hyperparameters["num_leaves"] = [2, 256]
+tuner.hyperparameters["max_depth"] = [2, 256]
+tuner.hyperparameters["min_data_in_leaf"] = [10, 250]
+tuner.hyperparameters["num_iterations"] = [25, 200]
+tuner.hyperparameters["bagging_fraction"] = [0.5, 1]
+tuner.hyperparameters["bagging_freq"] = [1, 5]
 
 
 #   Impute a continuous variable with lgbm
-#   Set the lightgbm parameters, note that the tuner won't be run if 
+#   Set the lightgbm parameters, note that the tuner won't be run if
 #       there's already a saved version in tune_hyperparameter_path + variable name
 #       unless tune_overwrite=True
-#   Parameters set here are the defaults, but they are overwritten by 
+#   Parameters set here are the defaults, but they are overwritten by
 #       tuner parameters if that is passed (as it is here)
 #   This is doing series of quantile regressions to determine your predicted
 #       rank (effectively) then drawing from an empirical distribution
 #       estimated with a pmm draw
 
-parameters_lgbm = Parameters.LightGBM(tune=True,
-                                      tune_hyperparameter_path=f"{Config().path_temp_files}/tuner_outputs",
-                                      tuner=tuner,
-                                      tune_overwrite=False,
-                                      quantiles=[0.1,0.5,0.9],
-                                      #  quantiles=[0.25,0.5,0.75],
-                                      parameters={
-                                              "objective":"regression",
-                                              "num_leaves":32,
-                                              "min_data_in_leaf":20,
-                                              "num_iterations":100,
-                                              "test_size":0.2,
-                                              "boosting":"gbdt",
-                                              "categorical_feature":["Var5"],
-                                              "verbose":-1# ,
-                                              # "early_stopping_round":100
-                                              },
-                                      error=Parameters.ErrorDraw.pmm,
-                                      parameters_pmm=Parameters.pmm(share_leave_out=0.1))
+parameters_lgbm = Parameters.LightGBM(
+    tune=True,
+    tune_hyperparameter_path=f"{Config().path_temp_files}/tuner_outputs",
+    tuner=tuner,
+    tune_overwrite=False,
+    quantiles=[0.1, 0.5, 0.9],
+    #  quantiles=[0.25,0.5,0.75],
+    parameters={
+        "objective": "regression",
+        "num_leaves": 32,
+        "min_data_in_leaf": 20,
+        "num_iterations": 100,
+        "test_size": 0.2,
+        "boosting": "gbdt",
+        "categorical_feature": ["Var5"],
+        "verbose": -1,  # ,
+        # "early_stopping_round":100
+    },
+    error=Parameters.ErrorDraw.pmm,
+    parameters_pmm=Parameters.pmm(share_leave_out=0.1),
+)
+
 
 #   Test a simple pre-post function
-#       These would get run gets run in each iteration (in each implicate) 
+#       These would get run gets run in each iteration (in each implicate)
 #           before (preFunctions) or after (postFunctions) this variable is imputed
 #   Notes for these functions:
-#       1) No type hints on imported package types (will throw an error) 
-#           i.e. no df:pl.DataFrame or -> pl.DataFrame   
+#       1) No type hints on imported package types (will throw an error)
+#           i.e. no df:pl.DataFrame or -> pl.DataFrame
 #       2) Must be completely self-contained (i.e. all imports within the function)
 #           This has to do with how it gets saved and loaded in async calls
-#       3) Effectively, you have to assume it'll be called 
+#       3) Effectively, you have to assume it'll be called
 #           in an environment with no imports before it
-def square_var(df,
-               var_to_square:str,
-               name:str):
+def square_var(df, var_to_square: str, name: str):
     import narwhals as nw
+
     return (
         nw.from_native(df)
-        .with_columns((nw.col(var_to_square)**2).alias(name))
+        .with_columns((nw.col(var_to_square) ** 2).alias(name))
         .to_native()
     )
 
 
-def recalculate_interaction(df,
-                            var1:str,
-                            var2:str,
-                            name:str):
+def recalculate_interaction(df, var1: str, var2: str, name: str):
     import narwhals as nw
+
     return (
         nw.from_native(df)
-        .with_columns((nw.col(var1)*nw.col(var2)).alias(name))
+        .with_columns((nw.col(var1) * nw.col(var2)).alias(name))
         .to_native()
     )
 
-v_lgbm1 = Variable(impute_var="var_lgbm1",
-                   model=["var_*",
-                          "var4",
-                          "var3",
-                          "var5",
-                          "unrelated_*",
-                          "repeat_*"],
-                   modeltype=Variable.ModelType.LightGBM,
-                   selection=Selection(method=Selection.Method.No),
-                   preselection=Selection(method=Selection.Method.No),
-                   parameters=parameters_lgbm,
-                   # postFunctions=Variable.PrePost.Function(square_var,
-                   #                                         parameters={"var_to_square":"var_lgbm1",
-                   #                                                     "name":"var_lgbm1_sq"})
-                   )
+
+v_lgbm1 = Variable(
+    impute_var="var_lgbm1",
+    model=["var_*", "var4", "var3", "var5", "unrelated_*", "repeat_*"],
+    modeltype=Variable.ModelType.LightGBM,
+    selection=Selection(method=Selection.Method.No),
+    preselection=Selection(method=Selection.Method.No),
+    parameters=parameters_lgbm,
+    # postFunctions=Variable.PrePost.Function(square_var,
+    #                                         parameters={"var_to_square":"var_lgbm1",
+    #                                                     "name":"var_lgbm1_sq"})
+)
 vars_impute.append(v_lgbm1)
 
 
 #   Impute a binary variable with lgbm, note that objective != quantile for a binary variable
 #       This isn't working well and I wouldn't use it if I got these kinds of results
-#       This tuner is set to run at the beginning (tune_overwrite=True) even if 
+#       This tuner is set to run at the beginning (tune_overwrite=True) even if
 #           a file already exists in the path
-parameters_lgbm2 = Parameters.LightGBM(tune=True,
-                                       tune_hyperparameter_path="/projects/data/NEWS/Test/tuner_outputs",
-                                       tuner=tuner,
-                                       tune_overwrite=False,
-                                       #quantiles=[0.25,0.5,0.75],
-                                       parameters={
-                                           "objective":"binary",
-                                           "num_leaves":32,
-                                           "min_data_in_leaf":20,
-                                           "num_iterations":100,
-                                           "test_size":0.2,
-                                           "boosting":"gbdt",
-                                           "categorical_feature":["Var5"],
-                                           "verbose":-1# ,
-                                           # "early_stopping_round":100
-                                           },
-                                       error=Parameters.ErrorDraw.pmm)
+parameters_lgbm2 = Parameters.LightGBM(
+    tune=True,
+    tune_hyperparameter_path="/projects/data/NEWS/Test/tuner_outputs",
+    tuner=tuner,
+    tune_overwrite=False,
+    # quantiles=[0.25,0.5,0.75],
+    parameters={
+        "objective": "binary",
+        "num_leaves": 32,
+        "min_data_in_leaf": 20,
+        "num_iterations": 100,
+        "test_size": 0.2,
+        "boosting": "gbdt",
+        "categorical_feature": ["Var5"],
+        "verbose": -1,  # ,
+        # "early_stopping_round":100
+    },
+    error=Parameters.ErrorDraw.pmm,
+)
 
 
 #    Test using an arbitrary function for pre-imputation processing
 #       This gets run in each iteration (in each implicate) before this
 #       variable is imputed
 preFunctions = [
-        Variable.PrePost.NarwhalsExpression((nw.col("var_reg1")**2).alias("var_reg1_sq")),
-        Variable.PrePost.Function(recalculate_interaction,
-                                  parameters={"var1":"var_reg1",
-                                              "var2":"var_reg2",
-                                              "name":"var_reg12"}),
-        Variable.PrePost.Function(square_var,
-                                  parameters={"var_to_square":"var_reg1",
-                                              "name":"var_reg1_sq"})
-    ]
-v_lgbm2 = Variable(impute_var="var_lgbm2",
-                   model=["var_*",
-                          "var4",
-                          "var3",
-                          "var5",
-                          "unrelated_*",
-                          "repeat_*"],
-                   modeltype=Variable.ModelType.LightGBM,
-                   selection=Selection(method=Selection.Method.No),
-                   preselection=Selection(method=Selection.Method.No),
-                   parameters=parameters_lgbm2,
-                   preFunctions=preFunctions)
+    Variable.PrePost.NarwhalsExpression((nw.col("var_reg1") ** 2).alias("var_reg1_sq")),
+    Variable.PrePost.Function(
+        recalculate_interaction,
+        parameters={"var1": "var_reg1", "var2": "var_reg2", "name": "var_reg12"},
+    ),
+    Variable.PrePost.Function(
+        square_var, parameters={"var_to_square": "var_reg1", "name": "var_reg1_sq"}
+    ),
+]
+v_lgbm2 = Variable(
+    impute_var="var_lgbm2",
+    model=["var_*", "var4", "var3", "var5", "unrelated_*", "repeat_*"],
+    modeltype=Variable.ModelType.LightGBM,
+    selection=Selection(method=Selection.Method.No),
+    preselection=Selection(method=Selection.Method.No),
+    parameters=parameters_lgbm2,
+    preFunctions=preFunctions,
+)
 vars_impute.append(v_lgbm2)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 srmi = SRMI(
@@ -422,11 +401,7 @@ srmi.run()
 if True:
     impute_vars = [vari.impute_var for vari in srmi.variables]
     df_original = nw.from_native(df_original).select(impute_vars).to_native()
-    stable_vars = columns_from_list(
-        df_original,
-        columns="var*",
-        exclude=impute_vars
-    )
+    stable_vars = columns_from_list(df_original, columns="var*", exclude=impute_vars)
 
     summary(df_original)
 

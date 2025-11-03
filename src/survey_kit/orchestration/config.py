@@ -85,6 +85,7 @@ class Config:
         else:
             if self.data_root == "":
                 from .. import logger
+
                 message = "You must set Configs().data_root to get a default temp file directory"
                 logger.error(message)
                 raise Exception(message)
@@ -131,6 +132,7 @@ class Config:
             power = 1
         else:
             from .. import logger
+
             message = f"Must pass kb, mb, or gb ({unit})"
             logger.error(message)
             raise Exception(message)

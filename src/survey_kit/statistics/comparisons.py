@@ -10,7 +10,6 @@ from ..utilities.dataframe import concat_wrapper, join_list, safe_height, Narwha
 from .. import logger
 
 
-
 def statistical_comparison_item(stat_item) -> bool:
     if hasattr(stat_item, "implicate_stats"):
         return True

@@ -32,6 +32,7 @@ from ..utilities.rounding import drb_round_table
 from ..serializable import Serializable
 from .. import logger
 
+
 class StatCalculator(Serializable):
     """
     A comprehensive class for calculating statistical estimates with optional replicate weights.

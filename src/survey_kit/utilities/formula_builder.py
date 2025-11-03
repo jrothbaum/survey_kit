@@ -12,6 +12,7 @@ from .inputs import list_input
 from .dataframe import columns_from_list, _columns_original_order
 from .. import logger
 
+
 class FormulaBuilder:
     def __init__(
         self,

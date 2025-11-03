@@ -151,7 +151,6 @@ def _norm_ppf_approx(p: float) -> float:
     return x
 
 
-
 @jit(nopython=True, cache=True)
 def _fit_tail_params_pareto_upper(
     q0: float, q1: float, alpha0: float, alpha1: float
@@ -566,8 +565,6 @@ def _draw_random_values_vectorized(
     return samples
 
 
-
-
 class DrawFromQuantileVectors:
     """
     High-performance vectorized quantile distribution with smart parallelization.
@@ -694,7 +691,7 @@ class DrawFromQuantileVectors:
         Numba needs to JIT-compile the sampling function. Subsequent calls
         are extremely fast.
 
-        
+
         Examples
         --------
         Generate samples from a single distribution:

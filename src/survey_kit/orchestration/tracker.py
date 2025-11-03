@@ -14,6 +14,7 @@ from .config import Config
 
 from .. import logger
 
+
 class FunctionTracker:
     """
     Manages parallel execution of multiple functions with dependency tracking.

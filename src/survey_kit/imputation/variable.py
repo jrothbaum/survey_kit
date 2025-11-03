@@ -17,6 +17,7 @@ from .selection import Selection
 from ..serializable import Serializable
 from .. import logger
 
+
 class Variable(Serializable):
     _save_suffix = "srmi.variable"
 

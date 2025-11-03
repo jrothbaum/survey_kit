@@ -30,7 +30,7 @@ from ..utilities.dataframe import (
     drop_if_exists,
     safe_upcast_list,
     columns_from_list,
-    safe_columns
+    safe_columns,
 )
 from ..utilities.compress import compress_df
 from ..utilities.formula_builder import FormulaBuilder
@@ -56,6 +56,7 @@ if TYPE_CHECKING:
     from .srmi import SRMI
 
 from .. import logger
+
 
 class Impute:
     """
@@ -1105,10 +1106,7 @@ class Impute:
 
         df_importance = lgbm_model.importance()
         cols_feature = (
-            nw.from_native(df_importance)
-            .lazy()
-            .collect()
-            ["Feature"].to_list()
+            nw.from_native(df_importance).lazy().collect()["Feature"].to_list()
         )
 
         statistics = Statistics(
@@ -1248,9 +1246,17 @@ class Impute:
 
         self.logging.info("Predictions")
 
-        self.logging.info(pl.concat([predict_model.rename({"___prediction":"Model (yhat)"}).describe(),
-                                     predict_impute.rename({"___prediction":"Imputed (yhat)"}).describe().select("Imputed (yhat)")],
-                                    how="horizontal"))
+        self.logging.info(
+            pl.concat(
+                [
+                    predict_model.rename({"___prediction": "Model (yhat)"}).describe(),
+                    predict_impute.rename({"___prediction": "Imputed (yhat)"})
+                    .describe()
+                    .select("Imputed (yhat)"),
+                ],
+                how="horizontal",
+            )
+        )
         self.logging.info(
             pl.concat(
                 [
@@ -1259,7 +1265,7 @@ class Impute:
                         .to_polars()
                         .lazy()
                         .collect()
-                        .rename({"___prediction":"Model (yhat)"})
+                        .rename({"___prediction": "Model (yhat)"})
                         .describe()
                     ),
                     (
@@ -1267,7 +1273,7 @@ class Impute:
                         .to_polars()
                         .lazy()
                         .collect()
-                        .rename({"___prediction":"Imputed (yhat)"})
+                        .rename({"___prediction": "Imputed (yhat)"})
                         .describe()
                         .select("Imputed (yhat)")
                     ),
@@ -1340,15 +1346,18 @@ class Impute:
                     concat_wrapper(
                         [
                             p_model,
-                            nw.from_native(df_model).select(self.variable.impute_var).to_native()
+                            nw.from_native(df_model)
+                            .select(self.variable.impute_var)
+                            .to_native(),
                         ],
-                        how="horizontal"
+                        how="horizontal",
                     )
-                ).to_polars()
+                )
+                .to_polars()
                 .select(pl.corr(self.variable.impute_var, f"___p{qi}"))
-                .item(0,0)
+                .item(0, 0)
             )
-            
+
             self.logging.info(
                 f"     Correlation between {self.variable.impute_var} and q={qi} prediction: {corr:,.3f}"
             )
@@ -1368,7 +1377,6 @@ class Impute:
             del p_impute, p_model
 
             self.logging.info("\n\n")
-
 
         statistics = Statistics(
             stats=["n", "n|missing", "mean", "std", "q25", "q50", "q75"],
@@ -1465,10 +1473,7 @@ class Impute:
 
             df_importance = lgbm_model_pmm.importance()
             cols_feature = (
-                nw.from_native(df_importance)
-                .lazy()
-                .collect()
-                ["Feature"].to_list()
+                nw.from_native(df_importance).lazy().collect()["Feature"].to_list()
             )
             statistics = Statistics(
                 stats=[
@@ -1494,7 +1499,9 @@ class Impute:
                                 .rename(
                                     {
                                         vari: f"Model\n{vari}"
-                                        for vari in safe_columns(stats_model.df_estimates)
+                                        for vari in safe_columns(
+                                            stats_model.df_estimates
+                                        )
                                     }
                                 )
                                 .rename({"Model\nVariable": "Feature"})
@@ -1505,7 +1512,9 @@ class Impute:
                                 .rename(
                                     {
                                         vari: f"Impute\n{vari}"
-                                        for vari in safe_columns(stats_model.df_estimates)
+                                        for vari in safe_columns(
+                                            stats_model.df_estimates
+                                        )
                                     }
                                 )
                                 .rename({"Impute\nVariable": "Feature"})
@@ -1582,10 +1591,8 @@ class Impute:
 
             #   Get the quantile regression interpolated imputes
             #       Which are used for assigning ranks
-            [_, predict_impute_values] = (
-                self._draw_interpolated_percentiles(
-                    df=predict_impute, percentiles=quantiles
-                )
+            [_, predict_impute_values] = self._draw_interpolated_percentiles(
+                df=predict_impute, percentiles=quantiles
             )
 
             col_0 = (
@@ -1658,20 +1665,15 @@ class Impute:
             gc.collect()
         elif errordraw == Parameters.ErrorDraw.Random:
             #   Interpolate values from the quantile predictions
-            [_, predict_impute_values] = (
-                self._draw_interpolated_percentiles(
-                    df=predict_impute, percentiles=quantiles
-                )
+            [_, predict_impute_values] = self._draw_interpolated_percentiles(
+                df=predict_impute, percentiles=quantiles
             )
 
             col_rename = (
-                nw.from_native(predict_impute_values)
-                .lazy()
-                .collect_schema()
-                .names()[0]
+                nw.from_native(predict_impute_values).lazy().collect_schema().names()[0]
             )
             predict_impute_values = predict_impute_values.rename(
-                {col_rename:self.variable.impute_var}
+                {col_rename: self.variable.impute_var}
             )
 
             donate_vars = [self.variable.impute_var]
@@ -2864,24 +2866,13 @@ class Impute:
         tail = "gaussian"
 
         draw = DrawFromQuantileVectors(
-            df_quantiles=df,
-            alphas=percentiles,
-            tails=tail,
-            seed=generate_seed()
+            df_quantiles=df, alphas=percentiles, tails=tail, seed=generate_seed()
         )
         df_results = draw.draw_random_values()
 
         return (
-            (
-                nw.from_native(df_results)
-                .select("p")
-                .to_native()
-            ),
-            (
-                nw.from_native(df_results)
-                .select("values")
-                .to_native()
-            )
+            (nw.from_native(df_results).select("p").to_native()),
+            (nw.from_native(df_results).select("values").to_native()),
         )
 
     def _find_nearest_neighbor_by(

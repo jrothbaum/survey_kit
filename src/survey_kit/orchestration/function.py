@@ -664,8 +664,7 @@ class Function(Serializable):
                 self.parameters.save(path_dict_save)
 
             function_call += (
-                "from survey_kit.serializable import SerializableDictionary"
-                + LINEBREAK
+                "from survey_kit.serializable import SerializableDictionary" + LINEBREAK
             )
             function_call += (
                 f"__parameters__ = SerializableDictionary.load('{Path(path_dict_save).as_posix()}')"

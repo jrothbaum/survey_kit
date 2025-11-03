@@ -417,20 +417,9 @@ class Survey_kit_Lightgbm:
             extra_test = {}
 
             if self.weight != "":
-                weight_test = (
-                    nw.from_native(x_test)
-                    .select(self.weight)
-                    .to_native()
-                )
-                x_test = (
-                    nw.from_native(x_test)
-                    .drop(self.weight)
-                    .to_native()
-                )
-                extra_test["weight"] = (
-                    nw.from_native(weight_test)
-                    .to_numpy().ravel()
-                )
+                weight_test = nw.from_native(x_test).select(self.weight).to_native()
+                x_test = nw.from_native(x_test).drop(self.weight).to_native()
+                extra_test["weight"] = nw.from_native(weight_test).to_numpy().ravel()
 
             self.train_y = y_test
             self.test_data = lgb.Dataset(

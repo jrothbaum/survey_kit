@@ -21,6 +21,7 @@ from ..serializable import Serializable
 
 from .. import logger
 
+
 class Selection(Serializable):
     """
     Handles variable selection for imputation models.

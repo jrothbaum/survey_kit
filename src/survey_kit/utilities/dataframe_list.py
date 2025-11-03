@@ -22,6 +22,7 @@ from ..serializable import Serializable
 
 from .. import logger
 
+
 class DataFrameList(Serializable):
     _save_suffix = "df_list"
     """

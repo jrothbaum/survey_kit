@@ -1,5 +1,6 @@
 from ..serializable import Serializable
 
+
 class Rounding(Serializable):
     _save_suffix = "rounding"
 

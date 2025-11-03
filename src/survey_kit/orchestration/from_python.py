@@ -9,7 +9,6 @@ from ..serializable import SerializableDictionary
 from ..utilities.inputs import list_input
 
 
-
 #   Convert any random python function into a Function class
 #       to be called asynchronously
 def FunctionFromPython(

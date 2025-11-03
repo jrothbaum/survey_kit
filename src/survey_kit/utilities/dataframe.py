@@ -62,9 +62,11 @@ def columns_if_present(columns: list[str], colums_to_check: list[str]) -> list[s
         columns_unordered=columns_present, columns_ordered=colums_to_check
     )
 
+
 @nw.narwhalify
-def safe_columns(df:IntoFrameT) -> list[str]:
+def safe_columns(df: IntoFrameT) -> list[str]:
     return df.lazy().collect_schema().names()
+
 
 @nw.narwhalify
 def columns_from_list(

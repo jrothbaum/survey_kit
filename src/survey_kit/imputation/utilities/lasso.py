@@ -115,13 +115,12 @@ class Lasso:
             #       Get analysis dataset from formulaic (the model matrix)
             fb.remove_constant()
             nw_type = NarwhalsType(self.df)
-            
-            df_mm = (
-                formulaic.Formula(fb.formula)
-                .get_model_matrix(nw.from_native(self.df).lazy().collect())
+
+            df_mm = formulaic.Formula(fb.formula).get_model_matrix(
+                nw.from_native(self.df).lazy().collect()
             )
 
-            if hasattr(df_mm,"rhs"):
+            if hasattr(df_mm, "rhs"):
                 df_mm = df_mm.rhs
             # df_mm = (
             #     formulaic.Formula(fb.formula)

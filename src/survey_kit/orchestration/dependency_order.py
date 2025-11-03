@@ -10,6 +10,7 @@ from .path_with_fallbacks import PathWithFallbacks
 
 from .. import logger
 
+
 class FunctionDependencyOrder:
     """
     Analyzes function dependencies and determines execution order.

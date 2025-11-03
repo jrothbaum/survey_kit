@@ -359,7 +359,10 @@ class Implicate(Serializable):
                 did_something = True
 
         if did_something:
-            if "By" in self.df_summary_stats[iterationi].lazy().collect_schema().names():
+            if (
+                "By"
+                in self.df_summary_stats[iterationi].lazy().collect_schema().names()
+            ):
                 col_reorder = (
                     nw.from_native(self.df_summary_stats[iterationi])
                     .lazy()

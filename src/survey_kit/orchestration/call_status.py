@@ -15,6 +15,7 @@ from .config import Config
 
 from .. import logger
 
+
 class CallStatus(Serializable):
     def __init__(self, language: Languages, call_input: CallInputs | None = None):
         if call_input is None:

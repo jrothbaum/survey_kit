@@ -18,6 +18,7 @@ from ..statistics.statistics import column_stats_builder
 from ..statistics.basic_calculations import calculate_by
 from ..serializable import Serializable
 
+
 class Moment(Serializable):
     _save_suffix = "moment"
     _save_exclude_items = ["nw_type"]
