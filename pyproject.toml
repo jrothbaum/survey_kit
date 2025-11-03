@@ -1,0 +1,41 @@
+[project]
+name = "survey-kit"
+version = "0.1.0"
+description = "Tools for working with survey and other data"
+readme = "README.md"
+requires-python = ">=3.9"
+dependencies = [
+    "dill>=0.4.0",
+    "psutil",
+    "igraph",
+    "formulaic>=1.2.0",
+    "narwhals>=2.7.0",
+    "numexpr>=2.10.2",
+    "polars>=1.25.2",
+    "pyarrow>=19.0.0",
+    "cffi",
+    "pypardiso>=0.4.6",
+    "scipy>=1.13.1",
+    "sparse-dot-mkl>=0.9.9",
+    "scikit-learn",
+    "lightgbm",
+    "optuna",
+    "numba"
+]
+
+
+[dependency-groups]
+dev = [
+    "duckdb>=1.4.1",
+    "numpy>=2.0.2",
+    "ruff>=0.14.0",
+    "polars_ds"
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+
+[tool.ruff]
+target-version = "py39"
