@@ -13,6 +13,66 @@ if TYPE_CHECKING:
 
 
 class Trim(Serializable):
+    """
+    Weight trimming parameters for iterative calibration.
+
+    Controls how calibrated weights are trimmed (bounded) during iterative calibration
+    to prevent extreme weight values. Trimming can improve practical usability of
+    weights at the cost of some bias in meeting calibration targets exactly.
+
+    Parameters
+    ----------
+    trim : bool, optional
+        Whether to apply trimming. Default is False.
+    min_val : float, optional
+        Minimum allowed weight ratio (weight/base_weight). Default is 0.05.
+    max_val : float, optional
+        Maximum allowed weight ratio (weight/base_weight). Default is 5.0.
+    step : float, optional
+        How much to relax trim bounds on each iteration (multiplied by iteration
+        number). Default is 0.02.
+    tolerance_step : float, optional
+        How much to relax trim tolerance on each iteration. Default is 0.01.
+    ignore_n : int, optional
+        Don't trim if fewer than this many observations exceed bounds. This prevents
+        trimming for a small number of outliers. Default is 0.
+
+    Examples
+    --------
+    Basic trimming with standard bounds:
+
+    >>> from survey_kit.calibration.trim import Trim
+    >>> trim = Trim(trim=True, min_val=0.2, max_val=4.0)
+
+    Relaxed trimming that ignores small violations:
+
+    >>> trim = Trim(
+    >>>     trim=True,
+    >>>     min_val=0.1,
+    >>>     max_val=5.0,
+    >>>     ignore_n=5,
+    >>>     step=0.03
+    >>> )
+
+    Usage in calibration:
+
+    >>> from survey_kit.calibration import Calibration
+    >>> cal = Calibration(df=df, moments=moments, weight="base_weight")
+    >>> results = cal.run(trim=trim, iterations_loop=10)
+
+    Notes
+    -----
+    - Trimming occurs between calibration iterations in an iterative loop.
+    - Bounds are relaxed on each iteration: on iteration i, the max bound becomes
+    max_val * (1 + i * tolerance_step) and the trim point becomes 
+    max_val * (1 - i * step).
+    - Setting ignore_n > 0 prevents trimming when only a few observations exceed
+    bounds, which can be useful for preserving calibration accuracy.
+    - Trimming creates a trade-off: tighter bounds reduce variance of weighted
+    estimates but may prevent exact calibration to targets.
+    - The iterative trimming approach allows the algorithm to gradually find a
+    balance between meeting targets and respecting weight bounds.
+    """
     _save_suffix = "calibration_trim"
 
     def __init__(

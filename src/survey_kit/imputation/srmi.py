@@ -39,9 +39,6 @@ from .. import logger
 
 
 class SRMI(Serializable):
-    _save_suffix = "srmi"
-    _save_exclude_items = ["implicates"]
-
     """
     Sequential Regression Multiple Imputation (SRMI) class for handling missing data imputation.
     
@@ -139,6 +136,9 @@ class SRMI(Serializable):
     ...     parallel_CallInputs=CallInputs(CPUs=4, MemInMB=5000)
     ... )
     """
+
+    _save_suffix = "srmi"
+    _save_exclude_items = ["implicates"]
 
     def __init__(
         self,

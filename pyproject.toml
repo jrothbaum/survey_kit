@@ -29,7 +29,11 @@ dev = [
     "duckdb>=1.4.1",
     "numpy>=2.0.2",
     "ruff>=0.14.0",
-    "polars_ds"
+    "polars_ds",
+    "mkdocs-material",
+    "mkdocstrings[python]",
+    "jupyter>=1.1.1",
+    "jupytext>=1.18.1",
 ]
 
 [build-system]

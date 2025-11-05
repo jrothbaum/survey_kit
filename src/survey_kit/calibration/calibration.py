@@ -44,8 +44,114 @@ from .. import logger
 
 
 class Calibration(Serializable):
+    """
+    Survey calibration using entropy balancing methods.
+
+    Calibration adjusts survey weights to match known population moments (targets) while 
+    minimizing the distance from base weights.
+
+    Parameters
+    ----------
+    df : IntoFrameT
+        Input dataframe containing the survey data to be calibrated.
+    moments : list[Moment | str] | Moment | str | None, optional
+        Moment objects or paths to saved moments defining calibration targets.
+        Can be a single Moment, list of Moments, or paths to saved Moment files.
+        Default is None.
+    missing_to_zero : bool, optional
+        Whether to fill missing values with zero before calibration. Default is True.
+    index : list[str] | None, optional
+        Column names to use as unique identifiers for observations. If None,
+        a row number index will be created. Default is None.
+    weight : str, optional
+        Column name containing base weights. If empty string, uniform weights
+        of 1 will be created. Default is "".
+    initial_guess : str, optional
+        Column name for initial weight guesses to improve convergence. Default is "".
+    final_weight : str, optional
+        Column name for output calibrated weights. If empty, defaults to
+        "___final_weight". Default is "".
+    aggregation : str, optional
+        How to combine multiple moments: "Combined" (all at once), "Sequential"
+        (one at a time), or "Both" (sequential first, then combined if needed).
+        Default is "Combined".
+    iterations : int, optional
+        Maximum number of iterations for calibration algorithm. If -1, uses
+        method-specific defaults (50 for aebw, 250 for legacy_ebw). Default is -1.
+    iterations_loop : int, optional
+        Maximum number of loops for sequential/trimmed calibration. Default is 20.
+    tolerance : float, optional
+        Convergence tolerance for maximum difference between targets and estimates.
+        Default is 0.00001.
+
+    Attributes
+    ----------
+    df : IntoFrameT
+        Dataframe with calibrated weights in the final_weight column.
+    moments : list[Moment]
+        List of Moment objects used for calibration.
+    diagnostics_out : dict | None
+        Dictionary containing convergence status and diagnostic dataframe after
+        running calibration.
+
+    Examples
+    --------
+    Basic calibration to match population totals:
+
+    >>> import polars as pl
+    >>> from survey_kit.calibration import Calibration, Moment
+    >>> 
+    >>> # Create sample data
+    >>> df = pl.DataFrame({
+    >>>     "id": range(100),
+    >>>     "age_group": ["18-34", "35-54", "55+"] * 33 + ["18-34"],
+    >>>     "region": ["North", "South"] * 50,
+    >>>     "base_weight": [1.0] * 100
+    >>> })
+    >>> 
+    >>> # Define target moments
+    >>> age_moment = Moment(df=df, formula="C(age_group)", weight="base_weight")
+    >>> 
+    >>> # Run calibration
+    >>> c = Calibration(df=df, moments=[age_moment], weight="base_weight")
+    >>> results = c.run()
+    >>> 
+    >>> # Get the calibrated weights (appended to the original data)
+    >>> calibrated_df = c.get_final_weights(df)
+
+    Multiple moments with sequential calibration:
+
+    >>> region_moment = Moment(df=df, formula="C(region)", weight="base_weight")
+    >>> c = Calibration(
+    >>>     df=df, 
+    >>>     moments=[age_moment, region_moment],
+    >>>     aggregation="Sequential",
+    >>>     weight="base_weight"
+    >>> )
+    >>> results = c.run(min_obs=10)
+
+    With weight trimming:
+
+    >>> from survey_kit.calibration.trim import Trim
+    >>> trim_params = Trim(trim=True, min_val=0.2, max_val=3.0)
+    >>> results = c.run(trim=trim_params, min_obs=[0, 10, 50])
+
+    Notes
+    -----
+    - The calibration preserves the total sum of weights while adjusting individual
+    weight values to match target moments.
+    - Sequential aggregation calibrates to each moment one at a time, while combined
+    aggregation solves for all moments simultaneously.
+    - The "Both" aggregation tries sequential first and falls back to combined if
+    convergence criteria aren't met.
+    - Use min_obs parameter to exclude moments with too few non-zero observations,
+    which can cause convergence issues.
+    """    
+
+
     _save_suffix = "calibration"
     _save_exclude_items = ["nw_type"]
+
 
     def __init__(
         self,
@@ -590,61 +696,64 @@ class Calibration(Serializable):
         **additional_params,
     ) -> dict:
         """
-        Run the calibration to estimate the weights from the moments
+        Run the calibration to estimate the weights from the moments.
 
-        args:
-            min_obs : int|list[int], optional
-                Limit the moments to those with more than some number of
-                non-zero observations.
-                You can pass a list of increasing values so that if
-                the model doesn't converge with the lowest number
-                (the most constraints), then try again dropping
-                constraints with more non-zero observations and try again.
-                I.e. if you pass [0,10,100], it will see if the model converges
-                with min_obs = 0, if not, it will try with min_obs = 10, etc.
-                The default is 0.
-            skip_setup : bool, optional
-                Programming parameter, don't pass.
-                The default is False.
-            print_diagnostics : bool, optional
-                Print the diagnostics (do the weights match the targets moments)?
-                The default is True.
-            skip_diagnostics : bool, optional
-                Don't even calculate the diagnostics?
-                They can take a while to calculate, but
-                you really shouldn't skip this.
-                The default is False.
-            trim : Trim | None, optional
-                Pass a Trim object with bounds on the weights.
-                The default is None.
-            **additional_params : kwargs
-                Any additional params that are specific to a
-                calibration algorithm.
+        Parameters
+        ----------
+        min_obs : int | list[int], optional
+            Limit the moments to those with more than some number of
+            non-zero observations.
+            You can pass a list of increasing values so that if
+            the model doesn't converge with the lowest number
+            (the most constraints), then try again dropping
+            constraints with more non-zero observations and try again.
+            I.e. if you pass [0,10,100], it will see if the model converges
+            with min_obs = 0, if not, it will try with min_obs = 10, etc.
+            The default is 0.
+        print_diagnostics : bool, optional
+            Print the diagnostics (do the weights match the target moments)?
+            The default is True.
+        skip_diagnostics : bool, optional
+            Don't even calculate the diagnostics?
+            They can take a while to calculate, but
+            you really shouldn't skip this.
+            The default is False.
+        trim : Trim | None, optional
+            Pass a Trim object with bounds on the weights.
+            The default is None.
+        **additional_params : dict
+            Any additional params that are specific to a
+            calibration algorithm.
 
         Returns
         -------
-        diagnostics : dict
-            A key-value pair with a set of diagnostics information.
-            Will have a boolean for convergence but presence of diagnostics
-            depends on skip_diagnostics value passed.
+        dict
+            A dictionary with diagnostics information including:
+            
+            - 'converged' : bool
+                Whether the calibration converged.
+            - 'max_diff' : float
+                Maximum difference between targets and estimates (if diagnostics calculated).
+            - 'diagnostics' : DataFrame
+                Detailed diagnostics by moment (if skip_diagnostics=False).
 
         Examples
         --------
-        Basic calibration run:
+        Basic calibration run::
 
-        >>> diagnostics = c.run(min_obs=50)
-        >>> print(f"Converged: {diagnostics['converged']}")
-        >>> print(f"Max difference: {diagnostics['max_diff']}")
+            diagnostics = c.run(min_obs=50)
+            print(f"Converged: {diagnostics['converged']}")
+            print(f"Max difference: {diagnostics['max_diff']}")
 
-        Run with fallback min_obs levels:
+        Run with fallback min_obs levels::
 
-        >>> # Try with no minimum first, then 10, then 100 if previous fails
-        >>> diagnostics = c.run(min_obs=[0, 10, 100])
+            # Try with no minimum first, then 10, then 100 if previous fails
+            diagnostics = c.run(min_obs=[0, 10, 100])
 
-        Run with weight trimming:
+        Run with weight trimming::
 
-        >>> trim_params = Trim(trim=True, min_val=0.1, max_val=5.0)
-        >>> diagnostics = c.run(trim=trim_params)
+            trim_params = Trim(trim=True, min_val=0.1, max_val=5.0)
+            diagnostics = c.run(trim=trim_params)
         """
 
         #  Is min_obs a list of values?
@@ -1677,6 +1786,23 @@ class Calibration(Serializable):
         sort: list = None,
         descending: list = None,
     ):
+        """
+        Print formatted calibration diagnostics to the logger.
+        
+        Parameters
+        ----------
+        max_columns : int, optional
+            Maximum number of rows to display. Default is 100.
+        calibrated_only : bool, optional
+            Only show moments that were actually calibrated to. Default is False.
+        min_non_zero : int, optional
+            Minimum non-zero observations required to display a moment. Default is 10.
+        sort : list, optional
+            Column names to sort by. Default is ["Calibrated", "abs", "NonZero"].
+        descending : list, optional
+            Sort order for each column in sort. Default is [True, True, True].
+        """
+
         diag = self.diagnostics_out
 
         if sort is None and descending is None:
@@ -1723,3 +1849,113 @@ class Calibration(Serializable):
                 .sort(sort, **d_descending)
                 .drop("abs")
             )
+
+    def get_final_weights(self,
+                          df_merge_to:IntoFrameT | None=None,
+                          truncate_low:float|None=None,
+                          truncate_high:float|None=None) -> IntoFrameT:
+        """
+        Get the final calibrated weights, optionally merged to another dataframe.
+        
+        Parameters
+        ----------
+        df_merge_to : IntoFrameT | None, optional
+            Dataframe to merge weights to. If None, returns weights with index only.
+            Default is None.
+        truncate_low : float | None, optional
+            Truncate weights below this value. Default is None.
+        truncate_high : float | None, optional
+            Truncate weights above this value. Default is None.
+            
+        Returns
+        -------
+        IntoFrameT
+            Dataframe with calibrated weights. If df_merge_to provided, returns that
+            dataframe with weights merged on index. Otherwise returns index columns
+            and final weight column only.
+        """
+        
+        col_weights = []
+        col_weights.extend(self.index)
+        col_weights.append(self.final_weight)
+        df_weights = (
+            nw.from_native(self.df)
+            .select(col_weights)
+            .to_native()
+        )
+        
+        c_final_weight = nw.col(self.final_weight)
+        truncate = None
+        if truncate_low is not None:
+            #   N to truncate?
+            expr_low = c_final_weight.lt(truncate_low)
+            n_truncate_low = safe_height(
+                nw.from_native(df_weights)
+                .filter(expr_low)
+                .to_native()
+            )
+            logger.info(f"     n truncated at {truncate_low} = {n_truncate_low}")
+            
+            if n_truncate_low:
+                truncate = (
+                    nw.when(expr_low)
+                    .then(nw.lit(truncate_low))
+                )
+        if truncate_high is not None:
+            #   N to truncate?
+            expr_high = c_final_weight.gt(truncate_high)
+            n_truncate_high = safe_height(
+                nw.from_native(df_weights)
+                .filter(expr_high)
+                .to_native()
+            )
+
+            logger.info(f"     n truncated at {truncate_high} = {n_truncate_high}")
+            
+            if n_truncate_high:
+                if truncate is not None:
+                    base = truncate
+                else:
+                    base = nw
+                
+                truncate = (
+                    base.when(expr_high)
+                    .then(nw.lit(truncate_high))
+                )
+                                
+        if truncate is not None:
+            truncate = truncate.otherwise(nw.col(self.final_weight)).alias(self.final_weight)
+            
+            df_weights = (
+                nw.from_native(df_weights)
+                .with_columns(truncate)
+                .to_native()
+            )
+                         
+        
+        if df_merge_to is not None:
+            if self.index == ["___rownumber"]:
+                #   Just concatenate, we made the index internally
+                df_weights = concat_wrapper(
+                    [
+                        df_merge_to,
+                        (
+                            nw.from_native(df_weights)
+                            .sort(self.index)
+                            .select(self.final_weight)
+                            .to_native()
+                        )
+                    ],
+                    how="horizontal"
+                )
+            else:
+                #   Merge on the index (safer - doesn't require assumption neither have changed)
+                df_weights = join_wrapper(
+                    df_merge_to,
+                    df_weights,
+                    on=self.index,
+                    how="left"
+                )
+                
+        return df_weights
+    

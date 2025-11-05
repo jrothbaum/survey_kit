@@ -159,9 +159,9 @@ class Parameters:
     @staticmethod
     def HotDeck(
         model_list: list[str] | list[list[str]] = None,
-        donate_list: list = None,
+        donate_list: list | None = None,
         n_hotdeck_array: int = 3,
-        sequential_drop: bool = False,
+        sequential_drop: bool = True,
     ) -> dict:
         """
         Parameters for hot HotDeck imputation
@@ -179,7 +179,7 @@ class Parameters:
         n_hotdeck_array : int, optional
             Size of hot deck donor arrays, by default 3
         sequential_drop : bool, optional
-            Drop variables sequentially until matches found, by default False
+            Drop variables sequentially until matches found, by default True
                 If model_list is a list of strings (one model), should we
                 sequentially drop the last variable until all recipients find
                 a donor?  Makes it easier to set the hot deck/stat match up.

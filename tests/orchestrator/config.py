@@ -2,7 +2,7 @@ import os
 import sys
 from pathlib import Path
 import polars as pl
-from survey_kit import Config
+from survey_kit.orchestration.config import Config
 
 path = Path(__file__)
 sys.path.append(os.path.normpath(path.parent.parent))

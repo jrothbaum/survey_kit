@@ -72,7 +72,7 @@ c_var4 = pl.col("var4")
 c_var5 = pl.col("var5")
 
 c_e_hd1 = pl.col("epsilon_hd1")
-c_e_hd2 = pl.col("epsilon_hd1")
+c_e_hd2 = pl.col("epsilon_hd2")
 
 c_e_reg1 = pl.col("epsilon_reg1")
 c_e_reg2 = pl.col("epsilon_reg2")

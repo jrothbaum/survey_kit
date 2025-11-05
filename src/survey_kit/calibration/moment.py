@@ -20,6 +20,113 @@ from ..serializable import Serializable
 
 
 class Moment(Serializable):
+    """
+    Statistical moments for survey calibration.
+
+    A Moment represents target statistics (means, proportions) that survey 
+    weights should be calibrated to match. Moments can be simple (e.g., overall mean)
+    interactions (i.e. share in a and b).  They can also be  
+    stratified by groups, and can include submoments for more complex constraints.
+
+    Parameters
+    ----------
+    df : IntoFrameT
+        Dataframe containing the data.
+    formula : str, optional
+        Formulaic formula specifying variables for the moment (e.g., "C(gender) + age").
+        Default is "".
+    weight : str, optional
+        Column name for weights. If empty, uniform weights are created. Default is "".
+    index : str | list[str] | None, optional
+        Column name(s) for unique observation identifiers. Default is None.
+    sort_by : str | list[str] | None, optional
+        Column name(s) to sort by when creating row index. Default is None.
+    rescale : bool, optional
+        Whether to rescale model matrix by dividing by target values. This implies a 
+        tradeoff between the tolerated miss (i.e. how close do we need to get 
+        in the calibration) and the target of this moment. Default is True.
+    by : list[str] | str | None, optional
+        Variables or formula to stratify moment by, creating submoments for each
+        i.e. if the formula is race and gender and by is state,
+        the moments would race x gender x state
+        group. Default is None.
+    missing_to_zero : bool, optional
+        Fill missing values with zero. Default is True.
+    keep_full_group : bool, optional
+        When using 'by', whether to keep the overall moment in addition to
+        submoments. Default is False.
+    equalize_by : bool, optional
+        Weight submoments equally rather than by their sample proportions.
+        Default is False.
+    equalize_by_obs_share : bool, optional
+        Weight submoments (within by) by their observation counts. Default is False.
+    equalize_by_weight_share : bool, optional
+        Weight submoments (within by) by their weight sums. Default is False.
+
+    Attributes
+    ----------
+    model_matrix : IntoFrameT | None
+        Design matrix for calibration (X in the moment equations).
+    targets : IntoFrameT | None
+        Target values to calibrate to.
+    non_zero : IntoFrameT | None
+        Count of non-zero observations for each moment variable.
+    sub_moments : list[Moment]
+        List of submoments when stratifying by groups.
+    columns : list[str]
+        Column names used in calibration after any restrictions.
+    n_observations : int
+        Number of observations in this moment.
+
+    Examples
+    --------
+    Simple moment for categorical variable:
+
+    >>> import polars as pl
+    >>> from survey_kit.calibration.moment import Moment
+    >>> 
+    >>> df = pl.DataFrame({
+    >>>     "id": range(100),
+    >>>     "gender": ["M", "F"] * 50,
+    >>>     "weight": [1.0] * 100
+    >>> })
+    >>> 
+    >>> moment = Moment(df=df, formula="C(gender)", weight="weight")
+
+    Moment with continuous and categorical variables:
+
+    >>> df = pl.DataFrame({
+    >>>     "id": range(100),
+    >>>     "age": range(20, 120),
+    >>>     "education": ["HS", "College", "Grad"] * 33 + ["HS"],
+    >>>     "weight": [1.0] * 100
+    >>> })
+    >>> 
+    >>> moment = Moment(
+    >>>     df=df, 
+    >>>     formula="age + C(education)", 
+    >>>     weight="weight"
+    >>> )
+
+    Stratified moment with subgroups:
+
+    >>> moment = Moment(
+    >>>     df=df,
+    >>>     formula="age",
+    >>>     by="C(education)",
+    >>>     weight="weight",
+    >>>     equalize_by=True
+    >>> )
+    >>> # This creates separate age moments for each education level
+
+    Notes
+    -----
+    - Formulas use the formulaic library syntax, with C() for categorical variables.
+    - When using 'by' parameter, submoments are automatically created for each group.
+    - The rescale option divides model matrix values by targets, which can improve
+    convergence but changes the interpretation of calibration parameters.
+    - Submoments allow for complex calibration schemes like raking or post-stratification.
+    """
     _save_suffix = "moment"
     _save_exclude_items = ["nw_type"]
 

@@ -619,7 +619,7 @@ class Function(Serializable):
                     )
 
                 function_call += (
-                    "from from survey_kit.utilities.logging import set_logging, PrintLogger"
+                    "from survey_kit.utilities.logging import set_logging, PrintLogger"
                     + LINEBREAK
                 )
                 function_call += (

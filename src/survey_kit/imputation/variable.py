@@ -144,19 +144,19 @@ class Variable(Serializable):
                 self.expression = expression
 
             def call(self, df: IntoFrameT) -> IntoFrameT:
-                """
-                Call the specific pre-post function.
+                # """
+                # Call the specific pre-post function.
 
-                Parameters
-                ----------
-                df : IntoFrameT
-                    The current implicate data.
+                # Parameters
+                # ----------
+                # df : IntoFrameT
+                #     The current implicate data.
 
-                Returns
-                -------
-                Lazy/DataFrame to return as updated implicate data
+                # Returns
+                # -------
+                # IntoFrameT (data) to return as updated implicate data
 
-                """
+                # """
                 return nw.from_native(df).with_columns(self.expression).to_native()
 
         class Function:
@@ -201,19 +201,19 @@ class Variable(Serializable):
                 self.df_variable = df_variable
 
             def call(self, df: IntoFrameT) -> IntoFrameT:
-                """
-                Call the specific pre-post function.
+                # """
+                # Call the specific pre-post function.
 
-                Parameters
-                ----------
-                df : IntoFrameT
-                    The current implicate data.
+                # Parameters
+                # ----------
+                # df : IntoFrameT
+                #     The current implicate data.
 
-                Returns
-                -------
-                Lazy/DataFrame to return as updated implicate data
+                # Returns
+                # -------
+                # Lazy/DataFrame to return as updated implicate data
 
-                """
+                # """
                 if self.df_variable != "":
                     self.parameters[self.df_variable] = df
                 df = self.delegate(**self.parameters)
@@ -527,20 +527,20 @@ class Variable(Serializable):
         return (fb, fb_rhs, model_vars)
 
     def validate_inputs(self, df: IntoFrameT):
-        """
-        Try to catch some variable specification errors upfront rather than
-            finding out later that things don't work'
+        # """
+        # Try to catch some variable specification errors upfront rather than
+        #     finding out later that things don't work'
 
-        Parameters
-        ----------
-        df : IntoFrameT
-            Input imputation data.
+        # Parameters
+        # ----------
+        # df : IntoFrameT
+        #     Input imputation data.
 
-        Returns
-        -------
-        None.  Throws errors if there are issues.
+        # Returns
+        # -------
+        # None.  Throws errors if there are issues.
 
-        """
+        # """
 
         #   Check for reserved variable names that will cause an error
         #       down the line and throw an error now to save time
@@ -806,26 +806,26 @@ class Variable(Serializable):
     def split_when_missing(
         variable: Variable, exclude_for_missing: list[str]
     ) -> list[Variable]:
-        """
-        For an impute variable, split it into two impute stages
-            where the first is when it is not missing and it can use the
-            model as is and the second handles when it is missing by dropping
-            any other variables that will be missing with this variable.
-            An example of this is if ern_yn is imputed to True in the CPS ASEC,
-            all the downstream earnings variables will be missing simultaneously
-            and can't be used in the imputation (some may be derived)
-        Parameters
-        ----------
-        variable : Variable
-            Variable information
-        exclude_for_missing : list[str]
-            List of model variables to exclude when variable.impute_var is missing
+        # """
+        # For an impute variable, split it into two impute stages
+        #     where the first is when it is not missing and it can use the
+        #     model as is and the second handles when it is missing by dropping
+        #     any other variables that will be missing with this variable.
+        #     An example of this is if ern_yn is imputed to True in the CPS ASEC,
+        #     all the downstream earnings variables will be missing simultaneously
+        #     and can't be used in the imputation (some may be derived)
+        # Parameters
+        # ----------
+        # variable : Variable
+        #     Variable information
+        # exclude_for_missing : list[str]
+        #     List of model variables to exclude when variable.impute_var is missing
 
-        Returns
-        -------
-        list[Variable]
+        # Returns
+        # -------
+        # list[Variable]
 
-        """
+        # """
 
         vars_out = []
 

@@ -481,7 +481,7 @@ class InputChecker:
                     path_for_inputs = cls.path_inputs(outputi, for_writing=True)
                     cls.delete_existing_inputs(outputi, path_for_inputs)
 
-                    d_save.save(path_for_inputs, dfs_as_plan=True, never_data=True)
+                    d_save.save(path_for_inputs)
 
                 #   In case I change my mind and want csv's again
                 #   df_inputs.write_csv(path_for_inputs)
