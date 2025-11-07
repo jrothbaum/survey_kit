@@ -4,6 +4,22 @@ version = "0.1.0"
 description = "Tools for working with survey and other data"
 readme = "README.md"
 requires-python = ">=3.9"
+
+license = {text = "CC0 1.0 Universal"}
+authors = [
+    {name = "Jon Rothbaum", email = "jon.rothbaum@gmail.com"}
+]
+
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Science/Research",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+]
+
 dependencies = [
     "dill>=0.4.0",
     "psutil",
