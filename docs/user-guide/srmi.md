@@ -70,7 +70,7 @@ It was designed to handle imputing hundreds of variables across multiple iterati
 
 ## API
 
-See the full [Imputation/SRMI API documentation](/api/srmi) 
+See the full [Imputation/SRMI API documentation](../api/srmi.md) 
 
 
 ## Examples/Tutorials
@@ -84,8 +84,8 @@ See the full [Imputation/SRMI API documentation](/api/srmi)
         ```
 
     === "Log"
-        [View in separate window](/tutorials/srmi/hotdeck.html){:target="_blank"}
-        <iframe src="/tutorials/srmi/hotdeck.html" 
+        [View in separate window](../../tutorials/srmi/hotdeck.html){:target="_blank"}
+        <iframe src="../../tutorials/srmi/hotdeck.html" 
             style="width: 100%; height: 800px; border: none;">
         </iframe>
 
@@ -98,8 +98,8 @@ See the full [Imputation/SRMI API documentation](/api/srmi)
         ```
 
     === "Log"
-        [View in separate window](/tutorials/srmi/regression.html){:target="_blank"}
-        <iframe src="/tutorials/srmi/regression.html" 
+        [View in separate window](../../tutorials/srmi/regression.html){:target="_blank"}
+        <iframe src="../../tutorials/srmi/regression.html" 
             style="width: 100%; height: 800px; border: none;">
         </iframe>
 
@@ -112,7 +112,7 @@ See the full [Imputation/SRMI API documentation](/api/srmi)
         ```
 
     === "Log"
-        [View in separate window](/tutorials/srmi/gbm.html){:target="_blank"}
-        <iframe src="/tutorials/srmi/gbm.html" 
+        [View in separate window](../../tutorials/srmi/gbm.html){:target="_blank"}
+        <iframe src="../../tutorials/srmi/gbm.html" 
             style="width: 100%; height: 800px; border: none;">
         </iframe>

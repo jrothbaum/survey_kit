@@ -1142,8 +1142,6 @@ class MultipleImputation(Serializable):
         ----------
         mi_concat : MultipleImputation
             Other mi object to concatenate with.
-        copy : bool, optional
-            Return a copy rather than editing the self object
         how : str, optional
             horizontal or vertical?
             Horizontal will actually do a join and vertical will just stack them

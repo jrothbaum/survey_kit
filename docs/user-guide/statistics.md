@@ -72,8 +72,8 @@ Implements Rubin's (1987) combining rules:
 
 ## API
 
-See the [Basic Statistics and Standard Errors documentation](/api/basic_standard_errors) estimating summary stats and standard errors.
-See the [Multiple Imputation documentation](/api/multiple_imputation) estimating statistics with multiply imputed data.
+See the [Basic Statistics and Standard Errors documentation](../api/basic_standard_errors.md) estimating summary stats and standard errors.
+See the [Multiple Imputation documentation](../api/multiple_imputation.md) estimating statistics with multiply imputed data.
 
 ## Example/Tutorial
 
@@ -86,8 +86,8 @@ See the [Multiple Imputation documentation](/api/multiple_imputation) estimating
         ```
 
     === "Log"
-        [View in separate window](/tutorials/statistics/basic.html){:target="_blank"}
-        <iframe src="/tutorials/statistics/basic.html" 
+        [View in separate window](../../tutorials/statistics/basic.html){:target="_blank"}
+        <iframe src="../../tutorials/statistics/basic.html" 
             style="width: 100%; height: 800px; border: none;">
         </iframe>
 
@@ -100,8 +100,8 @@ See the [Multiple Imputation documentation](/api/multiple_imputation) estimating
         ```
 
     === "Log (basic stats)"
-        [View in separate window](/tutorials/statistics/standard_errors.html){:target="_blank"}
-        <iframe src="/tutorials/statistics/standard_errors.html" 
+        [View in separate window](../../tutorials/statistics/standard_errors.html){:target="_blank"}
+        <iframe src="../../tutorials/statistics/standard_errors.html" 
             style="width: 100%; height: 800px; border: none;">
         </iframe>
 
@@ -115,8 +115,8 @@ See the [Multiple Imputation documentation](/api/multiple_imputation) estimating
     === "Log (any custom stat)"
         This works with **any function** that takes a dataframe and weight and returns estimates. You get proper variance estimation automatically.
 
-        [View in separate window](/tutorials/statistics/arbitrary_bootstrap.html){:target="_blank"}
-        <iframe src="/tutorials/statistics/arbitrary_bootstrap.html" 
+        [View in separate window](../../tutorials/statistics/arbitrary_bootstrap.html){:target="_blank"}
+        <iframe src="../../tutorials/statistics/arbitrary_bootstrap.html" 
             style="width: 100%; height: 800px; border: none;">
         </iframe>
 
@@ -130,8 +130,8 @@ See the [Multiple Imputation documentation](/api/multiple_imputation) estimating
         ```
 
     === "Log (basic stats)"
-        [View in separate window](/tutorials/statistics/multiple_imputation.html){:target="_blank"}
-        <iframe src="/tutorials/statistics/multiple_imputation.html" 
+        [View in separate window](../../tutorials/statistics/multiple_imputation.html){:target="_blank"}
+        <iframe src="../../tutorials/statistics/multiple_imputation.html" 
             style="width: 100%; height: 800px; border: none;">
         </iframe>
 
@@ -145,8 +145,8 @@ See the [Multiple Imputation documentation](/api/multiple_imputation) estimating
     === "Log (any custom stat)"
         This works with **any function** that takes a dataframe and weight and returns estimates. You get proper variance estimation (replicate weights + MI) automatically.
         
-        [View in separate window](/tutorials/statistics/arbitrary_srmi.html){:target="_blank"}
-        <iframe src="/tutorials/statistics/arbitrary_srmi.html" 
+        [View in separate window](../../tutorials/statistics/arbitrary_srmi.html){:target="_blank"}
+        <iframe src="../tutorials/statistics/arbitrary_srmi.html" 
             style="width: 100%; height: 800px; border: none;">
         </iframe>
 

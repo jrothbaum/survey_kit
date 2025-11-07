@@ -32,7 +32,7 @@ Plus, if you're doing replicate weights, you have to repeat this many times (for
 
 ## API
 
-See the full [Calibration API documentation](/api/calibration) 
+See the full [Calibration API documentation](../api/calibration.md) 
 
 ## Example/Tutorial
 
@@ -42,7 +42,7 @@ See the full [Calibration API documentation](/api/calibration)
     ```
 
 === "Log"
-    [View in separate window](/tutorials/calibration.html){:target="_blank"}
-    <iframe src="/tutorials/calibration.html" 
+    [View in separate window](../../tutorials/calibration.html){:target="_blank"}
+    <iframe src="../../tutorials/calibration.html" 
         style="width: 100%; height: 800px; border: none;">
     </iframe>
