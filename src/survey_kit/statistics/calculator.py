@@ -27,6 +27,8 @@ from ..utilities.dataframe import (
     join_list,
     concat_wrapper,
     NarwhalsType,
+    safe_sum_cast,
+    safe_columns
 )
 from ..utilities.rounding import drb_round_table
 from ..serializable import Serializable
@@ -182,6 +184,8 @@ class StatCalculator(Serializable):
         self.allow_slow_pandas = allow_slow_pandas
 
         self.replicate_stats = ReplicateStats()
+        if replicates is not None:
+            self.replicate_stats.bootstrap = replicates.bootstrap
 
         self.scale_weights()
 
@@ -284,8 +288,15 @@ class StatCalculator(Serializable):
         summarize_list = []
 
         if by is not None:
-            for listi in by.values():
-                summarize_list.extend(listi)
+            if type(by) is dict:
+                for listi in by.values():
+                    summarize_list.extend(listi)
+            elif type(by) is list:
+                for itemi in by:
+                    if type(itemi) is list:
+                        summarize_list.extend(itemi)
+                    else:
+                        summarize_list.append(itemi)
 
             summarize_list = list(dict.fromkeys(summarize_list))
 
@@ -924,7 +935,10 @@ class StatCalculator(Serializable):
             compare_to
         ):
             if not quietly:
-                logger.info("Comparing estimates using replicate weights")
+                if self.bootstrap:
+                    logger.info("Comparing estimates using bootstrap weights")
+                else:
+                    logger.info("Comparing estimates using replicate weights")
 
             outputs = compare(
                 stats1=self,
@@ -1020,381 +1034,229 @@ class StatCalculator(Serializable):
 
         return outputs
 
-    # def _compare_variable_list(self,
-    #                            comparei:tuple | dict) -> tuple(str,
-    #                                                            str,
-    #                                                            str,
-    #                                                            str):
-    #     if type(comparei) is dict:
-    #         compare_col = comparei.get("column",
-    #                                    self.variable_ids[0])
+    def from_function(delegate:Callable,
+                      estimate_ids:list | str,
+                      df:IntoFrameT | None=None,
+                      df_argument:str="df",
+                      arguments:dict|None=None,
+                      weight:str="",
+                      replicates:Replicates|None=None,
+                      scale_wgts_to:float=0.0,
+                      weight_argument_name:str="weight",
+                      by:dict[str,list[str]]|None=None,
+                      display:bool=True,
+                      display_all_vars:bool=True,
+                      display_max_vars:int=20,
+                      round_output:bool|int=True) -> StatCalculator:
+        """
+        Create a StatCalculator from a custom function that returns estimates.
 
-    #         compare_1 = comparei["1"]
-    #         compare_2 = comparei["2"]
+        This static method allows wrapping any function that returns estimates
+        in a StatCalculator object for easy display and comparison.
 
-    #         rename_to = comparei.get("name",
-    #                                  f"c({compare_1},{compare_2})")
-    #     else:
-    #         if len(comparei) == 3:
-    #             compare_col = comparei[0]
-    #             compare_1 = comparei[1]
-    #             compare_2 = comparei[2]
-    #         else:
-    #             compare_col = self.variable_ids[0]
-    #             compare_1 = comparei[0]
-    #             compare_2 = comparei[1]
+        Parameters
+        ----------
+        delegate : callable
+            Function that returns a table of estimates. Must accept weight
+            parameter if replicates are used.
+        estimate_ids : list | str
+            Column names that identify each unique estimate.
+        df : pl.LazyFrame | pl.DataFrame, optional
+            Dataframe passed as "df" argument to delegate. Allows dynamic
+            subsetting with by. Default is None.
+        df_argument : str, optional
+            Name of argument with data. Defaults is "df".
+        arguments : dict, optional
+            Static arguments (other than weight) passed to delegate. Default is None.
+        weight : str, optional
+            Weight column name for weighted statistics. Default is "".
+        replicates : Replicates|None, optional
+            Replicates object for replicate weight standard errors. Default is None.
+        scale_wgts_to : float, optional
+            Scale weights to sum to this value. Default is 0.0 (no scaling).
+        weight_argument_name : str, optional
+            Keyword argument name for passing weight to delegate. Default is "weight".
+        by : dict[str,list[str]]|None, optional
+            Dictionary defining grouping variables for summary statistics.
+        display : bool, optional
+            Print results to log. Default is True.
+        display_all_vars : bool, optional
+            Print all variables rather than truncated summary. Default is True.
+        display_max_vars : int, optional
+            Maximum variables to print if display_all_vars=False. Default is 20.
+        round_output : bool|int, optional
+            Round the output. Default is True.
 
-    #         rename_to = f"c({compare_1},{compare_2})"
+        Returns
+        -------
+        StatCalculator
+            StatCalculator object containing the function results with
+            estimates, SEs, and replicates as applicable.
+        """
 
-    #     return (compare_col,
-    #             compare_1,
-    #             compare_2,
-    #             rename_to)
+        #   Input parsing
+        if arguments is None:
+            arguments = {}
 
-    # def compare_by_weight(df:pl.LazyFrame | pl.DataFrame | str,
-    #                       statistics:list[Statistics]|Statistics|None=None,
-    #                       by:dict[str,list[str]]|None=None,
+        if type(estimate_ids) is str:
+            estimate_ids = [estimate_ids]
 
-    #                       # List of weights or replicates
-    #                       weights:list[str] | None=None,
-    #                       replicates:dict[str,Replicates] | None=None,
-    #                       scale_wgts_to:float=0.0,
+        if df is None:
+            by = None
+        else:
+            if scale_wgts_to > 0:
+                if weight != "":
+                    weights_to_cast = [weight]
+                    if replicates is not None:
+                        weights_to_cast.extend(replicates.rep_list)
+                    df = safe_sum_cast(df,
+                                       weights_to_cast)
+                    
+                    with_scale = [(nw.col(weighti)/nw.col(weighti).sum()*scale_wgts_to).alias(nw.col(weighti)) for weighti in weights_to_cast]
+                    df = (
+                        nw.from_native(df)
+                        .with_columns(with_scale)
+                        .to_native()
+                    )
 
-    #                       display:bool=True,
-    #                       display_baseline:bool=False,
-    #                       display_all_vars:bool=True,
-    #                       display_max_vars:int=20,
-    #                       round_output:bool|int=True,
+        if by is None:
+            by = {"All":[]}
 
-    #                       #   Compare all sets of weights
-    #                       compare_all:bool=False,
-    #                       #   Compare to a specific weight
-    #                       compare_weight:str="",
-    #                       #   Use a passed in object to compare to
-    #                       compare_to:StatCalculator=None,
+        replicate_name = "___replicate___"
 
-    #                       #   Comparison to make
-    #                       ratio:bool=True,
-    #                       difference:bool=True,
-    #                       ratio_minus_1:bool=True):
-    #     """
-    #     Get estimates for multiple weights and compare them as requested.
+        df_estimates = []
+        df_ses = []
+        df_replicates = []
+        by_vars = StatCalculator._by_vars(by=by)
 
-    #     This is a static method meant to be called as StatCalculator.compare_by_weight().
+        nw_type = NarwhalsType(df)
+        for keyi, valuei in by.items():
+            if keyi == "All":
+                logger.info(f"Running {delegate.__name__}")
+            else:
+                logger.info(f"Running {delegate.__name__} for {keyi}")
 
-    #     Parameters
-    #     ----------
-    #     df : pl.LazyFrame | pl.DataFrame | str
-    #         Polars dataframe or path of file to estimate stats on.
-    #     statistics : list[Statistics]|Statistics|None, optional
-    #         Statistics class object or list of Statistics defining what to calculate.
-    #     weights : list[str] | None, optional
-    #         List of weight column names for estimates (no SEs). Default is None.
-    #     replicates : dict[str,Replicates] | None, optional
-    #         Dictionary of Replicates objects for replicate weight SEs.
-    #         Keys are weight names, values are Replicates objects.
-    #         Takes precedence over weights. Default is None.
-    #     scale_wgts_to : float, optional
-    #         Adjust weights to sum to this value. Default is 0.0 (no scaling).
-    #     by : dict[str,list[str]]|None, optional
-    #         Dictionary defining grouping variables for summary statistics.
-    #     display : bool, optional
-    #         Print comparison results to log. Default is True.
-    #     display_baseline : bool, optional
-    #         Print the actual weighted estimates to log. Default is False.
-    #     display_all_vars : bool, optional
-    #         Print all variables rather than truncated summary. Default is True.
-    #     display_max_vars : int, optional
-    #         Maximum variables to print if display_all_vars=False. Default is 20.
-    #     round_output : bool|int, optional
-    #         Round the output. Default is True.
-    #     compare_all : bool, optional
-    #         Compare all weights to all others. Default is False.
-    #     compare_weight : str, optional
-    #         Specific weight to use as baseline for comparisons. Default is "".
-    #     compare_to : StatCalculator, optional
-    #         External stats object to compare against. Default is None.
-    #     ratio : bool, optional
-    #         Calculate ratios in comparisons. Default is True.
-    #     difference : bool, optional
-    #         Calculate differences in comparisons. Default is True.
-    #     ratio_minus_1 : bool, optional
-    #         Rescale ratio by subtracting 1. Default is True.
+            df_list = []
+            if df is not None:
+                if len(valuei):
+                    df_partitioned = (
+                        nw_type.to_polars()
+                        .lazy()
+                        .collect()
+                        .partition_by(
+                            by=valuei,
+                            maintain_order=True,
+                            include_key=True
+                        )
+                    )
 
-    #     Returns
-    #     -------
-    #     dict[str, StatCalculator]
-    #         Dictionary with StatCalculator objects for each weight's estimates
-    #         and comparison results.
-    #     """
+                    df_partitioned = [nw_type.from_polars(dfi) for dfi in df_partitioned]
+                    
+                    df_list.extend(df_partitioned)
+                else:
+                    df_list.append(df)
 
-    #     df = SafeCollect(SafeDataFrame(df)).lazy()
+            if len(df_list) == 0:
+                df_list = [None]
 
-    #     sum_stats = {}
+            for dfi in df_list:
+                append_by = []
+                append_values = []
 
-    #     if replicates is not None:
-    #         #   Do replicate comparisons with SEs
-    #         for weighti, repi in replicates.items():
-    #             logger.info(f"Estimates with replicate weight SEs for {weighti}")
-    #             sum_stats[weighti] = StatCalculator(df=df,
-    #                                                 statistics=statistics,
-    #                                                 by=by,
-    #                                                 replicates=repi,
-    #                                                 scale_wgts_to=scale_wgts_to,
-    #                                                 display=display_baseline,
-    #                                                 display_all_vars=display_all_vars,
-    #                                                 display_max_vars=display_max_vars,
-    #                                                 round_output=False)
+                if dfi is not None:
+                    arguments[df_argument] = dfi
 
-    #             logger.info("\n\n")
+                    if len(valuei):
+                        append_values = dfi.select(valuei).unique().to_dicts()
+                        append_by = [nw.lit(valuei).alias(keyi) for keyi, valuei in append_values[0].items()]
 
-    #     elif weights is not None:
-    #         for weighti in weights:
-    #             logger.info(f"Estimates for {weighti}")
-    #             sum_stats[weighti] = StatCalculator(df=df,
-    #                                               statistics=statistics,
-    #                                               by=by,
-    #                                               weight=weighti,
-    #                                               scale_wgts_to=scale_wgts_to,
-    #                                               display=display_baseline,
-    #                                               display_all_vars=display_all_vars,
-    #                                               display_max_vars=display_max_vars,
-    #                                               round_output=False)
-    #     else:
-    #         message = "Must pass a list of weights or Replicates objects"
-    #         logger.error(message)
+                if replicates is None:
+                    df_esti = delegate(**arguments)
+                    if len(append_by):
+                        df_esti = (
+                            nw.from_native(df_esti)
+                            .with_columns(append_by)
+                            .to_native()
+                        )
 
-    #     if len(sum_stats):
-    #         compare_sets = {}
+                    df_estimates.append(df_esti)
+                else:
+                    if len(append_values):
+                        logger.info(append_values)
 
-    #         if compare_to is not None:
-    #             compare_weight = "___comparison_group___"
-    #         elif compare_weight != "":
-    #             compare_to = sum_stats[compare_weight]
+                    rep_return = replicates_ses_from_function(delegate=delegate,
+                                                             arguments=arguments,
+                                                             join_on=estimate_ids,
+                                                             weight_argument_name=weight_argument_name,
+                                                             weights=replicates.rep_list,
+                                                             replicate_name=replicate_name)
 
-    #         keys = list(sum_stats.keys())
+                    df_esti = rep_return.df_estimates
+                    df_sei = rep_return.df_ses
+                    df_repi = rep_return.df_replicates
 
-    #         weight0 = keys[0]
-    #         sm0 = sum_stats[weight0]
+                    if len(append_by):
+                        df_esti = (
+                            nw.from_native(df_esti)
+                            .with_columns(append_by)
+                            .to_native()
+                        )
+                        df_sei = (
+                            nw.from_native(df_sei)
+                            .with_columns(append_by)
+                            .to_native()
+                        )
+                        
+                        df_repi = (
+                            nw.from_native(df_repi)
+                            .with_columns(append_by)
+                            .to_native()
+                        )
 
-    #         for i in range(0,len(keys)):
-    #             weighti = keys[i]
-    #             smi = sum_stats[weighti]
+                    df_estimates.append(df_esti)
+                    df_ses.append(df_sei)
+                    df_replicates.append(df_repi)
 
-    #             if compare_to is not None:
-    #                 if weighti != compare_weight:
-    #                     compare_sets[f"{compare_weight}_{weighti}"] = [smi,compare_to]
-    #             else:
-    #                 if compare_all:
-    #                     for j in range(i+1,len(keys)):
-    #                         weightj = keys[j]
-    #                         smj = sum_stats[weightj]
+            del df_list
 
-    #                         compare_sets[f"{weightj}_{weighti}"] = [smj, smi]
-    #                 else:
-    #                     if weighti != weight0:
-    #                         compare_sets[f"{weighti}_{weight0}"] = [smi, sm0]
+        #   Set up the output
+        ss_out = StatCalculator(df=None,
+                                weight=weight,
+                                replicates=replicates,
+                                by=by,
+                                display=display,
+                                display_all_vars=display_all_vars,
+                                display_max_vars=display_max_vars,
+                                round_output=round_output,
+                                calculate=False)
 
-    #         for comparei, seti in compare_sets.items():
-    #             logger.info(comparei)
-    #             sum_stats[comparei] = seti[0].compare(compare_to=seti[1],
-    #                                                   difference=difference,
-    #                                                   ratio=ratio,
-    #                                                   ratio_minus_1=ratio_minus_1,
-    #                                                   display=display)
+        ss_out.variable_ids = estimate_ids
 
-    #     return sum_stats
+        if len(df_estimates):
+            df_estimates = concat_wrapper(df_estimates,
+                                          how="diagonal")
+            #   Final variable order
+            if len(by_vars):
+                select_order = estimate_ids + by_vars
+                select_order.extend([coli for coli in safe_columns(df_estimates) if coli not in select_order])
+            else:
+                select_order = safe_columns(df_estimates)
+            ss_out.df_estimates = df_estimates.select(select_order)
+        if len(df_ses):
+            ss_out.df_ses = concat_wrapper(df_ses,
+                                       how="diagonal").select(select_order)
 
-    # def from_function(function,
-    #                   estimate_ids:list | str,
-    #                   df:IntoFrameT | None=None,
-    #                   arguments:dict|None=None,
-    #                   weight:str="",
-    #                   replicates:Replicates|None=None,
-    #                   scale_wgts_to:float=0.0,
-    #                   weight_argument_name:str="weight",
-    #                   by:dict[str,list[str]]|None=None,
-    #                   display:bool=True,
-    #                   display_all_vars:bool=True,
-    #                   display_max_vars:int=20,
-    #                   round_output:bool|int=True) -> StatCalculator:
-    #     """
-    #     Create a StatCalculator from a custom function that returns estimates.
+        if len(df_ses):
+            ss_out.df_replicates = concat_wrapper(df_replicates,
+                                                  how="diagonal").select(select_order + [replicate_name])
 
-    #     This static method allows wrapping any function that returns estimates
-    #     in a StatCalculator object for easy display and comparison.
+        ss_out.df_estimates = ss_out.round_results(df=ss_out.df_estimates)
+        ss_out.df_ses = ss_out.round_results(df=ss_out.df_ses)
 
-    #     Parameters
-    #     ----------
-    #     function : callable
-    #         Function that returns a table of estimates. Must accept weight
-    #         parameter if replicates are used.
-    #     estimate_ids : list | str
-    #         Column names that identify each unique estimate.
-    #     df : pl.LazyFrame | pl.DataFrame, optional
-    #         Dataframe passed as "df" argument to function. Allows dynamic
-    #         subsetting with by. Default is None.
-    #     arguments : dict, optional
-    #         Static arguments (other than weight) passed to function. Default is None.
-    #     weight : str, optional
-    #         Weight column name for weighted statistics. Default is "".
-    #     replicates : Replicates|None, optional
-    #         Replicates object for replicate weight standard errors. Default is None.
-    #     scale_wgts_to : float, optional
-    #         Scale weights to sum to this value. Default is 0.0 (no scaling).
-    #     weight_argument_name : str, optional
-    #         Keyword argument name for passing weight to function. Default is "weight".
-    #     by : dict[str,list[str]]|None, optional
-    #         Dictionary defining grouping variables for summary statistics.
-    #     display : bool, optional
-    #         Print results to log. Default is True.
-    #     display_all_vars : bool, optional
-    #         Print all variables rather than truncated summary. Default is True.
-    #     display_max_vars : int, optional
-    #         Maximum variables to print if display_all_vars=False. Default is 20.
-    #     round_output : bool|int, optional
-    #         Round the output. Default is True.
+        if display:
+            ss_out.print()
 
-    #     Returns
-    #     -------
-    #     StatCalculator
-    #         StatCalculator object containing the function results with
-    #         estimates, SEs, and replicates as applicable.
-    #     """
-
-    #     #   Input parsing
-    #     if arguments is None:
-    #         arguments = {}
-
-    #     if type(estimate_ids) is str:
-    #         estimate_ids = [estimate_ids]
-
-    #     if df is None:
-    #         by = None
-    #     else:
-    #         if scale_wgts_to > 0:
-    #             if weight != "":
-    #                 df = df.with_columns((pl.col(weight)/pl.sum(weight)*scale_wgts_to).alias(weight))
-
-    #             if replicates is not None:
-    #                 for weighti in replicates.rep_list:
-    #                     df = df.with_columns((pl.col(weighti)/pl.sum(weighti)*scale_wgts_to).alias(weighti))
-
-    #         df = nw.from_native(df)
-
-    #     if by is None:
-    #         by = {"All":[]}
-
-    #     if df is not None:
-    #         df = nw.from_native(df)
-
-    #     replicate_name = "___replicate___"
-
-    #     df_estimates = []
-    #     df_ses = []
-    #     df_replicates = []
-    #     by_vars = StatCalculator._by_vars(by=by)
-    #     for keyi, valuei in by.items():
-    #         if keyi == "All":
-    #             logger.info(f"Running {function.__name__}")
-    #         else:
-    #             logger.info(f"Running {function.__name__} for {keyi}")
-
-    #         df_list = []
-    #         if df is not None:
-    #             if len(valuei):
-    #                 df_list.extend(df.sort(valuei).partition_by(by=valuei,
-    #                                                             maintain_order=True,
-    #                                                             include_key=True))
-    #             else:
-    #                 df_list.append(df)
-
-    #         if len(df_list) == 0:
-    #             df_list = [None]
-
-    #         for dfi in df_list:
-    #             append_by = []
-    #             append_values = []
-
-    #             if dfi is not None:
-    #                 if pass_df_to_r:
-    #                     arguments["df"] = PolarsToR(dfi)
-    #                 else:
-    #                     arguments["df"] = dfi
-
-    #                 if len(valuei):
-    #                     append_values = dfi.select(valuei).unique().to_dicts()
-    #                     append_by = [pl.lit(valuei).alias(keyi) for keyi, valuei in append_values[0].items()]
-
-    #             if replicates is None:
-    #                 df_esti = function(**arguments)
-    #                 if len(append_by):
-    #                     df_esti = df_esti.with_columns(append_by)
-
-    #                 df_estimates.append(df_esti)
-    #             else:
-    #                 if len(append_values):
-    #                     logger.info(append_values)
-
-    #                 (df_esti,
-    #                  df_sei,
-    #                  df_repi,
-    #                  _) = replicates_ses_from_function(delegate=function,
-    #                                                          arguments=arguments,
-    #                                                          join_on=estimate_ids,
-    #                                                          weight_argument_name=weight_argument_name,
-    #                                                          weights=replicates.rep_list,
-    #                                                          replicate_name=replicate_name)
-
-    #                 if len(append_by):
-    #                     df_esti = df_esti.with_columns(append_by)
-    #                     df_sei = df_sei.with_columns(append_by)
-    #                     df_repi = df_repi.with_columns(append_by)
-
-    #                 df_estimates.append(df_esti)
-    #                 df_ses.append(df_sei)
-    #                 df_replicates.append(df_repi)
-
-    #         del df_list
-
-    #     #   Set up the output
-    #     ss_out = StatCalculator(df=None,
-    #                             weight=weight,
-    #                             replicates=replicates,
-    #                             by=by,
-    #                             display=display,
-    #                             display_all_vars=display_all_vars,
-    #                             display_max_vars=display_max_vars,
-    #                             round_output=round_output,
-    #                             calculate=False)
-
-    #     ss_out.variable_ids = estimate_ids
-
-    #     if len(df_estimates):
-    #         df_estimates = concat_wrapper(dflist=df_estimates,
-    #                                       how="diagonal")
-    #         #   Final variable order
-    #         if len(by_vars):
-    #             select_order = estimate_ids + by_vars
-    #             select_order.extend([coli for coli in df_estimates.columns if coli not in select_order])
-    #         else:
-    #             select_order = df_estimates.columns
-    #         ss_out.df_estimates = df_estimates.select(select_order)
-    #     if len(df_ses):
-    #         ss_out.df_ses = concat_wrapper(dflist=df_ses,
-    #                                    how="diagonal").select(select_order)
-
-    #     if len(df_ses):
-    #         ss_out.df_replicates = concat_wrapper(dflist=df_replicates,
-    #                                               how="diagonal").select(select_order + [replicate_name])
-
-    #     ss_out.df_estimates = ss_out.round_results(df=ss_out.df_estimates)
-    #     ss_out.df_ses = ss_out.round_results(df=ss_out.df_ses)
-
-    #     if display:
-    #         ss_out.print()
-
-    #     return ss_out
+        return ss_out
 
     def filter(self, filter_expr: nw.Expr) -> StatCalculator:
         self = self.copy()
@@ -1478,7 +1340,7 @@ class StatCalculator(Serializable):
 
         Returns
         -------
-        None.
+        StatCalculator
 
         """
 

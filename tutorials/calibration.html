@@ -7510,7 +7510,7 @@ a.anchor-link {
 </style>
 <!-- End of mermaid configuration --></head>
 <body class="jp-Notebook" data-jp-theme-light="true" data-jp-theme-name="JupyterLab Light">
-<main><div class="jp-Cell jp-CodeCell jp-Notebook-cell jp-mod-noOutputs" id="cell-id=6076bc15">
+<main><div class="jp-Cell jp-CodeCell jp-Notebook-cell jp-mod-noOutputs" id="cell-id=eede8bd1">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -7531,7 +7531,7 @@ a.anchor-link {
 </div>
 </div>
 </div>
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=2f791d45">
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=52fa22b1">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -7593,7 +7593,7 @@ a.anchor-link {
 </div>
 </div>
 </div>
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=d39eca27">
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=3219173c">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -7616,6 +7616,10 @@ a.anchor-link {
     <span class="c1">#    by=["year"],</span>
     <span class="n">rescale</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
 <span class="p">)</span>
+
+<span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">"You can save/reload moments if you want"</span><span class="p">)</span>
+<span class="c1"># m.save("/my/path/moment")</span>
+<span class="c1"># m_loaded = Moment.load("/my/path/moment")</span>
 </pre></div>
 </div>
 </div>
@@ -7646,9 +7650,16 @@ a.anchor-link {
 </pre>
 </div>
 </div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>You can save/reload moments if you want
+</pre>
 </div>
 </div>
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=9fe4a81a">
+</div>
+</div>
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=448ad6c3">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -7807,7 +7818,7 @@ Entropy Balance Rewighting, Sanders (2024)
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>Time elapsed: 0.09983940000529401
+<pre>Time elapsed: 0.11071370000718161
 </pre>
 </div>
 </div>
@@ -7835,7 +7846,7 @@ Entropy Balance Rewighting, Sanders (2024)
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>Maximum Difference: 3.3306690738754696e-15
+<pre>Maximum Difference: 3.6637359812630166e-15
 </pre>
 </div>
 </div>
@@ -7846,17 +7857,17 @@ Entropy Balance Rewighting, Sanders (2024)
 ┌─────────────────────┬──────────┬─────────┬───────────┬────────────┬─────────┬─────────────┬─────────────┐
 │            Variable ┆  Initial ┆ Targets ┆ Estimates ┆ Calibrated ┆ NonZero ┆        diff ┆     percent │
 ╞═════════════════════╪══════════╪═════════╪═══════════╪════════════╪═════════╪═════════════╪═════════════╡
-│ m0_v_f_continuous_0 ┆ 1.100747 ┆       1 ┆       1.0 ┆          1 ┆  100000 ┆ -3.3307e-15 ┆ -3.3307e-13 │
-│ m0_v_f_continuous_1 ┆ 1.101187 ┆       1 ┆       1.0 ┆          1 ┆  100000 ┆  3.1086e-15 ┆  3.1086e-13 │
+│ m0_v_f_continuous_0 ┆ 1.100747 ┆       1 ┆       1.0 ┆          1 ┆  100000 ┆ -3.6637e-15 ┆ -3.6637e-13 │
+│ m0_v_f_continuous_1 ┆ 1.101187 ┆       1 ┆       1.0 ┆          1 ┆  100000 ┆  2.8866e-15 ┆  2.8866e-13 │
 │ m0_v_f_continuous_2 ┆ 1.100447 ┆       1 ┆       1.0 ┆          1 ┆  100000 ┆ -2.6645e-15 ┆ -2.6645e-13 │
-│              m0_v_1 ┆ 1.005134 ┆       1 ┆       1.0 ┆          1 ┆  100000 ┆ -1.1102e-16 ┆ -1.1102e-14 │
+│              m0_v_1 ┆ 1.005134 ┆       1 ┆       1.0 ┆          1 ┆  100000 ┆ -3.3307e-16 ┆ -3.3307e-14 │
 └─────────────────────┴──────────┴─────────┴───────────┴────────────┴─────────┴─────────────┴─────────────┘
 </pre>
 </div>
 </div>
 </div>
 </div>
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=061bac38">
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=27e48a31">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -7904,7 +7915,7 @@ Entropy Balance Rewighting, Sanders (2024)
 </div>
 </div>
 </div>
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=b4a63728">
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=36f53df3">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -7955,7 +7966,7 @@ Entropy Balance Rewighting, Sanders (2024)
 </div>
 </div>
 </div>
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=70fc5f4a">
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=01961288">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>

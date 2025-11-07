@@ -19,6 +19,7 @@ from ..utilities.dataframe import (
     drop_if_exists,
     asterisk_matched_substring,
     columns_from_list,
+    safe_columns
 )
 
 from ..statistics.bootstrap import bayes_bootstrap_weights
@@ -562,7 +563,7 @@ class Implicate(Serializable):
         """
 
         df = self.df
-        columns = nw.from_native(df).lazy().collect_schema().names()
+        columns = safe_columns(df)
         replace_list = list(set(columns).difference(self.parent.index))
 
         drop_list = []

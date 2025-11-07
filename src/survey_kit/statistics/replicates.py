@@ -17,6 +17,7 @@ from ..utilities.dataframe import (
     NarwhalsType,
     fill_missing,
     columns_from_list,
+    safe_columns
 )
 from ..utilities.rounding import drb_round_table
 from ..serializable import Serializable
@@ -24,6 +25,129 @@ from .. import logger
 
 
 class Replicates(Serializable):
+    """
+    Configuration for replicate weight variance estimation.
+    
+    Replicates defines the structure of replicate weights in survey data for
+    calculating proper standard errors that account for complex sample designs.
+    Supports two variance estimation methods: Bootstrap and Balanced Repeated
+    Replication (BRR).
+    
+    Replicate weights are commonly used by statistical agencies (Census Bureau, BLS,
+    etc.) to enable users to calculate design-based standard errors without sharing
+    the full sample design details (strata, clusters, etc.).
+    
+    Parameters
+    ----------
+    weight_stub : str
+        Prefix for weight column names. For example, if weight_stub="weight_",
+        the function looks for columns: weight_0, weight_1, ..., weight_n
+        where weight_0 is the base weight and weight_1 through weight_n are
+        the replicate weights.
+    df : IntoFrameT | None, optional
+        Dataframe containing the weight columns. Used to automatically detect
+        the number of replicates. Default is None.
+    n_replicates : int | None, optional
+        Number of replicate weights (excluding the base weight). If None,
+        will be inferred from df. Default is None.
+    bootstrap : bool, optional
+        Type of variance estimation:
+        - True: Bootstrap variance (standard bootstrap resampling)
+        - False: Balanced Repeated Replication (BRR) variance
+        If you don't know which to use, use bootstrap=True. Default is False.
+        
+    Attributes
+    ----------
+    weight_stub : str
+        The weight column prefix.
+    n_replicates : int
+        Number of replicate weights.
+    bootstrap : bool
+        Variance estimation method flag.
+    rep_list : list[str]
+        List of all weight column names (base + replicates).
+        
+    Raises
+    ------
+    Exception
+        If neither df nor n_replicates is provided.
+        
+    Examples
+    --------
+    Infer number of replicates from dataframe:
+    
+    >>> from survey_kit.statistics.replicates import Replicates
+    >>> replicates = Replicates(
+    ...     df=df,
+    ...     weight_stub="weight_",
+    ...     bootstrap=True
+    ... )
+    >>> print(replicates.n_replicates)
+    >>> print(replicates.rep_list)
+    
+    Specify number of replicates directly:
+    
+    >>> replicates = Replicates(
+    ...     weight_stub="weight_",
+    ...     n_replicates=80,
+    ...     bootstrap=False  # Use BRR variance
+    ... )
+    
+    Use with StatCalculator:
+    
+    >>> from survey_kit.statistics.calculator import StatCalculator
+    >>> from survey_kit.statistics.statistics import Statistics
+    >>> 
+    >>> stats = Statistics(stats=["mean", "median"], columns=["income"])
+    >>> replicates = Replicates(weight_stub="weight_", n_replicates=80, bootstrap=True)
+    >>> 
+    >>> sc = StatCalculator(
+    ...     df=df,
+    ...     statistics=stats,
+    ...     weight="weight_0",
+    ...     replicates=replicates
+    ... )
+    >>> sc.print()
+    
+    Use with multiple imputation:
+    
+    >>> from survey_kit.statistics.multiple_imputation import mi_ses_from_function
+    >>> 
+    >>> arguments = {
+    ...     "statistics": stats,
+    ...     "replicates": replicates,
+    ...     "weight": "weight_0"
+    ... }
+    >>> 
+    >>> mi_results = mi_ses_from_function(
+    ...     delegate=StatCalculator,
+    ...     df_implicates=srmi.df_implicates,
+    ...     df_noimputes=weights_df,
+    ...     arguments=arguments,
+    ...     join_on=["Variable"]
+    ... )
+    
+    Notes
+    -----
+    **Bootstrap variance** (bootstrap=True):
+    - Standard bootstrap resampling variance estimation
+    - SE = sqrt(Σ(θ̂ᵣ - θ̂₀)² / R) where θ̂₀ is the base weight estimate, θ̂ᵣ are replicate estimates, and R is number of replicates
+    - Use when you generated your own bootstrap weights
+    
+    **BRR variance** (bootstrap=False):
+    - Balanced Repeated Replication variance
+    - Used by Census Bureau and other statistical agencies
+    - SE = sqrt(4 Σ(θ̂ᵣ - θ̂)² / R) where θ̄ᵣ is the mean across all replicate estimates
+    - Use when working with official government surveys that provide BRR weights
+    
+    The rep_list attribute provides all weight column names in order:
+    [weight_0, weight_1, ..., weight_n] where weight_0 is the base weight.
+    
+    See Also
+    --------
+    StatCalculator : Calculate statistics with replicate weight SEs
+    mi_ses_from_function : Combine replicate weights with multiple imputation
+    """
     _save_suffix = "replicates"
 
     def __init__(
@@ -51,7 +175,9 @@ class Replicates(Serializable):
         self.rep_list = [f"{weight_stub}{repi}" for repi in range(0, n_replicates + 1)]
 
 
-class ReplicateStats:
+class ReplicateStats(Serializable):
+    _save_suffix = "replicate_stats"
+    
     def __init__(
         self,
         df_estimates: IntoFrameT | None = None,
@@ -93,10 +219,12 @@ class ReplicateStats:
         self = self.copy()
 
         for dfi_name in self._df_attributes:
-            dfi = getattr(self, dfi_name)
-
-            if dfi is not None:
-                setattr(self, dfi_name, dfi.filter(filter_expr))
+            apply_as_attribute(
+                obj=self,
+                df_name=dfi_name,
+                nw_expr=filter_expr,
+                nw_method="filter"
+            )
 
         return self
 
@@ -106,12 +234,10 @@ class ReplicateStats:
         #   Don't edit the underlying object
         self = self.copy()
 
-        cols_keep = (
-            nw.from_native(self.df_estimates)
-            .select(select_expr)
-            .lazy()
-            .collect_schema()
-            .names()
+        select_expr = list_input(select_expr)
+        cols_keep = columns_from_list(
+            self.df_estimates,
+            columns=select_expr
         )
 
         for dfi_name in self._df_attributes:
@@ -120,10 +246,12 @@ class ReplicateStats:
             else:
                 replicate_col = []
 
-            dfi = getattr(self, dfi_name)
-
-            if dfi is not None:
-                setattr(self, dfi_name, dfi.select(cols_keep + replicate_col))
+            apply_as_attribute(
+                obj=self,
+                df_name=dfi_name,
+                nw_expr=cols_keep + replicate_col,
+                nw_method="select"
+            )
         return self
 
     def with_columns(self, with_expr: nw.Expr | list[nw.Expr]) -> ReplicateStats:
@@ -131,10 +259,12 @@ class ReplicateStats:
         self = self.copy()
 
         for dfi_name in self._df_attributes:
-            dfi = getattr(self, dfi_name)
-
-            if dfi is not None:
-                setattr(self, dfi_name, dfi.with_columns(with_expr))
+            apply_as_attribute(
+                obj=self,
+                df_name=dfi_name,
+                nw_expr=with_expr,
+                nw_method="with_columns"
+            )
 
         return self
 
@@ -145,10 +275,12 @@ class ReplicateStats:
         self = self.copy()
 
         for dfi_name in self._df_attributes:
-            dfi = getattr(self, dfi_name)
-
-            if dfi is not None:
-                setattr(self, dfi_name, dfi.sort(sort_expr))
+            apply_as_attribute(
+                obj=self,
+                df_name=dfi_name,
+                nw_expr=sort_expr,
+                nw_method="sort"
+            )
 
         return self
 
@@ -159,10 +291,12 @@ class ReplicateStats:
         self = self.copy()
 
         for dfi_name in self._df_attributes:
-            dfi = getattr(self, dfi_name)
-
-            if dfi is not None:
-                setattr(self, dfi_name, dfi.drop(drop_expr))
+            apply_as_attribute(
+                obj=self,
+                df_name=dfi_name,
+                nw_expr=drop_expr,
+                nw_method="drop"
+            )
 
         return self
 
@@ -171,10 +305,12 @@ class ReplicateStats:
         self = self.copy()
 
         for dfi_name in self._df_attributes:
-            dfi = getattr(self, dfi_name)
-
-            if dfi is not None:
-                setattr(self, dfi_name, dfi.rename(d_rename))
+            apply_as_attribute(
+                obj=self,
+                df_name=dfi_name,
+                nw_expr=d_rename,
+                nw_method="rename"
+            )
 
         return self
 
@@ -202,7 +338,7 @@ class ReplicateStats:
         for dfi_name in self._df_attributes:
             dfi = getattr(self, dfi_name)
             if dfi is not None:
-                setattr(self, dfi_name, function(dfi, *args, **kwargs))
+                setattr(self, dfi_name, nw.to_native(function(nw.from_native(dfi), *args, **kwargs)))
 
         return self
 
@@ -220,16 +356,20 @@ class ReplicateStats:
             nw_type = NarwhalsType(df)
 
             if how == "horizontal":
-                columns = nw.from_native(df).lazy().collect_schema().names()
+                columns = safe_columns(df)
                 replicate_col_name = "___replicate___"
                 if replicate_col_name in columns:
                     replicate_col = [replicate_col_name]
                 else:
                     replicate_col = []
 
-                join_list = join_on_concat + replicate_col
+
                 df_return = join_wrapper(
-                    df, df_join, on=join_list, how="left"
+                    df, 
+                    df_join, 
+                    left_on=join_on_self + replicate_col,
+                    right_on=join_on_concat + replicate_col,
+                    how="left"
                 ).lazy_backend(nw_type)
 
                 return df_return
@@ -668,3 +808,27 @@ def ses_from_replicates(
     df_estimates = fill_missing(df_estimates, None)
     df_ses = fill_missing(df_ses, None)
     return df_estimates, df_ses
+
+
+def apply_as_attribute(
+        obj,
+        df_name:str,
+        nw_expr,
+        nw_method:str
+    ):
+
+    dfi = nw.from_native(
+        getattr(obj, df_name)
+    )
+
+    if dfi is not None:
+        df_nw = nw.from_native(dfi)
+        nw_method_callable = getattr(df_nw,nw_method)
+        setattr(
+            obj,
+            df_name,
+            (
+                nw_method_callable(nw_expr)
+                .to_native()
+            )
+        )

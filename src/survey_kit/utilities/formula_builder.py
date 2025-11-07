@@ -1,19 +1,114 @@
-from __future__ import annotations
-from typing import Callable
-
-import re
-import narwhals as nw
-from narwhals.typing import IntoFrameT
-import polars as pl
-from formulaic import Formula
-from formulaic.parser import DefaultFormulaParser
-
-from .inputs import list_input
-from .dataframe import columns_from_list, _columns_original_order
-from .. import logger
-
-
 class FormulaBuilder:
+    """
+    Build and manipulate R-style formulas for statistical models.
+    
+    FormulaBuilder provides a programmatic way to construct complex model formulas
+    using R/Patsy-style syntax. It supports formula manipulation, variable expansion,
+    interactions, transformations, and pattern matching against dataframes.
+    
+    The class works with Formulaic to parse and expand formulas, and integrates
+    with the dataframe utilities to resolve wildcards and column patterns.
+    
+    Parameters
+    ----------
+    df : IntoFrameT | None, optional
+        Reference dataframe for resolving column names and wildcards.
+        Default is None.
+    formula : str, optional
+        Initial formula string. If empty, constructs from lhs and constant.
+        Default is "".
+    lhs : str, optional
+        Left-hand side of formula (response variable). Default is "".
+    constant : bool, optional
+        Include intercept term (1) or suppress it (0). Default is True.
+        
+    Attributes
+    ----------
+    formula : str
+        Current formula string.
+    df : IntoFrameT | None
+        Reference dataframe.
+    columns : list[str]
+        All variables required by the formula.
+    columns_rhs : list[str]
+        Variables in right-hand side of formula.
+    columns_lhs : list[str]
+        Variables in left-hand side of formula.
+        
+    Examples
+    --------
+    Basic formula construction:
+    
+    >>> from survey_kit.utilities.formula import FormulaBuilder
+    >>> 
+    >>> fb = FormulaBuilder(df=df, lhs="income", constant=True)
+    >>> fb += "age + education"
+    >>> print(fb.formula)
+    'income~1+age+education'
+    
+    Add variables using wildcards:
+    
+    >>> fb = FormulaBuilder(df=df, lhs="income")
+    >>> fb.continuous(columns="demographic_*")
+    >>> fb.factor(columns="region")
+    >>> print(fb.formula)
+    
+    Polynomial terms:
+    
+    >>> fb = FormulaBuilder(df=df, lhs="income")
+    >>> fb.polynomial(columns="age", degree=3)
+    >>> print(fb.formula)
+    'income~1+poly(age,degree=3,raw=True)'
+    
+    Interactions:
+    
+    >>> fb = FormulaBuilder(df=df, lhs="income")
+    >>> fb.simple_interaction(columns=["age", "education"], order=2)
+    >>> print(fb.formula)
+    'income~1+(age+education)**2'
+    
+    Standardization:
+    
+    >>> fb = FormulaBuilder(df=df, lhs="income")
+    >>> fb.scale(columns=["age", "experience"])
+    >>> print(fb.formula)
+    'income~1+scale(age)+scale(experience)'
+    
+    Working with existing formula strings:
+    
+    >>> formula = "income~age+education+age:education"
+    >>> fb = FormulaBuilder(df=df, formula=formula)
+    >>> fb.expand()  # Expand shorthand
+    >>> print(fb.rhs())  # Get right-hand side
+    'age+education+age:education'
+    >>> print(fb.columns)
+    ['income', 'age', 'education']
+    
+    Notes
+    -----
+    Formula syntax follows R/Patsy conventions:
+    - `~` separates left and right sides
+    - `+` adds terms
+    - `:` creates interactions
+    - `*` creates main effects and interactions: `a*b` = `a+b+a:b`
+    - `**n` creates all n-way interactions
+    - `I()` for arithmetic operations
+    - `C()` for categorical variables
+    - Functions like `scale()`, `center()`, `poly()` for transformations
+    
+    Wildcards in column specifications:
+    - `"income_*"` matches all columns starting with "income_"
+    - `["age", "education_*"]` matches age and all education columns
+    
+    The FormulaBuilder can be used in two modes:
+    1. Object mode: Create instance and chain methods
+    2. Static mode: Call methods with self=None for one-off operations
+    
+    See Also
+    --------
+    formulaic.Formula : Underlying formula parser
+    """
+    
     def __init__(
         self,
         df: IntoFrameT | None = None,
@@ -35,6 +130,7 @@ class FormulaBuilder:
         return self.formula
 
     def __add__(self, o):
+        """Add terms to the formula using + operator."""
         if type(o) is FormulaBuilder:
             o = o.rhs()
 
@@ -54,6 +150,16 @@ class FormulaBuilder:
         return self
 
     def add_to_formula(self, add_part: str = "", plus_first: bool = True) -> None:
+        """
+        Append a string to the formula.
+        
+        Parameters
+        ----------
+        add_part : str, optional
+            String to append. Default is "".
+        plus_first : bool, optional
+            Add "+" before the string. Default is True.
+        """
         if plus_first:
             plus = "+"
         else:
@@ -69,6 +175,31 @@ class FormulaBuilder:
         prefix: str = "",
         suffix: str = "",
     ) -> str | FormulaBuilder:
+        """
+        General wrapper for adding columns with prefix/suffix.
+        
+        Used internally by other methods to add variables with transformations.
+        
+        Parameters
+        ----------
+        df : IntoFrameT | None, optional
+            Dataframe for resolving column patterns. Default is None.
+        columns : str | list | None, optional
+            Column names or patterns. Default is None.
+        clause : str, optional
+            Pre-constructed clause (bypasses column lookup). Default is "".
+        case_insensitive : bool, optional
+            Case-insensitive column matching. Default is False.
+        prefix : str, optional
+            String to prepend to each column. Default is "".
+        suffix : str, optional
+            String to append to each column. Default is "".
+            
+        Returns
+        -------
+        str | FormulaBuilder
+            Formula string if self is None, otherwise returns self for chaining.
+        """
         columns = list_input(columns)
 
         #   Dataframe to look for columns in
@@ -99,6 +230,32 @@ class FormulaBuilder:
         clause: str = "",
         case_insensitive: bool = False,
     ) -> str | FormulaBuilder:
+        """
+        Add continuous variables to the formula.
+        
+        Parameters
+        ----------
+        df : IntoFrameT | None, optional
+            Dataframe for column lookup. Default is None.
+        columns : str | list | None, optional
+            Column names or patterns (e.g., "income_*"). Default is None.
+        clause : str, optional
+            Pre-constructed clause. Default is "".
+        case_insensitive : bool, optional
+            Case-insensitive matching. Default is False.
+            
+        Returns
+        -------
+        str | FormulaBuilder
+            Formula string or self for chaining.
+            
+        Examples
+        --------
+        >>> fb = FormulaBuilder(df=df, lhs="y")
+        >>> fb.continuous(columns=["age", "income"])
+        >>> print(fb.formula)
+        'y~1+age+income'
+        """
         if self is None:
             caller = FormulaBuilder
         else:
@@ -119,6 +276,39 @@ class FormulaBuilder:
         case_insensitive: bool = False,
         **kwargs,
     ) -> str | FormulaBuilder:
+        """
+        Wrap columns in a function call.
+        
+        Parameters
+        ----------
+        df : IntoFrameT | None, optional
+            Dataframe for column lookup. Default is None.
+        columns : str | list | None, optional
+            Column names or patterns. Default is None.
+        clause : str, optional
+            Pre-constructed clause. Default is "".
+        operator_before : str, optional
+            String before function call. Default is "".
+        operator_after : str, optional
+            String after function call. Default is "".
+        function_item : str, optional
+            Function name (e.g., "log", "sqrt"). Default is "".
+        case_insensitive : bool, optional
+            Case-insensitive matching. Default is False.
+        **kwargs
+            Additional function arguments.
+            
+        Returns
+        -------
+        str | FormulaBuilder
+            Formula string or self for chaining.
+            
+        Examples
+        --------
+        >>> fb.function(columns="income", function_item="log")
+        >>> print(fb.formula)
+        'y~1+log(income)'
+        """
         if self is None:
             caller = FormulaBuilder
         else:
@@ -157,6 +347,33 @@ class FormulaBuilder:
         standardize: bool = True,
         case_insensitive: bool = False,
     ) -> str | FormulaBuilder:
+        """
+        Standardize or center variables.
+        
+        Parameters
+        ----------
+        df : IntoFrameT | None, optional
+            Dataframe for column lookup. Default is None.
+        columns : str | list | None, optional
+            Column names or patterns. Default is None.
+        clause : str, optional
+            Pre-constructed clause. Default is "".
+        standardize : bool, optional
+            If True, standardize (mean=0, sd=1). If False, only center (mean=0).
+            Default is True.
+        case_insensitive : bool, optional
+            Case-insensitive matching. Default is False.
+            
+        Returns
+        -------
+        str | FormulaBuilder
+            Formula string or self for chaining.
+            
+        Examples
+        --------
+        >>> fb.scale(columns="age")  # Standardize
+        >>> fb.scale(columns="income", standardize=False)  # Center only
+        """
         if self is None:
             caller = FormulaBuilder
         else:
@@ -183,6 +400,27 @@ class FormulaBuilder:
         clause: str = "",
         case_insensitive: bool = False,
     ) -> str | FormulaBuilder:
+        """
+        Center variables (subtract mean).
+        
+        Convenience method for scale(standardize=False).
+        
+        Parameters
+        ----------
+        df : IntoFrameT | None, optional
+            Dataframe for column lookup. Default is None.
+        columns : str | list | None, optional
+            Column names or patterns. Default is None.
+        clause : str, optional
+            Pre-constructed clause. Default is "".
+        case_insensitive : bool, optional
+            Case-insensitive matching. Default is False.
+            
+        Returns
+        -------
+        str | FormulaBuilder
+            Formula string or self for chaining.
+        """
         if self is None:
             caller = FormulaBuilder
         else:
@@ -203,6 +441,27 @@ class FormulaBuilder:
         clause: str = "",
         case_insensitive: bool = False,
     ) -> str | FormulaBuilder:
+        """
+        Standardize variables (mean=0, sd=1).
+        
+        Convenience method for scale(standardize=True).
+        
+        Parameters
+        ----------
+        df : IntoFrameT | None, optional
+            Dataframe for column lookup. Default is None.
+        columns : str | list | None, optional
+            Column names or patterns. Default is None.
+        clause : str, optional
+            Pre-constructed clause. Default is "".
+        case_insensitive : bool, optional
+            Case-insensitive matching. Default is False.
+            
+        Returns
+        -------
+        str | FormulaBuilder
+            Formula string or self for chaining.
+        """
         if self is None:
             caller = FormulaBuilder
         else:
@@ -225,6 +484,39 @@ class FormulaBuilder:
         case_insensitive: bool = False,
         center: bool = False,
     ) -> str | FormulaBuilder:
+        """
+        Add polynomial terms.
+        
+        Parameters
+        ----------
+        df : IntoFrameT | None, optional
+            Dataframe for column lookup. Default is None.
+        columns : str | list | None, optional
+            Column names or patterns. Default is None.
+        clause : str, optional
+            Pre-constructed clause. Default is "".
+        degree : int, optional
+            Polynomial degree. Default is 0 (returns continuous).
+        case_insensitive : bool, optional
+            Case-insensitive matching. Default is False.
+        center : bool, optional
+            Use orthogonal polynomials (centered). Default is False (raw polynomials).
+            
+        Returns
+        -------
+        str | FormulaBuilder
+            Formula string or self for chaining.
+            
+        Examples
+        --------
+        >>> fb.polynomial(columns="age", degree=3)
+        >>> print(fb.formula)
+        'y~1+poly(age,degree=3,raw=True)'
+        
+        >>> fb.polynomial(columns="age", degree=2, center=True)
+        >>> print(fb.formula)
+        'y~1+poly(age,degree=2,raw=False)'
+        """
         if self is None:
             caller = FormulaBuilder
         else:
@@ -272,9 +564,6 @@ class FormulaBuilder:
                 self.add_to_formula(subformula, False)
                 return self
 
-    # #   Simple Interactions within group, where Order # determines interaction depths
-    # #       2 = pairwise/second order
-    # #       3
     def simple_interaction(
         self=None,
         df: IntoFrameT | None = None,
@@ -284,6 +573,39 @@ class FormulaBuilder:
         sub_function: Callable | None = None,
         no_base: bool = False,
     ) -> str | FormulaBuilder:
+        """
+        Create interactions between variables.
+        
+        Parameters
+        ----------
+        df : IntoFrameT | None, optional
+            Dataframe for column lookup. Default is None.
+        columns : str | list | None, optional
+            Column names or patterns. Default is None.
+        order : int, optional
+            Interaction order. 2 = pairwise, 3 = three-way, etc. Default is 2.
+        case_insensitive : bool, optional
+            Case-insensitive matching. Default is False.
+        sub_function : Callable | None, optional
+            Function to apply to columns before interacting. Default is None.
+        no_base : bool, optional
+            Exclude main effects (only interactions). Default is False.
+            
+        Returns
+        -------
+        str | FormulaBuilder
+            Formula string or self for chaining.
+            
+        Examples
+        --------
+        >>> fb.simple_interaction(columns=["age", "education"], order=2)
+        >>> print(fb.formula)
+        'y~1+(age+education)**2'
+        
+        >>> fb.simple_interaction(columns=["a", "b", "c"], order=2, no_base=True)
+        >>> print(fb.formula)
+        'y~1+(a+b+c)**2-(a+b+c)'  # Interactions only
+        """
         if self is not None:
             if df is None:
                 df = self.df
@@ -318,6 +640,29 @@ class FormulaBuilder:
     def interact_clauses(
         self=None, clause1: str = "", clause2: str = "", no_base: bool = False
     ) -> str | FormulaBuilder:
+        """
+        Create interactions between two formula clauses.
+        
+        Parameters
+        ----------
+        clause1 : str, optional
+            First formula clause. Default is "".
+        clause2 : str, optional
+            Second formula clause. Default is "".
+        no_base : bool, optional
+            Exclude main effects from clauses. Default is False.
+            
+        Returns
+        -------
+        str | FormulaBuilder
+            Formula string or self for chaining.
+            
+        Examples
+        --------
+        >>> fb.interact_clauses("age+education", "region")
+        >>> print(fb.formula)
+        'y~1+(age+education)*(region)'
+        """
         if clause1.startswith("+"):
             clause1 = clause1[1:]
         if clause2.startswith("+"):
@@ -345,6 +690,37 @@ class FormulaBuilder:
         reference=None,
         case_insensitive: bool = False,
     ):
+        """
+        Add categorical variables with treatment coding.
+        
+        Parameters
+        ----------
+        df : IntoFrameT | None, optional
+            Dataframe for column lookup. Default is None.
+        columns : str | list | None, optional
+            Column names or patterns. Default is None.
+        clause : str, optional
+            Pre-constructed clause. Default is "".
+        reference : str | int | None, optional
+            Reference level for treatment coding. Default is None (use first level).
+        case_insensitive : bool, optional
+            Case-insensitive matching. Default is False.
+            
+        Returns
+        -------
+        str | FormulaBuilder
+            Formula string or self for chaining.
+            
+        Examples
+        --------
+        >>> fb.factor(columns="region")
+        >>> print(fb.formula)
+        'y~1+C(region)'
+        
+        >>> fb.factor(columns="education", reference="high_school")
+        >>> print(fb.formula)
+        "y~1+C(education, contr.treatment('high_school'))"
+        """
         if self is None:
             caller = FormulaBuilder
         else:
@@ -366,9 +742,23 @@ class FormulaBuilder:
 
     @property
     def columns(self):
+        """Get all variables required by the formula."""
         return self.columns_from_formula()
 
     def columns_from_formula(self=None, formula: str = "") -> list[str]:
+        """
+        Extract variable names from a formula.
+        
+        Parameters
+        ----------
+        formula : str, optional
+            Formula string. If empty, uses self.formula. Default is "".
+            
+        Returns
+        -------
+        list[str]
+            Variable names required by the formula.
+        """
         if type(self) is str:
             formula = self
             self = None
@@ -378,6 +768,19 @@ class FormulaBuilder:
         return list(Formula(formula).required_variables)
 
     def lhs(self=None, formula: str = "") -> str:
+        """
+        Get left-hand side of formula.
+        
+        Parameters
+        ----------
+        formula : str, optional
+            Formula string. If empty, uses self.formula. Default is "".
+            
+        Returns
+        -------
+        str
+            Left-hand side (response variable).
+        """
         if type(self) is str:
             formula = self
             self = None
@@ -397,6 +800,19 @@ class FormulaBuilder:
         return lhs_string
 
     def rhs(self=None, formula: str = "") -> str:
+        """
+        Get right-hand side of formula.
+        
+        Parameters
+        ----------
+        formula : str, optional
+            Formula string. If empty, uses self.formula. Default is "".
+            
+        Returns
+        -------
+        str
+            Right-hand side (predictors).
+        """
         if type(self) is str:
             formula = self
             self = None
@@ -417,6 +833,7 @@ class FormulaBuilder:
 
     @property
     def columns_rhs(self):
+        """Variables in right-hand side, ordered as in dataframe."""
         formula_rhs = self.rhs()
         columns = FormulaBuilder.columns_from_formula(formula=formula_rhs)
 
@@ -430,6 +847,7 @@ class FormulaBuilder:
 
     @property
     def columns_lhs(self):
+        """Variables in left-hand side, ordered as in dataframe."""
         formula_lhs = self.lhs()
         if formula_lhs == "":
             return []
@@ -452,6 +870,22 @@ class FormulaBuilder:
     def has_constant(
         self=None, formula: str = "", true_if_missing: bool = False
     ) -> bool:
+        """
+        Check if formula includes an intercept.
+        
+        Parameters
+        ----------
+        formula : str, optional
+            Formula string. If empty, uses self.formula. Default is "".
+        true_if_missing : bool, optional
+            Return True if constant term is implicit (not specified).
+            Default is False.
+            
+        Returns
+        -------
+        bool
+            True if formula includes intercept.
+        """
         if type(self) is str:
             formula = self
             self = None
@@ -475,120 +909,45 @@ class FormulaBuilder:
             return rhs.replace(" ", "").startswith("1")
 
     def remove_constant(self):
+        """Remove intercept from formula (change ~1+ to ~0+)."""
         self.formula = self.formula.replace("~1+", "~")
         self.formula = self.formula.replace("~0+", "~")
         self.formula = self.formula.replace("~", "~0+")
 
-    def interactions_with_cols_to_list(
-        self=None,
-        formula: str = "",
-        df: IntoFrameT | None = None,
-        col_check: list = None,
-    ) -> dict:
-        interactions_dict = FormulaBuilder.interactions_with_cols_to_dict(
-            self=self, formula=formula, df=df, col_check=col_check
-        )
-
-        outputs = []
-        for valuei in interactions_dict.values():
-            outputs.extend(valuei)
-
-        #   Remove duplicates and returns
-        return _columns_original_order(
-            cols_unordered=list(set(outputs)), cols_ordered=outputs
-        )
-
-    def interactions_with_cols_to_dict(
-        self=None,
-        formula: str = "",
-        df: IntoFrameT | None = None,
-        col_check: list = None,
-    ) -> dict:
+    def expand(self=None, formula: str = ""):
+        """
+        Expand formula shorthand (e.g., a*b becomes a+b+a:b).
+        
+        Parameters
+        ----------
+        formula : str, optional
+            Formula string. If empty, uses self.formula. Default is "".
+            
+        Returns
+        -------
+        str
+            Expanded formula string.
+        """
         if self is not None:
-            if df is None:
-                df = self.df
             if formula == "":
                 formula = self.formula
         else:
-            self = FormulaBuilder(df=df, formula=formula)
+            self = FormulaBuilder(formula=formula)
 
-        self.expand()
+        lhs = self.lhs()
+        rhs = self.rhs()
 
-        logger.info(self.formula)
+        parser = DefaultFormulaParser()
+        parsed = parser.get_terms(rhs)
+        reconstructed_formula = "+".join([str(i) for i in parsed])
 
-        #   Separate into subclauses
-        sides = self.formula.split("~")
-        if len(sides) == 2:
-            lhs = sides[0]
-            rhs = sides[1]
-        else:
-            lhs = None
-            rhs = sides[0]
-
-        subclauses = rhs.split("+")
-
-        interactions = {coli: [] for coli in col_check}
-        for clausei in subclauses:
-            fbi = FormulaBuilder(df=df, formula=f"~{clausei}")
-
-            cols_in_clausei = fbi.columns
-            for coli in col_check:
-                if coli in cols_in_clausei:
-                    interactions[coli].append(clausei)
-
-        return interactions
-
-    def add_base_from_interactions(
-        self=None, formula: str = "", df: IntoFrameT | None = None
-    ):
-        if self is not None:
-            if df is None:
-                df = self.df
-            if formula == "":
-                formula = self.formula
-
-        #   Separate into subclauses
-        sides = formula.split("~")
-        if len(sides) == 2:
-            lhs = sides[0]
-            rhs = sides[1]
-        else:
-            lhs = None
-            rhs = sides[0]
-        subclauses = rhs.split("+")
-
-        rhs = ""
-
-        interactions = []
-        non_interactions = []
-        for clausei in subclauses:
-            if ":" in clausei:
-                interactions.append(clausei)
-            else:
-                non_interactions.append(clausei.strip())
-
-            rhs += f"+{clausei.strip()}"
-
-        for interi in interactions:
-            sub_clauses = interi.split(":")
-
-            for subi in sub_clauses:
-                subi = subi.strip()
-                if subi not in non_interactions:
-                    rhs += f"+{subi}"
-
-        #   Get rid of leading +
-        rhs = rhs[1 : len(rhs)]
-
-        if lhs is not None:
-            output = f"{lhs}~{rhs}"
-        else:
-            output = rhs
+        if lhs != "":
+            reconstructed_formula = f"{lhs}~{reconstructed_formula}"
 
         if self is not None:
-            self.formula = output
+            self.formula = reconstructed_formula
 
-        return output
+        return reconstructed_formula
 
     def exclude_interactions(
         self=None,
@@ -596,6 +955,23 @@ class FormulaBuilder:
         b_exclude_powers: bool = True,
         df: IntoFrameT | None = None,
     ) -> tuple[str, bool]:
+        """
+        Remove interaction terms from formula.
+        
+        Parameters
+        ----------
+        formula : str, optional
+            Formula string. If empty, uses self.formula. Default is "".
+        b_exclude_powers : bool, optional
+            Also exclude polynomial terms. Default is True.
+        df : IntoFrameT | None, optional
+            Reference dataframe. Default is None.
+            
+        Returns
+        -------
+        tuple[str, bool]
+            (modified formula, whether any terms were dropped)
+        """
         if self is not None:
             if df is None:
                 df = self.df
@@ -643,116 +1019,83 @@ class FormulaBuilder:
         self.formula = output
         return (output, any_dropped)
 
-    def expand(self=None, formula: str = ""):
-        if self is not None:
-            if formula == "":
-                formula = self.formula
-        else:
-            self = FormulaBuilder(formula=formula)
-
-        lhs = self.lhs()
-        rhs = self.rhs()
-
-        parser = DefaultFormulaParser()
-        parsed = parser.get_terms(rhs)
-        reconstructed_formula = "+".join([str(i) for i in parsed])
-
-        if lhs != "":
-            reconstructed_formula = f"{lhs}~{reconstructed_formula}"
-
-        if self is not None:
-            self.formula = reconstructed_formula
-
-        return reconstructed_formula
-
-    def recode_to_continuous(
+    def exclude_variables(
         self=None,
-        df: pl.LazyFrame | pl.DataFrame | None = None,
+        exclude_list: list = None,
         formula: str = "",
-        remove_factor: bool = True,
-        remove_scale: bool = True,
-    ) -> tuple[str, list[str]]:
+        df: IntoFrameT | None = None,
+        case_insensitive: bool = False,
+    ):
+        """
+        Remove specific variables from formula.
+        
+        Parameters
+        ----------
+        exclude_list : list, optional
+            Variables to exclude. Default is None.
+        formula : str, optional
+            Formula string. If empty, uses self.formula. Default is "".
+        df : IntoFrameT | None, optional
+            Reference dataframe. Default is None.
+        case_insensitive : bool, optional
+            Case-insensitive matching. Default is False.
+            
+        Returns
+        -------
+        str | FormulaBuilder
+            Modified formula string or self for chaining.
+        """
+        if exclude_list is None:
+            exclude_list = []
+
         if self is not None:
+            if df is None:
+                df = self.df
             if formula == "":
                 formula = self.formula
-        else:
-            self = FormulaBuilder(df=df, formula=formula)
 
-        #   It's easier with the expanded formula
-        self.expand()
+        if df is not None:
+            exclude_list = columns_from_list(
+                df=df, columns=exclude_list, case_insensitive=case_insensitive
+            )
 
         #   Separate into subclauses
-        sides = self.formula.split("~")
+        sides = formula.split("~")
         if len(sides) == 2:
             lhs = sides[0]
             rhs = sides[1]
         else:
-            lhs = ""
+            lhs = None
             rhs = sides[0]
-
         subclauses = rhs.split("+")
 
-        processed_rhs = ""
-        recoded_factors = []
+        rhs = ""
+
+        regex_list = [
+            f"(^|([^a-zA-Z0-9_])){itemi}($|([^a-zA-Z0-9_]))" for itemi in exclude_list
+        ]
+        regexes = "(" + ")|(".join(regex_list) + ")"
+
         for clausei in subclauses:
-            if ":" in clausei:
-                #   Interaction
-                interaction = ""
-                for subi in clausei.split(":"):
-                    if interaction != "":
-                        colon = ":"
-                    else:
-                        colon = ""
-
-                    if FormulaBuilder._is_factor(subi):
-                        if remove_factor:
-                            subi = FormulaBuilder.columns_from_formula(
-                                formula=f"~{subi}"
-                            )[0]
-                            recoded_factors.append(subi)
-                    elif FormulaBuilder._is_scale(subi):
-                        if remove_scale:
-                            subi = FormulaBuilder.columns_from_formula(
-                                formula=f"~{subi}"
-                            )[0]
-                    interaction += f"{colon}{subi}"
-
-                processed_rhs += f"+{interaction}"
+            if re.match(regexes, clausei) is None:
+                #   include this in the final formula
+                rhs += f"+{clausei}"
             else:
-                if FormulaBuilder._is_factor(clausei):
-                    if remove_factor:
-                        clausei = FormulaBuilder.columns_from_formula(
-                            formula=f"~{clausei}"
-                        )[0]
-                        recoded_factors.append(clausei)
-                elif FormulaBuilder._is_scale(clausei):
-                    if remove_scale:
-                        clausei = FormulaBuilder.columns_from_formula(
-                            formula=f"~{clausei}"
-                        )[0]
-
-                processed_rhs += f"+{clausei}"
+                logger.info(f"Dropping {clausei} from formula")
 
         #   Get rid of leading +
-        processed_rhs = processed_rhs[1 : len(processed_rhs)]
-        output = f"{lhs}~{processed_rhs}"
+        rhs = rhs[1 : len(rhs)]
 
-        self.formula = output
+        if lhs is not None:
+            output = f"{lhs}~{rhs}"
+        else:
+            output = rhs
 
-        #   Remove duplicates from recode_factors
-        return (
-            output,
-            _columns_original_order(
-                columns_unordered=list(set(recoded_factors)),
-                columns_ordered=recoded_factors,
-            ),
-        )
-
-    def _is_factor(clause: str):
-        return clause.startswith("C(") and "[T." in clause
-
-    def _is_scale(clause: str):
-        return clause.startswith("scale(")
+        if self is None:
+            return output
+        else:
+            self.formula = output
+            return self
 
     def formula_with_varnames_in_brackets(
         self=None,
@@ -762,26 +1105,34 @@ class FormulaBuilder:
         append: bool = False,
     ) -> str | FormulaBuilder:
         """
-        Add a clause, but replace {var*1} with the list of variables that
-            match var*1 in the dataframe
-
+        Expand {pattern} placeholders with matching column names.
+        
+        Replaces {var*} with all columns matching var* pattern in the dataframe.
+        Useful for programmatically building formulas with wildcards.
+        
         Parameters
         ----------
-        df : pl.LazyFrame | pl.DataFrame | None, optional
-            Data frame to use to lookup the variable names (if not in class object).
-            The default is None.
         clause : str, optional
-            The default is "".
+            Formula clause with {pattern} placeholders. Default is "".
+        df : pl.LazyFrame | pl.DataFrame | None, optional
+            Dataframe for column lookup. Default is None.
         case_insensitive : bool, optional
-            Case insentive search for variables in {}.  The default is False
+            Case-insensitive pattern matching. Default is False.
         append : bool, optional
-            Append the Clause to the existing formula (rather than overwriting it)
-            Only used if called on a FormulaBuilder object (rather than with self is None).
-            The default is False
+            Append to existing formula instead of replacing.
+            Only used when called on instance. Default is False.
+            
         Returns
         -------
-        self (if class object) or string (if uninitialized)
-
+        str | FormulaBuilder
+            Expanded formula string or self for chaining.
+            
+        Examples
+        --------
+        >>> fb = FormulaBuilder(df=df)
+        >>> fb.formula_with_varnames_in_brackets("{income_*} + age")
+        >>> print(fb.formula)
+        'y~1+income_wages+income_self_employment+age'
         """
 
         call_recursively = False
@@ -843,112 +1194,3 @@ class FormulaBuilder:
             else:
                 self.formula = output
             return self
-
-    def exclude_variables(
-        self=None,
-        exclude_list: list = None,
-        formula: str = "",
-        df: IntoFrameT | None = None,
-        case_insensitive: bool = False,
-    ):
-        if exclude_list is None:
-            exclude_list = []
-
-        if self is not None:
-            if df is None:
-                df = self.df
-            if formula == "":
-                formula = self.formula
-
-        if df is not None:
-            exclude_list = columns_from_list(
-                df=df, columns=exclude_list, case_insensitive=case_insensitive
-            )
-
-        #   Separate into subclauses
-        sides = formula.split("~")
-        if len(sides) == 2:
-            lhs = sides[0]
-            rhs = sides[1]
-        else:
-            lhs = None
-            rhs = sides[0]
-        subclauses = rhs.split("+")
-
-        rhs = ""
-
-        regex_list = [
-            f"(^|([^a-zA-Z0-9_])){itemi}($|([^a-zA-Z0-9_]))" for itemi in exclude_list
-        ]
-        regexes = "(" + ")|(".join(regex_list) + ")"
-
-        for clausei in subclauses:
-            if re.match(regexes, clausei) is None:
-                #   include this in the final formula
-                rhs += f"+{clausei}"
-            else:
-                logger.info(f"Dropping {clausei} from formula")
-
-        #   Get rid of leading +
-        rhs = rhs[1 : len(rhs)]
-
-        if lhs is not None:
-            output = f"{lhs}~{rhs}"
-        else:
-            output = rhs
-
-        if self is None:
-            return output
-        else:
-            self.formula = output
-            return self
-
-    def match_formula_to_columns(self=None, columns: list = None, formula: str = ""):
-        if columns is None:
-            columns = []
-        if self is not None:
-            if formula == "":
-                formula = self.formula
-
-        b_constant = FormulaBuilder.has_constant(formula=formula)
-        formula = FormulaBuilder.expand(formula=formula)
-
-        #   Separate into subclauses
-        sides = formula.split("~")
-        if len(sides) == 2:
-            lhs = sides[0]
-            rhs = sides[1]
-        else:
-            lhs = ""
-            rhs = sides[0]
-
-        subclauses = rhs.split("+")
-
-        #   Sort them by string length (so longer ones match first)
-        subclauses.sort(key=len, reverse=True)
-        matched = []
-        for clausei in subclauses:
-            pattern = f"^.*{re.escape(clausei)}.*$"
-
-            remaining = []
-            for coli in columns:
-                if re.match(pattern, coli):
-                    if clausei not in matched:
-                        matched.insert(0, clausei)
-                else:
-                    remaining.append(coli)
-            columns = remaining
-
-            if len(columns) == 0:
-                break
-
-        if b_constant:
-            constant = "1"
-        else:
-            constant = "0"
-        output = f"{lhs}~{constant}+{'+'.join(matched)}"
-
-        if self is not None:
-            self.formula = output
-
-        return output

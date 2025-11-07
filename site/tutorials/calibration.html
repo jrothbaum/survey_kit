@@ -3,7 +3,7 @@
 <html lang="en">
 <head><meta charset="utf-8"/>
 <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
-<title>regression</title><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.1.10/require.min.js"></script>
+<title>calibration</title><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.1.10/require.min.js"></script>
 <style type="text/css">
     pre { line-height: 125%; }
 td.linenos .normal { color: inherit; background-color: transparent; padding-left: 5px; padding-right: 5px; }
@@ -7510,7 +7510,7 @@ a.anchor-link {
 </style>
 <!-- End of mermaid configuration --></head>
 <body class="jp-Notebook" data-jp-theme-light="true" data-jp-theme-name="JupyterLab Light">
-<main><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=ab055b58">
+<main><div class="jp-Cell jp-CodeCell jp-Notebook-cell jp-mod-noOutputs" id="cell-id=eede8bd1">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -7518,7 +7518,63 @@ a.anchor-link {
 <div class="jp-InputPrompt jp-InputArea-prompt">In [1]:</div>
 <div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
 <div class="cm-editor cm-s-jupyter">
-<div class="highlight hl-ipython3"><pre><span></span><span class="nb">print</span><span class="p">(</span><span class="s2">"HI"</span><span class="p">)</span>
+<div class="highlight hl-ipython3"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">survey_kit.utilities.random</span><span class="w"> </span><span class="kn">import</span> <span class="n">RandomData</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">survey_kit.utilities.formula_builder</span><span class="w"> </span><span class="kn">import</span> <span class="n">FormulaBuilder</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">survey_kit.calibration.moment</span><span class="w"> </span><span class="kn">import</span> <span class="n">Moment</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">survey_kit.calibration.calibration</span><span class="w"> </span><span class="kn">import</span> <span class="n">Calibration</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">survey_kit.utilities.dataframe</span><span class="w"> </span><span class="kn">import</span> <span class="n">summary</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">narwhals</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">nw</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">survey_kit</span><span class="w"> </span><span class="kn">import</span> <span class="n">logger</span>
+</pre></div>
+</div>
+</div>
+</div>
+</div>
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=52fa22b1">
+<div class="jp-Cell-inputWrapper" tabindex="0">
+<div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
+</div>
+<div class="jp-InputArea jp-Cell-inputArea">
+<div class="jp-InputPrompt jp-InputArea-prompt">In [2]:</div>
+<div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
+<div class="cm-editor cm-s-jupyter">
+<div class="highlight hl-ipython3"><pre><span></span><span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">"Generating data for weighting"</span><span class="p">)</span>
+<span class="n">n_rows</span> <span class="o">=</span> <span class="mi">100_000</span>
+<span class="n">df_population</span> <span class="o">=</span> <span class="p">(</span>
+    <span class="n">RandomData</span><span class="p">(</span><span class="n">n_rows</span><span class="o">=</span><span class="n">n_rows</span><span class="p">,</span> <span class="n">seed</span><span class="o">=</span><span class="mi">12332151</span><span class="p">)</span>
+    <span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="s2">"index"</span><span class="p">)</span>
+    <span class="o">.</span><span class="n">integer</span><span class="p">(</span><span class="s2">"v_1"</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">10</span><span class="p">)</span>
+    <span class="o">.</span><span class="n">np_distribution</span><span class="p">(</span><span class="s2">"v_f_continuous_0"</span><span class="p">,</span> <span class="s2">"normal"</span><span class="p">,</span> <span class="n">loc</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span> <span class="n">scale</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+    <span class="o">.</span><span class="n">np_distribution</span><span class="p">(</span><span class="s2">"v_f_continuous_1"</span><span class="p">,</span> <span class="s2">"normal"</span><span class="p">,</span> <span class="n">loc</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span> <span class="n">scale</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+    <span class="o">.</span><span class="n">np_distribution</span><span class="p">(</span><span class="s2">"v_f_continuous_2"</span><span class="p">,</span> <span class="s2">"normal"</span><span class="p">,</span> <span class="n">loc</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span> <span class="n">scale</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+    <span class="o">.</span><span class="n">float</span><span class="p">(</span><span class="s2">"v_extra"</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span>
+    <span class="o">.</span><span class="n">np_distribution</span><span class="p">(</span><span class="s2">"weight_0"</span><span class="p">,</span> <span class="s2">"normal"</span><span class="p">,</span> <span class="n">loc</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span> <span class="n">scale</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+    <span class="o">.</span><span class="n">np_distribution</span><span class="p">(</span><span class="s2">"weight_1"</span><span class="p">,</span> <span class="s2">"normal"</span><span class="p">,</span> <span class="n">loc</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span> <span class="n">scale</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+    <span class="o">.</span><span class="n">integer</span><span class="p">(</span><span class="s2">"year"</span><span class="p">,</span> <span class="mi">2016</span><span class="p">,</span> <span class="mi">2021</span><span class="p">)</span>
+    <span class="o">.</span><span class="n">integer</span><span class="p">(</span><span class="s2">"month"</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">12</span><span class="p">)</span>
+    <span class="o">.</span><span class="n">to_df</span><span class="p">()</span>
+    <span class="o">.</span><span class="n">lazy</span><span class="p">()</span>
+<span class="p">)</span>
+
+<span class="n">df_treatment</span> <span class="o">=</span> <span class="p">(</span>
+    <span class="n">RandomData</span><span class="p">(</span><span class="n">n_rows</span><span class="o">=</span><span class="n">n_rows</span><span class="p">,</span> <span class="n">seed</span><span class="o">=</span><span class="mi">894654</span><span class="p">)</span>
+    <span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="s2">"index"</span><span class="p">)</span>
+    <span class="o">.</span><span class="n">integer</span><span class="p">(</span><span class="s2">"v_1"</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">10</span><span class="p">)</span>
+    <span class="c1">#   Intentionally set the loc/scale as different than above</span>
+    <span class="o">.</span><span class="n">np_distribution</span><span class="p">(</span><span class="s2">"v_f_continuous_0"</span><span class="p">,</span> <span class="s2">"normal"</span><span class="p">,</span> <span class="n">loc</span><span class="o">=</span><span class="mi">11</span><span class="p">,</span> <span class="n">scale</span><span class="o">=</span><span class="mi">4</span><span class="p">)</span>
+    <span class="o">.</span><span class="n">np_distribution</span><span class="p">(</span><span class="s2">"v_f_continuous_1"</span><span class="p">,</span> <span class="s2">"normal"</span><span class="p">,</span> <span class="n">loc</span><span class="o">=</span><span class="mi">11</span><span class="p">,</span> <span class="n">scale</span><span class="o">=</span><span class="mi">4</span><span class="p">)</span>
+    <span class="o">.</span><span class="n">np_distribution</span><span class="p">(</span><span class="s2">"v_f_continuous_2"</span><span class="p">,</span> <span class="s2">"normal"</span><span class="p">,</span> <span class="n">loc</span><span class="o">=</span><span class="mi">11</span><span class="p">,</span> <span class="n">scale</span><span class="o">=</span><span class="mi">4</span><span class="p">)</span>
+    <span class="o">.</span><span class="n">float</span><span class="p">(</span><span class="s2">"v_extra"</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span>
+    <span class="o">.</span><span class="n">np_distribution</span><span class="p">(</span><span class="s2">"weight_0"</span><span class="p">,</span> <span class="s2">"normal"</span><span class="p">,</span> <span class="n">loc</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span> <span class="n">scale</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+    <span class="o">.</span><span class="n">np_distribution</span><span class="p">(</span><span class="s2">"weight_1"</span><span class="p">,</span> <span class="s2">"normal"</span><span class="p">,</span> <span class="n">loc</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span> <span class="n">scale</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+    <span class="o">.</span><span class="n">integer</span><span class="p">(</span><span class="s2">"year"</span><span class="p">,</span> <span class="mi">2016</span><span class="p">,</span> <span class="mi">2021</span><span class="p">)</span>
+    <span class="o">.</span><span class="n">integer</span><span class="p">(</span><span class="s2">"month"</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">12</span><span class="p">)</span>
+    <span class="o">.</span><span class="n">to_df</span><span class="p">()</span>
+    <span class="o">.</span><span class="n">lazy</span><span class="p">()</span>
+<span class="p">)</span>
+
+<span class="c1"># print(df.describe())</span>
 </pre></div>
 </div>
 </div>
@@ -7530,8 +7586,432 @@ a.anchor-link {
 <div class="jp-OutputArea jp-Cell-outputArea">
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>Generating data for weighting
+</pre>
+</div>
+</div>
+</div>
+</div>
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=3219173c">
+<div class="jp-Cell-inputWrapper" tabindex="0">
+<div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
+</div>
+<div class="jp-InputArea jp-Cell-inputArea">
+<div class="jp-InputPrompt jp-InputArea-prompt">In [3]:</div>
+<div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
+<div class="cm-editor cm-s-jupyter">
+<div class="highlight hl-ipython3"><pre><span></span><span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">"Weighting 'function'"</span><span class="p">)</span>
+<span class="n">f</span> <span class="o">=</span> <span class="n">FormulaBuilder</span><span class="p">(</span><span class="n">df</span><span class="o">=</span><span class="n">df_population</span><span class="p">,</span> <span class="n">constant</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+<span class="n">f</span><span class="o">.</span><span class="n">continuous</span><span class="p">(</span><span class="n">columns</span><span class="o">=</span><span class="p">[</span><span class="s2">"v_1"</span><span class="p">,</span> <span class="s2">"v_f_continuous_*"</span><span class="p">,</span> <span class="s2">"v_f_p2_*"</span><span class="p">])</span>
+<span class="c1">#   f.simple_interaction(columns=["v_1","v_f_continuous_0"])</span>
+
+<span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">"Define the target moments that the weighting will match"</span><span class="p">)</span>
+<span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">"   This can be a dataset or a single row of pop controls"</span><span class="p">)</span>
+<span class="n">m</span> <span class="o">=</span> <span class="n">Moment</span><span class="p">(</span>
+    <span class="n">df</span><span class="o">=</span><span class="n">df_population</span><span class="p">,</span>
+    <span class="n">formula</span><span class="o">=</span><span class="n">f</span><span class="o">.</span><span class="n">formula</span><span class="p">,</span>
+    <span class="n">weight</span><span class="o">=</span><span class="s2">"weight_0"</span><span class="p">,</span>
+    <span class="n">index</span><span class="o">=</span><span class="s2">"index"</span><span class="p">,</span>
+    <span class="c1">#    by=["year"],</span>
+    <span class="n">rescale</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+<span class="p">)</span>
+
+<span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">"You can save/reload moments if you want"</span><span class="p">)</span>
+<span class="c1"># m.save("/my/path/moment")</span>
+<span class="c1"># m_loaded = Moment.load("/my/path/moment")</span>
+</pre></div>
+</div>
+</div>
+</div>
+</div>
+<div class="jp-Cell-outputWrapper">
+<div class="jp-Collapser jp-OutputCollapser jp-Cell-outputCollapser">
+</div>
+<div class="jp-OutputArea jp-Cell-outputArea">
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>Weighting 'function'
+</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>Define the target moments that the weighting will match
+</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>   This can be a dataset or a single row of pop controls
+</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>You can save/reload moments if you want
+</pre>
+</div>
+</div>
+</div>
+</div>
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=448ad6c3">
+<div class="jp-Cell-inputWrapper" tabindex="0">
+<div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
+</div>
+<div class="jp-InputArea jp-Cell-inputArea">
+<div class="jp-InputPrompt jp-InputArea-prompt">In [4]:</div>
+<div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
+<div class="cm-editor cm-s-jupyter">
+<div class="highlight hl-ipython3"><pre><span></span><span class="c1">#   Calibrate the data in df_treatment to the moment above</span>
+<span class="n">c</span> <span class="o">=</span> <span class="n">Calibration</span><span class="p">(</span>
+    <span class="n">df</span><span class="o">=</span><span class="n">df_treatment</span><span class="p">,</span>
+    <span class="n">moments</span><span class="o">=</span><span class="n">m</span><span class="p">,</span>
+    <span class="n">weight</span><span class="o">=</span><span class="s2">"weight_1"</span><span class="p">,</span>
+    <span class="n">final_weight</span><span class="o">=</span><span class="s2">"weight_final"</span>
+<span class="p">)</span>
+
+<span class="n">c</span><span class="o">.</span><span class="n">run</span><span class="p">(</span>
+    <span class="c1">#   Drop a moment if there are too few observations</span>
+    <span class="n">min_obs</span><span class="o">=</span><span class="mi">5</span><span class="p">,</span>
+    <span class="c1"># If it fails to converge, set bounds on the weights </span>
+    <span class="c1">#   final weights = (base*ratio) where the bounds are on the ratio</span>
+    <span class="c1">#   for "best possible" weights   </span>
+    <span class="n">bounds</span><span class="o">=</span><span class="p">(</span><span class="mf">0.001</span><span class="p">,</span> <span class="mi">1000</span><span class="p">)</span>
+<span class="p">)</span>
+
+<span class="c1">#   Merge the final weights back on the treatment data</span>
+<span class="n">df_treatment</span> <span class="o">=</span> <span class="n">c</span><span class="o">.</span><span class="n">get_final_weights</span><span class="p">(</span><span class="n">df_treatment</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+</div>
+</div>
+<div class="jp-Cell-outputWrapper">
+<div class="jp-Collapser jp-OutputCollapser jp-Cell-outputCollapser">
+</div>
+<div class="jp-OutputArea jp-Cell-outputArea">
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>Aggregating any sub_moments
+</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>Calibrating weights using aebw
+</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>      min obs = 5
+</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>     Calibration using combined moments
+</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>
+Entropy Balance Rewighting, Sanders (2024)
+</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>Input matrix is sparse? False
+</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>Problem Size: 100000 rows, 5 moments
+</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>  #    Criterion     ||Eq. Const.||  ||FOC Lagr.|| PrimalStepSize  DualStepSize  Opt. Violation.
+</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>  0     0.000000      17465.610380       0.0000          inf            inf      17465.61037995
+</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>  1   1945.423027     7092.371751       46.6445     123.27371263    2.06592760   7092.52513345 
+</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>  2   9247.126302      68.148229        10.2235      70.89880835    0.25970726    68.91081991  
+</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>  3   9477.094839       1.179172         0.9164      12.66666907    0.05747635     1.49338233  
+</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>  4   9472.014246       0.006919         0.2327      0.94332784     0.00277490     0.23283020  
+</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>  5   9471.976595       0.000009         0.0234      0.03116427     0.00000998     0.02340470  
+</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>  6   9471.976505       0.000000         0.0003      0.00342021     0.00000076     0.00026967  
+</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>  7   9471.976506       0.000000         0.0000      0.00004033     0.00000001     0.00000004  
+</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>Optimality converged.
+</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>Time elapsed: 0.11071370000718161
+</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>Optimization completed, success?: True
+</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="text/plain" tabindex="0">
-<pre>HI
+<pre>
+</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>Converged:          True
+</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>Maximum Difference: 3.6637359812630166e-15
+</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>shape: (4, 8)
+┌─────────────────────┬──────────┬─────────┬───────────┬────────────┬─────────┬─────────────┬─────────────┐
+│            Variable ┆  Initial ┆ Targets ┆ Estimates ┆ Calibrated ┆ NonZero ┆        diff ┆     percent │
+╞═════════════════════╪══════════╪═════════╪═══════════╪════════════╪═════════╪═════════════╪═════════════╡
+│ m0_v_f_continuous_0 ┆ 1.100747 ┆       1 ┆       1.0 ┆          1 ┆  100000 ┆ -3.6637e-15 ┆ -3.6637e-13 │
+│ m0_v_f_continuous_1 ┆ 1.101187 ┆       1 ┆       1.0 ┆          1 ┆  100000 ┆  2.8866e-15 ┆  2.8866e-13 │
+│ m0_v_f_continuous_2 ┆ 1.100447 ┆       1 ┆       1.0 ┆          1 ┆  100000 ┆ -2.6645e-15 ┆ -2.6645e-13 │
+│              m0_v_1 ┆ 1.005134 ┆       1 ┆       1.0 ┆          1 ┆  100000 ┆ -3.3307e-16 ┆ -3.3307e-14 │
+└─────────────────────┴──────────┴─────────┴───────────┴────────────┴─────────┴─────────────┴─────────────┘
+</pre>
+</div>
+</div>
+</div>
+</div>
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=27e48a31">
+<div class="jp-Cell-inputWrapper" tabindex="0">
+<div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
+</div>
+<div class="jp-InputArea jp-Cell-inputArea">
+<div class="jp-InputPrompt jp-InputArea-prompt">In [5]:</div>
+<div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
+<div class="cm-editor cm-s-jupyter">
+<div class="highlight hl-ipython3"><pre><span></span><span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">"'Population' estimates"</span><span class="p">)</span>
+<span class="n">_</span> <span class="o">=</span> <span class="n">summary</span><span class="p">(</span><span class="n">df_population</span><span class="p">,</span>
+        <span class="n">weight</span><span class="o">=</span><span class="s2">"weight_0"</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+</div>
+</div>
+<div class="jp-Cell-outputWrapper">
+<div class="jp-Collapser jp-OutputCollapser jp-Cell-outputCollapser">
+</div>
+<div class="jp-OutputArea jp-Cell-outputArea">
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>'Population' estimates
+</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>┌──────────────────┬─────────┬─────────────┬───────────────┬───────────────┬───────────┬───────────┐
+│         Variable ┆       n ┆ n (missing) ┆          mean ┆           std ┆       min ┆       max │
+╞══════════════════╪═════════╪═════════════╪═══════════════╪═══════════════╪═══════════╪═══════════╡
+│            index ┆ 100,000 ┆           0 ┆ 49,987.162827 ┆ 28,870.556017 ┆       0.0 ┆  99,999.0 │
+│              v_1 ┆ 100,000 ┆           0 ┆      5.484124 ┆      2.875588 ┆       1.0 ┆      10.0 │
+│ v_f_continuous_0 ┆ 100,000 ┆           0 ┆      9.989362 ┆      1.996633 ┆  1.491748 ┆ 18.835062 │
+│ v_f_continuous_1 ┆ 100,000 ┆           0 ┆     10.002072 ┆      2.006889 ┆   1.37638 ┆  18.82769 │
+│ v_f_continuous_2 ┆ 100,000 ┆           0 ┆      9.998039 ┆      2.004505 ┆  1.166252 ┆ 19.254231 │
+│          v_extra ┆ 100,000 ┆           0 ┆      0.504297 ┆      0.867154 ┆ -0.999978 ┆  1.999996 │
+│         weight_1 ┆ 100,000 ┆           0 ┆     10.004412 ┆      1.002786 ┆   5.35507 ┆ 14.023032 │
+│             year ┆ 100,000 ┆           0 ┆  2,018.493399 ┆      1.706467 ┆   2,016.0 ┆   2,021.0 │
+│            month ┆ 100,000 ┆           0 ┆      6.504686 ┆       3.44999 ┆       1.0 ┆      12.0 │
+└──────────────────┴─────────┴─────────────┴───────────────┴───────────────┴───────────┴───────────┘
+</pre>
+</div>
+</div>
+</div>
+</div>
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=36f53df3">
+<div class="jp-Cell-inputWrapper" tabindex="0">
+<div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
+</div>
+<div class="jp-InputArea jp-Cell-inputArea">
+<div class="jp-InputPrompt jp-InputArea-prompt">In [6]:</div>
+<div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
+<div class="cm-editor cm-s-jupyter">
+<div class="highlight hl-ipython3"><pre><span></span><span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">"</span><span class="se">\n\n</span><span class="s2">'Treatment', original weights"</span><span class="p">)</span>
+<span class="n">_</span> <span class="o">=</span> <span class="n">summary</span><span class="p">(</span><span class="n">df_treatment</span><span class="p">,</span>
+        <span class="n">weight</span><span class="o">=</span><span class="s2">"weight_1"</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+</div>
+</div>
+<div class="jp-Cell-outputWrapper">
+<div class="jp-Collapser jp-OutputCollapser jp-Cell-outputCollapser">
+</div>
+<div class="jp-OutputArea jp-Cell-outputArea">
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>
+
+'Treatment', original weights
+</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>┌──────────────────┬─────────┬─────────────┬───────────────┬───────────────┬───────────┬───────────┐
+│         Variable ┆       n ┆ n (missing) ┆          mean ┆           std ┆       min ┆       max │
+╞══════════════════╪═════════╪═════════════╪═══════════════╪═══════════════╪═══════════╪═══════════╡
+│            index ┆ 100,000 ┆           0 ┆ 49,997.423141 ┆ 28,873.734839 ┆       0.0 ┆  99,999.0 │
+│              v_1 ┆ 100,000 ┆           0 ┆       5.51228 ┆      2.868293 ┆       1.0 ┆      10.0 │
+│ v_f_continuous_0 ┆ 100,000 ┆           0 ┆      10.99576 ┆      4.013016 ┆ -5.459849 ┆ 30.287625 │
+│ v_f_continuous_1 ┆ 100,000 ┆           0 ┆     11.014155 ┆      3.999313 ┆ -7.360353 ┆ 27.415263 │
+│ v_f_continuous_2 ┆ 100,000 ┆           0 ┆      11.00231 ┆      4.005346 ┆ -8.478953 ┆ 27.102181 │
+│          v_extra ┆ 100,000 ┆           0 ┆      0.500786 ┆      0.867307 ┆ -0.999996 ┆  1.999988 │
+│         weight_0 ┆ 100,000 ┆           0 ┆      9.997927 ┆      1.001265 ┆   5.26969 ┆ 14.090873 │
+│             year ┆ 100,000 ┆           0 ┆  2,018.500692 ┆      1.707684 ┆   2,016.0 ┆   2,021.0 │
+│            month ┆ 100,000 ┆           0 ┆      6.489706 ┆      3.447587 ┆       1.0 ┆      12.0 │
+│     weight_final ┆ 100,000 ┆           0 ┆      1.010022 ┆      0.475068 ┆  0.149575 ┆   7.45808 │
+└──────────────────┴─────────┴─────────────┴───────────────┴───────────────┴───────────┴───────────┘
+</pre>
+</div>
+</div>
+</div>
+</div>
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=01961288">
+<div class="jp-Cell-inputWrapper" tabindex="0">
+<div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
+</div>
+<div class="jp-InputArea jp-Cell-inputArea">
+<div class="jp-InputPrompt jp-InputArea-prompt">In [7]:</div>
+<div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
+<div class="cm-editor cm-s-jupyter">
+<div class="highlight hl-ipython3"><pre><span></span><span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">"</span><span class="se">\n\n</span><span class="s2">'Treatment', calibrated"</span><span class="p">)</span>
+<span class="n">_</span> <span class="o">=</span> <span class="n">summary</span><span class="p">(</span><span class="n">df_treatment</span><span class="p">,</span>
+        <span class="n">weight</span><span class="o">=</span><span class="s2">"weight_final"</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+</div>
+</div>
+<div class="jp-Cell-outputWrapper">
+<div class="jp-Collapser jp-OutputCollapser jp-Cell-outputCollapser">
+</div>
+<div class="jp-OutputArea jp-Cell-outputArea">
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>
+
+'Treatment', calibrated
+</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>┌──────────────────┬─────────┬─────────────┬───────────────┬───────────────┬───────────┬───────────┐
+│         Variable ┆       n ┆ n (missing) ┆          mean ┆           std ┆       min ┆       max │
+╞══════════════════╪═════════╪═════════════╪═══════════════╪═══════════════╪═══════════╪═══════════╡
+│            index ┆ 100,000 ┆           0 ┆ 49,953.704786 ┆ 28,879.488768 ┆       0.0 ┆  99,999.0 │
+│              v_1 ┆ 100,000 ┆           0 ┆      5.484124 ┆      2.868654 ┆       1.0 ┆      10.0 │
+│ v_f_continuous_0 ┆ 100,000 ┆           0 ┆      9.989362 ┆      4.007166 ┆ -5.459849 ┆ 30.287625 │
+│ v_f_continuous_1 ┆ 100,000 ┆           0 ┆     10.002072 ┆      4.006294 ┆ -7.360353 ┆ 27.415263 │
+│ v_f_continuous_2 ┆ 100,000 ┆           0 ┆      9.998039 ┆      4.007545 ┆ -8.478953 ┆ 27.102181 │
+│          v_extra ┆ 100,000 ┆           0 ┆      0.502229 ┆      0.867483 ┆ -0.999996 ┆  1.999988 │
+│         weight_0 ┆ 100,000 ┆           0 ┆      9.999153 ┆      1.000994 ┆   5.26969 ┆ 14.090873 │
+│         weight_1 ┆ 100,000 ┆           0 ┆     10.102295 ┆      0.998432 ┆  5.539069 ┆ 14.227871 │
+│             year ┆ 100,000 ┆           0 ┆  2,018.501971 ┆      1.708979 ┆   2,016.0 ┆   2,021.0 │
+│            month ┆ 100,000 ┆           0 ┆       6.49219 ┆      3.448097 ┆       1.0 ┆      12.0 │
+└──────────────────┴─────────┴─────────────┴───────────────┴───────────────┴───────────┴───────────┘
 </pre>
 </div>
 </div>

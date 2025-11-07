@@ -24,37 +24,42 @@ def compress_df(
     Has some optional parameters to handle figuring out the optimal compress
     for stata
 
-    Args:
-        df (IntoFrameT):
-            Input data
-        cols (list[str], optional):
-            Specific columns to compress (default: all)
-        check_string (bool):
-            Attempt to convert string columns to numeric
-        check_string_only (bool):
-            Only check string conversions
-        cast_all_null_to_boolean (bool):
-            Cast all-null columns to boolean
-        check_date_time (bool):
-            Optimize datetime columns
-        no_boolean (bool):
-            Skip boolean type casting (and leave as int8)
+    Parameters
+    ----------
+    df : IntoFrameT
+        Input data
+    cols : list[str], optional
+        Specific columns to compress (default: all)
+    check_string : bool
+        Attempt to convert string columns to numeric
+    check_string_only : bool
+        Only check string conversions
+    cast_all_null_to_boolean : bool
+        Cast all-null columns to boolean
+    check_date_time : bool
+        Optimize datetime columns
+    no_boolean : bool
+        Skip boolean type casting (and leave as int8)
 
+    Returns
+    -------
+    IntoFrameT
+        Compressed DataFrame with optimized data types
 
-    Returns:
-        IntoFrameT
+    Examples
+    --------
+    Basic compression:
 
-    Examples:
-        Basic compression:
-            >>> compressed_df = compress(df)
+    >>> compressed_df = compress_df(df)
 
+    String to numeric conversion:
 
-        String to numeric conversion:
-            >>> compressed_df = Compress(df, check_string=True)
+    >>> compressed_df = compress_df(df, check_string=True)
 
-    Note:
-        Automatically detects the smallest integer type that can hold all values
-        in each column, considering ranges like Int8 (-128 to 127), Int16, etc.
+    Notes
+    -----
+    Automatically detects the smallest integer type that can hold all values
+    in each column, considering ranges like Int8 (-128 to 127), Int16, etc.
     """
 
     nw_type = NarwhalsType(df)

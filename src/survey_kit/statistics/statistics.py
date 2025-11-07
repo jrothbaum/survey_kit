@@ -4,7 +4,7 @@ from narwhals.typing import IntoFrameT
 from formulaic import Formula
 from .rounding import Rounding
 from ..utilities.inputs import list_input
-from ..utilities.dataframe import concat_wrapper, columns_from_list, NarwhalsType
+from ..utilities.dataframe import concat_wrapper, columns_from_list, NarwhalsType, drop_if_exists
 from .basic_calculations import (
     calculate_by,
     _check_special_modifiers,
@@ -15,6 +15,23 @@ from .. import logger
 
 
 class Statistics:
+    """
+    Parameters
+    ----------
+    stats : list[str],
+        List of statistics to calculate (mean, median, etc.)
+        Call Statistics.available_stats() for options
+    formula : str, optional
+        formulaic (or R)-style formula for defining statistics to be calculated.
+        The default is "".  This takes precedence over columns
+    columns : list[str]|str|None, optional
+        List of columns to calculate statistics over. The default is None.
+    quantile_interpolated : bool, optional
+        Use linear interpolation (census-style) for quantiles. The default is False.
+    quantile_interpolated_interval : int, optional
+        If quantile_interpolated, what is the bin interval? The default is 2500.
+
+    """
     def __init__(
         self,
         stats: list[str],
@@ -23,25 +40,7 @@ class Statistics:
         quantile_interpolated: bool = False,
         quantile_interpolated_interval: int = 2500,
     ):
-        """
-
-
-        Parameters
-        ----------
-        stats : list[str],
-            List of statistics to calculate (mean, median, etc.)
-            Call Statistics.available_stats() for options
-        formula : str, optional
-            formulaic (or R)-style formula for defining statistics to be calculated.
-            The default is "".  This takes precedence over columns
-        columns : list[str]|str|None, optional
-            List of columns to calculate statistics over. The default is None.
-        quantile_interpolated : bool, optional
-            Use linear interpolation (census-style) for quantiles. The default is False.
-        quantile_interpolated_interval : int, optional
-            If quantile_interpolated, what is the bin interval? The default is 2500.
-
-        """
+        
         #   Input parsing/set defaults
         if columns is None:
             columns = []
@@ -74,6 +73,9 @@ class Statistics:
         if by is None:
             by = {"All": []}
 
+        if type(by) is list:
+            by = {f"{i}":itemi for i, itemi in enumerate(by)}
+
         if self.formula != "":
             #   It's a formula, process accordingly
             df_summary = nw.from_native(
@@ -102,7 +104,11 @@ class Statistics:
 
         if len(summarize_vars):
             df_summary = concat_wrapper(
-                [df_summary, df.select(summarize_vars)], how="horizontal"
+                [
+                    drop_if_exists(df_summary,summarize_vars), 
+                    df.select(summarize_vars)
+                ], 
+                how="horizontal"
             )
 
         #   Rename the stats for more useful table headers
@@ -185,7 +191,7 @@ class Statistics:
             b_default_index = False
 
             if keyi in by.keys():
-                index = by[keyi]
+                index = list_input(by[keyi])
 
                 if index is None:
                     index = default_index

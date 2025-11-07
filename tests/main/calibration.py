@@ -9,11 +9,9 @@ from survey_kit.calibration.calibration import Calibration
 
 import narwhals as nw
 
-from survey_kit import logger
+from survey_kit import logger, config
 
-path = Path(__file__)
-sys.path.append(os.path.normpath(path.parent.parent))
-from scratch import path_scratch
+path_scratch = config.path_temp_files
 
 
 n_rows = 100_000
@@ -81,7 +79,7 @@ c = Calibration(
 )
 elapsed_calibration_setup = perf_counter() - start_calibration_setup
 
-c.save(f"{path_scratch()}/calibration")
+c.save(f"{path_scratch}/calibration")
 
 start_calibration_run = perf_counter()
 c.run(min_obs=5, bounds=(0.000001, 1000))
@@ -108,8 +106,7 @@ logger.info(df_check)
 assert nw.from_native(df_check).select(nw.all().all()).item(0, 0)
 
 
-c = Calibration.load(f"{path_scratch()}/calibration", backend="duckdb")
+c = Calibration.load(f"{path_scratch}/calibration", backend="duckdb")
 c.run()
 print(type(c.df))
 print(type(c.diagnostics_out["diagnostics"]))
-print("HI")

@@ -7,9 +7,13 @@ nav:
   - User Guide:
     - Calibration: user-guide/calibration.md
     - Imputation/SRMI: user-guide/srmi.md
+    - Statistics/Standard Errors: user-guide/statistics.md
   - API Reference:
     - Calibration: api/calibration.md
     - Imputation/SRMI: api/srmi.md
+    - Basic Statistics/Standard Errors: api/basic_standard_errors.md
+    - Multiple Imputation Standard Errors: api/multiple_imputation.md
+    - Miscellaneous: api/miscellaneous.md
 theme:
   name: material
   font: false
@@ -42,12 +46,14 @@ theme:
 
 
 plugins:
+- autorefs
 - search: 
     # See https://squidfunk.github.io/mkdocs-material/plugins/search/#configuration
     enabled: true
 - mkdocstrings:
     handlers:
       python:
+        paths: [src]
         inventories:
         - https://installer.readthedocs.io/en/stable/objects.inv
         options:

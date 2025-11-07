@@ -6,14 +6,8 @@ from survey_kit.orchestration.config import Config
 from survey_kit.orchestration.from_decorator import as_function
 from survey_kit.orchestration.callers import run_function_list
 from survey_kit.orchestration.utilities import CallInputs, CallTypes
-from survey_kit import logger
+from survey_kit import logger, config
 
-path = Path(__file__)
-sys.path.append(os.path.normpath(path.parent.parent))
-from scratch import path_scratch
-
-config = Config()
-config.data_root = path_scratch()
 
 
 @as_function(inputs_as_dictionary=False)

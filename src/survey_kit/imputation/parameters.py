@@ -275,7 +275,7 @@ class Parameters:
     @staticmethod
     def Regression(
         model: RegressionModel = RegressionModel.OLS,
-        error: ErrorDraw = ErrorDraw.Random,
+        error: ErrorDraw = ErrorDraw.pmm,
         random_share: float = 1.0,
         parameters_pmm: dict = None,
     ) -> dict:

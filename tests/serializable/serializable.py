@@ -9,11 +9,9 @@ from survey_kit.serializable import SerializableList, Serializable
 from survey_kit.utilities.dataframe import NarwhalsType
 
 
-from survey_kit import logger
+from survey_kit import logger, config
 
-path = Path(__file__)
-sys.path.append(os.path.normpath(path.parent.parent))
-from scratch import path_scratch
+path_scratch = config.path_temp_files
 
 
 n_rows = 1_000
@@ -30,8 +28,8 @@ df = (
 l = SerializableList(["a", 1, 2, df])
 
 
-# Get the scratch directory
-path_save = path_scratch()
+# Save to the scratch directory
+path_save = path_scratch
 print(path_save)
 
 

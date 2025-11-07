@@ -87,7 +87,29 @@ See the full [Imputation/SRMI API documentation](/api/srmi)
         </iframe>
 
 === "Regression"
-    Pending, imputation with logit (binary variable) and OLS (continuous)
+    Logit and/or OLS-based imputation
+
+    === "Code"
+        ```python
+        --8<-- "tutorials/srmi/regression.py"
+        ```
+
+    === "Log"
+        [View in separate window](/tutorials/srmi/regression.html){:target="_blank"}
+        <iframe src="/tutorials/srmi/regression.html" 
+            style="width: 100%; height: 800px; border: none;">
+        </iframe>
 
 === "Machine Learning"
-    Pending, imputation with LightGBM
+    Imputation with LightGBM, see the [LightGBM documentation](https://lightgbm.readthedocs.io/en/stable/) for additional information on some of the options.
+
+    === "Code"
+        ```python
+        --8<-- "tutorials/srmi/gbm.py"
+        ```
+
+    === "Log"
+        [View in separate window](/tutorials/srmi/gbm.html){:target="_blank"}
+        <iframe src="/tutorials/srmi/gbm.html" 
+            style="width: 100%; height: 800px; border: none;">
+        </iframe>

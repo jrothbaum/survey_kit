@@ -113,9 +113,10 @@ class Impute:
                 del logging.root.manager.loggerDict["SRMI_Impute_Variable"]
             self.logging = set_logging(
                 path_log=os.path.normpath(path_diagnostics),
-                to_console=False,
+                to_console=not self.parent.parallel,
                 force=True,
                 name="SRMI_Impute_Variable",
+                level=logging.INFO,
             )
         else:
             self.logging = logger

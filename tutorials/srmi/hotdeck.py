@@ -17,18 +17,13 @@ from survey_kit.orchestration.config import Config
 from survey_kit import logger, config
 from survey_kit.utilities.dataframe import summary, columns_from_list
 
+
+
+# %%
+# Draw some random data
+
 n_rows = 10_000
 impute_share = 0.25
-
-
-path = Path(config.code_root)
-sys.path.append(os.path.normpath(path.parent.parent / "tests"))
-from scratch import path_scratch
-
-
-config.data_root = path_scratch(temp_file_suffix=False)
-print(config.data_root)
-
 
 df = (
     RandomData(n_rows=n_rows, seed=32565437)
@@ -169,7 +164,7 @@ srmi = SRMI(
     parallel=False,
     bayesian_bootstrap=True,
     parallel_testing=False,
-    path_model=f"{path_scratch()}/py_srmi_test",
+    path_model=f"{config.path_temp_files}/py_srmi_test_hd",
     force_start=True,
 )
 
@@ -182,11 +177,14 @@ logger.info("Get the results")
 _ = df_list = srmi.df_implicates
 
 # %%
-logger.info("\n\nLook at the data")
+logger.info("\n\nLook at the original")
+_ = summary(df_original)
+
+logger.info("\n\nLook at the imputes")
 _ = df_list.pipe(summary)
 
-logger.info("\n\nLook at the data | var_hd1 == 0")
+logger.info("\n\nLook at the imputes | var_hd1 == 0")
 _ = df_list.filter(~nw.col("var_hd1")).pipe(summary)
 
-logger.info("\n\nLook at the data | var_hd1 == 1")
+logger.info("\n\nLook at the imputes | var_hd1 == 1")
 _ = df_list.filter(nw.col("var_hd1")).pipe(summary)

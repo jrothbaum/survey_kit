@@ -60,13 +60,14 @@ def bayes_bootstrap_weights(
 
 
 def bayes_bootstrap(
-    n_rows: int, n_draws: int = 1, seed: int = 0, prefix: str = "__bb_weight_"
+    n_rows: int, n_draws: int = 1, seed: int = 0, prefix: str = "__bb_weight_",
+    initial_weight_index:int=1
 ) -> pl.DataFrame:
     rd = RandomData(seed=seed, n_rows=n_rows)
 
     for i in range(n_draws):
         rd.np_distribution(
-            name=f"{prefix}{i + 1}", distribution="gamma", shape=1, scale=1
+            name=f"{prefix}{i + initial_weight_index}", distribution="gamma", shape=1, scale=1
         )
 
     return rd.to_df()

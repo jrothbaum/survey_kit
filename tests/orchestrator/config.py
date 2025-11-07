@@ -4,9 +4,6 @@ from pathlib import Path
 import polars as pl
 from survey_kit.orchestration.config import Config
 
-path = Path(__file__)
-sys.path.append(os.path.normpath(path.parent.parent))
-from scratch import path_scratch
 
 c = Config()
 
@@ -28,7 +25,6 @@ print(f"versions = {c.versions}")
 c.versions = [3, 2, 1]
 print(f"versions = {c.versions}")
 
-c.data_root = path_scratch()
 print(c.data_root)
 print(c.data_with_version)
 
@@ -42,3 +38,7 @@ c.parameter_files = dict(
 print(c.parameter_files)
 
 c.pbs_log_path = "/pbs/log/path"
+
+
+
+c.clean_temp_directory(2)

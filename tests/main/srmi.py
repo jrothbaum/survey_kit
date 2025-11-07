@@ -11,7 +11,7 @@ from survey_kit.utilities.dataframe import summary
 
 from survey_kit.utilities.formula_builder import FormulaBuilder
 from survey_kit.imputation.utilities.lasso import Lasso
-import survey_kit.imputation.utilities.lightgbm_wrapper as rep_lgbm
+import survey_kit.imputation.utilities.lightgbm_wrapper as kit_lgbm
 from survey_kit.imputation.utilities.lightgbm_wrapper import Tuner_optuna
 
 from survey_kit.imputation.variable import Variable
@@ -20,20 +20,14 @@ from survey_kit.imputation.selection import Selection
 from survey_kit.imputation.srmi import SRMI
 from survey_kit.orchestration.config import Config
 
-from survey_kit import logger
+from survey_kit import logger, config
 from survey_kit.utilities.dataframe import summary, columns_from_list
 
 n_rows = 10_000
 impute_share = 0.25
 
 
-path = Path(__file__)
-sys.path.append(os.path.normpath(path.parent.parent))
-from scratch import path_scratch
-
-
-Config().data_root = path_scratch(temp_file_suffix=False)
-
+path_scratch = config.path_temp_files
 
 df = (
     RandomData(n_rows=n_rows, seed=32565437)
@@ -234,7 +228,7 @@ vars_impute.append(v_reg2)
 
 
 tuner = Tuner_optuna(
-    n_trials=50, objective=rep_lgbm.Tuner.Objectives.mae, test_size=0.25
+    n_trials=50, objective=kit_lgbm.Tuner.Objectives.mae, test_size=0.25
 )
 
 #   Set the tuner parameters to the defaults
@@ -332,7 +326,7 @@ vars_impute.append(v_lgbm1)
 #           a file already exists in the path
 parameters_lgbm2 = Parameters.LightGBM(
     tune=True,
-    tune_hyperparameter_path="/projects/data/NEWS/Test/tuner_outputs",
+    tune_hyperparameter_path=f"{config.data_root}/tuner_outputs",
     tuner=tuner,
     tune_overwrite=False,
     # quantiles=[0.25,0.5,0.75],
@@ -392,7 +386,7 @@ srmi = SRMI(
     model=f_model.formula,
     bayesian_bootstrap=True,
     parallel_testing=False,
-    path_model=f"{path_scratch()}/py_srmi_test",
+    path_model=f"{path_scratch}/py_srmi_test",
     force_start=True,
 )
 
@@ -405,7 +399,7 @@ if True:
 
     summary(df_original)
 
-    srmi_loaded = srmi.load(f"{path_scratch()}/py_srmi_test")
+    srmi_loaded = srmi.load(f"{path_scratch}/py_srmi_test")
 
     dfs = srmi.df_implicates
     dfs_loaded = srmi_loaded.df_implicates

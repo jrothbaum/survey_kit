@@ -24,17 +24,23 @@ from .. import logger
 
 
 class DataFrameList(Serializable):
-    _save_suffix = "df_list"
     """
         A light wrapper around Lazy/DataFrames
-            that can be used like a list, mostly, (append, extend, +)
-            and also can be used like the underlying LazyFrame or DataFrame
-            where a narwhals operation is applied to all items in the list.
+        that can be used like a list, mostly, (append, extend, +)
+        and also can be used like the underlying LazyFrame or DataFrame
+        where a narwhals operation is applied to all items in the list.
+        
+        Examples
+        --------
+        >>> df_list = DataFrameList([df1, df2])
+        >>> df_list.filter(nw.col("a") == 1)
             
-            For example, with df_list = DataFrameList([df1,df2]),
-            df_list.filter(nw.col("a") == 1) would apply the filter to 
-            df1 and df2 and return a DataFrameList with the filtered data
+        This would apply the filter to df1 and df2 and return a DataFrameList with
+        the filtered data.
+
     """
+
+    _save_suffix = "df_list"
 
     def __init__(self, df_list: list[IntoFrameT]):
         self._df_list = df_list

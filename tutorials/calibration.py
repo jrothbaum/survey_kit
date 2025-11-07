@@ -62,6 +62,9 @@ m = Moment(
     rescale=True,
 )
 
+logger.info("You can save/reload moments if you want")
+# m.save("/my/path/moment")
+# m_loaded = Moment.load("/my/path/moment")
 
 # %%
 #   Calibrate the data in df_treatment to the moment above

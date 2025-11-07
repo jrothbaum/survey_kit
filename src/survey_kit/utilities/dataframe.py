@@ -30,8 +30,10 @@ def fill_missing(
         c_numeric = None
 
     if value is not None:
-        df = df.with_columns(c_missing.fill_null(value))
-
+        try:
+            df = df.with_columns(c_missing.fill_null(value))
+        except:
+            df = df.with_columns(c_numeric.fill_null(value))
     if c_numeric is not None:
         df = df.with_columns(c_numeric.fill_nan(value))
 
@@ -836,7 +838,7 @@ def print_longer_table(
 
         cfg.set_tbl_rows(n_rows)
 
-        logging.info(df)
+        logging.info(df.lazy().collect())
 
 
 @nw.narwhalify
@@ -852,6 +854,107 @@ def summary(
     quantile_interpolated: bool = False,
     drb_round: bool = False,
 ) -> IntoFrameT:
+    
+    """
+    Generate summary statistics for a dataframe.
+    
+    A convenience function for quickly exploring data. Calculates common summary
+    statistics (mean, std, min, max, etc.) with optional weighting and grouping.
+    Works with any dataframe backend (Polars, Pandas, Arrow, DuckDB) via Narwhals.
+    
+    Parameters
+    ----------
+    df : IntoFrameT
+        Input dataframe to summarize.
+    columns : list[str] | str | None, optional
+        Columns to summarize. Supports wildcards (e.g., "income_*").
+        If None, summarizes all columns. Default is None.
+    weight : str, optional
+        Column name for weights. If provided, calculates weighted statistics.
+        Default is "" (unweighted).
+    print : bool, optional
+        Print the summary table. Default is True.
+    stats : list[str] | str | None, optional
+        Statistics to calculate. If None, uses default set.
+        See Statistics.available_stats() for options. Default is None.
+    detailed : bool, optional
+        Use detailed statistics (includes quartiles). 
+        Overrides stats parameter. Default is False.
+    additional_stats : list[str] | str | None, optional
+        Additional statistics beyond the default/detailed set.
+        Examples: ["q10", "q90", "n|not0", "share|not0"]. Default is None.
+    by : list[str] | str | None, optional
+        Column(s) to group by before calculating statistics. Default is None.
+    quantile_interpolated : bool, optional
+        Use interpolated quantiles (vs exact values from data). Default is False.
+    drb_round : bool, optional
+        Apply DRB (Disclosure Review Board) rounding rules for 4 significant digits.
+        Useful for publication-ready output. Default is False.
+        
+    Returns
+    -------
+    IntoFrameT
+        Dataframe of summary statistics (same type as input df).
+        
+    Examples
+    --------
+    Basic unweighted summary:
+    
+    >>> from survey_kit.utilities.dataframe import summary
+    >>> from survey_kit.utilities.random import RandomData
+    >>> 
+    >>> df = RandomData(n_rows=1000, seed=123).integer("income", 0, 100_000).to_df()
+    >>> summary(df)
+    
+    Weighted summary:
+    
+    >>> summary(df, weight="survey_weight")
+    
+    By groups:
+    
+    >>> summary(df, weight="survey_weight", by="year")
+    
+    Detailed statistics with rounding:
+    
+    >>> summary(df, weight="survey_weight", detailed=True, drb_round=True)
+    
+    Custom statistics:
+    
+    >>> from survey_kit.statistics.statistics import Statistics
+    >>> Statistics.available_stats()  # See options
+    >>> summary(df, additional_stats=["q10", "q90", "n|not0", "share|not0"])
+    
+    Specific columns with wildcards:
+    
+    >>> summary(df, columns=["income_*", "age"], weight="survey_weight")
+    
+    Get results without printing:
+    
+    >>> df_stats = summary(df, weight="survey_weight", print=False)
+    >>> print(df_stats.collect())
+    
+    Notes
+    -----
+    Default statistics (if stats=None and detailed=False):
+    - n: Count of non-missing values
+    - n|missing: Count of missing values
+    - mean: Average
+    - std: Standard deviation
+    - min: Minimum
+    - max: Maximum
+    
+    Detailed statistics (if detailed=True):
+    - Adds: q25, q50 (median), q75
+    
+    The "|not0" suffix excludes zeros: "n|not0" counts non-zero values,
+    "share|not0" calculates proportion among non-zero observations.
+    
+    See Also
+    --------
+    StatCalculator : For standard errors with replicate weights
+    Statistics : For defining custom statistics
+    """
+
     from ..statistics.calculator import StatCalculator
     from ..statistics.statistics import Statistics
 
@@ -859,6 +962,9 @@ def summary(
     stats = list_input(stats)
     additional_stats = list_input(additional_stats)
     by = list_input(by)
+    if len(by) > 1:
+        by = [by]
+
 
     if len(columns):
         columns = columns_from_list(df=df, columns=columns)
@@ -960,3 +1066,5 @@ def winsorize_by_percentiles(
 
     df = nw.from_native(df).with_columns(clip_list).to_native()
     return df
+
+

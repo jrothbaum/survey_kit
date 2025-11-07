@@ -6,10 +6,9 @@ from pathlib import Path
 from survey_kit.utilities.random import RandomData
 from survey_kit.utilities.formula_builder import FormulaBuilder
 from survey_kit.calibration.moment import Moment
+from survey_kit import config
 
-path = Path(__file__)
-sys.path.append(os.path.normpath(path.parent.parent))
-from scratch import path_scratch
+path_scratch = config.path_temp_files
 
 
 n_rows = 1_000
@@ -77,10 +76,10 @@ m_arrow = Moment(
 # print(m_pandas.model_matrix)
 
 
-m.save(f"{path_scratch()}/moment")
+m.save(f"{path_scratch}/moment")
 
 m_new = Moment.load(
-    f"{path_scratch()}/moment",
+    f"{path_scratch}/moment",
     delete=False,
     # session=DuckDBSession(),
     backend="duckdb",

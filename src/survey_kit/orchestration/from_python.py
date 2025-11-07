@@ -65,7 +65,7 @@ def FunctionFromPython(
         string parameters are passed as objects. If list, only specified
         parameters. Default is False.
     import_all_in_namespace : bool, optional
-        Use "from namespace import \*" instead of importing specific function.
+        Use "from namespace import *" instead of importing specific function.
         Default is False.
     shared_memory_items : dict | None, optional
         Items to pass via shared memory for multiprocessing calls.
