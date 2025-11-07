@@ -1,0 +1,13 @@
+.tabbed-content pre {
+    overflow-x: auto; 
+    white-space: pre;
+}
+
+.tabbed-content code {
+    white-space: pre;
+}
+
+/* Hide doctest prompts */
+.highlight .gp {
+    display: none;
+}
