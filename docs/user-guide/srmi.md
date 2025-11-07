@@ -50,6 +50,7 @@ It was designed to handle imputing hundreds of variables across multiple iterati
 ### When to Use This vs. Other Packages
 
 **Use this package when you:**
+
 - Work with large datasets (>100K rows) where performance matters
 - Need production reliability with checkpoint/resume capability
 - Want to mix different imputation methods intelligently
@@ -58,10 +59,12 @@ It was designed to handle imputing hundreds of variables across multiple iterati
 - Require hot deck or statistical matching methods
 
 **Use mice or similar packages when you:**
+
 - Work with smaller datasets (<100K rows)
 - Want extensive built-in convergence diagnostics
 - Just want something that works and you can cite
 - Want a simpler API with simpler defaults
+
 
 **Note:** This package assumes familiarity with imputation methodology. It provides powerful, flexible tools for implementing complex imputation strategies correctly at scale. If you need a point-and-click solution with extensive guardrails, traditional packages may be more appropriate.
 

@@ -828,18 +828,22 @@
 </ul>
 <p>It was designed to handle imputing hundreds of variables across multiple iterations (SRMI) with samples ranging from hundreds of thousands to hundreds of millions of records, with complex dependency structures between variables.</p>
 <h3 id="when-to-use-this-vs-other-packages">When to Use This vs. Other Packages<a class="headerlink" href="#when-to-use-this-vs-other-packages" title="Permanent link">&para;</a></h3>
-<p><strong>Use this package when you:</strong>
-- Work with large datasets (&gt;100K rows) where performance matters
-- Need production reliability with checkpoint/resume capability
-- Want to mix different imputation methods intelligently
-- Have complex variable dependencies that require custom logic
-- Need modern ML approaches (gradient boosting, quantile regression)
-- Require hot deck or statistical matching methods</p>
-<p><strong>Use mice or similar packages when you:</strong>
-- Work with smaller datasets (&lt;100K rows)
-- Want extensive built-in convergence diagnostics
-- Just want something that works and you can cite
-- Want a simpler API with simpler defaults</p>
+<p><strong>Use this package when you:</strong></p>
+<ul>
+<li>Work with large datasets (&gt;100K rows) where performance matters</li>
+<li>Need production reliability with checkpoint/resume capability</li>
+<li>Want to mix different imputation methods intelligently</li>
+<li>Have complex variable dependencies that require custom logic</li>
+<li>Need modern ML approaches (gradient boosting, quantile regression)</li>
+<li>Require hot deck or statistical matching methods</li>
+</ul>
+<p><strong>Use mice or similar packages when you:</strong></p>
+<ul>
+<li>Work with smaller datasets (&lt;100K rows)</li>
+<li>Want extensive built-in convergence diagnostics</li>
+<li>Just want something that works and you can cite</li>
+<li>Want a simpler API with simpler defaults</li>
+</ul>
 <p><strong>Note:</strong> This package assumes familiarity with imputation methodology. It provides powerful, flexible tools for implementing complex imputation strategies correctly at scale. If you need a point-and-click solution with extensive guardrails, traditional packages may be more appropriate.</p>
 <h2 id="api">API<a class="headerlink" href="#api" title="Permanent link">&para;</a></h2>
 <p>See the full <a href="/api/srmi">Imputation/SRMI API documentation</a> </p>
