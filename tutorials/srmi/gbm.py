@@ -240,6 +240,8 @@ parameters_lgbm2 = Parameters.LightGBM(
 v_gbm2 = Variable(
     impute_var="var_gbm2",
     Where=nw.col("var_gbm1"),
+    #   Needed in case var_gbm1 changes between iterations
+    Where_predict=(nw.col("var_gbm2") != 0),
     model=["var_*", "var4", "var3", "var5", "unrelated_*", "repeat_*"],
     modeltype=Variable.ModelType.LightGBM,
     parameters=parameters_lgbm2,
@@ -297,9 +299,19 @@ parameters_lgbm3 = Parameters.LightGBM(
 v_gbm3 = Variable(
     impute_var="var_gbm3",
     Where=nw.col("var_gbm1"),
+    #   Needed in case var_gbm1 changes between iterations
+    Where_predict=(nw.col("var_gbm3") != 0),
     model=["var_*", "var4", "var3", "var5", "unrelated_*", "repeat_*"],
     modeltype=Variable.ModelType.LightGBM,
-    parameters=parameters_lgbm3
+    parameters=parameters_lgbm3,
+    postFunctions=[
+        (
+            nw.when(nw.col("var_gbm1"))
+            .then(nw.col("var_gbm3"))
+            .otherwise(nw.lit(0))
+            .alias("var_gbm3")
+        )
+    ]
 )
 
 vars_impute.append(v_gbm3)
