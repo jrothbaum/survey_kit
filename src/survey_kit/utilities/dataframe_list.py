@@ -33,7 +33,7 @@ class DataFrameList(Serializable):
         Examples
         --------
         >>> df_list = DataFrameList([df1, df2])
-        >>> df_list.filter(nw.col("a") == 1)
+        >>> df_list = df_list.filter(nw.col("a") == 1)
             
         This would apply the filter to df1 and df2 and return a DataFrameList with
         the filtered data.

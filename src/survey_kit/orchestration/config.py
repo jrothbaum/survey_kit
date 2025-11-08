@@ -31,6 +31,99 @@ class TypedEnvVar:
 
 
 class Config:
+    """
+    Global configuration for survey-kit.
+    
+    Config manages package-wide settings including paths, CPU limits, memory settings,
+    and environment variables. Settings can be configured via environment variables
+    or by directly setting attributes on the config instance.
+    
+    The config instance is typically accessed via:
+    ```python
+        from survey_kit import config
+        config.data_root = "/path/to/data"
+        config.cpus = 8
+    ```
+    
+    Attributes
+    ----------
+    code_root : str
+        Root directory for code files. Set via environment variable 
+        `_survey_kit_code_root_` or directly. Default is "".
+    data_root : str
+        Root directory for data files. Set via environment variable
+        `_survey_kit_data_root_` or directly. Default is "".
+    cpus : int
+        Number of CPUs to use for parallel operations. Automatically sets
+        thread limits for Polars, OpenBLAS, MKL, etc. when changed.
+        Set via `_survey_kit_n_cpus_` or directly. Default is os.cpu_count().
+    path_temp_files : str
+        Directory for temporary files. Set via `_survey_kit_path_temp_files_`
+        or directly. Default is {data_root}/temp_files.
+    ram : int
+        Total available RAM in bytes. Set via `_survey_kit_ram_`.
+        Default is system total memory.
+    mem_in_gb : int
+        Available memory in gigabytes (read-only).
+    mem_in_mb : int
+        Available memory in megabytes (read-only).
+    mem_in_kb : int
+        Available memory in kilobytes (read-only).
+    Examples
+    --------
+    Basic configuration:
+    
+    >>> from survey_kit import config
+    >>> config.data_root = "/projects/data/myproject"
+    >>> config.cpus = 16
+    >>> print(config.path_temp_files)
+    '/projects/data/myproject/temp_files'
+    
+    Using environment variables:
+    ```bash
+        export _survey_kit_data_root_="/projects/data/myproject"
+        export _survey_kit_n_cpus_=16
+    ```
+
+    Memory information:
+    
+    >>> print(f"Available RAM: {config.mem_in_gb} GB")
+    >>> print(f"Available RAM: {config.mem_in_mb} MB")
+    
+    Temporary files:
+    
+    >>> temp_path = config.path_temp_with_random(as_parquet=True)
+    >>> print(temp_path)
+    '/projects/data/myproject/temp_files/abc123xyz.parquet'
+    
+    Notes
+    -----
+    Setting `cpus` automatically updates thread limits for multiple libraries:
+    - POLARS_MAX_THREADS
+    - OMP_NUM_THREADS
+    - NUMEXPR_NUM_THREADS
+    - MKL_NUM_THREADS
+    - OPENBLAS_NUM_THREADS
+    
+    """
+
+    # parameter_files : dict
+    #     Dictionary of parameter file paths. Set via `_survey_kit_parameter_files_`.
+    #     Default is {}.
+    # pbs_log_path : str
+    #     Path for PBS job logs. Set via `_survey_kit_pbs_log_path_`.
+    #     Default is "".
+    # versions : list
+    #     (IGNORE - INTENDED FOR FUTURE USE)
+    #     List of version strings (e.g., ["V3", "V2"]). Used to construct
+    #     versioned data paths. Set via `_survey_kit_versions_`. Default is [].
+    # latest_version : str
+    #     (IGNORE - INTENDED FOR FUTURE USE)
+    #     Most recent version string from versions list (read-only).
+    # data_with_version : str
+    #     (IGNORE - INTENDED FOR FUTURE USE)
+    #     Path combining data_root with latest_version (read-only).
+    
     _code_root_key = "_survey_kit_code_root_"
     _data_root_key = "_survey_kit_data_root_"
     _version_key = "_survey_kit_versions_"
@@ -144,6 +237,29 @@ class Config:
     def path_temp_with_random(
         self, as_parquet: bool = False, underscore_prefix: bool = False
     ) -> str:
+        """
+        Generate a random temporary file path.
+        
+        Parameters
+        ----------
+        as_parquet : bool, optional
+            Add .parquet extension. Default is False.
+        underscore_prefix : bool, optional
+            Prefix filename with underscore. Default is False.
+            
+        Returns
+        -------
+        str
+            Full path to a uniquely-named temporary file.
+            
+        Examples
+        --------
+        >>> config.path_temp_with_random()
+        '/data/temp_files/abc123xyz'
+        
+        >>> config.path_temp_with_random(as_parquet=True)
+        '/data/temp_files/abc123xyz.parquet'
+        """
         if as_parquet:
             parquet_suffix = ".parquet"
         else:

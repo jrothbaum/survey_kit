@@ -18,6 +18,12 @@
         show_root_full_path: false
         heading_level: 2
 
+::: survey_kit.orchestration.config.Config
+    options:
+        show_root_heading: true
+        show_root_full_path: false
+        heading_level: 2
+
 ::: survey_kit.utilities.random
     options:
         show_root_heading: true
