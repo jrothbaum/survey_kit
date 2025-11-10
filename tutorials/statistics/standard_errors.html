@@ -7510,7 +7510,7 @@ a.anchor-link {
 </style>
 <!-- End of mermaid configuration --></head>
 <body class="jp-Notebook" data-jp-theme-light="true" data-jp-theme-name="JupyterLab Light">
-<main><div class="jp-Cell jp-CodeCell jp-Notebook-cell jp-mod-noOutputs" id="cell-id=32288ebf">
+<main><div class="jp-Cell jp-CodeCell jp-Notebook-cell jp-mod-noOutputs" id="cell-id=ed70f97a">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -7523,7 +7523,7 @@ a.anchor-link {
 <span class="kn">import</span><span class="w"> </span><span class="nn">polars</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pl</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">survey_kit.utilities.random</span><span class="w"> </span><span class="kn">import</span> <span class="n">RandomData</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">survey_kit.utilities.dataframe</span><span class="w"> </span><span class="kn">import</span> <span class="n">summary</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">survey_kit.statistics.calculator</span><span class="w"> </span><span class="kn">import</span> <span class="n">StatCalculator</span><span class="p">,</span><span class="n">ComparisonItem</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">survey_kit.statistics.calculator</span><span class="w"> </span><span class="kn">import</span> <span class="n">StatCalculator</span><span class="p">,</span> <span class="n">ComparisonItem</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">survey_kit.statistics.statistics</span><span class="w"> </span><span class="kn">import</span> <span class="n">Statistics</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">survey_kit.statistics.replicates</span><span class="w"> </span><span class="kn">import</span> <span class="n">Replicates</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">survey_kit.statistics.bootstrap</span><span class="w"> </span><span class="kn">import</span> <span class="n">bayes_bootstrap</span>
@@ -7535,7 +7535,7 @@ a.anchor-link {
 </div>
 </div>
 </div>
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=4b9f0d8e">
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=138d5a57">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -7556,24 +7556,20 @@ a.anchor-link {
         <span class="o">.</span><span class="n">integer</span><span class="p">(</span><span class="s2">"income_2"</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">120_000</span><span class="p">)</span>
     <span class="p">)</span><span class="o">.</span><span class="n">to_df</span><span class="p">()</span>
 
-
     <span class="c1">#   Attach bootstrap weights to the data</span>
-    <span class="n">df</span> <span class="o">=</span> <span class="p">(</span>
-            <span class="n">pl</span><span class="o">.</span><span class="n">concat</span><span class="p">(</span>
-                <span class="p">[</span>
-                    <span class="n">df</span><span class="p">,</span>
-                    <span class="n">bayes_bootstrap</span><span class="p">(</span>
-                        <span class="n">n_rows</span><span class="o">=</span><span class="n">n_rows</span><span class="p">,</span>
-                        <span class="n">n_draws</span><span class="o">=</span><span class="n">n_replicates</span><span class="o">+</span><span class="mi">1</span><span class="p">,</span>
-                        <span class="n">seed</span><span class="o">=</span><span class="n">generate_seed</span><span class="p">(),</span>
-                        <span class="n">initial_weight_index</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
-                        <span class="n">prefix</span><span class="o">=</span><span class="s2">"weight_"</span>
-                    <span class="p">)</span>
-                <span class="p">],</span>
-                <span class="n">how</span><span class="o">=</span><span class="s2">"horizontal"</span>
-            <span class="p">)</span>
-            <span class="o">.</span><span class="n">lazy</span><span class="p">()</span>
-    <span class="p">)</span>
+    <span class="n">df</span> <span class="o">=</span> <span class="n">pl</span><span class="o">.</span><span class="n">concat</span><span class="p">(</span>
+        <span class="p">[</span>
+            <span class="n">df</span><span class="p">,</span>
+            <span class="n">bayes_bootstrap</span><span class="p">(</span>
+                <span class="n">n_rows</span><span class="o">=</span><span class="n">n_rows</span><span class="p">,</span>
+                <span class="n">n_draws</span><span class="o">=</span><span class="n">n_replicates</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span>
+                <span class="n">seed</span><span class="o">=</span><span class="n">generate_seed</span><span class="p">(),</span>
+                <span class="n">initial_weight_index</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
+                <span class="n">prefix</span><span class="o">=</span><span class="s2">"weight_"</span><span class="p">,</span>
+            <span class="p">),</span>
+        <span class="p">],</span>
+        <span class="n">how</span><span class="o">=</span><span class="s2">"horizontal"</span><span class="p">,</span>
+    <span class="p">)</span><span class="o">.</span><span class="n">lazy</span><span class="p">()</span>
 
     <span class="n">df</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">with_columns</span><span class="p">(</span>
         <span class="n">pl</span><span class="o">.</span><span class="n">when</span><span class="p">(</span><span class="n">pl</span><span class="o">.</span><span class="n">col</span><span class="p">(</span><span class="s2">"year"</span><span class="p">)</span><span class="o">.</span><span class="n">ne</span><span class="p">(</span><span class="mi">2016</span><span class="p">))</span><span class="o">.</span><span class="n">then</span><span class="p">(</span><span class="n">pl</span><span class="o">.</span><span class="n">col</span><span class="p">(</span><span class="s2">"income"</span><span class="p">))</span><span class="o">.</span><span class="n">otherwise</span><span class="p">(</span><span class="n">pl</span><span class="o">.</span><span class="n">lit</span><span class="p">(</span><span class="mi">0</span><span class="p">))</span>
@@ -7581,10 +7577,13 @@ a.anchor-link {
 
     <span class="k">return</span> <span class="n">df</span>
 
+
 <span class="n">n_rows</span> <span class="o">=</span> <span class="mi">1_000</span>
 <span class="n">n_replicates</span> <span class="o">=</span> <span class="mi">10</span>
 
-<span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">"Create two datasets to compare, with bootstrap weights (or repliate weights)"</span><span class="p">)</span>
+<span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span>
+    <span class="s2">"Create two datasets to compare, with bootstrap weights (or repliate weights)"</span>
+<span class="p">)</span>
 <span class="n">df</span> <span class="o">=</span> <span class="n">gen_random_table</span><span class="p">(</span><span class="n">n_rows</span><span class="p">,</span> <span class="n">n_replicates</span><span class="p">,</span> <span class="n">seed</span><span class="o">=</span><span class="mi">1230</span><span class="p">)</span>
 <span class="n">df_compare</span> <span class="o">=</span> <span class="n">gen_random_table</span><span class="p">(</span><span class="n">n_rows</span><span class="p">,</span> <span class="n">n_replicates</span><span class="p">,</span> <span class="n">seed</span><span class="o">=</span><span class="mi">9324</span><span class="p">)</span>
 </pre></div>
@@ -7605,7 +7604,7 @@ a.anchor-link {
 </div>
 </div>
 </div>
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=1ae53fc1">
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=bde37337">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -7680,7 +7679,7 @@ a.anchor-link {
 </div>
 </div>
 </div>
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=6e0fa0b0">
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=31cbd954">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -7690,9 +7689,8 @@ a.anchor-link {
 <div class="cm-editor cm-s-jupyter">
 <div class="highlight hl-ipython3"><pre><span></span><span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">"Use the stat calculator class to get stats"</span><span class="p">)</span>
 <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">"   The basic option, just get some stats"</span><span class="p">)</span>
-<span class="n">stats</span> <span class="o">=</span> <span class="n">statistics</span><span class="o">=</span><span class="n">Statistics</span><span class="p">(</span>
-    <span class="n">stats</span><span class="o">=</span><span class="p">[</span><span class="s2">"mean"</span><span class="p">,</span> <span class="s2">"median|not0"</span><span class="p">],</span> 
-    <span class="n">columns</span><span class="o">=</span><span class="p">[</span><span class="s2">"v_1"</span><span class="p">,</span> <span class="s2">"income"</span><span class="p">,</span> <span class="s2">"income_2"</span><span class="p">]</span>
+<span class="n">stats</span> <span class="o">=</span> <span class="n">statistics</span> <span class="o">=</span> <span class="n">Statistics</span><span class="p">(</span>
+    <span class="n">stats</span><span class="o">=</span><span class="p">[</span><span class="s2">"mean"</span><span class="p">,</span> <span class="s2">"median|not0"</span><span class="p">],</span> <span class="n">columns</span><span class="o">=</span><span class="p">[</span><span class="s2">"v_1"</span><span class="p">,</span> <span class="s2">"income"</span><span class="p">,</span> <span class="s2">"income_2"</span><span class="p">]</span>
 <span class="p">)</span>
 
 <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">"What is available:"</span><span class="p">)</span>
@@ -7827,7 +7825,7 @@ a.anchor-link {
 </div>
 </div>
 </div>
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=b43db414">
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=8288dc21">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -7872,7 +7870,7 @@ a.anchor-link {
 </div>
 </div>
 </div>
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=f00925a0">
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=0dd9340f">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -7884,19 +7882,15 @@ a.anchor-link {
 <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">"   Set up 'Replicates'"</span><span class="p">)</span>
 <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">"       from data (with df)"</span><span class="p">)</span>
 <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">"       NOTE:   if pass 'bootstrap=True', it will calculate "</span><span class="p">)</span>
-<span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">"               regular bootstrap SEs rather than balanced repeated replication SEs"</span><span class="p">)</span>
-<span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">"               (if you don't know what that means, pass bootstrap=True)"</span><span class="p">)</span>
-<span class="n">replicates_from_df</span> <span class="o">=</span> <span class="n">Replicates</span><span class="p">(</span>
-    <span class="n">df</span><span class="o">=</span><span class="n">df</span><span class="p">,</span>
-    <span class="n">weight_stub</span><span class="o">=</span><span class="s2">"weight_"</span><span class="p">,</span>
-    <span class="n">bootstrap</span><span class="o">=</span><span class="kc">True</span>
+<span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span>
+    <span class="s2">"               regular bootstrap SEs rather than balanced repeated replication SEs"</span>
 <span class="p">)</span>
+<span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">"               (if you don't know what that means, pass bootstrap=True)"</span><span class="p">)</span>
+<span class="n">replicates_from_df</span> <span class="o">=</span> <span class="n">Replicates</span><span class="p">(</span><span class="n">df</span><span class="o">=</span><span class="n">df</span><span class="p">,</span> <span class="n">weight_stub</span><span class="o">=</span><span class="s2">"weight_"</span><span class="p">,</span> <span class="n">bootstrap</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 
 <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">"       or just tell it the number (n_replicates)"</span><span class="p">)</span>
 <span class="n">replicates</span> <span class="o">=</span> <span class="n">Replicates</span><span class="p">(</span>
-    <span class="n">weight_stub</span><span class="o">=</span><span class="s2">"weight_"</span><span class="p">,</span>
-    <span class="n">n_replicates</span><span class="o">=</span><span class="n">n_replicates</span><span class="p">,</span>
-    <span class="n">bootstrap</span><span class="o">=</span><span class="kc">True</span>
+    <span class="n">weight_stub</span><span class="o">=</span><span class="s2">"weight_"</span><span class="p">,</span> <span class="n">n_replicates</span><span class="o">=</span><span class="n">n_replicates</span><span class="p">,</span> <span class="n">bootstrap</span><span class="o">=</span><span class="kc">True</span>
 <span class="p">)</span>
 <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">"       Same either way"</span><span class="p">)</span>
 <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="n">replicates_from_df</span><span class="o">.</span><span class="n">rep_list</span><span class="p">)</span>
@@ -7983,7 +7977,7 @@ a.anchor-link {
 </div>
 </div>
 </div>
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=5e567ed3">
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=1c4d2396">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -7994,19 +7988,11 @@ a.anchor-link {
 <div class="highlight hl-ipython3"><pre><span></span><span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">"</span><span class="se">\n\n</span><span class="s2">Now let's calculate the stats with replicate-weighted standard errors"</span><span class="p">)</span>
 <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">"   for df"</span><span class="p">)</span>
 <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">"   (where each estimate has the SE below the estimate)"</span><span class="p">)</span>
-<span class="n">sc</span> <span class="o">=</span> <span class="n">StatCalculator</span><span class="p">(</span>
-    <span class="n">df</span><span class="p">,</span>
-    <span class="n">statistics</span><span class="o">=</span><span class="n">stats</span><span class="p">,</span>
-    <span class="n">weight</span><span class="o">=</span><span class="s2">"weight_0"</span><span class="p">,</span>
-    <span class="n">replicates</span><span class="o">=</span><span class="n">replicates</span>
-<span class="p">)</span>
+<span class="n">sc</span> <span class="o">=</span> <span class="n">StatCalculator</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="n">statistics</span><span class="o">=</span><span class="n">stats</span><span class="p">,</span> <span class="n">weight</span><span class="o">=</span><span class="s2">"weight_0"</span><span class="p">,</span> <span class="n">replicates</span><span class="o">=</span><span class="n">replicates</span><span class="p">)</span>
 
 <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">"   for df_compare"</span><span class="p">)</span>
 <span class="n">sc_compare</span> <span class="o">=</span> <span class="n">StatCalculator</span><span class="p">(</span>
-    <span class="n">df_compare</span><span class="p">,</span>
-    <span class="n">statistics</span><span class="o">=</span><span class="n">stats</span><span class="p">,</span>
-    <span class="n">weight</span><span class="o">=</span><span class="s2">"weight_0"</span><span class="p">,</span>
-    <span class="n">replicates</span><span class="o">=</span><span class="n">replicates</span>
+    <span class="n">df_compare</span><span class="p">,</span> <span class="n">statistics</span><span class="o">=</span><span class="n">stats</span><span class="p">,</span> <span class="n">weight</span><span class="o">=</span><span class="s2">"weight_0"</span><span class="p">,</span> <span class="n">replicates</span><span class="o">=</span><span class="n">replicates</span>
 <span class="p">)</span>
 
 
@@ -8250,7 +8236,7 @@ Now let's calculate the stats with replicate-weighted standard errors
 </div>
 </div>
 </div>
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=7bfba890">
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=15d55d4c">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -8279,7 +8265,7 @@ Now let's calculate the stats with replicate-weighted standard errors
 </div>
 </div>
 </div>
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=b907ec55">
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=8403c9f5">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -8290,9 +8276,11 @@ Now let's calculate the stats with replicate-weighted standard errors
 <div class="highlight hl-ipython3"><pre><span></span><span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">"</span><span class="se">\n\n</span><span class="s2">We can compare them easily"</span><span class="p">)</span>
 <span class="n">d_comparisons</span> <span class="o">=</span> <span class="n">sc</span><span class="o">.</span><span class="n">compare</span><span class="p">(</span><span class="n">sc_compare</span><span class="p">)</span>
 
-<span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">"Which gives us a dictionary of comparisons, with keys=['difference','ratio']"</span><span class="p">)</span>
-<span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="n">d_comparisons</span><span class="p">[</span><span class="s1">'difference'</span><span class="p">])</span>
-<span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="n">d_comparisons</span><span class="p">[</span><span class="s1">'ratio'</span><span class="p">])</span>
+<span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span>
+    <span class="s2">"Which gives us a dictionary of comparisons, with keys=['difference','ratio']"</span>
+<span class="p">)</span>
+<span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="n">d_comparisons</span><span class="p">[</span><span class="s2">"difference"</span><span class="p">])</span>
+<span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="n">d_comparisons</span><span class="p">[</span><span class="s2">"ratio"</span><span class="p">])</span>
 </pre></div>
 </div>
 </div>
@@ -8390,20 +8378,20 @@ We can compare them easily
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>&lt;survey_kit.statistics.calculator.StatCalculator object at 0x0000017865FC28D0&gt;
+<pre>&lt;survey_kit.statistics.calculator.StatCalculator object at 0x00000274B1112F90&gt;
 </pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>&lt;survey_kit.statistics.calculator.StatCalculator object at 0x0000017865FE5480&gt;
+<pre>&lt;survey_kit.statistics.calculator.StatCalculator object at 0x00000274B10E5E10&gt;
 </pre>
 </div>
 </div>
 </div>
 </div>
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=865e96eb">
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=9e883d04">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -8411,30 +8399,26 @@ We can compare them easily
 <div class="jp-InputPrompt jp-InputArea-prompt">In [10]:</div>
 <div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
 <div class="cm-editor cm-s-jupyter">
-<div class="highlight hl-ipython3"><pre><span></span><span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">"</span><span class="se">\n\n</span><span class="s2">Let's just get the difference between the means to medians, within the same data"</span><span class="p">)</span>
+<div class="highlight hl-ipython3"><pre><span></span><span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span>
+    <span class="s2">"</span><span class="se">\n\n</span><span class="s2">Let's just get the difference between the means to medians, within the same data"</span>
+<span class="p">)</span>
 <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">"   For df"</span><span class="p">)</span>
 <span class="n">sc_mean_median</span> <span class="o">=</span> <span class="n">sc</span><span class="o">.</span><span class="n">compare</span><span class="p">(</span>
     <span class="n">sc</span><span class="p">,</span>
     <span class="n">ratio</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
     <span class="n">compare_list_columns</span><span class="o">=</span><span class="p">[</span>
-        <span class="n">ComparisonItem</span><span class="o">.</span><span class="n">Column</span><span class="p">(</span>
-            <span class="s2">"mean"</span><span class="p">,</span>
-            <span class="s2">"median (not 0)"</span><span class="p">,</span>
-            <span class="n">name</span><span class="o">=</span><span class="s2">"median_mean"</span>
-        <span class="p">)</span>
-    <span class="p">])[</span><span class="s2">"difference"</span><span class="p">]</span>
+        <span class="n">ComparisonItem</span><span class="o">.</span><span class="n">Column</span><span class="p">(</span><span class="s2">"mean"</span><span class="p">,</span> <span class="s2">"median (not 0)"</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s2">"median_mean"</span><span class="p">)</span>
+    <span class="p">],</span>
+<span class="p">)[</span><span class="s2">"difference"</span><span class="p">]</span>
 
 <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">"   For df_compare"</span><span class="p">)</span>
 <span class="n">sc_compare_mean_median</span> <span class="o">=</span> <span class="n">sc_compare</span><span class="o">.</span><span class="n">compare</span><span class="p">(</span>
     <span class="n">sc_compare</span><span class="p">,</span>
     <span class="n">ratio</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
     <span class="n">compare_list_columns</span><span class="o">=</span><span class="p">[</span>
-        <span class="n">ComparisonItem</span><span class="o">.</span><span class="n">Column</span><span class="p">(</span>
-            <span class="s2">"mean"</span><span class="p">,</span>
-            <span class="s2">"median (not 0)"</span><span class="p">,</span>
-            <span class="n">name</span><span class="o">=</span><span class="s2">"median_mean"</span>
-        <span class="p">)</span>
-    <span class="p">])[</span><span class="s2">"difference"</span><span class="p">]</span>
+        <span class="n">ComparisonItem</span><span class="o">.</span><span class="n">Column</span><span class="p">(</span><span class="s2">"mean"</span><span class="p">,</span> <span class="s2">"median (not 0)"</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s2">"median_mean"</span><span class="p">)</span>
+    <span class="p">],</span>
+<span class="p">)[</span><span class="s2">"difference"</span><span class="p">]</span>
 </pre></div>
 </div>
 </div>
@@ -8545,7 +8529,7 @@ Let's just get the difference between the means to medians, within the same data
 </div>
 </div>
 </div>
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=3bfc9417">
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=b30d98c4">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -8553,9 +8537,13 @@ Let's just get the difference between the means to medians, within the same data
 <div class="jp-InputPrompt jp-InputArea-prompt">In [11]:</div>
 <div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
 <div class="cm-editor cm-s-jupyter">
-<div class="highlight hl-ipython3"><pre><span></span><span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">"</span><span class="se">\n\n</span><span class="s2">Now, we can use the same tool to get a difference in difference comparison"</span><span class="p">)</span>
-<span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">"   i.e. [df(median|not0) - df(mean)] - [df_compare(median|not0) - df_compare(mean)]"</span><span class="p">)</span>
-<span class="n">d_diff_in_diffs</span> <span class="o">=</span> <span class="n">sc_mean_median</span><span class="o">.</span><span class="n">compare</span><span class="p">(</span><span class="n">sc_compare_mean_median</span><span class="p">,</span><span class="n">ratio</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+<div class="highlight hl-ipython3"><pre><span></span><span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span>
+    <span class="s2">"</span><span class="se">\n\n</span><span class="s2">Now, we can use the same tool to get a difference in difference comparison"</span>
+<span class="p">)</span>
+<span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span>
+    <span class="s2">"   i.e. [df(median|not0) - df(mean)] - [df_compare(median|not0) - df_compare(mean)]"</span>
+<span class="p">)</span>
+<span class="n">d_diff_in_diffs</span> <span class="o">=</span> <span class="n">sc_mean_median</span><span class="o">.</span><span class="n">compare</span><span class="p">(</span><span class="n">sc_compare_mean_median</span><span class="p">,</span> <span class="n">ratio</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
@@ -8621,7 +8609,7 @@ Now, we can use the same tool to get a difference in difference comparison
 </div>
 </div>
 </div>
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=64dfeac5">
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=907f081c">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -8630,31 +8618,27 @@ Now, we can use the same tool to get a difference in difference comparison
 <div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
 <div class="cm-editor cm-s-jupyter">
 <div class="highlight hl-ipython3"><pre><span></span><span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">"</span><span class="se">\n\n</span><span class="s2">Let's get the ratio two variables"</span><span class="p">)</span>
-<span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">"   rather than the difference between two statistics for the same variable)"</span><span class="p">)</span>
+<span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span>
+    <span class="s2">"   rather than the difference between two statistics for the same variable)"</span>
+<span class="p">)</span>
 
 <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">"   For df"</span><span class="p">)</span>
 <span class="n">sc_inc_inc_2</span> <span class="o">=</span> <span class="n">sc</span><span class="o">.</span><span class="n">compare</span><span class="p">(</span>
     <span class="n">sc</span><span class="p">,</span>
     <span class="n">difference</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
     <span class="n">compare_list_variables</span><span class="o">=</span><span class="p">[</span>
-        <span class="n">ComparisonItem</span><span class="o">.</span><span class="n">Variable</span><span class="p">(</span>
-            <span class="n">value1</span><span class="o">=</span><span class="s2">"income"</span><span class="p">,</span>
-            <span class="n">value2</span><span class="o">=</span><span class="s2">"income_2"</span><span class="p">,</span>
-            <span class="n">name</span><span class="o">=</span><span class="s2">"income_comp"</span>
-        <span class="p">)</span>
-    <span class="p">])[</span><span class="s2">"ratio"</span><span class="p">]</span>
+        <span class="n">ComparisonItem</span><span class="o">.</span><span class="n">Variable</span><span class="p">(</span><span class="n">value1</span><span class="o">=</span><span class="s2">"income"</span><span class="p">,</span> <span class="n">value2</span><span class="o">=</span><span class="s2">"income_2"</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s2">"income_comp"</span><span class="p">)</span>
+    <span class="p">],</span>
+<span class="p">)[</span><span class="s2">"ratio"</span><span class="p">]</span>
 
 <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">"   For df_compare"</span><span class="p">)</span>
 <span class="n">sc_inc_inc_2_compare</span> <span class="o">=</span> <span class="n">sc_compare</span><span class="o">.</span><span class="n">compare</span><span class="p">(</span>
     <span class="n">sc_compare</span><span class="p">,</span>
     <span class="n">difference</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
     <span class="n">compare_list_variables</span><span class="o">=</span><span class="p">[</span>
-        <span class="n">ComparisonItem</span><span class="o">.</span><span class="n">Variable</span><span class="p">(</span>
-            <span class="n">value1</span><span class="o">=</span><span class="s2">"income"</span><span class="p">,</span>
-            <span class="n">value2</span><span class="o">=</span><span class="s2">"income_2"</span><span class="p">,</span>
-            <span class="n">name</span><span class="o">=</span><span class="s2">"income_comp"</span>
-        <span class="p">)</span>
-    <span class="p">])[</span><span class="s2">"ratio"</span><span class="p">]</span>
+        <span class="n">ComparisonItem</span><span class="o">.</span><span class="n">Variable</span><span class="p">(</span><span class="n">value1</span><span class="o">=</span><span class="s2">"income"</span><span class="p">,</span> <span class="n">value2</span><span class="o">=</span><span class="s2">"income_2"</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s2">"income_comp"</span><span class="p">)</span>
+    <span class="p">],</span>
+<span class="p">)[</span><span class="s2">"ratio"</span><span class="p">]</span>
 </pre></div>
 </div>
 </div>
@@ -8764,7 +8748,7 @@ Let's get the ratio two variables
 </div>
 </div>
 </div>
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=d7c7d0d6">
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=93374792">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -8773,9 +8757,11 @@ Let's get the ratio two variables
 <div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
 <div class="cm-editor cm-s-jupyter">
 <div class="highlight hl-ipython3"><pre><span></span><span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">"</span><span class="se">\n\n</span><span class="s2">And for fun, the diff-in-diff"</span><span class="p">)</span>
-<span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">"   i.e. [df(income_2)/df(income)] - [df_compare(income_2)/df_compare(income)]"</span><span class="p">)</span>
+<span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span>
+    <span class="s2">"   i.e. [df(income_2)/df(income)] - [df_compare(income_2)/df_compare(income)]"</span>
+<span class="p">)</span>
 
-<span class="n">d_diff_in_diffs_2</span> <span class="o">=</span> <span class="n">sc_inc_inc_2</span><span class="o">.</span><span class="n">compare</span><span class="p">(</span><span class="n">sc_inc_inc_2_compare</span><span class="p">,</span><span class="n">ratio</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+<span class="n">d_diff_in_diffs_2</span> <span class="o">=</span> <span class="n">sc_inc_inc_2</span><span class="o">.</span><span class="n">compare</span><span class="p">(</span><span class="n">sc_inc_inc_2_compare</span><span class="p">,</span> <span class="n">ratio</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>

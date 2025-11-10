@@ -7510,7 +7510,7 @@ a.anchor-link {
 </style>
 <!-- End of mermaid configuration --></head>
 <body class="jp-Notebook" data-jp-theme-light="true" data-jp-theme-name="JupyterLab Light">
-<main><div class="jp-Cell jp-CodeCell jp-Notebook-cell jp-mod-noOutputs" id="cell-id=29cc33f3">
+<main><div class="jp-Cell jp-CodeCell jp-Notebook-cell jp-mod-noOutputs" id="cell-id=c5dc2dd8">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -7528,7 +7528,10 @@ a.anchor-link {
 <span class="kn">from</span><span class="w"> </span><span class="nn">survey_kit.imputation.srmi</span><span class="w"> </span><span class="kn">import</span> <span class="n">SRMI</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">survey_kit</span><span class="w"> </span><span class="kn">import</span> <span class="n">logger</span><span class="p">,</span> <span class="n">config</span>
 
-<span class="kn">from</span><span class="w"> </span><span class="nn">survey_kit.statistics.multiple_imputation</span><span class="w"> </span><span class="kn">import</span> <span class="n">MultipleImputation</span><span class="p">,</span> <span class="n">mi_ses_from_function</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">survey_kit.statistics.multiple_imputation</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
+    <span class="n">MultipleImputation</span><span class="p">,</span>
+    <span class="n">mi_ses_from_function</span><span class="p">,</span>
+<span class="p">)</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">survey_kit.statistics.calculator</span><span class="w"> </span><span class="kn">import</span> <span class="n">StatCalculator</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">survey_kit.statistics.statistics</span><span class="w"> </span><span class="kn">import</span> <span class="n">Statistics</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">survey_kit.statistics.replicates</span><span class="w"> </span><span class="kn">import</span> <span class="n">Replicates</span>
@@ -7541,7 +7544,7 @@ a.anchor-link {
 </div>
 </div>
 </div>
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=29ebc722">
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=1f83e758">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -7571,7 +7574,7 @@ a.anchor-link {
 </div>
 </div>
 </div>
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=40207f7c">
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=eed1bd4d">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -7584,16 +7587,13 @@ a.anchor-link {
 <span class="n">n_rows</span> <span class="o">=</span> <span class="n">safe_height</span><span class="p">(</span><span class="n">df_implicates</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
 <span class="n">n_replicates</span> <span class="o">=</span> <span class="mi">10</span>
 
-<span class="n">df_weights</span> <span class="o">=</span> <span class="p">(</span>
-        <span class="n">bayes_bootstrap</span><span class="p">(</span>
-        <span class="n">n_rows</span><span class="o">=</span><span class="n">n_rows</span><span class="p">,</span>
-        <span class="n">n_draws</span><span class="o">=</span><span class="n">n_replicates</span><span class="o">+</span><span class="mi">1</span><span class="p">,</span>
-        <span class="n">seed</span><span class="o">=</span><span class="n">generate_seed</span><span class="p">(),</span>
-        <span class="n">prefix</span><span class="o">=</span><span class="s2">"weight_"</span><span class="p">,</span>
-        <span class="n">initial_weight_index</span><span class="o">=</span><span class="mi">0</span>
-    <span class="p">)</span>
-    <span class="o">.</span><span class="n">with_row_index</span><span class="p">(</span><span class="s2">"index"</span><span class="p">)</span>
-<span class="p">)</span>
+<span class="n">df_weights</span> <span class="o">=</span> <span class="n">bayes_bootstrap</span><span class="p">(</span>
+    <span class="n">n_rows</span><span class="o">=</span><span class="n">n_rows</span><span class="p">,</span>
+    <span class="n">n_draws</span><span class="o">=</span><span class="n">n_replicates</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span>
+    <span class="n">seed</span><span class="o">=</span><span class="n">generate_seed</span><span class="p">(),</span>
+    <span class="n">prefix</span><span class="o">=</span><span class="s2">"weight_"</span><span class="p">,</span>
+    <span class="n">initial_weight_index</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
+<span class="p">)</span><span class="o">.</span><span class="n">with_row_index</span><span class="p">(</span><span class="s2">"index"</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
@@ -7612,7 +7612,7 @@ a.anchor-link {
 </div>
 </div>
 </div>
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=bb382253">
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=1f84bdd9">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -7652,18 +7652,18 @@ a.anchor-link {
 │        var2 ┆ 10,000 ┆           0 ┆     4.9782 ┆    3.154508 ┆        0.0 ┆         10.0 │
 │        var3 ┆ 10,000 ┆           0 ┆    25.1084 ┆   14.752302 ┆        0.0 ┆         50.0 │
 │        var4 ┆ 10,000 ┆           0 ┆   0.505666 ┆    0.287861 ┆   0.000027 ┆     0.999997 │
-│        var5 ┆ 10,000 ┆           0 ┆     0.4999 ┆    0.500025 ┆        0.0 ┆          1.0 │
 │ unrelated_1 ┆ 10,000 ┆           0 ┆   0.502449 ┆    0.288359 ┆   0.000119 ┆     0.999997 │
 │ unrelated_2 ┆ 10,000 ┆           0 ┆   0.500105 ┆    0.287638 ┆   0.000049 ┆     0.999539 │
 │ unrelated_3 ┆ 10,000 ┆           0 ┆   0.499175 ┆     0.28876 ┆   0.000129 ┆      0.99994 │
 │ unrelated_4 ┆ 10,000 ┆           0 ┆   0.500655 ┆    0.288698 ┆   0.000133 ┆     0.999972 │
 │ unrelated_5 ┆ 10,000 ┆           0 ┆    0.49876 ┆    0.288979 ┆   0.000071 ┆     0.999867 │
 │    repeat_1 ┆ 10,000 ┆           0 ┆   0.502449 ┆    0.288359 ┆   0.000119 ┆     0.999997 │
-│    var_gbm3 ┆ 10,000 ┆       1,212 ┆  -2.721713 ┆   10.901329 ┆ -55.354108 ┆    26.213084 │
-│    var_gbm2 ┆ 10,000 ┆           0 ┆  -2.361046 ┆   10.164599 ┆ -55.354108 ┆    26.213084 │
-│    var_gbm1 ┆ 10,000 ┆           0 ┆     0.5278 ┆    0.499252 ┆        0.0 ┆          1.0 │
-│   var_gbm12 ┆ 10,000 ┆           0 ┆  -2.361046 ┆   10.164599 ┆ -55.354108 ┆    26.213084 │
-│ var_gbm2_sq ┆ 10,000 ┆           0 ┆ 108.883286 ┆   269.40042 ┆        0.0 ┆ 3,064.077326 │
+│    var_gbm2 ┆ 10,000 ┆           0 ┆  -2.405997 ┆   10.199102 ┆ -55.354108 ┆    26.213084 │
+│    var_gbm3 ┆ 10,000 ┆           0 ┆  -2.362588 ┆    10.14679 ┆ -55.354108 ┆    26.213084 │
+│   var_gbm12 ┆ 10,000 ┆           0 ┆  -2.405997 ┆   10.199102 ┆ -55.354108 ┆    26.213084 │
+│ var_gbm2_sq ┆ 10,000 ┆           0 ┆ 109.800094 ┆  271.148843 ┆        0.0 ┆ 3,064.077326 │
+│        var5 ┆ 10,000 ┆           0 ┆     0.4999 ┆    0.500025 ┆        0.0 ┆          1.0 │
+│    var_gbm1 ┆ 10,000 ┆           0 ┆     0.5272 ┆    0.499285 ┆        0.0 ┆          1.0 │
 └─────────────┴────────┴─────────────┴────────────┴─────────────┴────────────┴──────────────┘
 </pre>
 </div>
@@ -7681,18 +7681,18 @@ a.anchor-link {
 │        var2 ┆ 10,000 ┆           0 ┆     4.9782 ┆    3.154508 ┆        0.0 ┆         10.0 │
 │        var3 ┆ 10,000 ┆           0 ┆    25.1084 ┆   14.752302 ┆        0.0 ┆         50.0 │
 │        var4 ┆ 10,000 ┆           0 ┆   0.505666 ┆    0.287861 ┆   0.000027 ┆     0.999997 │
-│        var5 ┆ 10,000 ┆           0 ┆     0.4999 ┆    0.500025 ┆        0.0 ┆          1.0 │
 │ unrelated_1 ┆ 10,000 ┆           0 ┆   0.502449 ┆    0.288359 ┆   0.000119 ┆     0.999997 │
 │ unrelated_2 ┆ 10,000 ┆           0 ┆   0.500105 ┆    0.287638 ┆   0.000049 ┆     0.999539 │
 │ unrelated_3 ┆ 10,000 ┆           0 ┆   0.499175 ┆     0.28876 ┆   0.000129 ┆      0.99994 │
 │ unrelated_4 ┆ 10,000 ┆           0 ┆   0.500655 ┆    0.288698 ┆   0.000133 ┆     0.999972 │
 │ unrelated_5 ┆ 10,000 ┆           0 ┆    0.49876 ┆    0.288979 ┆   0.000071 ┆     0.999867 │
 │    repeat_1 ┆ 10,000 ┆           0 ┆   0.502449 ┆    0.288359 ┆   0.000119 ┆     0.999997 │
-│    var_gbm3 ┆ 10,000 ┆       1,219 ┆  -2.692408 ┆   10.886586 ┆ -55.354108 ┆    26.213084 │
-│    var_gbm2 ┆ 10,000 ┆           0 ┆  -2.299835 ┆   10.146886 ┆ -55.354108 ┆    26.213084 │
-│    var_gbm1 ┆ 10,000 ┆           0 ┆     0.5284 ┆    0.499218 ┆        0.0 ┆          1.0 │
-│   var_gbm12 ┆ 10,000 ┆           0 ┆  -2.299835 ┆   10.146886 ┆ -55.354108 ┆    26.213084 │
-│ var_gbm2_sq ┆ 10,000 ┆           0 ┆ 108.238244 ┆  271.231778 ┆        0.0 ┆ 3,064.077326 │
+│    var_gbm2 ┆ 10,000 ┆           0 ┆  -2.334157 ┆   10.148004 ┆ -55.354108 ┆    26.213084 │
+│    var_gbm3 ┆ 10,000 ┆           0 ┆  -2.322527 ┆   10.098587 ┆ -55.354108 ┆    26.213084 │
+│   var_gbm12 ┆ 10,000 ┆           0 ┆  -2.334157 ┆   10.148004 ┆ -55.354108 ┆    26.213084 │
+│ var_gbm2_sq ┆ 10,000 ┆           0 ┆ 108.419985 ┆  266.593764 ┆        0.0 ┆ 3,064.077326 │
+│        var5 ┆ 10,000 ┆           0 ┆     0.4999 ┆    0.500025 ┆        0.0 ┆          1.0 │
+│    var_gbm1 ┆ 10,000 ┆           0 ┆     0.5276 ┆    0.499263 ┆        0.0 ┆          1.0 │
 └─────────────┴────────┴─────────────┴────────────┴─────────────┴────────────┴──────────────┘
 </pre>
 </div>
@@ -7721,7 +7721,7 @@ a.anchor-link {
 </div>
 </div>
 </div>
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=7aa42787">
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=78f15d8e">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -7760,7 +7760,7 @@ a.anchor-link {
 </div>
 </div>
 </div>
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=5642f863">
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=6ad30235">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -7768,7 +7768,9 @@ a.anchor-link {
 <div class="jp-InputPrompt jp-InputArea-prompt">In [6]:</div>
 <div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
 <div class="cm-editor cm-s-jupyter">
-<div class="highlight hl-ipython3"><pre><span></span><span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">"Define the 'replicate' object, which tell is what the weight variables are"</span><span class="p">)</span>
+<div class="highlight hl-ipython3"><pre><span></span><span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span>
+    <span class="s2">"Define the 'replicate' object, which tell is what the weight variables are"</span>
+<span class="p">)</span>
 <span class="n">replicates</span> <span class="o">=</span> <span class="n">Replicates</span><span class="p">(</span><span class="n">weight_stub</span><span class="o">=</span><span class="s2">"weight_"</span><span class="p">,</span> <span class="n">n_replicates</span><span class="o">=</span><span class="n">n_replicates</span><span class="p">)</span>
 </pre></div>
 </div>
@@ -7788,7 +7790,7 @@ a.anchor-link {
 </div>
 </div>
 </div>
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=690c0b36">
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=823e3b12">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -7797,10 +7799,7 @@ a.anchor-link {
 <div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
 <div class="cm-editor cm-s-jupyter">
 <div class="highlight hl-ipython3"><pre><span></span><span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">"Arguments that are getting passed to StatCalculator at each run"</span><span class="p">)</span>
-<span class="n">arguments</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span>
-    <span class="n">statistics</span><span class="o">=</span><span class="n">stats</span><span class="p">,</span>
-    <span class="n">replicates</span><span class="o">=</span><span class="n">replicates</span>
-<span class="p">)</span>
+<span class="n">arguments</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">statistics</span><span class="o">=</span><span class="n">stats</span><span class="p">,</span> <span class="n">replicates</span><span class="o">=</span><span class="n">replicates</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
@@ -7819,7 +7818,7 @@ a.anchor-link {
 </div>
 </div>
 </div>
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=8458ef0d">
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=038d046a">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -7956,16 +7955,16 @@ a.anchor-link {
 <pre>┌─────────────┬────────────┐
 │    Variable ┆       mean │
 ╞═════════════╪════════════╡
-│    var_gbm3 ┆  -2.549985 │
-│             ┆   0.396227 │
-│    var_gbm2 ┆  -2.161733 │
-│             ┆   0.423325 │
-│    var_gbm1 ┆   0.521376 │
-│             ┆   0.017829 │
-│   var_gbm12 ┆  -2.161733 │
-│             ┆   0.423325 │
-│ var_gbm2_sq ┆ 107.251698 │
-│             ┆   6.245331 │
+│    var_gbm2 ┆  -2.217066 │
+│             ┆   0.385699 │
+│    var_gbm3 ┆  -2.207621 │
+│             ┆   0.341393 │
+│   var_gbm12 ┆  -2.217066 │
+│             ┆   0.385699 │
+│ var_gbm2_sq ┆ 107.884137 │
+│             ┆   6.782814 │
+│    var_gbm1 ┆   0.521275 │
+│             ┆   0.017052 │
 └─────────────┴────────────┘
 </pre>
 </div>
@@ -8049,16 +8048,16 @@ a.anchor-link {
 <pre>┌─────────────┬────────────┐
 │    Variable ┆       mean │
 ╞═════════════╪════════════╡
-│    var_gbm3 ┆   -2.49392 │
-│             ┆   0.431025 │
-│    var_gbm2 ┆  -2.083911 │
-│             ┆   0.437701 │
-│    var_gbm1 ┆   0.520732 │
-│             ┆   0.021626 │
-│   var_gbm12 ┆  -2.083911 │
-│             ┆   0.437701 │
-│ var_gbm2_sq ┆ 106.290287 │
-│             ┆   6.783125 │
+│    var_gbm2 ┆  -2.142171 │
+│             ┆    0.37997 │
+│    var_gbm3 ┆  -2.147947 │
+│             ┆   0.369895 │
+│   var_gbm12 ┆  -2.142171 │
+│             ┆    0.37997 │
+│ var_gbm2_sq ┆ 106.430245 │
+│             ┆   6.571245 │
+│    var_gbm1 ┆   0.519809 │
+│             ┆   0.021913 │
 └─────────────┴────────────┘
 </pre>
 </div>
@@ -8073,7 +8072,7 @@ a.anchor-link {
 </div>
 </div>
 </div>
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=96586873">
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=740409e4">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -8081,9 +8080,13 @@ a.anchor-link {
 <div class="jp-InputPrompt jp-InputArea-prompt">In [9]:</div>
 <div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
 <div class="cm-editor cm-s-jupyter">
-<div class="highlight hl-ipython3"><pre><span></span><span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">"Do it again, but run each implicate in it's own process and collect the results"</span><span class="p">)</span>
+<div class="highlight hl-ipython3"><pre><span></span><span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span>
+    <span class="s2">"Do it again, but run each implicate in it's own process and collect the results"</span>
+<span class="p">)</span>
 <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">"   This will split up the job and "</span><span class="p">)</span>
-<span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">"   use all your cpus (or what you set in config.cpus), dividing them up among the jobs"</span><span class="p">)</span>
+<span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span>
+    <span class="s2">"   use all your cpus (or what you set in config.cpus), dividing them up among the jobs"</span>
+<span class="p">)</span>
 <span class="n">mi_results</span> <span class="o">=</span> <span class="n">mi_ses_from_function</span><span class="p">(</span>
     <span class="n">delegate</span><span class="o">=</span><span class="n">StatCalculator</span><span class="p">,</span>
     <span class="n">df_implicates</span><span class="o">=</span><span class="n">df_implicates</span><span class="p">,</span>
@@ -8175,8 +8178,8 @@ set_logging(path_log='.',force=True,to_console=False,append_to_file=True,name='.
 capture_prints_log = PrintLogger('.',to_console=False)
 from survey_kit.statistics.multiple_imputation import _mi_ses_from_function_one_implicate
 from survey_kit.serializable import SerializableDictionary
-d_implicate = SerializableDictionary.load(path='C:/Users/jonro/OneDrive/Documents/Coding/survey_kit/.scratch/temp_files/ac2i3ibe')
-_mi_ses_from_function_one_implicate(implicate_number=0,path_save='C:/Users/jonro/OneDrive/Documents/Coding/survey_kit/.scratch/temp_files/ac2i3ibe_implicate_0',**d_implicate)
+d_implicate = SerializableDictionary.load(path='C:/Users/jonro/OneDrive/Documents/Coding/survey_kit/.scratch/temp_files/wsrqn3wx')
+_mi_ses_from_function_one_implicate(implicate_number=0,path_save='C:/Users/jonro/OneDrive/Documents/Coding/survey_kit/.scratch/temp_files/wsrqn3wx_implicate_0',**d_implicate)
 
 
 END CODE
@@ -8221,8 +8224,8 @@ set_logging(path_log='.',force=True,to_console=False,append_to_file=True,name='.
 capture_prints_log = PrintLogger('.',to_console=False)
 from survey_kit.statistics.multiple_imputation import _mi_ses_from_function_one_implicate
 from survey_kit.serializable import SerializableDictionary
-d_implicate = SerializableDictionary.load(path='C:/Users/jonro/OneDrive/Documents/Coding/survey_kit/.scratch/temp_files/ac2i3ibe')
-_mi_ses_from_function_one_implicate(implicate_number=1,path_save='C:/Users/jonro/OneDrive/Documents/Coding/survey_kit/.scratch/temp_files/ac2i3ibe_implicate_1',**d_implicate)
+d_implicate = SerializableDictionary.load(path='C:/Users/jonro/OneDrive/Documents/Coding/survey_kit/.scratch/temp_files/wsrqn3wx')
+_mi_ses_from_function_one_implicate(implicate_number=1,path_save='C:/Users/jonro/OneDrive/Documents/Coding/survey_kit/.scratch/temp_files/wsrqn3wx_implicate_1',**d_implicate)
 
 
 END CODE
@@ -8314,7 +8317,7 @@ END CODE
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
 <pre>
 LOGGING INFORMATION FOR:
-    FILE:       C:\Users\jonro\OneDrive\Documents\Coding\survey_kit\.scratch\temp_files\001__mi_ses_from_function_one_implicate_utvdwij4.py
+    FILE:       C:\Users\jonro\OneDrive\Documents\Coding\survey_kit\.scratch\temp_files\001__mi_ses_from_function_one_implicate_sugzioon.py
 PRINT OUTPUT BEGIN
 
 
@@ -8330,7 +8333,7 @@ PRINT OUTPUT END
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
 <pre>
 LOGGING INFORMATION FOR:
-    FILE:       C:\Users\jonro\OneDrive\Documents\Coding\survey_kit\.scratch\temp_files\002__mi_ses_from_function_one_implicate_eynb07th.py
+    FILE:       C:\Users\jonro\OneDrive\Documents\Coding\survey_kit\.scratch\temp_files\002__mi_ses_from_function_one_implicate_ytsnlnn1.py
 PRINT OUTPUT BEGIN
 
 
@@ -8358,27 +8361,27 @@ PRINT OUTPUT END
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>Removing existing directory C:/Users/jonro/OneDrive/Documents/Coding/survey_kit/.scratch/temp_files/ac2i3ibe_implicate_0.replicate_stats
+<pre>Removing existing directory C:/Users/jonro/OneDrive/Documents/Coding/survey_kit/.scratch/temp_files/wsrqn3wx_implicate_0.replicate_stats
 </pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>Removing existing directory C:/Users/jonro/OneDrive/Documents/Coding/survey_kit/.scratch/temp_files/ac2i3ibe_implicate_1.replicate_stats
+<pre>Removing existing directory C:/Users/jonro/OneDrive/Documents/Coding/survey_kit/.scratch/temp_files/wsrqn3wx_implicate_1.replicate_stats
 </pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>Removing existing directory C:/Users/jonro/OneDrive/Documents/Coding/survey_kit/.scratch/temp_files/ac2i3ibe.dict
+<pre>Removing existing directory C:/Users/jonro/OneDrive/Documents/Coding/survey_kit/.scratch/temp_files/wsrqn3wx.dict
 </pre>
 </div>
 </div>
 </div>
 </div>
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=677fa5e2">
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=cdfd8951">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -8410,23 +8413,23 @@ PRINT OUTPUT END
 <pre>┌─────────────┬────────────┐
 │    Variable ┆       mean │
 ╞═════════════╪════════════╡
-│    var_gbm3 ┆  -2.521952 │
-│             ┆   0.416829 │
-│    var_gbm2 ┆  -2.122822 │
-│             ┆   0.435816 │
-│    var_gbm1 ┆   0.521054 │
-│             ┆   0.019827 │
-│   var_gbm12 ┆  -2.122822 │
-│             ┆   0.435816 │
-│ var_gbm2_sq ┆ 106.770992 │
-│             ┆   6.572724 │
+│    var_gbm2 ┆  -2.179618 │
+│             ┆   0.388301 │
+│    var_gbm3 ┆  -2.177784 │
+│             ┆   0.359662 │
+│   var_gbm12 ┆  -2.179618 │
+│             ┆   0.388301 │
+│ var_gbm2_sq ┆ 107.157191 │
+│             ┆   6.795533 │
+│    var_gbm1 ┆   0.520542 │
+│             ┆   0.019674 │
 └─────────────┴────────────┘
 </pre>
 </div>
 </div>
 </div>
 </div>
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=2a351cbd">
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=8af967c6">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -8458,23 +8461,23 @@ PRINT OUTPUT END
 <pre>┌─────────────┬────────────┐
 │    Variable ┆       mean │
 ╞═════════════╪════════════╡
-│    var_gbm3 ┆  -2.521952 │
-│             ┆   0.416829 │
-│    var_gbm2 ┆  -2.122822 │
-│             ┆   0.435816 │
-│    var_gbm1 ┆   0.521054 │
-│             ┆   0.019827 │
-│   var_gbm12 ┆  -2.122822 │
-│             ┆   0.435816 │
-│ var_gbm2_sq ┆ 106.770992 │
-│             ┆   6.572724 │
+│    var_gbm2 ┆  -2.179618 │
+│             ┆   0.388301 │
+│    var_gbm3 ┆  -2.177784 │
+│             ┆   0.359662 │
+│   var_gbm12 ┆  -2.179618 │
+│             ┆   0.388301 │
+│ var_gbm2_sq ┆ 107.157191 │
+│             ┆   6.795533 │
+│    var_gbm1 ┆   0.520542 │
+│             ┆   0.019674 │
 └─────────────┴────────────┘
 </pre>
 </div>
 </div>
 </div>
 </div>
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=e9a3ad4c">
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=0e42df91">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -8520,7 +8523,7 @@ PRINT OUTPUT END
 </div>
 </div>
 </div>
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=979946bd">
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=195d694e">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -8549,7 +8552,7 @@ PRINT OUTPUT END
 </div>
 </div>
 </div>
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=1339af62">
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=ce68217f">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -8592,15 +8595,15 @@ PRINT OUTPUT END
 <pre>┌─────────────┬──────┐
 │    Variable ┆ mean │
 ╞═════════════╪══════╡
-│    var_gbm3 ┆  0.0 │
-│             ┆  0.0 │
 │    var_gbm2 ┆  0.0 │
 │             ┆  0.0 │
-│    var_gbm1 ┆  0.0 │
+│    var_gbm3 ┆  0.0 │
 │             ┆  0.0 │
 │   var_gbm12 ┆  0.0 │
 │             ┆  0.0 │
 │ var_gbm2_sq ┆  0.0 │
+│             ┆  0.0 │
+│    var_gbm1 ┆  0.0 │
 │             ┆  0.0 │
 └─────────────┴──────┘
 </pre>
@@ -8619,15 +8622,15 @@ PRINT OUTPUT END
 <pre>┌─────────────┬──────┐
 │    Variable ┆ mean │
 ╞═════════════╪══════╡
-│    var_gbm3 ┆  0.0 │
-│             ┆  0.0 │
 │    var_gbm2 ┆  0.0 │
 │             ┆  0.0 │
-│    var_gbm1 ┆  0.0 │
+│    var_gbm3 ┆  0.0 │
 │             ┆  0.0 │
 │   var_gbm12 ┆  0.0 │
 │             ┆  0.0 │
 │ var_gbm2_sq ┆  0.0 │
+│             ┆  0.0 │
+│    var_gbm1 ┆  0.0 │
 │             ┆  0.0 │
 └─────────────┴──────┘
 </pre>

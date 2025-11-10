@@ -7510,7 +7510,7 @@ a.anchor-link {
 </style>
 <!-- End of mermaid configuration --></head>
 <body class="jp-Notebook" data-jp-theme-light="true" data-jp-theme-name="JupyterLab Light">
-<main><div class="jp-Cell jp-CodeCell jp-Notebook-cell jp-mod-noOutputs" id="cell-id=4bd58cf4">
+<main><div class="jp-Cell jp-CodeCell jp-Notebook-cell jp-mod-noOutputs" id="cell-id=7a3bc654">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -7536,7 +7536,7 @@ a.anchor-link {
 </div>
 </div>
 </div>
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=a8a733b9">
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=584f10ae">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -7566,7 +7566,7 @@ a.anchor-link {
 </div>
 </div>
 </div>
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=a3adc86c">
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=83fb3ad0">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -7578,16 +7578,13 @@ a.anchor-link {
 <span class="n">n_rows</span> <span class="o">=</span> <span class="n">safe_height</span><span class="p">(</span><span class="n">df_implicates</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
 <span class="n">n_replicates</span> <span class="o">=</span> <span class="mi">10</span>
 
-<span class="n">df_weights</span> <span class="o">=</span> <span class="p">(</span>
-        <span class="n">bayes_bootstrap</span><span class="p">(</span>
-        <span class="n">n_rows</span><span class="o">=</span><span class="n">n_rows</span><span class="p">,</span>
-        <span class="n">n_draws</span><span class="o">=</span><span class="n">n_replicates</span><span class="o">+</span><span class="mi">1</span><span class="p">,</span>
-        <span class="n">seed</span><span class="o">=</span><span class="mi">8345</span><span class="p">,</span>
-        <span class="n">prefix</span><span class="o">=</span><span class="s2">"weight_"</span><span class="p">,</span>
-        <span class="n">initial_weight_index</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
-    <span class="p">)</span>
-    <span class="o">.</span><span class="n">with_row_index</span><span class="p">(</span><span class="s2">"index"</span><span class="p">)</span>
-<span class="p">)</span>
+<span class="n">df_weights</span> <span class="o">=</span> <span class="n">bayes_bootstrap</span><span class="p">(</span>
+    <span class="n">n_rows</span><span class="o">=</span><span class="n">n_rows</span><span class="p">,</span>
+    <span class="n">n_draws</span><span class="o">=</span><span class="n">n_replicates</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span>
+    <span class="n">seed</span><span class="o">=</span><span class="mi">8345</span><span class="p">,</span>
+    <span class="n">prefix</span><span class="o">=</span><span class="s2">"weight_"</span><span class="p">,</span>
+    <span class="n">initial_weight_index</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
+<span class="p">)</span><span class="o">.</span><span class="n">with_row_index</span><span class="p">(</span><span class="s2">"index"</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
@@ -7606,7 +7603,7 @@ a.anchor-link {
 </div>
 </div>
 </div>
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=a82cfd30">
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=af44e367">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -7655,18 +7652,18 @@ a.anchor-link {
 │        var2 ┆ 10,000 ┆           0 ┆     4.9782 ┆    3.154508 ┆        0.0 ┆         10.0 │
 │        var3 ┆ 10,000 ┆           0 ┆    25.1084 ┆   14.752302 ┆        0.0 ┆         50.0 │
 │        var4 ┆ 10,000 ┆           0 ┆   0.505666 ┆    0.287861 ┆   0.000027 ┆     0.999997 │
-│        var5 ┆ 10,000 ┆           0 ┆     0.4999 ┆    0.500025 ┆        0.0 ┆          1.0 │
 │ unrelated_1 ┆ 10,000 ┆           0 ┆   0.502449 ┆    0.288359 ┆   0.000119 ┆     0.999997 │
 │ unrelated_2 ┆ 10,000 ┆           0 ┆   0.500105 ┆    0.287638 ┆   0.000049 ┆     0.999539 │
 │ unrelated_3 ┆ 10,000 ┆           0 ┆   0.499175 ┆     0.28876 ┆   0.000129 ┆      0.99994 │
 │ unrelated_4 ┆ 10,000 ┆           0 ┆   0.500655 ┆    0.288698 ┆   0.000133 ┆     0.999972 │
 │ unrelated_5 ┆ 10,000 ┆           0 ┆    0.49876 ┆    0.288979 ┆   0.000071 ┆     0.999867 │
 │    repeat_1 ┆ 10,000 ┆           0 ┆   0.502449 ┆    0.288359 ┆   0.000119 ┆     0.999997 │
-│    var_gbm3 ┆ 10,000 ┆       1,212 ┆  -2.721713 ┆   10.901329 ┆ -55.354108 ┆    26.213084 │
-│    var_gbm2 ┆ 10,000 ┆           0 ┆  -2.361046 ┆   10.164599 ┆ -55.354108 ┆    26.213084 │
-│    var_gbm1 ┆ 10,000 ┆           0 ┆     0.5278 ┆    0.499252 ┆        0.0 ┆          1.0 │
-│   var_gbm12 ┆ 10,000 ┆           0 ┆  -2.361046 ┆   10.164599 ┆ -55.354108 ┆    26.213084 │
-│ var_gbm2_sq ┆ 10,000 ┆           0 ┆ 108.883286 ┆   269.40042 ┆        0.0 ┆ 3,064.077326 │
+│    var_gbm2 ┆ 10,000 ┆           0 ┆  -2.405997 ┆   10.199102 ┆ -55.354108 ┆    26.213084 │
+│    var_gbm3 ┆ 10,000 ┆           0 ┆  -2.362588 ┆    10.14679 ┆ -55.354108 ┆    26.213084 │
+│   var_gbm12 ┆ 10,000 ┆           0 ┆  -2.405997 ┆   10.199102 ┆ -55.354108 ┆    26.213084 │
+│ var_gbm2_sq ┆ 10,000 ┆           0 ┆ 109.800094 ┆  271.148843 ┆        0.0 ┆ 3,064.077326 │
+│        var5 ┆ 10,000 ┆           0 ┆     0.4999 ┆    0.500025 ┆        0.0 ┆          1.0 │
+│    var_gbm1 ┆ 10,000 ┆           0 ┆     0.5272 ┆    0.499285 ┆        0.0 ┆          1.0 │
 └─────────────┴────────┴─────────────┴────────────┴─────────────┴────────────┴──────────────┘
 </pre>
 </div>
@@ -7684,18 +7681,18 @@ a.anchor-link {
 │        var2 ┆ 10,000 ┆           0 ┆     4.9782 ┆    3.154508 ┆        0.0 ┆         10.0 │
 │        var3 ┆ 10,000 ┆           0 ┆    25.1084 ┆   14.752302 ┆        0.0 ┆         50.0 │
 │        var4 ┆ 10,000 ┆           0 ┆   0.505666 ┆    0.287861 ┆   0.000027 ┆     0.999997 │
-│        var5 ┆ 10,000 ┆           0 ┆     0.4999 ┆    0.500025 ┆        0.0 ┆          1.0 │
 │ unrelated_1 ┆ 10,000 ┆           0 ┆   0.502449 ┆    0.288359 ┆   0.000119 ┆     0.999997 │
 │ unrelated_2 ┆ 10,000 ┆           0 ┆   0.500105 ┆    0.287638 ┆   0.000049 ┆     0.999539 │
 │ unrelated_3 ┆ 10,000 ┆           0 ┆   0.499175 ┆     0.28876 ┆   0.000129 ┆      0.99994 │
 │ unrelated_4 ┆ 10,000 ┆           0 ┆   0.500655 ┆    0.288698 ┆   0.000133 ┆     0.999972 │
 │ unrelated_5 ┆ 10,000 ┆           0 ┆    0.49876 ┆    0.288979 ┆   0.000071 ┆     0.999867 │
 │    repeat_1 ┆ 10,000 ┆           0 ┆   0.502449 ┆    0.288359 ┆   0.000119 ┆     0.999997 │
-│    var_gbm3 ┆ 10,000 ┆       1,219 ┆  -2.692408 ┆   10.886586 ┆ -55.354108 ┆    26.213084 │
-│    var_gbm2 ┆ 10,000 ┆           0 ┆  -2.299835 ┆   10.146886 ┆ -55.354108 ┆    26.213084 │
-│    var_gbm1 ┆ 10,000 ┆           0 ┆     0.5284 ┆    0.499218 ┆        0.0 ┆          1.0 │
-│   var_gbm12 ┆ 10,000 ┆           0 ┆  -2.299835 ┆   10.146886 ┆ -55.354108 ┆    26.213084 │
-│ var_gbm2_sq ┆ 10,000 ┆           0 ┆ 108.238244 ┆  271.231778 ┆        0.0 ┆ 3,064.077326 │
+│    var_gbm2 ┆ 10,000 ┆           0 ┆  -2.334157 ┆   10.148004 ┆ -55.354108 ┆    26.213084 │
+│    var_gbm3 ┆ 10,000 ┆           0 ┆  -2.322527 ┆   10.098587 ┆ -55.354108 ┆    26.213084 │
+│   var_gbm12 ┆ 10,000 ┆           0 ┆  -2.334157 ┆   10.148004 ┆ -55.354108 ┆    26.213084 │
+│ var_gbm2_sq ┆ 10,000 ┆           0 ┆ 108.419985 ┆  266.593764 ┆        0.0 ┆ 3,064.077326 │
+│        var5 ┆ 10,000 ┆           0 ┆     0.4999 ┆    0.500025 ┆        0.0 ┆          1.0 │
+│    var_gbm1 ┆ 10,000 ┆           0 ┆     0.5276 ┆    0.499263 ┆        0.0 ┆          1.0 │
 └─────────────┴────────┴─────────────┴────────────┴─────────────┴────────────┴──────────────┘
 </pre>
 </div>
@@ -7731,7 +7728,7 @@ a.anchor-link {
 </div>
 </div>
 </div>
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=832c84bd">
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=9d72cdcd">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -7740,14 +7737,17 @@ a.anchor-link {
 <div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
 <div class="cm-editor cm-s-jupyter">
 <div class="highlight hl-ipython3"><pre><span></span><span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">"To run an arbitrary stat, you need"</span><span class="p">)</span>
-<span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">"   any function that takes a dataframe and a weight and returns a dataframe"</span><span class="p">)</span>
+<span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span>
+    <span class="s2">"   any function that takes a dataframe and a weight and returns a dataframe"</span>
+<span class="p">)</span>
 <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">"The function will be run for each boostrap/replicate weight"</span><span class="p">)</span>
 <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">"   Note: you may need to import packages within the function"</span><span class="p">)</span>
 <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">"   if executed in parallel (it will get pickled and reloaded)"</span><span class="p">)</span>
-<span class="k">def</span><span class="w"> </span><span class="nf">run_regression</span><span class="p">(</span><span class="n">df</span><span class="p">:</span><span class="n">pl</span><span class="o">.</span><span class="n">LazyFrame</span> <span class="o">|</span> <span class="n">pl</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span>
-                   <span class="n">y</span><span class="p">:</span><span class="nb">str</span><span class="p">,</span>
-                   <span class="n">X</span><span class="p">:</span><span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span>
-                   <span class="n">weight</span><span class="p">:</span><span class="nb">str</span><span class="o">=</span><span class="s2">""</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pl</span><span class="o">.</span><span class="n">LazyFrame</span> <span class="o">|</span> <span class="n">pl</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">run_regression</span><span class="p">(</span>
+    <span class="n">df</span><span class="p">:</span> <span class="n">pl</span><span class="o">.</span><span class="n">LazyFrame</span> <span class="o">|</span> <span class="n">pl</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="n">y</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">X</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span> <span class="n">weight</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">""</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pl</span><span class="o">.</span><span class="n">LazyFrame</span> <span class="o">|</span> <span class="n">pl</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
     <span class="kn">import</span><span class="w"> </span><span class="nn">polars</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pl</span>
     <span class="kn">from</span><span class="w"> </span><span class="nn">sklearn.linear_model</span><span class="w"> </span><span class="kn">import</span> <span class="n">LinearRegression</span>
 
@@ -7756,23 +7756,20 @@ a.anchor-link {
     <span class="n">d_weight</span> <span class="o">=</span> <span class="p">{}</span>
     <span class="k">if</span> <span class="n">weight</span> <span class="o">!=</span> <span class="s2">""</span><span class="p">:</span>
         <span class="n">d_weight</span><span class="p">[</span><span class="s2">"sample_weight"</span><span class="p">]</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="n">weight</span><span class="p">]</span>
-    
-    <span class="n">model</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span>
-        <span class="n">X</span><span class="o">=</span><span class="n">df</span><span class="o">.</span><span class="n">select</span><span class="p">(</span><span class="n">X</span><span class="p">),</span>
-        <span class="n">y</span><span class="o">=</span><span class="n">df</span><span class="o">.</span><span class="n">select</span><span class="p">(</span><span class="n">y</span><span class="p">),</span>
-        <span class="o">**</span><span class="n">d_weight</span>
-    <span class="p">)</span>
+
+    <span class="n">model</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">X</span><span class="o">=</span><span class="n">df</span><span class="o">.</span><span class="n">select</span><span class="p">(</span><span class="n">X</span><span class="p">),</span> <span class="n">y</span><span class="o">=</span><span class="n">df</span><span class="o">.</span><span class="n">select</span><span class="p">(</span><span class="n">y</span><span class="p">),</span> <span class="o">**</span><span class="n">d_weight</span><span class="p">)</span>
 
     <span class="n">df_betas</span> <span class="o">=</span> <span class="n">pl</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span>
-            <span class="nb">dict</span><span class="p">(</span>
-                <span class="n">Variable</span><span class="o">=</span><span class="n">df</span><span class="o">.</span><span class="n">select</span><span class="p">(</span><span class="n">X</span><span class="p">)</span><span class="o">.</span><span class="n">lazy</span><span class="p">()</span><span class="o">.</span><span class="n">collect_schema</span><span class="p">()</span><span class="o">.</span><span class="n">names</span><span class="p">()</span> <span class="o">+</span> <span class="p">[</span><span class="s2">"_Intercept_"</span><span class="p">],</span>
-                <span class="n">Beta</span><span class="o">=</span><span class="p">[</span>
-                    <span class="nb">float</span><span class="p">(</span><span class="n">vali</span><span class="p">)</span>
-                    <span class="k">for</span> <span class="n">vali</span> <span class="ow">in</span> <span class="p">[</span><span class="nb">float</span><span class="p">(</span><span class="n">coefi</span><span class="p">)</span> <span class="k">for</span> <span class="n">coefi</span> <span class="ow">in</span> <span class="n">model</span><span class="o">.</span><span class="n">coef_</span><span class="p">[</span><span class="mi">0</span><span class="p">]]</span> <span class="o">+</span> <span class="p">[</span><span class="nb">float</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">intercept_</span><span class="p">[</span><span class="mi">0</span><span class="p">])]</span>
-                <span class="p">],</span>
-            <span class="p">)</span>
+        <span class="nb">dict</span><span class="p">(</span>
+            <span class="n">Variable</span><span class="o">=</span><span class="n">df</span><span class="o">.</span><span class="n">select</span><span class="p">(</span><span class="n">X</span><span class="p">)</span><span class="o">.</span><span class="n">lazy</span><span class="p">()</span><span class="o">.</span><span class="n">collect_schema</span><span class="p">()</span><span class="o">.</span><span class="n">names</span><span class="p">()</span> <span class="o">+</span> <span class="p">[</span><span class="s2">"_Intercept_"</span><span class="p">],</span>
+            <span class="n">Beta</span><span class="o">=</span><span class="p">[</span>
+                <span class="nb">float</span><span class="p">(</span><span class="n">vali</span><span class="p">)</span>
+                <span class="k">for</span> <span class="n">vali</span> <span class="ow">in</span> <span class="p">[</span><span class="nb">float</span><span class="p">(</span><span class="n">coefi</span><span class="p">)</span> <span class="k">for</span> <span class="n">coefi</span> <span class="ow">in</span> <span class="n">model</span><span class="o">.</span><span class="n">coef_</span><span class="p">[</span><span class="mi">0</span><span class="p">]]</span>
+                <span class="o">+</span> <span class="p">[</span><span class="nb">float</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">intercept_</span><span class="p">[</span><span class="mi">0</span><span class="p">])]</span>
+            <span class="p">],</span>
         <span class="p">)</span>
-    
+    <span class="p">)</span>
+
     <span class="k">return</span> <span class="n">df_betas</span>
 </pre></div>
 </div>
@@ -7820,7 +7817,7 @@ a.anchor-link {
 </div>
 </div>
 </div>
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=3f701dde">
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=d31efc10">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -7830,8 +7827,8 @@ a.anchor-link {
 <div class="cm-editor cm-s-jupyter">
 <div class="highlight hl-ipython3"><pre><span></span><span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">"The betas from the regression (no weights, implicate 0)"</span><span class="p">)</span>
 <span class="n">y</span> <span class="o">=</span> <span class="s2">"var_gbm2"</span>
-<span class="n">X</span> <span class="o">=</span> <span class="p">[</span><span class="s2">"var2"</span><span class="p">,</span><span class="s2">"var3"</span><span class="p">,</span><span class="s2">"var4"</span><span class="p">,</span><span class="s2">"var5"</span><span class="p">]</span>
-<span class="n">df_betas</span> <span class="o">=</span> <span class="n">run_regression</span><span class="p">(</span><span class="n">df</span><span class="o">=</span><span class="n">df_implicates</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span><span class="n">y</span><span class="o">=</span><span class="n">y</span><span class="p">,</span><span class="n">X</span><span class="o">=</span><span class="n">X</span><span class="p">)</span>
+<span class="n">X</span> <span class="o">=</span> <span class="p">[</span><span class="s2">"var2"</span><span class="p">,</span> <span class="s2">"var3"</span><span class="p">,</span> <span class="s2">"var4"</span><span class="p">,</span> <span class="s2">"var5"</span><span class="p">]</span>
+<span class="n">df_betas</span> <span class="o">=</span> <span class="n">run_regression</span><span class="p">(</span><span class="n">df</span><span class="o">=</span><span class="n">df_implicates</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">y</span><span class="o">=</span><span class="n">y</span><span class="p">,</span> <span class="n">X</span><span class="o">=</span><span class="n">X</span><span class="p">)</span>
 <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="n">df_betas</span><span class="p">)</span>
 </pre></div>
 </div>
@@ -7853,23 +7850,23 @@ a.anchor-link {
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
 <pre>shape: (5, 2)
-┌─────────────┬────────────┐
-│ Variable    ┆ Beta       │
-│ ---         ┆ ---        │
-│ str         ┆ f64        │
-╞═════════════╪════════════╡
-│ var2        ┆ 0.59185    │
-│ var3        ┆ -0.328883  │
-│ var4        ┆ -12.990215 │
-│ var5        ┆ 2.933262   │
-│ _Intercept_ ┆ 8.052709   │
-└─────────────┴────────────┘
+┌─────────────┬───────────┐
+│ Variable    ┆ Beta      │
+│ ---         ┆ ---       │
+│ str         ┆ f64       │
+╞═════════════╪═══════════╡
+│ var2        ┆ 0.583644  │
+│ var3        ┆ -0.330792 │
+│ var4        ┆ -13.05279 │
+│ var5        ┆ 3.005503  │
+│ _Intercept_ ┆ 8.092053  │
+└─────────────┴───────────┘
 </pre>
 </div>
 </div>
 </div>
 </div>
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=802193dd">
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=e6d91d28">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -7883,17 +7880,15 @@ a.anchor-link {
     <span class="n">X</span><span class="o">=</span><span class="n">X</span><span class="p">,</span>
 <span class="p">)</span>
 <span class="n">replicates</span> <span class="o">=</span> <span class="n">Replicates</span><span class="p">(</span>
-    <span class="n">weight_stub</span><span class="o">=</span><span class="s2">"weight_"</span><span class="p">,</span>
-    <span class="n">n_replicates</span><span class="o">=</span><span class="n">n_replicates</span><span class="p">,</span>
-    <span class="n">bootstrap</span><span class="o">=</span><span class="kc">True</span>
+    <span class="n">weight_stub</span><span class="o">=</span><span class="s2">"weight_"</span><span class="p">,</span> <span class="n">n_replicates</span><span class="o">=</span><span class="n">n_replicates</span><span class="p">,</span> <span class="n">bootstrap</span><span class="o">=</span><span class="kc">True</span>
 <span class="p">)</span>
 <span class="n">sc_compare</span> <span class="o">=</span> <span class="n">StatCalculator</span><span class="o">.</span><span class="n">from_function</span><span class="p">(</span>
     <span class="n">run_regression</span><span class="p">,</span>
-    <span class="n">df</span><span class="o">=</span><span class="n">join_wrapper</span><span class="p">(</span><span class="n">df_implicates</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span><span class="n">df_weights</span><span class="p">,</span><span class="n">on</span><span class="o">=</span><span class="p">[</span><span class="s2">"index"</span><span class="p">],</span><span class="n">how</span><span class="o">=</span><span class="s2">"left"</span><span class="p">),</span>
+    <span class="n">df</span><span class="o">=</span><span class="n">join_wrapper</span><span class="p">(</span><span class="n">df_implicates</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">df_weights</span><span class="p">,</span> <span class="n">on</span><span class="o">=</span><span class="p">[</span><span class="s2">"index"</span><span class="p">],</span> <span class="n">how</span><span class="o">=</span><span class="s2">"left"</span><span class="p">),</span>
     <span class="n">estimate_ids</span><span class="o">=</span><span class="p">[</span><span class="s2">"Variable"</span><span class="p">],</span>
     <span class="n">arguments</span><span class="o">=</span><span class="n">arguments_sc</span><span class="p">,</span>
     <span class="n">replicates</span><span class="o">=</span><span class="n">replicates</span><span class="p">,</span>
-    <span class="n">display</span><span class="o">=</span><span class="kc">False</span>
+    <span class="n">display</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
 <span class="p">)</span>
 <span class="n">sc_compare</span><span class="o">.</span><span class="n">print</span><span class="p">()</span>
 </pre></div>
@@ -7991,16 +7986,16 @@ a.anchor-link {
 <pre>┌─────────────┬────────────┐
 │    Variable ┆       Beta │
 ╞═════════════╪════════════╡
-│        var2 ┆   0.588633 │
-│             ┆    0.07485 │
-│        var3 ┆  -0.329186 │
-│             ┆    0.00812 │
-│        var4 ┆ -13.066947 │
-│             ┆   0.646009 │
-│        var5 ┆   2.741127 │
-│             ┆   0.637431 │
-│ _Intercept_ ┆   8.178235 │
-│             ┆   0.660875 │
+│        var2 ┆   0.575825 │
+│             ┆   0.085591 │
+│        var3 ┆  -0.332087 │
+│             ┆   0.009964 │
+│        var4 ┆ -13.095352 │
+│             ┆   0.584783 │
+│        var5 ┆   2.769605 │
+│             ┆   0.737985 │
+│ _Intercept_ ┆   8.308586 │
+│             ┆     0.8383 │
 └─────────────┴────────────┘
 </pre>
 </div>
@@ -8014,7 +8009,7 @@ a.anchor-link {
 </div>
 </div>
 </div>
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=c4c80f44">
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=3b47d3b2">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -8188,16 +8183,16 @@ a.anchor-link {
 <pre>┌─────────────┬────────────┐
 │    Variable ┆       Beta │
 ╞═════════════╪════════════╡
-│        var2 ┆   0.588633 │
-│             ┆    0.07485 │
-│        var3 ┆  -0.329186 │
-│             ┆    0.00812 │
-│        var4 ┆ -13.066947 │
-│             ┆   0.646009 │
-│        var5 ┆   2.741127 │
-│             ┆   0.637431 │
-│ _Intercept_ ┆   8.178235 │
-│             ┆   0.660875 │
+│        var2 ┆   0.575825 │
+│             ┆   0.085591 │
+│        var3 ┆  -0.332087 │
+│             ┆   0.009964 │
+│        var4 ┆ -13.095352 │
+│             ┆   0.584783 │
+│        var5 ┆   2.769605 │
+│             ┆   0.737985 │
+│ _Intercept_ ┆   8.308586 │
+│             ┆     0.8383 │
 └─────────────┴────────────┘
 </pre>
 </div>
@@ -8292,20 +8287,20 @@ a.anchor-link {
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>┌─────────────┬───────────┐
-│    Variable ┆      Beta │
-╞═════════════╪═══════════╡
-│        var2 ┆   0.58445 │
-│             ┆   0.07622 │
-│        var3 ┆ -0.328438 │
-│             ┆  0.013036 │
-│        var4 ┆ -13.10739 │
-│             ┆   0.57152 │
-│        var5 ┆  2.565298 │
-│             ┆   0.87618 │
-│ _Intercept_ ┆  8.398606 │
-│             ┆  0.988309 │
-└─────────────┴───────────┘
+<pre>┌─────────────┬────────────┐
+│    Variable ┆       Beta │
+╞═════════════╪════════════╡
+│        var2 ┆   0.570787 │
+│             ┆   0.074242 │
+│        var3 ┆  -0.335643 │
+│             ┆   0.019819 │
+│        var4 ┆ -13.152631 │
+│             ┆   0.604451 │
+│        var5 ┆   2.741469 │
+│             ┆   0.673906 │
+│ _Intercept_ ┆   8.535823 │
+│             ┆   1.168383 │
+└─────────────┴────────────┘
 </pre>
 </div>
 </div>
@@ -8315,16 +8310,16 @@ a.anchor-link {
 <pre>┌─────────────┬────────────┐
 │    Variable ┆       Beta │
 ╞═════════════╪════════════╡
-│        var2 ┆   0.586542 │
-│             ┆   0.075625 │
-│        var3 ┆  -0.328812 │
-│             ┆   0.010879 │
-│        var4 ┆ -13.087169 │
-│             ┆   0.610907 │
-│        var5 ┆   2.653212 │
-│             ┆   0.781148 │
-│ _Intercept_ ┆    8.28842 │
-│             ┆   0.862078 │
+│        var2 ┆   0.573306 │
+│             ┆   0.080237 │
+│        var3 ┆  -0.333865 │
+│             ┆   0.015985 │
+│        var4 ┆ -13.123991 │
+│             ┆   0.596763 │
+│        var5 ┆   2.755537 │
+│             ┆   0.707092 │
+│ _Intercept_ ┆   8.422204 │
+│             ┆   1.035693 │
 └─────────────┴────────────┘
 </pre>
 </div>
@@ -8338,7 +8333,7 @@ a.anchor-link {
 </div>
 </div>
 </div>
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=fc9e2b1a">
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=321880de">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -8441,8 +8436,8 @@ set_logging(path_log='.',force=True,to_console=False,append_to_file=True,name='.
 capture_prints_log = PrintLogger('.',to_console=False)
 from survey_kit.statistics.multiple_imputation import _mi_ses_from_function_one_implicate
 from survey_kit.serializable import SerializableDictionary
-d_implicate = SerializableDictionary.load(path='C:/Users/jonro/OneDrive/Documents/Coding/survey_kit/.scratch/temp_files/pmcvruu8')
-_mi_ses_from_function_one_implicate(implicate_number=0,path_save='C:/Users/jonro/OneDrive/Documents/Coding/survey_kit/.scratch/temp_files/pmcvruu8_implicate_0',**d_implicate)
+d_implicate = SerializableDictionary.load(path='C:/Users/jonro/OneDrive/Documents/Coding/survey_kit/.scratch/temp_files/3wtpdirw')
+_mi_ses_from_function_one_implicate(implicate_number=0,path_save='C:/Users/jonro/OneDrive/Documents/Coding/survey_kit/.scratch/temp_files/3wtpdirw_implicate_0',**d_implicate)
 
 
 END CODE
@@ -8487,8 +8482,8 @@ set_logging(path_log='.',force=True,to_console=False,append_to_file=True,name='.
 capture_prints_log = PrintLogger('.',to_console=False)
 from survey_kit.statistics.multiple_imputation import _mi_ses_from_function_one_implicate
 from survey_kit.serializable import SerializableDictionary
-d_implicate = SerializableDictionary.load(path='C:/Users/jonro/OneDrive/Documents/Coding/survey_kit/.scratch/temp_files/pmcvruu8')
-_mi_ses_from_function_one_implicate(implicate_number=1,path_save='C:/Users/jonro/OneDrive/Documents/Coding/survey_kit/.scratch/temp_files/pmcvruu8_implicate_1',**d_implicate)
+d_implicate = SerializableDictionary.load(path='C:/Users/jonro/OneDrive/Documents/Coding/survey_kit/.scratch/temp_files/3wtpdirw')
+_mi_ses_from_function_one_implicate(implicate_number=1,path_save='C:/Users/jonro/OneDrive/Documents/Coding/survey_kit/.scratch/temp_files/3wtpdirw_implicate_1',**d_implicate)
 
 
 END CODE
@@ -8574,7 +8569,7 @@ END CODE
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
 <pre>
 LOGGING INFORMATION FOR:
-    FILE:       C:\Users\jonro\OneDrive\Documents\Coding\survey_kit\.scratch\temp_files\001__mi_ses_from_function_one_implicate_q5osm_1p.py
+    FILE:       C:\Users\jonro\OneDrive\Documents\Coding\survey_kit\.scratch\temp_files\001__mi_ses_from_function_one_implicate__4e30mfc.py
 PRINT OUTPUT BEGIN
 
 
@@ -8590,7 +8585,7 @@ PRINT OUTPUT END
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
 <pre>
 LOGGING INFORMATION FOR:
-    FILE:       C:\Users\jonro\OneDrive\Documents\Coding\survey_kit\.scratch\temp_files\002__mi_ses_from_function_one_implicate_97o5gvm9.py
+    FILE:       C:\Users\jonro\OneDrive\Documents\Coding\survey_kit\.scratch\temp_files\002__mi_ses_from_function_one_implicate_ik4naak8.py
 PRINT OUTPUT BEGIN
 
 
@@ -8618,27 +8613,27 @@ PRINT OUTPUT END
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>Removing existing directory C:/Users/jonro/OneDrive/Documents/Coding/survey_kit/.scratch/temp_files/pmcvruu8_implicate_0.replicate_stats
+<pre>Removing existing directory C:/Users/jonro/OneDrive/Documents/Coding/survey_kit/.scratch/temp_files/3wtpdirw_implicate_0.replicate_stats
 </pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>Removing existing directory C:/Users/jonro/OneDrive/Documents/Coding/survey_kit/.scratch/temp_files/pmcvruu8_implicate_1.replicate_stats
+<pre>Removing existing directory C:/Users/jonro/OneDrive/Documents/Coding/survey_kit/.scratch/temp_files/3wtpdirw_implicate_1.replicate_stats
 </pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>Removing existing directory C:/Users/jonro/OneDrive/Documents/Coding/survey_kit/.scratch/temp_files/pmcvruu8.dict
+<pre>Removing existing directory C:/Users/jonro/OneDrive/Documents/Coding/survey_kit/.scratch/temp_files/3wtpdirw.dict
 </pre>
 </div>
 </div>
 </div>
 </div>
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=ab99d621">
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=cc893899">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -8671,16 +8666,16 @@ PRINT OUTPUT END
 <pre>┌─────────────┬────────────┐
 │    Variable ┆       Beta │
 ╞═════════════╪════════════╡
-│        var2 ┆   0.586542 │
-│             ┆   0.075625 │
-│        var3 ┆  -0.328812 │
-│             ┆   0.010879 │
-│        var4 ┆ -13.087169 │
-│             ┆   0.610907 │
-│        var5 ┆   2.653212 │
-│             ┆   0.781148 │
-│ _Intercept_ ┆    8.28842 │
-│             ┆   0.862078 │
+│        var2 ┆   0.573306 │
+│             ┆   0.080237 │
+│        var3 ┆  -0.333865 │
+│             ┆   0.015985 │
+│        var4 ┆ -13.123991 │
+│             ┆   0.596763 │
+│        var5 ┆   2.755537 │
+│             ┆   0.707092 │
+│ _Intercept_ ┆   8.422204 │
+│             ┆   1.035693 │
 └─────────────┴────────────┘
 </pre>
 </div>
@@ -8691,23 +8686,23 @@ PRINT OUTPUT END
 <pre>┌─────────────┬────────────┐
 │    Variable ┆       Beta │
 ╞═════════════╪════════════╡
-│        var2 ┆   0.586542 │
-│             ┆   0.075625 │
-│        var3 ┆  -0.328812 │
-│             ┆   0.010879 │
-│        var4 ┆ -13.087169 │
-│             ┆   0.610907 │
-│        var5 ┆   2.653212 │
-│             ┆   0.781148 │
-│ _Intercept_ ┆    8.28842 │
-│             ┆   0.862078 │
+│        var2 ┆   0.573306 │
+│             ┆   0.080237 │
+│        var3 ┆  -0.333865 │
+│             ┆   0.015985 │
+│        var4 ┆ -13.123991 │
+│             ┆   0.596763 │
+│        var5 ┆   2.755537 │
+│             ┆   0.707092 │
+│ _Intercept_ ┆   8.422204 │
+│             ┆   1.035693 │
 └─────────────┴────────────┘
 </pre>
 </div>
 </div>
 </div>
 </div>
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=36dee94b">
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=81355f5a">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
