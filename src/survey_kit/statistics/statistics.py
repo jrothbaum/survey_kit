@@ -1,10 +1,17 @@
 import narwhals as nw
+import narwhals.selectors as cs
 from narwhals.typing import IntoFrameT
 
 from formulaic import Formula
 from .rounding import Rounding
 from ..utilities.inputs import list_input
-from ..utilities.dataframe import concat_wrapper, columns_from_list, NarwhalsType, drop_if_exists
+from ..utilities.dataframe import (
+    concat_wrapper,
+    columns_from_list,
+    NarwhalsType,
+    drop_if_exists,
+    safe_columns
+)
 from .basic_calculations import (
     calculate_by,
     _check_special_modifiers,
@@ -93,6 +100,8 @@ class Statistics:
             else:
                 cols_summary = df.lazy_backend(nw_type).collect_schema().names()
 
+        df_summary = df_summary.select(cs.numeric(),cs.boolean())
+        cols_summary = safe_columns(df_summary)
         #   Keep the weights
         if (
             weight != ""

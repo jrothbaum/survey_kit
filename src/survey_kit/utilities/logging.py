@@ -15,7 +15,7 @@ def set_logging(
     name: str = "",
 ):
     if name == "":
-        globals()["SurveyTools_log_params"] = deepcopy(locals())
+        globals()["_survey_kit_log_params"] = deepcopy(locals())
     handlers = []
     Format = "%(levelname)10s:\t\t%(message)s"
 
@@ -25,13 +25,13 @@ def set_logging(
                 os.remove(path_log)
         mode = "a"
 
-        hFile = SurveyToolsLoggingFileHandler(path_log, mode=mode, encoding="utf-8")
-        hFile.setFormatter(SurveyToolsLoggingFormatting(Format))
+        hFile = SurveyKitLoggingFileHandler(path_log, mode=mode, encoding="utf-8")
+        hFile.setFormatter(SurveyKitLoggingFormatting(Format))
         handlers.append(hFile)
 
     if to_console:
-        hConsole = SurveyToolsLoggingStreamHandler()
-        hConsole.setFormatter(SurveyToolsLoggingFormatting(Format))
+        hConsole = SurveyKitLoggingStreamHandler()
+        hConsole.setFormatter(SurveyKitLoggingFormatting(Format))
         handlers.append(hConsole)
 
     if name != "":
@@ -52,7 +52,7 @@ def set_logging(
         )
 
 
-class SurveyToolsLoggingFileHandler(logging.FileHandler):
+class SurveyKitLoggingFileHandler(logging.FileHandler):
     NoCarriageReturn = "[!n]"
 
     def emit(self, record) -> None:
@@ -66,7 +66,7 @@ class SurveyToolsLoggingFileHandler(logging.FileHandler):
             return super().emit(record=record)
 
 
-class SurveyToolsLoggingStreamHandler(logging.StreamHandler):
+class SurveyKitLoggingStreamHandler(logging.StreamHandler):
     NoCarriageReturn = "[!n]"
 
     def emit(self, record) -> None:
@@ -80,7 +80,7 @@ class SurveyToolsLoggingStreamHandler(logging.StreamHandler):
             return super().emit(record=record)
 
 
-class SurveyToolsLoggingFormatting(logging.Formatter):
+class SurveyKitLoggingFormatting(logging.Formatter):
     info_fmt = logging.Formatter("%(message)s")
     default_fmt = logging.Formatter("%(levelname)10s:\t\t%(message)s")
 

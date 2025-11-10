@@ -49,6 +49,7 @@ def gen_random_table(n_rows: int, n_replicates: int, seed: int):
         pl.when(pl.col("year").ne(2016)).then(pl.col("income")).otherwise(pl.lit(0))
     )
 
+    df = df.with_columns(pl.lit("a").alias("v_string"))
     return df
 
 
@@ -63,7 +64,7 @@ replicates = Replicates(weight_stub="weight_", n_replicates=n_replicates,bootstr
 print("Polars")
 sc = StatCalculator(
     df,
-    statistics=Statistics(stats=["mean", "median|not0"], columns=["v_1", "income"]),
+    statistics=Statistics(stats=["mean", "median|not0"], columns=["v_1", "income","v_string"]),
     weight="weight_0",
     replicates=replicates,
     by=dict(year=["year"]),
