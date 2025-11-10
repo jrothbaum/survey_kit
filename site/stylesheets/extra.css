@@ -11,3 +11,7 @@
 .highlight .gp {
     display: none;
 }
+
+.md-source__facts {
+  display: none;
+}
