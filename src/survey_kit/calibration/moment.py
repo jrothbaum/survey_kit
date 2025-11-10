@@ -23,9 +23,9 @@ class Moment(Serializable):
     """
     Statistical moments for survey calibration.
 
-    A Moment represents target statistics (means, proportions) that survey 
+    A Moment represents target statistics (means, proportions) that survey
     weights should be calibrated to match. Moments can be simple (e.g., overall mean)
-    interactions (i.e. share in a and b).  They can also be  
+    interactions (i.e. share in a and b).  They can also be
     stratified by groups, and can include submoments for more complex constraints.
 
     Parameters
@@ -42,8 +42,8 @@ class Moment(Serializable):
     sort_by : str | list[str] | None, optional
         Column name(s) to sort by when creating row index. Default is None.
     rescale : bool, optional
-        Whether to rescale model matrix by dividing by target values. This implies a 
-        tradeoff between the tolerated miss (i.e. how close do we need to get 
+        Whether to rescale model matrix by dividing by target values. This implies a
+        tradeoff between the tolerated miss (i.e. how close do we need to get
         in the calibration) and the target of this moment. Default is True.
     by : list[str] | str | None, optional
         Variables or formula to stratify moment by, creating submoments for each
@@ -84,13 +84,13 @@ class Moment(Serializable):
 
     >>> import polars as pl
     >>> from survey_kit.calibration.moment import Moment
-    >>> 
+    >>>
     >>> df = pl.DataFrame({
     >>>     "id": range(100),
     >>>     "gender": ["M", "F"] * 50,
     >>>     "weight": [1.0] * 100
     >>> })
-    >>> 
+    >>>
     >>> moment = Moment(df=df, formula="C(gender)", weight="weight")
 
     Moment with continuous and categorical variables:
@@ -101,10 +101,10 @@ class Moment(Serializable):
     >>>     "education": ["HS", "College", "Grad"] * 33 + ["HS"],
     >>>     "weight": [1.0] * 100
     >>> })
-    >>> 
+    >>>
     >>> moment = Moment(
-    >>>     df=df, 
-    >>>     formula="age + C(education)", 
+    >>>     df=df,
+    >>>     formula="age + C(education)",
     >>>     weight="weight"
     >>> )
 
@@ -127,6 +127,7 @@ class Moment(Serializable):
     convergence but changes the interpretation of calibration parameters.
     - Submoments allow for complex calibration schemes like raking or post-stratification.
     """
+
     _save_suffix = "moment"
     _save_exclude_items = ["nw_type"]
 

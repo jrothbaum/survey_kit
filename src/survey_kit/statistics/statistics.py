@@ -10,7 +10,7 @@ from ..utilities.dataframe import (
     columns_from_list,
     NarwhalsType,
     drop_if_exists,
-    safe_columns
+    safe_columns,
 )
 from .basic_calculations import (
     calculate_by,
@@ -39,6 +39,7 @@ class Statistics:
         If quantile_interpolated, what is the bin interval? The default is 2500.
 
     """
+
     def __init__(
         self,
         stats: list[str],
@@ -47,7 +48,6 @@ class Statistics:
         quantile_interpolated: bool = False,
         quantile_interpolated_interval: int = 2500,
     ):
-        
         #   Input parsing/set defaults
         if columns is None:
             columns = []
@@ -81,7 +81,7 @@ class Statistics:
             by = {"All": []}
 
         if type(by) is list:
-            by = {f"{i}":itemi for i, itemi in enumerate(by)}
+            by = {f"{i}": itemi for i, itemi in enumerate(by)}
 
         if self.formula != "":
             #   It's a formula, process accordingly
@@ -100,7 +100,7 @@ class Statistics:
             else:
                 cols_summary = df.lazy_backend(nw_type).collect_schema().names()
 
-        df_summary = df_summary.select(cs.numeric(),cs.boolean())
+        df_summary = df_summary.select(cs.numeric(), cs.boolean())
         cols_summary = safe_columns(df_summary)
         #   Keep the weights
         if (
@@ -113,11 +113,8 @@ class Statistics:
 
         if len(summarize_vars):
             df_summary = concat_wrapper(
-                [
-                    drop_if_exists(df_summary,summarize_vars), 
-                    df.select(summarize_vars)
-                ], 
-                how="horizontal"
+                [drop_if_exists(df_summary, summarize_vars), df.select(summarize_vars)],
+                how="horizontal",
             )
 
         #   Rename the stats for more useful table headers

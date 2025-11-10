@@ -11,15 +11,15 @@ from .. import logger
 def set_seed(seed: int = 0):
     """
     Set the random seed for reproducibility.
-    
+
     Sets the seed for Python's random module, which is used by the
     random number generator in this module.
-    
+
     Parameters
     ----------
     seed : int, optional
         Random seed. If 0 or less, does not set seed. Default is 0.
-        
+
     Examples
     --------
     >>> from survey_kit.utilities.random import set_seed, generate_seed
@@ -37,12 +37,12 @@ def set_seed(seed: int = 0):
 def get_random_state():
     """
     Get the current state of the random number generator.
-    
+
     Returns
     -------
     tuple
         Internal state of Python's random module.
-        
+
     Examples
     --------
     >>> from survey_kit.utilities.random import get_random_state, set_random_state
@@ -56,12 +56,12 @@ def get_random_state():
 def set_random_state(value):
     """
     Set the random number generator to a specific state.
-    
+
     Parameters
     ----------
     value : tuple
         State tuple from get_random_state().
-        
+
     Examples
     --------
     >>> state = get_random_state()
@@ -74,13 +74,13 @@ def set_random_state(value):
 def RandomNumberGenerator() -> np.random.Generator:
     """
     Create a new numpy random number generator with random seed.
-    
+
     Returns
     -------
     np.random.Generator
         Numpy random number generator initialized with a random seed
         from Python's random module.
-        
+
     Examples
     --------
     >>> from survey_kit.utilities.random import RandomNumberGenerator
@@ -93,17 +93,17 @@ def RandomNumberGenerator() -> np.random.Generator:
 def generate_seed(power_of_2_limit: int = 32):
     """
     Generate a random seed value.
-    
+
     Parameters
     ----------
     power_of_2_limit : int, optional
         Upper bound is 2^power_of_2_limit. Default is 32.
-        
+
     Returns
     -------
     int
         Random integer between 1 and 2^power_of_2_limit - 1.
-        
+
     Examples
     --------
     >>> from survey_kit.utilities.random import generate_seed, set_seed
@@ -288,7 +288,7 @@ class RandomData:
     def np_distribution(self, name: str, distribution: str, **kwargs) -> RandomData:
         """
         Create a column from a numpy distribution.
-        
+
         Parameters
         ----------
         name : str
@@ -298,17 +298,17 @@ class RandomData:
             Must be a valid method of np.random.Generator.
         **kwargs
             Keyword arguments passed to the distribution function (e.g., loc, scale for normal).
-            
+
         Returns
         -------
         RandomData
             Self for method chaining.
-            
+
         Raises
         ------
         Exception
             If distribution is not a valid numpy random distribution.
-            
+
         Examples
         --------
         >>> df = (RandomData(n_rows=1000, seed=123)
@@ -331,18 +331,18 @@ class RandomData:
     def to_df(self, compress: bool = True) -> pl.DataFrame:
         """
         Convert accumulated random data to a Polars DataFrame.
-        
+
         Parameters
         ----------
         compress : bool, optional
             Apply compression to reduce memory usage by downcasting numeric types.
             Default is True.
-            
+
         Returns
         -------
         pl.DataFrame
             DataFrame containing all generated columns.
-            
+
         Examples
         --------
         >>> df = (RandomData(n_rows=1000, seed=123)
@@ -350,7 +350,7 @@ class RandomData:
         ...       .float("value", 0, 100)
         ...       .to_df())
         >>> print(df)
-        
+
         >>> # Without compression
         >>> df_uncompressed = (RandomData(n_rows=1000, seed=123)
         ...                    .integer("id", 1, 1000)

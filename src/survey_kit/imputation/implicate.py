@@ -19,7 +19,7 @@ from ..utilities.dataframe import (
     drop_if_exists,
     asterisk_matched_substring,
     columns_from_list,
-    safe_columns
+    safe_columns,
 )
 
 from ..statistics.bootstrap import bayes_bootstrap_weights

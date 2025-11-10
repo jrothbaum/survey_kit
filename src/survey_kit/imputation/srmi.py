@@ -41,10 +41,10 @@ from .. import logger
 class SRMI(Serializable):
     """
     Sequential Regression Multiple Imputation (SRMI) class for handling missing data imputation.
-    
+
     This class manages the complete SRMI process including variable setup, model configuration,
     parallel execution, and result management across multiple implicates and iterations.
-    
+
     Parameters
     ----------
     df : IntoFrameT
@@ -105,17 +105,17 @@ class SRMI(Serializable):
         Flag indicating object created from saved state, by default False
     imputation_stats : list[str] | None, optional
         List of statistics to calculate during imputation, by default None
-        
+
     Raises
     ------
     Exception
         If n_implicates < 1 or n_iterations < 1
         If path equals path_model_new in load_to_continue_prior
-        
+
     Examples
     --------
     Basic usage:
-    
+
     >>> srmi = SRMI(
     ...     df=data,
     ...     variables=[var1, var2],
@@ -124,9 +124,9 @@ class SRMI(Serializable):
     ...     path_model="/path/to/model"
     ... )
     >>> srmi.run()
-    
+
     With parallel execution:
-    
+
     >>> srmi = SRMI(
     ...     df=data,
     ...     variables=vars_list,

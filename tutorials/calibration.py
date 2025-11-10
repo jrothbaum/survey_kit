@@ -69,19 +69,16 @@ logger.info("You can save/reload moments if you want")
 # %%
 #   Calibrate the data in df_treatment to the moment above
 c = Calibration(
-    df=df_treatment,
-    moments=m,
-    weight="weight_1",
-    final_weight="weight_final"
+    df=df_treatment, moments=m, weight="weight_1", final_weight="weight_final"
 )
 
 c.run(
     #   Drop a moment if there are too few observations
     min_obs=5,
-    # If it fails to converge, set bounds on the weights 
+    # If it fails to converge, set bounds on the weights
     #   final weights = (base*ratio) where the bounds are on the ratio
-    #   for "best possible" weights   
-    bounds=(0.001, 1000)
+    #   for "best possible" weights
+    bounds=(0.001, 1000),
 )
 
 #   Merge the final weights back on the treatment data
@@ -89,15 +86,12 @@ df_treatment = c.get_final_weights(df_treatment)
 
 # %%
 logger.info("'Population' estimates")
-_ = summary(df_population,
-        weight="weight_0")
+_ = summary(df_population, weight="weight_0")
 
 # %%
 logger.info("\n\n'Treatment', original weights")
-_ = summary(df_treatment,
-        weight="weight_1")
+_ = summary(df_treatment, weight="weight_1")
 
 # %%
 logger.info("\n\n'Treatment', calibrated")
-_ = summary(df_treatment,
-        weight="weight_final")
+_ = summary(df_treatment, weight="weight_final")

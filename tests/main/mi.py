@@ -8,7 +8,10 @@ from survey_kit.utilities.dataframe import summary
 from survey_kit.imputation.srmi import SRMI
 from survey_kit import logger, config
 
-from survey_kit.statistics.multiple_imputation import MultipleImputation, mi_ses_from_function
+from survey_kit.statistics.multiple_imputation import (
+    MultipleImputation,
+    mi_ses_from_function,
+)
 from survey_kit.statistics.calculator import StatCalculator
 from survey_kit.statistics.statistics import Statistics
 from survey_kit.statistics.replicates import Replicates
@@ -28,16 +31,13 @@ df_implicates = srmi.df_implicates
 set_seed(8345)
 n_rows = safe_height(df_implicates[0])
 n_replicates = 10
-df_weights = (
-        bayes_bootstrap(
-        n_rows=n_rows,
-        n_draws=n_replicates+1,
-        seed=generate_seed(),
-        prefix="weight_",
-        initial_weight_index=0
-    )
-    .with_row_index("index")
-)
+df_weights = bayes_bootstrap(
+    n_rows=n_rows,
+    n_draws=n_replicates + 1,
+    seed=generate_seed(),
+    prefix="weight_",
+    initial_weight_index=0,
+).with_row_index("index")
 
 _ = df_implicates.pipe(summary)
 _ = summary(df_weights)
@@ -49,10 +49,7 @@ stats = Statistics(
 )
 replicates = Replicates(weight_stub="weight_", n_replicates=n_replicates)
 
-arguments = dict(
-    statistics=stats,
-    replicates=replicates
-)
+arguments = dict(statistics=stats, replicates=replicates)
 
 
 mi_results_seq = mi_ses_from_function(
@@ -78,7 +75,6 @@ mi_results = mi_ses_from_function(
 )
 
 # mi_results.print()
-    
 
 
 mi_results.print()

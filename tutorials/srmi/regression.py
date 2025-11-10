@@ -74,14 +74,14 @@ c_var5 = pl.col("var5")
 
 
 logger.info("var_reg1 is binary and conditional on other variables")
-c_reg1 = ((c_var2 * 2 - c_var3 * 3 * c_var5 + c_e_reg1)  > 0).alias("var_reg1")
+c_reg1 = ((c_var2 * 2 - c_var3 * 3 * c_var5 + c_e_reg1) > 0).alias("var_reg1")
 
 logger.info("var_reg2 is != 0 only if var_reg1 == True")
 c_reg2 = (
     pl.when(pl.col("var_reg1"))
-      .then(((c_var2 * 1.5 - c_var3 * 1 * c_var4 + c_e_reg2)))
-      .otherwise(pl.lit(0))
-      .alias("var_reg2")
+    .then((c_var2 * 1.5 - c_var3 * 1 * c_var4 + c_e_reg2))
+    .otherwise(pl.lit(0))
+    .alias("var_reg2")
 )
 #   Create a bunch of variables that are functions of the variables created above
 df = (
@@ -119,7 +119,9 @@ summary(df)
 
 
 # %%
-logger.info("Define the regression model (intentionally include some extraneous variables")
+logger.info(
+    "Define the regression model (intentionally include some extraneous variables"
+)
 
 f_model = FormulaBuilder(df=df)
 f_model.formula_with_varnames_in_brackets(
@@ -139,7 +141,7 @@ v_reg1 = Variable(
     impute_var="var_reg1",
     modeltype=Variable.ModelType.pmm,
     model=f_model.formula,
-    parameters=Parameters.Regression(model=Parameters.RegressionModel.Logit)
+    parameters=Parameters.Regression(model=Parameters.RegressionModel.Logit),
 )
 logger.info("Add the variable to the list to be imputed")
 vars_impute.append(v_reg1)
@@ -158,10 +160,10 @@ v_reg2 = Variable(
     parameters=Parameters.Regression(),
     postFunctions=(
         nw.when(nw.col("var_reg1"))
-          .then(nw.col("var_reg2"))
-          .otherwise(nw.lit(0))
-          .alias("var_reg2")
-    )
+        .then(nw.col("var_reg2"))
+        .otherwise(nw.lit(0))
+        .alias("var_reg2")
+    ),
 )
 
 vars_impute.append(v_reg2)

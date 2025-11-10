@@ -64,7 +64,7 @@ class Trim(Serializable):
     -----
     - Trimming occurs between calibration iterations in an iterative loop.
     - Bounds are relaxed on each iteration: on iteration i, the max bound becomes
-    max_val * (1 + i * tolerance_step) and the trim point becomes 
+    max_val * (1 + i * tolerance_step) and the trim point becomes
     max_val * (1 - i * step).
     - Setting ignore_n > 0 prevents trimming when only a few observations exceed
     bounds, which can be useful for preserving calibration accuracy.
@@ -73,6 +73,7 @@ class Trim(Serializable):
     - The iterative trimming approach allows the algorithm to gradually find a
     balance between meeting targets and respecting weight bounds.
     """
+
     _save_suffix = "calibration_trim"
 
     def __init__(

@@ -854,14 +854,13 @@ def summary(
     quantile_interpolated: bool = False,
     drb_round: bool = False,
 ) -> IntoFrameT:
-    
     """
     Generate summary statistics for a dataframe.
-    
+
     A convenience function for quickly exploring data. Calculates common summary
     statistics (mean, std, min, max, etc.) with optional weighting and grouping.
     Works with any dataframe backend (Polars, Pandas, Arrow, DuckDB) via Narwhals.
-    
+
     Parameters
     ----------
     df : IntoFrameT
@@ -878,7 +877,7 @@ def summary(
         Statistics to calculate. If None, uses default set.
         See Statistics.available_stats() for options. Default is None.
     detailed : bool, optional
-        Use detailed statistics (includes quartiles). 
+        Use detailed statistics (includes quartiles).
         Overrides stats parameter. Default is False.
     additional_stats : list[str] | str | None, optional
         Additional statistics beyond the default/detailed set.
@@ -890,49 +889,49 @@ def summary(
     drb_round : bool, optional
         Apply DRB (Disclosure Review Board) rounding rules for 4 significant digits.
         Useful for publication-ready output. Default is False.
-        
+
     Returns
     -------
     IntoFrameT
         Dataframe of summary statistics (same type as input df).
-        
+
     Examples
     --------
     Basic unweighted summary:
-    
+
     >>> from survey_kit.utilities.dataframe import summary
     >>> from survey_kit.utilities.random import RandomData
-    >>> 
+    >>>
     >>> df = RandomData(n_rows=1000, seed=123).integer("income", 0, 100_000).to_df()
     >>> summary(df)
-    
+
     Weighted summary:
-    
+
     >>> summary(df, weight="survey_weight")
-    
+
     By groups:
-    
+
     >>> summary(df, weight="survey_weight", by="year")
-    
+
     Detailed statistics with rounding:
-    
+
     >>> summary(df, weight="survey_weight", detailed=True, drb_round=True)
-    
+
     Custom statistics:
-    
+
     >>> from survey_kit.statistics.statistics import Statistics
     >>> Statistics.available_stats()  # See options
     >>> summary(df, additional_stats=["q10", "q90", "n|not0", "share|not0"])
-    
+
     Specific columns with wildcards:
-    
+
     >>> summary(df, columns=["income_*", "age"], weight="survey_weight")
-    
+
     Get results without printing:
-    
+
     >>> df_stats = summary(df, weight="survey_weight", print=False)
     >>> print(df_stats.collect())
-    
+
     Notes
     -----
     Default statistics (if stats=None and detailed=False):
@@ -942,13 +941,13 @@ def summary(
     - std: Standard deviation
     - min: Minimum
     - max: Maximum
-    
+
     Detailed statistics (if detailed=True):
     - Adds: q25, q50 (median), q75
-    
+
     The "|not0" suffix excludes zeros: "n|not0" counts non-zero values,
     "share|not0" calculates proportion among non-zero observations.
-    
+
     See Also
     --------
     StatCalculator : For standard errors with replicate weights
@@ -964,7 +963,6 @@ def summary(
     by = list_input(by)
     if len(by) > 1:
         by = [by]
-
 
     if len(columns):
         columns = columns_from_list(df=df, columns=columns)
@@ -1066,5 +1064,3 @@ def winsorize_by_percentiles(
 
     df = nw.from_native(df).with_columns(clip_list).to_native()
     return df
-
-

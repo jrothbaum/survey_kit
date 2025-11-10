@@ -7,7 +7,11 @@ from narwhals.typing import IntoFrameT
 from ..utilities.inputs import list_input
 from .replicates import ReplicateStats, ses_from_replicates
 from ..utilities.dataframe import (
-    concat_wrapper, join_list, safe_height, NarwhalsType, safe_columns
+    concat_wrapper,
+    join_list,
+    safe_height,
+    NarwhalsType,
+    safe_columns,
 )
 from .. import logger
 
@@ -30,22 +34,23 @@ def _comparison_item(stat_item, implicate: int):
 
 class ComparisonItem:
     """
-    Helpers for specifying comparisons in [StatCalculator][survey_kit.statistics.calculator.StatCalculator] 
+    Helpers for specifying comparisons in [StatCalculator][survey_kit.statistics.calculator.StatCalculator]
     and [MultipleImputation][survey_kit.statistics.multiple_imputation.MultipleImputation].
-    
+
     Provides two types of comparisons:
 
     - Variable: Compare different variables (e.g., income vs income_2)
     - Column: Compare different statistics (e.g., mean vs median)
-    
+
     """
+
     class Variable:
         """
         Specify a comparison between two variables.
-        
+
         Used to compare different variables within the same dataset, such as
         comparing income from two sources or comparing outcomes across groups.
-        
+
         Parameters
         ----------
         value1 : str
@@ -58,25 +63,28 @@ class ComparisonItem:
         name : str, optional
             Name for the comparison result. If empty, uses f"{value1}_vs_{value2}".
             Default is "".
-            
+
         Examples
         --------
         >>> from survey_kit.statistics.calculator import ComparisonItem
-        >>> 
+        >>>
         >>> # Compare two income variables
         >>> comp = ComparisonItem.Variable(
         ...     value1="wage_income",
         ...     value2="self_employment_income",
         ...     name="wage_vs_self_employment"
         ... )
-        >>> 
+        >>>
         >>> comparison = sc.compare(
         ...     sc,
         ...     difference=False,
         ...     compare_list_variables=[comp]
         ... )["ratio"]
         """
-        def __init__(self, value1: str, value2: str, column: str="Variable", name: str = ""):
+
+        def __init__(
+            self, value1: str, value2: str, column: str = "Variable", name: str = ""
+        ):
             self.column = column
             self.value1 = value1
             self.value2 = value2
@@ -85,10 +93,10 @@ class ComparisonItem:
     class Column:
         """
         Specify a comparison between two statistics/columns.
-        
+
         Used to compare different statistics for the same variable, such as
         comparing mean vs median or comparing different quantiles.
-        
+
         Parameters
         ----------
         column1 : str
@@ -98,24 +106,25 @@ class ComparisonItem:
         name : str, optional
             Name for the comparison result. If empty, uses f"c({column1},{column2})".
             Default is "".
-            
+
         Examples
         --------
         >>> from survey_kit.statistics.calculator import ComparisonItem
-        >>> 
+        >>>
         >>> # Compare mean vs median
         >>> comp = ComparisonItem.Column(
         ...     column1="mean",
         ...     column2="median (not 0)",
         ...     name="median_mean_diff"
         ... )
-        >>> 
+        >>>
         >>> comparison = sc.compare(
         ...     sc,
         ...     ratio=False,
         ...     compare_list_columns=[comp]
         ... )["difference"]
         """
+
         def __init__(self, column1: str, column2: str, name: str = ""):
             self.column1 = column1
             self.column2 = column2
@@ -252,10 +261,11 @@ def compare(
             if len(comparisons) == 1:
                 output["difference"] = implicate_stats_difference[0]
             else:
-                
-                mi_stats_diff = MultipleImputation(implicate_stats=implicate_stats_difference,
-                                                        join_on=join_on,
-                                                        rounding=rounding)
+                mi_stats_diff = MultipleImputation(
+                    implicate_stats=implicate_stats_difference,
+                    join_on=join_on,
+                    rounding=rounding,
+                )
                 mi_stats_diff.calculate()
 
                 output["difference"] = mi_stats_diff
@@ -264,9 +274,11 @@ def compare(
             if len(comparisons) == 1:
                 output["ratio"] = implicate_stats_ratio[0]
             else:
-                mi_stats_ratio = MultipleImputation(implicate_stats=implicate_stats_ratio,
-                                                          join_on=join_on,
-                                                          rounding=rounding)
+                mi_stats_ratio = MultipleImputation(
+                    implicate_stats=implicate_stats_ratio,
+                    join_on=join_on,
+                    rounding=rounding,
+                )
                 mi_stats_ratio.calculate()
 
                 output["ratio"] = mi_stats_ratio
@@ -575,21 +587,21 @@ def replicate_comparison(
     return outputs
 
 
-
-def _append_to_mi(name:str,
-                  stat_item,
-                  stats,
-                  vertical:bool,
-                  n_implicates:int,
-                  vertical_drop_var_name:bool,
-                  separator:str=":"):
+def _append_to_mi(
+    name: str,
+    stat_item,
+    stats,
+    vertical: bool,
+    n_implicates: int,
+    vertical_drop_var_name: bool,
+    separator: str = ":",
+):
     from .replicates import ReplicateStats
     from .multiple_imputation import MultipleImputation
     from .calculator import StatCalculator
-    
-    
+
     variable_ids = _join_variables(stat_item)
-    
+
     if stats.join_on is None:
         stats.join_on = variable_ids
     elif len(stats.join_on) == 0:
@@ -600,25 +612,25 @@ def _append_to_mi(name:str,
         raise Exception(message)
     if type(stat_item) is not MultipleImputation:
         implicate_stats = []
-        for i in range(0,n_implicates):
+        for i in range(0, n_implicates):
             if type(stat_item) is ReplicateStats:
                 rep_stats = stat_item
             elif type(stat_item) is StatCalculator:
                 rep_stats = stat_item.replicate_stats
 
             implicate_stats.append(rep_stats)
-                
-                
-        stat_item = MultipleImputation(implicate_stats=implicate_stats,
-                                            join_on=variable_ids)
+
+        stat_item = MultipleImputation(
+            implicate_stats=implicate_stats, join_on=variable_ids
+        )
         stat_item.calculate()
     if vertical:
         if vertical_drop_var_name:
             rename = nw.lit(name).alias(variable_ids[0])
         else:
-            rename = nw.concat_str(nw.lit(name),
-                                   nw.col(variable_ids[0]),
-                                   separator=separator).alias(variable_ids[0])
+            rename = nw.concat_str(
+                nw.lit(name), nw.col(variable_ids[0]), separator=separator
+            ).alias(variable_ids[0])
     else:
         rename = {}
         rename_df_p = {}
@@ -627,16 +639,17 @@ def _append_to_mi(name:str,
                 rename[coli] = f"{name}{separator}{coli}"
                 rename_df_p[f"{coli}_df"] = f"{name}{separator}{coli}_df"
                 rename_df_p[f"{coli}_t"] = f"{name}{separator}{coli}_t"
-    
-    
-    df_add_names = ["df_estimates",
-                    "df_ses",
-                    "df_df",
-                    "df_t",
-                    "df_p",
-                    "df_rate_of_missing_information"]
+
+    df_add_names = [
+        "df_estimates",
+        "df_ses",
+        "df_df",
+        "df_t",
+        "df_p",
+        "df_rate_of_missing_information",
+    ]
     dfs_to_add = {}
-    
+
     for df_name in df_add_names:
         if vertical:
             dfs_to_add[df_name] = (
@@ -648,7 +661,8 @@ def _append_to_mi(name:str,
             if df_name == "df_p":
                 dfs_to_add[df_name] = (
                     nw.from_native(getattr(stat_item, df_name))
-                    .rename(rename).rename(rename_df_p)
+                    .rename(rename)
+                    .rename(rename_df_p)
                     .to_native()
                 )
             else:
@@ -657,123 +671,94 @@ def _append_to_mi(name:str,
                     .rename(rename)
                     .to_native()
                 )
-    
-    
+
     implicate_stats = []
     for impi in stat_item.implicate_stats:
         if vertical:
-            repi = ReplicateStats(df_estimates=(
-                    nw.from_native(impi.df_estimates)
-                    .with_columns(rename)
-                    .to_native()
+            repi = ReplicateStats(
+                df_estimates=(
+                    nw.from_native(impi.df_estimates).with_columns(rename).to_native()
                 ),
-                df_ses=(
-                    nw.from_native(impi.df_ses)
-                    .with_columns(rename)
-                    .to_native()
-                ),
+                df_ses=(nw.from_native(impi.df_ses).with_columns(rename).to_native()),
                 df_replicates=(
-                    nw.from_native(impi.df_replicates)
-                    .with_columns(rename)
-                    .to_native()
+                    nw.from_native(impi.df_replicates).with_columns(rename).to_native()
                 ),
-                bootstrap=impi.bootstrap
+                bootstrap=impi.bootstrap,
             )
         else:
             repi = ReplicateStats(
                 df_estimates=(
-                    nw.from_native(impi.df_estimates)
-                    .rename(rename)
-                    .to_native()
+                    nw.from_native(impi.df_estimates).rename(rename).to_native()
                 ),
-                df_ses=(
-                    nw.from_native(impi.df_ses)
-                    .rename(rename)
-                    .to_native()
-                ),
+                df_ses=(nw.from_native(impi.df_ses).rename(rename).to_native()),
                 df_replicates=(
-                    nw.from_native(impi.df_replicates)
-                    .rename(rename)
-                    .to_native()
+                    nw.from_native(impi.df_replicates).rename(rename).to_native()
                 ),
-                bootstrap=impi.bootstrap
+                bootstrap=impi.bootstrap,
             )
-                
+
         implicate_stats.append(repi)
-    
-    stats = _add_to_df_list(stats,
-                            dfs_to_add,
-                            vertical,
-                            variable_ids)
-    
+
+    stats = _add_to_df_list(stats, dfs_to_add, vertical, variable_ids)
+
     for n_impi, impi in enumerate(implicate_stats):
         dfs_to_add = {
-                "df_estimates":impi.df_estimates,
-                "df_ses":impi.df_ses,
-                "df_replicates":impi.df_replicates
-            }
-        
-        
+            "df_estimates": impi.df_estimates,
+            "df_ses": impi.df_ses,
+            "df_replicates": impi.df_replicates,
+        }
+
         if len(stats.implicate_stats) > n_impi:
-            stats.implicate_stats[n_impi] = _add_to_df_list(stats.implicate_stats[n_impi],
-                                                            dfs_to_add, 
-                                                            vertical, 
-                                                            variable_ids)
+            stats.implicate_stats[n_impi] = _add_to_df_list(
+                stats.implicate_stats[n_impi], dfs_to_add, vertical, variable_ids
+            )
         else:
             stats.implicate_stats.append(impi)
-                
-        
-        
+
     return stats
 
 
-
-def _append_to_sc(name:str,
-                  stat_item,
-                  stats,
-                  vertical:bool,
-                  vertical_drop_var_name:bool,
-                  separator:str=":"):
+def _append_to_sc(
+    name: str,
+    stat_item,
+    stats,
+    vertical: bool,
+    vertical_drop_var_name: bool,
+    separator: str = ":",
+):
     from .replicates import ReplicateStats
     from .calculator import StatCalculator
-    
+
     variable_ids = _join_variables(stat_item)
 
     if len(stats.variable_ids) == 0:
         stats.variable_ids = variable_ids
         stats.replicates = stat_item.replicates
-        
+
     elif stats.variable_ids != variable_ids:
         message = f"ID variables for stats must match across data ({stats.variable_ids} != {variable_ids})"
         logger.error(message)
         raise Exception(message)
-        
-    
+
     if vertical:
         if vertical_drop_var_name:
             rename = nw.lit(name).alias(variable_ids[0])
         else:
-            rename = nw.concat_str(nw.lit(name),
-                                   nw.col(variable_ids[0]),
-                                   separator=separator).alias(variable_ids[0])
-        
+            rename = nw.concat_str(
+                nw.lit(name), nw.col(variable_ids[0]), separator=separator
+            ).alias(variable_ids[0])
+
     else:
         rename = {}
         for coli in safe_columns(stat_item.df_estimates):
             if coli not in variable_ids:
                 rename[coli] = f"{name}{separator}{coli}"
-                
-                               
-    
-    
-    df_add_names = ["df_estimates",
-                    "df_ses",
-                    "df_replicates"]
+
+    df_add_names = ["df_estimates", "df_ses", "df_replicates"]
     dfs_to_add = {}
-    
+
     for df_name in df_add_names:
         if vertical:
-            
             if getattr(stat_item, df_name) is not None:
                 dfs_to_add[df_name] = (
                     nw.from_native(getattr(stat_item, df_name))
@@ -787,61 +772,49 @@ def _append_to_sc(name:str,
                     .rename(rename)
                     .to_native()
                 )
-    
-    
-    stats = _add_to_df_list(stats,
-                            dfs_to_add,
-                            vertical,
-                            variable_ids)
-        
+
+    stats = _add_to_df_list(stats, dfs_to_add, vertical, variable_ids)
+
     return stats
 
 
-def _add_to_df_list(stats,
-                    dfs_to_add:dict,
-                    vertical:bool,
-                    variable_ids:list[str]):
-    
+def _add_to_df_list(stats, dfs_to_add: dict, vertical: bool, variable_ids: list[str]):
     for df_name, dfi in dfs_to_add.items():
         df_add_to = getattr(stats, df_name)
         if df_add_to is None:
             setattr(stats, df_name, dfi)
         else:
             if vertical:
-                setattr(stats, df_name, concat_wrapper([df_add_to,dfi],how="diagonal"))
+                setattr(
+                    stats, df_name, concat_wrapper([df_add_to, dfi], how="diagonal")
+                )
             else:
                 if df_name == "df_replicates":
                     join_on_replicates = ["___replicate___"]
                 else:
                     join_on_replicates = []
-                
-                
+
                 setattr(
-                    stats, 
+                    stats,
                     df_name,
                     join_list(
-                        [df_add_to,dfi],
+                        [df_add_to, dfi],
                         how="outer",
-                        on=variable_ids + join_on_replicates
-                    )
+                        on=variable_ids + join_on_replicates,
+                    ),
                 )
     return stats
-        
-    
+
 
 def _join_variables(stat_item) -> list[str]:
     variable_ids = None
     if hasattr(stat_item, "variable_ids"):
         variable_ids = stat_item.variable_ids
-    
+
     if variable_ids is None:
         variable_ids = []
-        
-        
+
     if len(variable_ids) == 0:
         variable_ids = [stat_item.df_estimates.columns[0]]
-        
-        
+
     return variable_ids
-        
-    

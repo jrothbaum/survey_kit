@@ -69,21 +69,21 @@ c_var5 = pl.col("var5")
 
 
 logger.info("var_gbm1 is binary and conditional on other variables")
-c_gbm1 = ((c_var2 * 2 - c_var3 * 3 * c_var5 + c_e_gbm1)  > 0).alias("var_gbm1")
+c_gbm1 = ((c_var2 * 2 - c_var3 * 3 * c_var5 + c_e_gbm1) > 0).alias("var_gbm1")
 
 logger.info("var_gbm2 is != 0 only if var_gbm1 == True")
 c_gbm2 = (
     pl.when(pl.col("var_gbm1"))
-      .then(((c_var2 * 1.5 - c_var3 * 1 * c_var4 + c_e_gbm2)))
-      .otherwise(pl.lit(0))
-      .alias("var_gbm2")
+    .then((c_var2 * 1.5 - c_var3 * 1 * c_var4 + c_e_gbm2))
+    .otherwise(pl.lit(0))
+    .alias("var_gbm2")
 )
 
 c_gbm3 = (
     pl.when(pl.col("var_gbm1"))
-      .then(((c_var2 * 1.5 - c_var3 * 1 * c_var4 + c_e_gbm2)))
-      .otherwise(pl.lit(0))
-      .alias("var_gbm3")
+    .then((c_var2 * 1.5 - c_var3 * 1 * c_var4 + c_e_gbm2))
+    .otherwise(pl.lit(0))
+    .alias("var_gbm3")
 )
 #   Create a bunch of variables that are functions of the variables created above
 df = (
@@ -118,6 +118,8 @@ summary(df)
 
 # %%
 logger.info("Define some dummy functions to run after imputation of 2")
+
+
 #   Test a simple pre-post function
 #       These would get run gets run in each iteration (in each implicate)
 #           before (preFunctions) or after (postFunctions) this variable is imputed
@@ -166,8 +168,6 @@ tuner.hyperparameters["bagging_fraction"] = [0.5, 1]
 tuner.hyperparameters["bagging_freq"] = [1, 5]
 
 
-
-
 vars_impute = []
 
 # %%
@@ -179,7 +179,9 @@ logger.info("   (you can pass a formula, but you don't need to)")
 logger.info("First, set up the lightgbm parameters")
 logger.info("   This says, do hyperparameter tuning first (tune)")
 logger.info("   Redo it at each run (tune_overwrite)")
-logger.info("   And sets the lightgbm parameter defaults (parameters) that the tuning can overwrite")
+logger.info(
+    "   And sets the lightgbm parameter defaults (parameters) that the tuning can overwrite"
+)
 parameters_lgbm1 = Parameters.LightGBM(
     tune=True,
     tune_hyperparameter_path=f"{config.data_root}/tuner_outputs",
@@ -204,14 +206,10 @@ v_gbm1 = Variable(
     impute_var="var_gbm1",
     model=["var_*", "var4", "var3", "var5", "unrelated_*", "repeat_*"],
     modeltype=Variable.ModelType.LightGBM,
-    parameters=parameters_lgbm1
+    parameters=parameters_lgbm1,
 )
 logger.info("Add the variable to the list to be imputed")
 vars_impute.append(v_gbm1)
-
-
-
-
 
 
 logger.info("Impute the continuous variable (var_gbm2) ")
@@ -254,25 +252,15 @@ v_gbm2 = Variable(
         ),
         Variable.PrePost.Function(
             recalculate_interaction,
-            parameters=dict(
-                var1="var_gbm1",
-                var2="var_gbm2",
-                name="var_gbm12"
-            ),
+            parameters=dict(var1="var_gbm1", var2="var_gbm2", name="var_gbm12"),
         ),
         Variable.PrePost.Function(
-            square_var,
-            parameters=dict(
-                var_to_square="var_gbm2", 
-                name="var_gbm2_sq"
-            )
+            square_var, parameters=dict(var_to_square="var_gbm2", name="var_gbm2_sq")
         ),
-    ]
+    ],
 )
 
 vars_impute.append(v_gbm2)
-
-
 
 
 logger.info("Now do one with the quantile-regression lightgbm")
@@ -282,7 +270,7 @@ parameters_lgbm3 = Parameters.LightGBM(
     tune_hyperparameter_path=f"{config.data_root}/tuner_outputs",
     tuner=tuner,
     tune_overwrite=True,
-    quantiles=[0.25,0.5,0.75],
+    quantiles=[0.25, 0.5, 0.75],
     parameters={
         "objective": "quantile",
         "num_leaves": 32,
@@ -311,7 +299,7 @@ v_gbm3 = Variable(
             .otherwise(nw.lit(0))
             .alias("var_gbm3")
         )
-    ]
+    ],
 )
 
 vars_impute.append(v_gbm3)
@@ -347,13 +335,13 @@ _ = df_list = srmi.df_implicates
 
 # %%
 logger.info("\n\nLook at the original")
-_ = summary(df_original,detailed=True,drb_round=True)
+_ = summary(df_original, detailed=True, drb_round=True)
 
 logger.info("\n\nLook at the imputes")
-_ = df_list.pipe(summary,detailed=True,drb_round=True)
+_ = df_list.pipe(summary, detailed=True, drb_round=True)
 
 logger.info("\n\nLook at the imputes | var_gbm1 == 0")
-_ = df_list.filter(~nw.col("var_gbm1")).pipe(summary,detailed=True,drb_round=True)
+_ = df_list.filter(~nw.col("var_gbm1")).pipe(summary, detailed=True, drb_round=True)
 
 logger.info("\n\nLook at the imputes | var_gbm1 == 1")
-_ = df_list.filter(nw.col("var_gbm1")).pipe(summary,detailed=True,drb_round=True)
+_ = df_list.filter(nw.col("var_gbm1")).pipe(summary, detailed=True, drb_round=True)

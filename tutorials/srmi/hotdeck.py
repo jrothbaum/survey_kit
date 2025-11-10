@@ -18,7 +18,6 @@ from survey_kit import logger, config
 from survey_kit.utilities.dataframe import summary, columns_from_list
 
 
-
 # %%
 # Draw some random data
 
@@ -53,14 +52,14 @@ c_e_hd2 = pl.col("epsilon_hd2")
 
 
 logger.info("var_hd1 is binary and conditional on other variables")
-c_hd1 = ((c_var2 * 2 - c_var3 * 3 * c_var5 + c_e_hd1)  > 0).alias("var_hd1")
+c_hd1 = ((c_var2 * 2 - c_var3 * 3 * c_var5 + c_e_hd1) > 0).alias("var_hd1")
 
 logger.info("var_hd2 is != 0 only if var_hd1 == True")
 c_hd2 = (
     pl.when(pl.col("var_hd1"))
-      .then(((c_var2 * 1.5 - c_var3 * 1 * c_var4 + c_e_hd2)))
-      .otherwise(pl.lit(0))
-      .alias("var_hd2")
+    .then((c_var2 * 1.5 - c_var3 * 1 * c_var4 + c_e_hd2))
+    .otherwise(pl.lit(0))
+    .alias("var_hd2")
 )
 #   Create a bunch of variables that are functions of the variables created above
 df = (
@@ -121,9 +120,7 @@ logger.info("   and the list of match variables")
 v_hd1 = Variable(
     impute_var="var_hd1",
     modeltype=Variable.ModelType.StatMatch,
-    parameters=Parameters.HotDeck(
-        model_list=["var2", "var3", "var5"]
-    )
+    parameters=Parameters.HotDeck(model_list=["var2", "var3", "var5"]),
 )
 
 logger.info("Add the variable to the list to be imputed")
@@ -141,15 +138,13 @@ v_hd2 = Variable(
     Where=nw.col("var_hd1"),
     By=["year", "month"],
     modeltype=Variable.ModelType.HotDeck,
-    parameters=Parameters.HotDeck(
-        model_list=["var2", "var3", "var5"]
-    ),
+    parameters=Parameters.HotDeck(model_list=["var2", "var3", "var5"]),
     postFunctions=(
         nw.when(nw.col("var_hd1"))
-          .then(nw.col("var_hd2"))
-          .otherwise(nw.lit(0))
-          .alias("var_hd2")
-    )
+        .then(nw.col("var_hd2"))
+        .otherwise(nw.lit(0))
+        .alias("var_hd2")
+    ),
 )
 vars_impute.append(v_hd2)
 

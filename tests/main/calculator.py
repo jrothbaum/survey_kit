@@ -27,23 +27,19 @@ def gen_random_table(n_rows: int, n_replicates: int, seed: int):
         .integer("income", 0, 100_000)
     ).to_df()
 
-
-    df = (
-            pl.concat(
-                [
-                    df,
-                    bayes_bootstrap(
-                        n_rows=n_rows,
-                        n_draws=n_replicates+1,
-                        seed=generate_seed(),
-                        initial_weight_index=0,
-                        prefix="weight_"
-                    )
-                ],
-                how="horizontal"
-            )
-            .lazy()
-    )
+    df = pl.concat(
+        [
+            df,
+            bayes_bootstrap(
+                n_rows=n_rows,
+                n_draws=n_replicates + 1,
+                seed=generate_seed(),
+                initial_weight_index=0,
+                prefix="weight_",
+            ),
+        ],
+        how="horizontal",
+    ).lazy()
 
     df = df.with_columns(
         pl.when(pl.col("year").ne(2016)).then(pl.col("income")).otherwise(pl.lit(0))
@@ -58,13 +54,17 @@ df_compare = gen_random_table(n_rows, n_replicates, seed=9324)
 # print(df.schema)
 # print(df.describe())
 
-replicates = Replicates(weight_stub="weight_", n_replicates=n_replicates,bootstrap=True)
+replicates = Replicates(
+    weight_stub="weight_", n_replicates=n_replicates, bootstrap=True
+)
 
 
 print("Polars")
 sc = StatCalculator(
     df,
-    statistics=Statistics(stats=["mean", "median|not0"], columns=["v_1", "income","v_string"]),
+    statistics=Statistics(
+        stats=["mean", "median|not0"], columns=["v_1", "income", "v_string"]
+    ),
     weight="weight_0",
     replicates=replicates,
     by=dict(year=["year"]),

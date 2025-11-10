@@ -9,7 +9,6 @@ from survey_kit.orchestration.utilities import CallInputs, CallTypes
 from survey_kit import logger, config
 
 
-
 @as_function(inputs_as_dictionary=False)
 def do_something(a: int, b: int) -> None:
     print(f"printed: {a}*{b} = {a * b}")

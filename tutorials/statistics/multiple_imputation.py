@@ -8,7 +8,10 @@ from survey_kit.utilities.dataframe import summary
 from survey_kit.imputation.srmi import SRMI
 from survey_kit import logger, config
 
-from survey_kit.statistics.multiple_imputation import MultipleImputation, mi_ses_from_function
+from survey_kit.statistics.multiple_imputation import (
+    MultipleImputation,
+    mi_ses_from_function,
+)
 from survey_kit.statistics.calculator import StatCalculator
 from survey_kit.statistics.statistics import Statistics
 from survey_kit.statistics.replicates import Replicates
@@ -30,16 +33,13 @@ set_seed(8345)
 n_rows = safe_height(df_implicates[0])
 n_replicates = 10
 
-df_weights = (
-        bayes_bootstrap(
-        n_rows=n_rows,
-        n_draws=n_replicates+1,
-        seed=generate_seed(),
-        prefix="weight_",
-        initial_weight_index=0
-    )
-    .with_row_index("index")
-)
+df_weights = bayes_bootstrap(
+    n_rows=n_rows,
+    n_draws=n_replicates + 1,
+    seed=generate_seed(),
+    prefix="weight_",
+    initial_weight_index=0,
+).with_row_index("index")
 
 
 # %%
@@ -57,16 +57,15 @@ stats = Statistics(
 )
 
 # %%
-logger.info("Define the 'replicate' object, which tell is what the weight variables are")
+logger.info(
+    "Define the 'replicate' object, which tell is what the weight variables are"
+)
 replicates = Replicates(weight_stub="weight_", n_replicates=n_replicates)
 
 
 # %%
 logger.info("Arguments that are getting passed to StatCalculator at each run")
-arguments = dict(
-    statistics=stats,
-    replicates=replicates
-)
+arguments = dict(statistics=stats, replicates=replicates)
 
 
 # %%
@@ -86,9 +85,13 @@ mi_results_seq = mi_ses_from_function(
 
 
 # %%
-logger.info("Do it again, but run each implicate in it's own process and collect the results")
+logger.info(
+    "Do it again, but run each implicate in it's own process and collect the results"
+)
 logger.info("   This will split up the job and ")
-logger.info("   use all your cpus (or what you set in config.cpus), dividing them up among the jobs")
+logger.info(
+    "   use all your cpus (or what you set in config.cpus), dividing them up among the jobs"
+)
 mi_results = mi_ses_from_function(
     delegate=StatCalculator,
     df_implicates=df_implicates,

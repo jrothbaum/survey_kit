@@ -25,18 +25,18 @@ from .. import logger
 
 class DataFrameList(Serializable):
     """
-        A light wrapper around Lazy/DataFrames
-        that can be used like a list, mostly, (append, extend, +)
-        and also can be used like the underlying LazyFrame or DataFrame
-        where a narwhals operation is applied to all items in the list.
-        
-        Examples
-        --------
-        >>> df_list = DataFrameList([df1, df2])
-        >>> df_list = df_list.filter(nw.col("a") == 1)
-            
-        This would apply the filter to df1 and df2 and return a DataFrameList with
-        the filtered data.
+    A light wrapper around Lazy/DataFrames
+    that can be used like a list, mostly, (append, extend, +)
+    and also can be used like the underlying LazyFrame or DataFrame
+    where a narwhals operation is applied to all items in the list.
+
+    Examples
+    --------
+    >>> df_list = DataFrameList([df1, df2])
+    >>> df_list = df_list.filter(nw.col("a") == 1)
+
+    This would apply the filter to df1 and df2 and return a DataFrameList with
+    the filtered data.
 
     """
 

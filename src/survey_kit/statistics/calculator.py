@@ -28,7 +28,7 @@ from ..utilities.dataframe import (
     concat_wrapper,
     NarwhalsType,
     safe_sum_cast,
-    safe_columns
+    safe_columns,
 )
 from ..utilities.rounding import drb_round_table
 from ..serializable import Serializable
@@ -1034,20 +1034,22 @@ class StatCalculator(Serializable):
 
         return outputs
 
-    def from_function(delegate:Callable,
-                      estimate_ids:list | str,
-                      df:IntoFrameT | None=None,
-                      df_argument:str="df",
-                      arguments:dict|None=None,
-                      weight:str="",
-                      replicates:Replicates|None=None,
-                      scale_wgts_to:float=0.0,
-                      weight_argument_name:str="weight",
-                      by:dict[str,list[str]]|None=None,
-                      display:bool=True,
-                      display_all_vars:bool=True,
-                      display_max_vars:int=20,
-                      round_output:bool|int=True) -> StatCalculator:
+    def from_function(
+        delegate: Callable,
+        estimate_ids: list | str,
+        df: IntoFrameT | None = None,
+        df_argument: str = "df",
+        arguments: dict | None = None,
+        weight: str = "",
+        replicates: Replicates | None = None,
+        scale_wgts_to: float = 0.0,
+        weight_argument_name: str = "weight",
+        by: dict[str, list[str]] | None = None,
+        display: bool = True,
+        display_all_vars: bool = True,
+        display_max_vars: int = 20,
+        round_output: bool | int = True,
+    ) -> StatCalculator:
         """
         Create a StatCalculator from a custom function that returns estimates.
 
@@ -1109,18 +1111,18 @@ class StatCalculator(Serializable):
                     weights_to_cast = [weight]
                     if replicates is not None:
                         weights_to_cast.extend(replicates.rep_list)
-                    df = safe_sum_cast(df,
-                                       weights_to_cast)
-                    
-                    with_scale = [(nw.col(weighti)/nw.col(weighti).sum()*scale_wgts_to).alias(nw.col(weighti)) for weighti in weights_to_cast]
-                    df = (
-                        nw.from_native(df)
-                        .with_columns(with_scale)
-                        .to_native()
-                    )
+                    df = safe_sum_cast(df, weights_to_cast)
+
+                    with_scale = [
+                        (nw.col(weighti) / nw.col(weighti).sum() * scale_wgts_to).alias(
+                            nw.col(weighti)
+                        )
+                        for weighti in weights_to_cast
+                    ]
+                    df = nw.from_native(df).with_columns(with_scale).to_native()
 
         if by is None:
-            by = {"All":[]}
+            by = {"All": []}
 
         replicate_name = "___replicate___"
 
@@ -1143,15 +1145,13 @@ class StatCalculator(Serializable):
                         nw_type.to_polars()
                         .lazy()
                         .collect()
-                        .partition_by(
-                            by=valuei,
-                            maintain_order=True,
-                            include_key=True
-                        )
+                        .partition_by(by=valuei, maintain_order=True, include_key=True)
                     )
 
-                    df_partitioned = [nw_type.from_polars(dfi) for dfi in df_partitioned]
-                    
+                    df_partitioned = [
+                        nw_type.from_polars(dfi) for dfi in df_partitioned
+                    ]
+
                     df_list.extend(df_partitioned)
                 else:
                     df_list.append(df)
@@ -1168,15 +1168,16 @@ class StatCalculator(Serializable):
 
                     if len(valuei):
                         append_values = dfi.select(valuei).unique().to_dicts()
-                        append_by = [nw.lit(valuei).alias(keyi) for keyi, valuei in append_values[0].items()]
+                        append_by = [
+                            nw.lit(valuei).alias(keyi)
+                            for keyi, valuei in append_values[0].items()
+                        ]
 
                 if replicates is None:
                     df_esti = delegate(**arguments)
                     if len(append_by):
                         df_esti = (
-                            nw.from_native(df_esti)
-                            .with_columns(append_by)
-                            .to_native()
+                            nw.from_native(df_esti).with_columns(append_by).to_native()
                         )
 
                     df_estimates.append(df_esti)
@@ -1184,12 +1185,14 @@ class StatCalculator(Serializable):
                     if len(append_values):
                         logger.info(append_values)
 
-                    rep_return = replicates_ses_from_function(delegate=delegate,
-                                                             arguments=arguments,
-                                                             join_on=estimate_ids,
-                                                             weight_argument_name=weight_argument_name,
-                                                             weights=replicates.rep_list,
-                                                             replicate_name=replicate_name)
+                    rep_return = replicates_ses_from_function(
+                        delegate=delegate,
+                        arguments=arguments,
+                        join_on=estimate_ids,
+                        weight_argument_name=weight_argument_name,
+                        weights=replicates.rep_list,
+                        replicate_name=replicate_name,
+                    )
 
                     df_esti = rep_return.df_estimates
                     df_sei = rep_return.df_ses
@@ -1197,20 +1200,14 @@ class StatCalculator(Serializable):
 
                     if len(append_by):
                         df_esti = (
-                            nw.from_native(df_esti)
-                            .with_columns(append_by)
-                            .to_native()
+                            nw.from_native(df_esti).with_columns(append_by).to_native()
                         )
                         df_sei = (
-                            nw.from_native(df_sei)
-                            .with_columns(append_by)
-                            .to_native()
+                            nw.from_native(df_sei).with_columns(append_by).to_native()
                         )
-                        
+
                         df_repi = (
-                            nw.from_native(df_repi)
-                            .with_columns(append_by)
-                            .to_native()
+                            nw.from_native(df_repi).with_columns(append_by).to_native()
                         )
 
                     df_estimates.append(df_esti)
@@ -1220,35 +1217,42 @@ class StatCalculator(Serializable):
             del df_list
 
         #   Set up the output
-        ss_out = StatCalculator(df=None,
-                                weight=weight,
-                                replicates=replicates,
-                                by=by,
-                                display=display,
-                                display_all_vars=display_all_vars,
-                                display_max_vars=display_max_vars,
-                                round_output=round_output,
-                                calculate=False)
+        ss_out = StatCalculator(
+            df=None,
+            weight=weight,
+            replicates=replicates,
+            by=by,
+            display=display,
+            display_all_vars=display_all_vars,
+            display_max_vars=display_max_vars,
+            round_output=round_output,
+            calculate=False,
+        )
 
         ss_out.variable_ids = estimate_ids
 
         if len(df_estimates):
-            df_estimates = concat_wrapper(df_estimates,
-                                          how="diagonal")
+            df_estimates = concat_wrapper(df_estimates, how="diagonal")
             #   Final variable order
             if len(by_vars):
                 select_order = estimate_ids + by_vars
-                select_order.extend([coli for coli in safe_columns(df_estimates) if coli not in select_order])
+                select_order.extend(
+                    [
+                        coli
+                        for coli in safe_columns(df_estimates)
+                        if coli not in select_order
+                    ]
+                )
             else:
                 select_order = safe_columns(df_estimates)
             ss_out.df_estimates = df_estimates.select(select_order)
         if len(df_ses):
-            ss_out.df_ses = concat_wrapper(df_ses,
-                                       how="diagonal").select(select_order)
+            ss_out.df_ses = concat_wrapper(df_ses, how="diagonal").select(select_order)
 
         if len(df_ses):
-            ss_out.df_replicates = concat_wrapper(df_replicates,
-                                                  how="diagonal").select(select_order + [replicate_name])
+            ss_out.df_replicates = concat_wrapper(df_replicates, how="diagonal").select(
+                select_order + [replicate_name]
+            )
 
         ss_out.df_estimates = ss_out.round_results(df=ss_out.df_estimates)
         ss_out.df_ses = ss_out.round_results(df=ss_out.df_ses)

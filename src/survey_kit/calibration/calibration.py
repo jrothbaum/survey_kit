@@ -47,7 +47,7 @@ class Calibration(Serializable):
     """
     Survey calibration using entropy balancing methods.
 
-    Calibration adjusts survey weights to match known population moments (targets) while 
+    Calibration adjusts survey weights to match known population moments (targets) while
     minimizing the distance from base weights.
 
     Parameters
@@ -100,7 +100,7 @@ class Calibration(Serializable):
 
     >>> import polars as pl
     >>> from survey_kit.calibration import Calibration, Moment
-    >>> 
+    >>>
     >>> # Create sample data
     >>> df = pl.DataFrame({
     >>>     "id": range(100),
@@ -108,14 +108,14 @@ class Calibration(Serializable):
     >>>     "region": ["North", "South"] * 50,
     >>>     "base_weight": [1.0] * 100
     >>> })
-    >>> 
+    >>>
     >>> # Define target moments
     >>> age_moment = Moment(df=df, formula="C(age_group)", weight="base_weight")
-    >>> 
+    >>>
     >>> # Run calibration
     >>> c = Calibration(df=df, moments=[age_moment], weight="base_weight")
     >>> results = c.run()
-    >>> 
+    >>>
     >>> # Get the calibrated weights (appended to the original data)
     >>> calibrated_df = c.get_final_weights(df)
 
@@ -123,7 +123,7 @@ class Calibration(Serializable):
 
     >>> region_moment = Moment(df=df, formula="C(region)", weight="base_weight")
     >>> c = Calibration(
-    >>>     df=df, 
+    >>>     df=df,
     >>>     moments=[age_moment, region_moment],
     >>>     aggregation="Sequential",
     >>>     weight="base_weight"
@@ -146,12 +146,10 @@ class Calibration(Serializable):
     convergence criteria aren't met.
     - Use min_obs parameter to exclude moments with too few non-zero observations,
     which can cause convergence issues.
-    """    
-
+    """
 
     _save_suffix = "calibration"
     _save_exclude_items = ["nw_type"]
-
 
     def __init__(
         self,
@@ -729,7 +727,7 @@ class Calibration(Serializable):
         -------
         dict
             A dictionary with diagnostics information including:
-            
+
             - 'converged' : bool
                 Whether the calibration converged.
             - 'max_diff' : float
@@ -1788,7 +1786,7 @@ class Calibration(Serializable):
     ):
         """
         Print formatted calibration diagnostics to the logger.
-        
+
         Parameters
         ----------
         max_columns : int, optional
@@ -1850,13 +1848,15 @@ class Calibration(Serializable):
                 .drop("abs")
             )
 
-    def get_final_weights(self,
-                          df_merge_to:IntoFrameT | None=None,
-                          truncate_low:float|None=None,
-                          truncate_high:float|None=None) -> IntoFrameT:
+    def get_final_weights(
+        self,
+        df_merge_to: IntoFrameT | None = None,
+        truncate_low: float | None = None,
+        truncate_high: float | None = None,
+    ) -> IntoFrameT:
         """
         Get the final calibrated weights, optionally merged to another dataframe.
-        
+
         Parameters
         ----------
         df_merge_to : IntoFrameT | None, optional
@@ -1866,7 +1866,7 @@ class Calibration(Serializable):
             Truncate weights below this value. Default is None.
         truncate_high : float | None, optional
             Truncate weights above this value. Default is None.
-            
+
         Returns
         -------
         IntoFrameT
@@ -1874,65 +1874,48 @@ class Calibration(Serializable):
             dataframe with weights merged on index. Otherwise returns index columns
             and final weight column only.
         """
-        
+
         col_weights = []
         col_weights.extend(self.index)
         col_weights.append(self.final_weight)
-        df_weights = (
-            nw.from_native(self.df)
-            .select(col_weights)
-            .to_native()
-        )
-        
+        df_weights = nw.from_native(self.df).select(col_weights).to_native()
+
         c_final_weight = nw.col(self.final_weight)
         truncate = None
         if truncate_low is not None:
             #   N to truncate?
             expr_low = c_final_weight.lt(truncate_low)
             n_truncate_low = safe_height(
-                nw.from_native(df_weights)
-                .filter(expr_low)
-                .to_native()
+                nw.from_native(df_weights).filter(expr_low).to_native()
             )
             logger.info(f"     n truncated at {truncate_low} = {n_truncate_low}")
-            
+
             if n_truncate_low:
-                truncate = (
-                    nw.when(expr_low)
-                    .then(nw.lit(truncate_low))
-                )
+                truncate = nw.when(expr_low).then(nw.lit(truncate_low))
         if truncate_high is not None:
             #   N to truncate?
             expr_high = c_final_weight.gt(truncate_high)
             n_truncate_high = safe_height(
-                nw.from_native(df_weights)
-                .filter(expr_high)
-                .to_native()
+                nw.from_native(df_weights).filter(expr_high).to_native()
             )
 
             logger.info(f"     n truncated at {truncate_high} = {n_truncate_high}")
-            
+
             if n_truncate_high:
                 if truncate is not None:
                     base = truncate
                 else:
                     base = nw
-                
-                truncate = (
-                    base.when(expr_high)
-                    .then(nw.lit(truncate_high))
-                )
-                                
+
+                truncate = base.when(expr_high).then(nw.lit(truncate_high))
+
         if truncate is not None:
-            truncate = truncate.otherwise(nw.col(self.final_weight)).alias(self.final_weight)
-            
-            df_weights = (
-                nw.from_native(df_weights)
-                .with_columns(truncate)
-                .to_native()
+            truncate = truncate.otherwise(nw.col(self.final_weight)).alias(
+                self.final_weight
             )
-                         
-        
+
+            df_weights = nw.from_native(df_weights).with_columns(truncate).to_native()
+
         if df_merge_to is not None:
             if self.index == ["___rownumber"]:
                 #   Just concatenate, we made the index internally
@@ -1944,18 +1927,14 @@ class Calibration(Serializable):
                             .sort(self.index)
                             .select(self.final_weight)
                             .to_native()
-                        )
+                        ),
                     ],
-                    how="horizontal"
+                    how="horizontal",
                 )
             else:
                 #   Merge on the index (safer - doesn't require assumption neither have changed)
                 df_weights = join_wrapper(
-                    df_merge_to,
-                    df_weights,
-                    on=self.index,
-                    how="left"
+                    df_merge_to, df_weights, on=self.index, how="left"
                 )
-                
+
         return df_weights
-    

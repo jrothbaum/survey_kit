@@ -40,5 +40,4 @@ print(c.parameter_files)
 c.pbs_log_path = "/pbs/log/path"
 
 
-
 c.clean_temp_directory(2)

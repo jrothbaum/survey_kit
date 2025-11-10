@@ -11,17 +11,19 @@ from .inputs import list_input
 from .dataframe import columns_from_list, _columns_original_order
 
 from .. import logger
+
+
 class FormulaBuilder:
     """
     Build and manipulate R-style formulas for statistical models.
-    
+
     FormulaBuilder provides a programmatic way to construct complex model formulas
     using R/Patsy-style syntax. It supports formula manipulation, variable expansion,
     interactions, transformations, and pattern matching against dataframes.
-    
+
     The class works with Formulaic to parse and expand formulas, and integrates
     with the dataframe utilities to resolve wildcards and column patterns.
-    
+
     Parameters
     ----------
     df : IntoFrameT | None, optional
@@ -34,7 +36,7 @@ class FormulaBuilder:
         Left-hand side of formula (response variable). Default is "".
     constant : bool, optional
         Include intercept term (1) or suppress it (0). Default is True.
-        
+
     Attributes
     ----------
     formula : str
@@ -47,48 +49,48 @@ class FormulaBuilder:
         Variables in right-hand side of formula.
     columns_lhs : list[str]
         Variables in left-hand side of formula.
-        
+
     Examples
     --------
     Basic formula construction:
-    
+
     >>> from survey_kit.utilities.formula import FormulaBuilder
-    >>> 
+    >>>
     >>> fb = FormulaBuilder(df=df, lhs="income", constant=True)
     >>> fb += "age + education"
     >>> print(fb.formula)
     'income~1+age+education'
-    
+
     Add variables using wildcards:
-    
+
     >>> fb = FormulaBuilder(df=df, lhs="income")
     >>> fb.continuous(columns="demographic_*")
     >>> fb.factor(columns="region")
     >>> print(fb.formula)
-    
+
     Polynomial terms:
-    
+
     >>> fb = FormulaBuilder(df=df, lhs="income")
     >>> fb.polynomial(columns="age", degree=3)
     >>> print(fb.formula)
     'income~1+poly(age,degree=3,raw=True)'
-    
+
     Interactions:
-    
+
     >>> fb = FormulaBuilder(df=df, lhs="income")
     >>> fb.simple_interaction(columns=["age", "education"], order=2)
     >>> print(fb.formula)
     'income~1+(age+education)**2'
-    
+
     Standardization:
-    
+
     >>> fb = FormulaBuilder(df=df, lhs="income")
     >>> fb.scale(columns=["age", "experience"])
     >>> print(fb.formula)
     'income~1+scale(age)+scale(experience)'
-    
+
     Working with existing formula strings:
-    
+
     >>> formula = "income~age+education+age:education"
     >>> fb = FormulaBuilder(df=df, formula=formula)
     >>> fb.expand()  # Expand shorthand
@@ -96,7 +98,7 @@ class FormulaBuilder:
     'age+education+age:education'
     >>> print(fb.columns)
     ['income', 'age', 'education']
-    
+
     Notes
     -----
     Formula syntax follows R/Patsy conventions:
@@ -108,20 +110,20 @@ class FormulaBuilder:
     - `I()` for arithmetic operations
     - `C()` for categorical variables
     - Functions like `scale()`, `center()`, `poly()` for transformations
-    
+
     Wildcards in column specifications:
     - `"income_*"` matches all columns starting with "income_"
     - `["age", "education_*"]` matches age and all education columns
-    
+
     The FormulaBuilder can be used in two modes:
     1. Object mode: Create instance and chain methods
     2. Static mode: Call methods with self=None for one-off operations
-    
+
     See Also
     --------
     formulaic.Formula : Underlying formula parser
     """
-    
+
     def __init__(
         self,
         df: IntoFrameT | None = None,
@@ -165,7 +167,7 @@ class FormulaBuilder:
     def add_to_formula(self, add_part: str = "", plus_first: bool = True) -> None:
         """
         Append a string to the formula.
-        
+
         Parameters
         ----------
         add_part : str, optional
@@ -190,9 +192,9 @@ class FormulaBuilder:
     ) -> str | FormulaBuilder:
         """
         General wrapper for adding columns with prefix/suffix.
-        
+
         Used internally by other methods to add variables with transformations.
-        
+
         Parameters
         ----------
         df : IntoFrameT | None, optional
@@ -207,7 +209,7 @@ class FormulaBuilder:
             String to prepend to each column. Default is "".
         suffix : str, optional
             String to append to each column. Default is "".
-            
+
         Returns
         -------
         str | FormulaBuilder
@@ -245,7 +247,7 @@ class FormulaBuilder:
     ) -> str | FormulaBuilder:
         """
         Add continuous variables to the formula.
-        
+
         Parameters
         ----------
         df : IntoFrameT | None, optional
@@ -256,12 +258,12 @@ class FormulaBuilder:
             Pre-constructed clause. Default is "".
         case_insensitive : bool, optional
             Case-insensitive matching. Default is False.
-            
+
         Returns
         -------
         str | FormulaBuilder
             Formula string or self for chaining.
-            
+
         Examples
         --------
         >>> fb = FormulaBuilder(df=df, lhs="y")
@@ -291,7 +293,7 @@ class FormulaBuilder:
     ) -> str | FormulaBuilder:
         """
         Wrap columns in a function call.
-        
+
         Parameters
         ----------
         df : IntoFrameT | None, optional
@@ -310,12 +312,12 @@ class FormulaBuilder:
             Case-insensitive matching. Default is False.
         **kwargs
             Additional function arguments.
-            
+
         Returns
         -------
         str | FormulaBuilder
             Formula string or self for chaining.
-            
+
         Examples
         --------
         >>> fb.function(columns="income", function_item="log")
@@ -362,7 +364,7 @@ class FormulaBuilder:
     ) -> str | FormulaBuilder:
         """
         Standardize or center variables.
-        
+
         Parameters
         ----------
         df : IntoFrameT | None, optional
@@ -376,12 +378,12 @@ class FormulaBuilder:
             Default is True.
         case_insensitive : bool, optional
             Case-insensitive matching. Default is False.
-            
+
         Returns
         -------
         str | FormulaBuilder
             Formula string or self for chaining.
-            
+
         Examples
         --------
         >>> fb.scale(columns="age")  # Standardize
@@ -415,9 +417,9 @@ class FormulaBuilder:
     ) -> str | FormulaBuilder:
         """
         Center variables (subtract mean).
-        
+
         Convenience method for scale(standardize=False).
-        
+
         Parameters
         ----------
         df : IntoFrameT | None, optional
@@ -428,7 +430,7 @@ class FormulaBuilder:
             Pre-constructed clause. Default is "".
         case_insensitive : bool, optional
             Case-insensitive matching. Default is False.
-            
+
         Returns
         -------
         str | FormulaBuilder
@@ -456,9 +458,9 @@ class FormulaBuilder:
     ) -> str | FormulaBuilder:
         """
         Standardize variables (mean=0, sd=1).
-        
+
         Convenience method for scale(standardize=True).
-        
+
         Parameters
         ----------
         df : IntoFrameT | None, optional
@@ -469,7 +471,7 @@ class FormulaBuilder:
             Pre-constructed clause. Default is "".
         case_insensitive : bool, optional
             Case-insensitive matching. Default is False.
-            
+
         Returns
         -------
         str | FormulaBuilder
@@ -499,7 +501,7 @@ class FormulaBuilder:
     ) -> str | FormulaBuilder:
         """
         Add polynomial terms.
-        
+
         Parameters
         ----------
         df : IntoFrameT | None, optional
@@ -514,18 +516,18 @@ class FormulaBuilder:
             Case-insensitive matching. Default is False.
         center : bool, optional
             Use orthogonal polynomials (centered). Default is False (raw polynomials).
-            
+
         Returns
         -------
         str | FormulaBuilder
             Formula string or self for chaining.
-            
+
         Examples
         --------
         >>> fb.polynomial(columns="age", degree=3)
         >>> print(fb.formula)
         'y~1+poly(age,degree=3,raw=True)'
-        
+
         >>> fb.polynomial(columns="age", degree=2, center=True)
         >>> print(fb.formula)
         'y~1+poly(age,degree=2,raw=False)'
@@ -588,7 +590,7 @@ class FormulaBuilder:
     ) -> str | FormulaBuilder:
         """
         Create interactions between variables.
-        
+
         Parameters
         ----------
         df : IntoFrameT | None, optional
@@ -603,18 +605,18 @@ class FormulaBuilder:
             Function to apply to columns before interacting. Default is None.
         no_base : bool, optional
             Exclude main effects (only interactions). Default is False.
-            
+
         Returns
         -------
         str | FormulaBuilder
             Formula string or self for chaining.
-            
+
         Examples
         --------
         >>> fb.simple_interaction(columns=["age", "education"], order=2)
         >>> print(fb.formula)
         'y~1+(age+education)**2'
-        
+
         >>> fb.simple_interaction(columns=["a", "b", "c"], order=2, no_base=True)
         >>> print(fb.formula)
         'y~1+(a+b+c)**2-(a+b+c)'  # Interactions only
@@ -655,7 +657,7 @@ class FormulaBuilder:
     ) -> str | FormulaBuilder:
         """
         Create interactions between two formula clauses.
-        
+
         Parameters
         ----------
         clause1 : str, optional
@@ -664,12 +666,12 @@ class FormulaBuilder:
             Second formula clause. Default is "".
         no_base : bool, optional
             Exclude main effects from clauses. Default is False.
-            
+
         Returns
         -------
         str | FormulaBuilder
             Formula string or self for chaining.
-            
+
         Examples
         --------
         >>> fb.interact_clauses("age+education", "region")
@@ -705,7 +707,7 @@ class FormulaBuilder:
     ):
         """
         Add categorical variables with treatment coding.
-        
+
         Parameters
         ----------
         df : IntoFrameT | None, optional
@@ -718,18 +720,18 @@ class FormulaBuilder:
             Reference level for treatment coding. Default is None (use first level).
         case_insensitive : bool, optional
             Case-insensitive matching. Default is False.
-            
+
         Returns
         -------
         str | FormulaBuilder
             Formula string or self for chaining.
-            
+
         Examples
         --------
         >>> fb.factor(columns="region")
         >>> print(fb.formula)
         'y~1+C(region)'
-        
+
         >>> fb.factor(columns="education", reference="high_school")
         >>> print(fb.formula)
         "y~1+C(education, contr.treatment('high_school'))"
@@ -761,12 +763,12 @@ class FormulaBuilder:
     def columns_from_formula(self=None, formula: str = "") -> list[str]:
         """
         Extract variable names from a formula.
-        
+
         Parameters
         ----------
         formula : str, optional
             Formula string. If empty, uses self.formula. Default is "".
-            
+
         Returns
         -------
         list[str]
@@ -783,12 +785,12 @@ class FormulaBuilder:
     def lhs(self=None, formula: str = "") -> str:
         """
         Get left-hand side of formula.
-        
+
         Parameters
         ----------
         formula : str, optional
             Formula string. If empty, uses self.formula. Default is "".
-            
+
         Returns
         -------
         str
@@ -815,12 +817,12 @@ class FormulaBuilder:
     def rhs(self=None, formula: str = "") -> str:
         """
         Get right-hand side of formula.
-        
+
         Parameters
         ----------
         formula : str, optional
             Formula string. If empty, uses self.formula. Default is "".
-            
+
         Returns
         -------
         str
@@ -885,7 +887,7 @@ class FormulaBuilder:
     ) -> bool:
         """
         Check if formula includes an intercept.
-        
+
         Parameters
         ----------
         formula : str, optional
@@ -893,7 +895,7 @@ class FormulaBuilder:
         true_if_missing : bool, optional
             Return True if constant term is implicit (not specified).
             Default is False.
-            
+
         Returns
         -------
         bool
@@ -930,12 +932,12 @@ class FormulaBuilder:
     def expand(self=None, formula: str = ""):
         """
         Expand formula shorthand (e.g., a*b becomes a+b+a:b).
-        
+
         Parameters
         ----------
         formula : str, optional
             Formula string. If empty, uses self.formula. Default is "".
-            
+
         Returns
         -------
         str
@@ -970,7 +972,7 @@ class FormulaBuilder:
     ) -> tuple[str, bool]:
         """
         Remove interaction terms from formula.
-        
+
         Parameters
         ----------
         formula : str, optional
@@ -979,7 +981,7 @@ class FormulaBuilder:
             Also exclude polynomial terms. Default is True.
         df : IntoFrameT | None, optional
             Reference dataframe. Default is None.
-            
+
         Returns
         -------
         tuple[str, bool]
@@ -1041,7 +1043,7 @@ class FormulaBuilder:
     ):
         """
         Remove specific variables from formula.
-        
+
         Parameters
         ----------
         exclude_list : list, optional
@@ -1052,7 +1054,7 @@ class FormulaBuilder:
             Reference dataframe. Default is None.
         case_insensitive : bool, optional
             Case-insensitive matching. Default is False.
-            
+
         Returns
         -------
         str | FormulaBuilder
@@ -1119,10 +1121,10 @@ class FormulaBuilder:
     ) -> str | FormulaBuilder:
         """
         Expand {pattern} placeholders with matching column names.
-        
+
         Replaces {var*} with all columns matching var* pattern in the dataframe.
         Useful for programmatically building formulas with wildcards.
-        
+
         Parameters
         ----------
         clause : str, optional
@@ -1134,12 +1136,12 @@ class FormulaBuilder:
         append : bool, optional
             Append to existing formula instead of replacing.
             Only used when called on instance. Default is False.
-            
+
         Returns
         -------
         str | FormulaBuilder
             Expanded formula string or self for chaining.
-            
+
         Examples
         --------
         >>> fb = FormulaBuilder(df=df)

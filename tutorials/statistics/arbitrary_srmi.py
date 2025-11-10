@@ -23,16 +23,13 @@ logger.info("Make random weights for the bootstrap")
 n_rows = safe_height(df_implicates[0])
 n_replicates = 10
 
-df_weights = (
-        bayes_bootstrap(
-        n_rows=n_rows,
-        n_draws=n_replicates+1,
-        seed=8345,
-        prefix="weight_",
-        initial_weight_index=0,
-    )
-    .with_row_index("index")
-)
+df_weights = bayes_bootstrap(
+    n_rows=n_rows,
+    n_draws=n_replicates + 1,
+    seed=8345,
+    prefix="weight_",
+    initial_weight_index=0,
+).with_row_index("index")
 
 # %%
 logger.info("What's the data look like")
@@ -43,14 +40,17 @@ _ = summary(df_weights)
 
 # %%
 logger.info("To run an arbitrary stat, you need")
-logger.info("   any function that takes a dataframe and a weight and returns a dataframe")
+logger.info(
+    "   any function that takes a dataframe and a weight and returns a dataframe"
+)
 logger.info("The function will be run for each boostrap/replicate weight")
 logger.info("   Note: you may need to import packages within the function")
 logger.info("   if executed in parallel (it will get pickled and reloaded)")
-def run_regression(df:pl.LazyFrame | pl.DataFrame,
-                   y:str,
-                   X:list[str],
-                   weight:str="") -> pl.LazyFrame | pl.DataFrame:
+
+
+def run_regression(
+    df: pl.LazyFrame | pl.DataFrame, y: str, X: list[str], weight: str = ""
+) -> pl.LazyFrame | pl.DataFrame:
     import polars as pl
     from sklearn.linear_model import LinearRegression
 
@@ -59,35 +59,29 @@ def run_regression(df:pl.LazyFrame | pl.DataFrame,
     d_weight = {}
     if weight != "":
         d_weight["sample_weight"] = df[weight]
-    
-    model.fit(
-        X=df.select(X),
-        y=df.select(y),
-        **d_weight
-    )
+
+    model.fit(X=df.select(X), y=df.select(y), **d_weight)
 
     df_betas = pl.DataFrame(
-            dict(
-                Variable=df.select(X).lazy().collect_schema().names() + ["_Intercept_"],
-                Beta=[
-                    float(vali)
-                    for vali in [float(coefi) for coefi in model.coef_[0]] + [float(model.intercept_[0])]
-                ],
-            )
+        dict(
+            Variable=df.select(X).lazy().collect_schema().names() + ["_Intercept_"],
+            Beta=[
+                float(vali)
+                for vali in [float(coefi) for coefi in model.coef_[0]]
+                + [float(model.intercept_[0])]
+            ],
         )
-    
-    return df_betas
+    )
 
+    return df_betas
 
 
 # %%
 logger.info("The betas from the regression (no weights, implicate 0)")
 y = "var_gbm2"
-X = ["var2","var3","var4","var5"]
-df_betas = run_regression(df=df_implicates[0],y=y,X=X)
+X = ["var2", "var3", "var4", "var5"]
+df_betas = run_regression(df=df_implicates[0], y=y, X=X)
 logger.info(df_betas)
-
-
 
 
 # %%
@@ -97,20 +91,17 @@ arguments_sc = dict(
     X=X,
 )
 replicates = Replicates(
-    weight_stub="weight_",
-    n_replicates=n_replicates,
-    bootstrap=True
+    weight_stub="weight_", n_replicates=n_replicates, bootstrap=True
 )
 sc_compare = StatCalculator.from_function(
     run_regression,
-    df=join_wrapper(df_implicates[0],df_weights,on=["index"],how="left"),
+    df=join_wrapper(df_implicates[0], df_weights, on=["index"], how="left"),
     estimate_ids=["Variable"],
     arguments=arguments_sc,
     replicates=replicates,
-    display=False
+    display=False,
 )
 sc_compare.print()
-
 
 
 # %%

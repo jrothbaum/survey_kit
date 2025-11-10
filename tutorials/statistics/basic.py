@@ -21,37 +21,25 @@ df = (
 
 # %%
 logger.info("The simplest option: just call summary(df)")
-logger.info("  Note the '_ =' is to prevent it from being printed twice in jupyter when generating the html, you can ignore")
+logger.info(
+    "  Note the '_ =' is to prevent it from being printed twice in jupyter when generating the html, you can ignore"
+)
 _ = summary(df)
 
 # %%
 logger.info("\n\n + Weighted")
-_ = summary(df,weight="weight_0")
+_ = summary(df, weight="weight_0")
 
 
 # %%
 logger.info("\n\n + by something")
-_ = summary(
-    df,
-    weight="weight_0",
-    by="year"
-)
-_ = summary(
-    df,
-    weight="weight_0",
-    by=["quarter","year"]
-)
-
+_ = summary(df, weight="weight_0", by="year")
+_ = summary(df, weight="weight_0", by=["quarter", "year"])
 
 
 # %%
 logger.info("\n\n with detailed stats and 4-sig digit rounding")
-_ = summary(
-    df,
-    weight="weight_0",
-    detailed=True,
-    drb_round=True
-)
+_ = summary(df, weight="weight_0", detailed=True, drb_round=True)
 
 
 # %%
@@ -59,9 +47,7 @@ logger.info("\n\n with additional stats")
 logger.info("What is available:")
 logger.info(Statistics.available_stats())
 _ = summary(
-    df,
-    weight="weight_0",
-    additional_stats=["q10","q95","n|not0","share|not0"]
+    df, weight="weight_0", additional_stats=["q10", "q95", "n|not0", "share|not0"]
 )
 
 
@@ -70,7 +56,7 @@ logger.info("Get them (but no need to print):")
 df_stats = summary(
     df,
     weight="weight_0",
-    additional_stats=["q10","q95","n|not0","share|not0"],
+    additional_stats=["q10", "q95", "n|not0", "share|not0"],
     print=False,
 )
 
