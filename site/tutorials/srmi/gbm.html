@@ -7510,7 +7510,7 @@ a.anchor-link {
 </style>
 <!-- End of mermaid configuration --></head>
 <body class="jp-Notebook" data-jp-theme-light="true" data-jp-theme-name="JupyterLab Light">
-<main><div class="jp-Cell jp-CodeCell jp-Notebook-cell jp-mod-noOutputs" id="cell-id=f07ed8ee">
+<main><div class="jp-Cell jp-CodeCell jp-Notebook-cell jp-mod-noOutputs" id="cell-id=fabaf2de">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -7543,7 +7543,7 @@ a.anchor-link {
 </div>
 </div>
 </div>
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=8ab8469c">
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=e5f75c3f">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -7599,21 +7599,21 @@ a.anchor-link {
 
 
 <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">"var_gbm1 is binary and conditional on other variables"</span><span class="p">)</span>
-<span class="n">c_gbm1</span> <span class="o">=</span> <span class="p">((</span><span class="n">c_var2</span> <span class="o">*</span> <span class="mi">2</span> <span class="o">-</span> <span class="n">c_var3</span> <span class="o">*</span> <span class="mi">3</span> <span class="o">*</span> <span class="n">c_var5</span> <span class="o">+</span> <span class="n">c_e_gbm1</span><span class="p">)</span>  <span class="o">&gt;</span> <span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">alias</span><span class="p">(</span><span class="s2">"var_gbm1"</span><span class="p">)</span>
+<span class="n">c_gbm1</span> <span class="o">=</span> <span class="p">((</span><span class="n">c_var2</span> <span class="o">*</span> <span class="mi">2</span> <span class="o">-</span> <span class="n">c_var3</span> <span class="o">*</span> <span class="mi">3</span> <span class="o">*</span> <span class="n">c_var5</span> <span class="o">+</span> <span class="n">c_e_gbm1</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">alias</span><span class="p">(</span><span class="s2">"var_gbm1"</span><span class="p">)</span>
 
 <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">"var_gbm2 is != 0 only if var_gbm1 == True"</span><span class="p">)</span>
 <span class="n">c_gbm2</span> <span class="o">=</span> <span class="p">(</span>
     <span class="n">pl</span><span class="o">.</span><span class="n">when</span><span class="p">(</span><span class="n">pl</span><span class="o">.</span><span class="n">col</span><span class="p">(</span><span class="s2">"var_gbm1"</span><span class="p">))</span>
-      <span class="o">.</span><span class="n">then</span><span class="p">(((</span><span class="n">c_var2</span> <span class="o">*</span> <span class="mf">1.5</span> <span class="o">-</span> <span class="n">c_var3</span> <span class="o">*</span> <span class="mi">1</span> <span class="o">*</span> <span class="n">c_var4</span> <span class="o">+</span> <span class="n">c_e_gbm2</span><span class="p">)))</span>
-      <span class="o">.</span><span class="n">otherwise</span><span class="p">(</span><span class="n">pl</span><span class="o">.</span><span class="n">lit</span><span class="p">(</span><span class="mi">0</span><span class="p">))</span>
-      <span class="o">.</span><span class="n">alias</span><span class="p">(</span><span class="s2">"var_gbm2"</span><span class="p">)</span>
+    <span class="o">.</span><span class="n">then</span><span class="p">((</span><span class="n">c_var2</span> <span class="o">*</span> <span class="mf">1.5</span> <span class="o">-</span> <span class="n">c_var3</span> <span class="o">*</span> <span class="mi">1</span> <span class="o">*</span> <span class="n">c_var4</span> <span class="o">+</span> <span class="n">c_e_gbm2</span><span class="p">))</span>
+    <span class="o">.</span><span class="n">otherwise</span><span class="p">(</span><span class="n">pl</span><span class="o">.</span><span class="n">lit</span><span class="p">(</span><span class="mi">0</span><span class="p">))</span>
+    <span class="o">.</span><span class="n">alias</span><span class="p">(</span><span class="s2">"var_gbm2"</span><span class="p">)</span>
 <span class="p">)</span>
 
 <span class="n">c_gbm3</span> <span class="o">=</span> <span class="p">(</span>
     <span class="n">pl</span><span class="o">.</span><span class="n">when</span><span class="p">(</span><span class="n">pl</span><span class="o">.</span><span class="n">col</span><span class="p">(</span><span class="s2">"var_gbm1"</span><span class="p">))</span>
-      <span class="o">.</span><span class="n">then</span><span class="p">(((</span><span class="n">c_var2</span> <span class="o">*</span> <span class="mf">1.5</span> <span class="o">-</span> <span class="n">c_var3</span> <span class="o">*</span> <span class="mi">1</span> <span class="o">*</span> <span class="n">c_var4</span> <span class="o">+</span> <span class="n">c_e_gbm2</span><span class="p">)))</span>
-      <span class="o">.</span><span class="n">otherwise</span><span class="p">(</span><span class="n">pl</span><span class="o">.</span><span class="n">lit</span><span class="p">(</span><span class="mi">0</span><span class="p">))</span>
-      <span class="o">.</span><span class="n">alias</span><span class="p">(</span><span class="s2">"var_gbm3"</span><span class="p">)</span>
+    <span class="o">.</span><span class="n">then</span><span class="p">((</span><span class="n">c_var2</span> <span class="o">*</span> <span class="mf">1.5</span> <span class="o">-</span> <span class="n">c_var3</span> <span class="o">*</span> <span class="mi">1</span> <span class="o">*</span> <span class="n">c_var4</span> <span class="o">+</span> <span class="n">c_e_gbm2</span><span class="p">))</span>
+    <span class="o">.</span><span class="n">otherwise</span><span class="p">(</span><span class="n">pl</span><span class="o">.</span><span class="n">lit</span><span class="p">(</span><span class="mi">0</span><span class="p">))</span>
+    <span class="o">.</span><span class="n">alias</span><span class="p">(</span><span class="s2">"var_gbm3"</span><span class="p">)</span>
 <span class="p">)</span>
 <span class="c1">#   Create a bunch of variables that are functions of the variables created above</span>
 <span class="n">df</span> <span class="o">=</span> <span class="p">(</span>
@@ -7680,16 +7680,16 @@ a.anchor-link {
 │        var2 ┆ 10,000 ┆           0 ┆     4.9782 ┆    3.154508 ┆        0.0 ┆      10.0 │
 │        var3 ┆ 10,000 ┆           0 ┆    25.1084 ┆   14.752302 ┆        0.0 ┆      50.0 │
 │        var4 ┆ 10,000 ┆           0 ┆   0.505666 ┆    0.287861 ┆   0.000027 ┆  0.999997 │
-│        var5 ┆ 10,000 ┆           0 ┆     0.4999 ┆    0.500025 ┆        0.0 ┆       1.0 │
 │ unrelated_1 ┆ 10,000 ┆           0 ┆   0.502449 ┆    0.288359 ┆   0.000119 ┆  0.999997 │
 │ unrelated_2 ┆ 10,000 ┆           0 ┆   0.500105 ┆    0.287638 ┆   0.000049 ┆  0.999539 │
 │ unrelated_3 ┆ 10,000 ┆           0 ┆   0.499175 ┆     0.28876 ┆   0.000129 ┆   0.99994 │
 │ unrelated_4 ┆ 10,000 ┆           0 ┆   0.500655 ┆    0.288698 ┆   0.000133 ┆  0.999972 │
 │ unrelated_5 ┆ 10,000 ┆           0 ┆    0.49876 ┆    0.288979 ┆   0.000071 ┆  0.999867 │
-│    var_gbm1 ┆ 10,000 ┆       2,483 ┆   0.526008 ┆    0.499356 ┆        0.0 ┆       1.0 │
 │    var_gbm2 ┆ 10,000 ┆       2,464 ┆  -2.393041 ┆   10.384672 ┆ -55.354108 ┆ 26.213084 │
 │    var_gbm3 ┆ 10,000 ┆       2,596 ┆  -2.500425 ┆   10.365353 ┆ -55.354108 ┆ 26.213084 │
 │    repeat_1 ┆ 10,000 ┆           0 ┆   0.502449 ┆    0.288359 ┆   0.000119 ┆  0.999997 │
+│        var5 ┆ 10,000 ┆           0 ┆     0.4999 ┆    0.500025 ┆        0.0 ┆       1.0 │
+│    var_gbm1 ┆ 10,000 ┆       2,483 ┆   0.526008 ┆    0.499356 ┆        0.0 ┆       1.0 │
 └─────────────┴────────┴─────────────┴────────────┴─────────────┴────────────┴───────────┘
 </pre>
 </div>
@@ -7699,12 +7699,12 @@ a.anchor-link {
 <div class="jp-RenderedHTMLCommon jp-RenderedHTML jp-OutputArea-output jp-OutputArea-executeResult" data-mime-type="text/html" tabindex="0">
 <i>naive plan: (run <b>LazyFrame.explain(optimized=True)</b> to see the optimized plan)</i>
 <p></p>
-<div>SELECT [col("Variable"), col("n"), col("n (missing)"), col("mean"), col("std"), col("min"), col("max")]<p></p>  UNION<p></p>    PLAN 0:<p></p>       WITH_COLUMNS:<p></p>       [col("n (missing)").cast(Int16), col("min").strict_cast(Float64), col("max").strict_cast(Float64)] <p></p>        SELECT [col("Variable"), col("n"), col("n (missing)"), col("mean"), col("std"), col("min"), col("max")]<p></p>           WITH_COLUMNS:<p></p>           ["_row_index_".alias("Variable")] <p></p>            SELECT [col("min"), col("n (missing)"), col("max"), col("std"), col("n"), col("mean")]<p></p>              SELECT [col("___index___"), col("_row_index__min").alias("min"), col("_row_index__rawn_missing").alias("n (missing)"), col("_row_index__max").alias("max"), col("_row_index__std").alias("std"), col("_row_index__rawn").alias("n"), col("_row_index__mean").alias("mean")]<p></p>                SELECT [col("___index___"), col("_row_index__min"), col("_row_index__rawn_missing"), col("_row_index__max"), col("_row_index__std"), col("_row_index__rawn"), col("_row_index__mean")]<p></p>                  DF ["___index___", "_row_index__rawn", "_row_index__mean", "_row_index__std", ...]; PROJECT */103 COLUMNS<p></p>    PLAN 1:<p></p>       WITH_COLUMNS:<p></p>       [col("n (missing)").cast(Int16), col("min").strict_cast(Float64), col("max").strict_cast(Float64)] <p></p>        SELECT [col("Variable"), col("n"), col("n (missing)"), col("mean"), col("std"), col("min"), col("max")]<p></p>           WITH_COLUMNS:<p></p>           ["index".alias("Variable")] <p></p>            SELECT [col("min"), col("n (missing)"), col("max"), col("std"), col("n"), col("mean")]<p></p>              SELECT [col("___index___"), col("index_min").alias("min"), col("index_rawn_missing").alias("n (missing)"), col("index_max").alias("max"), col("index_std").alias("std"), col("index_rawn").alias("n"), col("index_mean").alias("mean")]<p></p>                SELECT [col("___index___"), col("index_min"), col("index_rawn_missing"), col("index_max"), col("index_std"), col("index_rawn"), col("index_mean")]<p></p>                  DF ["___index___", "_row_index__rawn", "_row_index__mean", "_row_index__std", ...]; PROJECT */103 COLUMNS<p></p>    PLAN 2:<p></p>       WITH_COLUMNS:<p></p>       [col("n (missing)").cast(Int16), col("min").strict_cast(Float64), col("max").strict_cast(Float64)] <p></p>        SELECT [col("Variable"), col("n"), col("n (missing)"), col("mean"), col("std"), col("min"), col("max")]<p></p>           WITH_COLUMNS:<p></p>           ["year".alias("Variable")] <p></p>            SELECT [col("min"), col("n (missing)"), col("max"), col("std"), col("n"), col("mean")]<p></p>              SELECT [col("___index___"), col("year_min").alias("min"), col("year_rawn_missing").alias("n (missing)"), col("year_max").alias("max"), col("year_std").alias("std"), col("year_rawn").alias("n"), col("year_mean").alias("mean")]<p></p>                SELECT [col("___index___"), col("year_min"), col("year_rawn_missing"), col("year_max"), col("year_std"), col("year_rawn"), col("year_mean")]<p></p>                  DF ["___index___", "_row_index__rawn", "_row_index__mean", "_row_index__std", ...]; PROJECT */103 COLUMNS<p></p>    PLAN 3:<p></p>       WITH_COLUMNS:<p></p>       [col("n (missing)").cast(Int16), col("min").strict_cast(Float64), col("max").strict_cast(Float64)] <p></p>        SELECT [col("Variable"), col("n"), col("n (missing)"), col("mean"), col("std"), col("min"), col("max")]<p></p>           WITH_COLUMNS:<p></p>           ["month".alias("Variable")] <p></p>            SELECT [col("min"), col("n (missing)"), col("max"), col("std"), col("n"), col("mean")]<p></p>              SELECT [col("___index___"), col("month_min").alias("min"), col("month_rawn_missing").alias("n (missing)"), col("month_max").alias("max"), col("month_std").alias("std"), col("month_rawn").alias("n"), col("month_mean").alias("mean")]<p></p>                SELECT [col("___index___"), col("month_min"), col("month_rawn_missing"), col("month_max"), col("month_std"), col("month_rawn"), col("month_mean")]<p></p>                  DF ["___index___", "_row_index__rawn", "_row_index__mean", "_row_index__std", ...]; PROJECT */103 COLUMNS<p></p>    PLAN 4:<p></p>       WITH_COLUMNS:<p></p>       [col("n (missing)").cast(Int16), col("min").strict_cast(Float64), col("max").strict_cast(Float64)] <p></p>        SELECT [col("Variable"), col("n"), col("n (missing)"), col("mean"), col("std"), col("min"), col("max")]<p></p>           WITH_COLUMNS:<p></p>           ["var2".alias("Variable")] <p></p>            SELECT [col("min"), col("n (missing)"), col("max"), col("std"), col("n"), col("mean")]<p></p>              SELECT [col("___index___"), col("var2_min").alias("min"), col("var2_rawn_missing").alias("n (missing)"), col("var2_max").alias("max"), col("var2_std").alias("std"), col("var2_rawn").alias("n"), col("var2_mean").alias("mean")]<p></p>                SELECT [col("___index___"), col("var2_min"), col("var2_rawn_missing"), col("var2_max"), col("var2_std"), col("var2_rawn"), col("var2_mean")]<p></p>                  DF ["___index___", "_row_index__rawn", "_row_index__mean", "_row_index__std", ...]; PROJECT */103 COLUMNS<p></p>    PLAN 5:<p></p>       WITH_COLUMNS:<p></p>       [col("n (missing)").cast(Int16), col("min").strict_cast(Float64), col("max").strict_cast(Float64)] <p></p>        SELECT [col("Variable"), col("n"), col("n (missing)"), col("mean"), col("std"), col("min"), col("max")]<p></p>           WITH_COLUMNS:<p></p>           ["var3".alias("Variable")] <p></p>            SELECT [col("min"), col("n (missing)"), col("max"), col("std"), col("n"), col("mean")]<p></p>              SELECT [col("___index___"), col("var3_min").alias("min"), col("var3_rawn_missing").alias("n (missing)"), col("var3_max").alias("max"), col("var3_std").alias("std"), col("var3_rawn").alias("n"), col("var3_mean").alias("mean")]<p></p>                SELECT [col("___index___"), col("var3_min"), col("var3_rawn_missing"), col("var3_max"), col("var3_std"), col("var3_rawn"), col("var3_mean")]<p></p>                  DF ["___index___", "_row_index__rawn", "_row_index__mean", "_row_index__std", ...]; PROJECT */103 COLUMNS<p></p>    PLAN 6:<p></p>       WITH_COLUMNS:<p></p>       [col("n (missing)").cast(Int16)] <p></p>        SELECT [col("Variable"), col("n"), col("n (missing)"), col("mean"), col("std"), col("min"), col("max")]<p></p>           WITH_COLUMNS:<p></p>           ["var4".alias("Variable")] <p></p>            SELECT [col("min"), col("n (missing)"), col("max"), col("std"), col("n"), col("mean")]<p></p>              SELECT [col("___index___"), col("var4_min").alias("min"), col("var4_rawn_missing").alias("n (missing)"), col("var4_max").alias("max"), col("var4_std").alias("std"), col("var4_rawn").alias("n"), col("var4_mean").alias("mean")]<p></p>                SELECT [col("___index___"), col("var4_min"), col("var4_rawn_missing"), col("var4_max"), col("var4_std"), col("var4_rawn"), col("var4_mean")]<p></p>                  DF ["___index___", "_row_index__rawn", "_row_index__mean", "_row_index__std", ...]; PROJECT */103 COLUMNS<p></p>    PLAN 7:<p></p>       WITH_COLUMNS:<p></p>       [col("n (missing)").cast(Int16), col("min").strict_cast(Float64), col("max").strict_cast(Float64)] <p></p>        SELECT [col("Variable"), col("n"), col("n (missing)"), col("mean"), col("std"), col("min"), col("max")]<p></p>           WITH_COLUMNS:<p></p>           ["var5".alias("Variable")] <p></p>            SELECT [col("min"), col("n (missing)"), col("max"), col("std"), col("n"), col("mean")]<p></p>              SELECT [col("___index___"), col("var5_min").alias("min"), col("var5_rawn_missing").alias("n (missing)"), col("var5_max").alias("max"), col("var5_std").alias("std"), col("var5_rawn").alias("n"), col("var5_mean").alias("mean")]<p></p>                SELECT [col("___index___"), col("var5_min"), col("var5_rawn_missing"), col("var5_max"), col("var5_std"), col("var5_rawn"), col("var5_mean")]<p></p>                  DF ["___index___", "_row_index__rawn", "_row_index__mean", "_row_index__std", ...]; PROJECT */103 COLUMNS<p></p>    PLAN 8:<p></p>       WITH_COLUMNS:<p></p>       [col("n (missing)").cast(Int16)] <p></p>        SELECT [col("Variable"), col("n"), col("n (missing)"), col("mean"), col("std"), col("min"), col("max")]<p></p>           WITH_COLUMNS:<p></p>           ["unrelated_1".alias("Variable")] <p></p>            SELECT [col("min"), col("n (missing)"), col("max"), col("std"), col("n"), col("mean")]<p></p>              SELECT [col("___index___"), col("unrelated_1_min").alias("min"), col("unrelated_1_rawn_missing").alias("n (missing)"), col("unrelated_1_max").alias("max"), col("unrelated_1_std").alias("std"), col("unrelated_1_rawn").alias("n"), col("unrelated_1_mean").alias("mean")]<p></p>                SELECT [col("___index___"), col("unrelated_1_min"), col("unrelated_1_rawn_missing"), col("unrelated_1_max"), col("unrelated_1_std"), col("unrelated_1_rawn"), col("unrelated_1_mean")]<p></p>                  DF ["___index___", "_row_index__rawn", "_row_index__mean", "_row_index__std", ...]; PROJECT */103 COLUMNS<p></p>    PLAN 9:<p></p>       WITH_COLUMNS:<p></p>       [col("n (missing)").cast(Int16)] <p></p>        SELECT [col("Variable"), col("n"), col("n (missing)"), col("mean"), col("std"), col("min"), col("max")]<p></p>           WITH_COLUMNS:<p></p>           ["unrelated_2".alias("Variable")] <p></p>            SELECT [col("min"), col("n (missing)"), col("max"), col("std"), col("n"), col("mean")]<p></p>              SELECT [col("___index___"), col("unrelated_2_min").alias("min"), col("unrelated_2_rawn_missing").alias("n (missing)"), col("unrelated_2_max").alias("max"), col("unrelated_2_std").alias("std"), col("unrelated_2_rawn").alias("n"), col("unrelated_2_mean").alias("mean")]<p></p>                SELECT [col("___index___"), col("unrelated_2_min"), col("unrelated_2_rawn_missing"), col("unrelated_2_max"), col("unrelated_2_std"), col("unrelated_2_rawn"), col("unrelated_2_mean")]<p></p>                  DF ["___index___", "_row_index__rawn", "_row_index__mean", "_row_index__std", ...]; PROJECT */103 COLUMNS<p></p>    PLAN 10:<p></p>       WITH_COLUMNS:<p></p>       [col("n (missing)").cast(Int16)] <p></p>        SELECT [col("Variable"), col("n"), col("n (missing)"), col("mean"), col("std"), col("min"), col("max")]<p></p>           WITH_COLUMNS:<p></p>           ["unrelated_3".alias("Variable")] <p></p>            SELECT [col("min"), col("n (missing)"), col("max"), col("std"), col("n"), col("mean")]<p></p>              SELECT [col("___index___"), col("unrelated_3_min").alias("min"), col("unrelated_3_rawn_missing").alias("n (missing)"), col("unrelated_3_max").alias("max"), col("unrelated_3_std").alias("std"), col("unrelated_3_rawn").alias("n"), col("unrelated_3_mean").alias("mean")]<p></p>                SELECT [col("___index___"), col("unrelated_3_min"), col("unrelated_3_rawn_missing"), col("unrelated_3_max"), col("unrelated_3_std"), col("unrelated_3_rawn"), col("unrelated_3_mean")]<p></p>                  DF ["___index___", "_row_index__rawn", "_row_index__mean", "_row_index__std", ...]; PROJECT */103 COLUMNS<p></p>    PLAN 11:<p></p>       WITH_COLUMNS:<p></p>       [col("n (missing)").cast(Int16)] <p></p>        SELECT [col("Variable"), col("n"), col("n (missing)"), col("mean"), col("std"), col("min"), col("max")]<p></p>           WITH_COLUMNS:<p></p>           ["unrelated_4".alias("Variable")] <p></p>            SELECT [col("min"), col("n (missing)"), col("max"), col("std"), col("n"), col("mean")]<p></p>              SELECT [col("___index___"), col("unrelated_4_min").alias("min"), col("unrelated_4_rawn_missing").alias("n (missing)"), col("unrelated_4_max").alias("max"), col("unrelated_4_std").alias("std"), col("unrelated_4_rawn").alias("n"), col("unrelated_4_mean").alias("mean")]<p></p>                SELECT [col("___index___"), col("unrelated_4_min"), col("unrelated_4_rawn_missing"), col("unrelated_4_max"), col("unrelated_4_std"), col("unrelated_4_rawn"), col("unrelated_4_mean")]<p></p>                  DF ["___index___", "_row_index__rawn", "_row_index__mean", "_row_index__std", ...]; PROJECT */103 COLUMNS<p></p>    PLAN 12:<p></p>       WITH_COLUMNS:<p></p>       [col("n (missing)").cast(Int16)] <p></p>        SELECT [col("Variable"), col("n"), col("n (missing)"), col("mean"), col("std"), col("min"), col("max")]<p></p>           WITH_COLUMNS:<p></p>           ["unrelated_5".alias("Variable")] <p></p>            SELECT [col("min"), col("n (missing)"), col("max"), col("std"), col("n"), col("mean")]<p></p>              SELECT [col("___index___"), col("unrelated_5_min").alias("min"), col("unrelated_5_rawn_missing").alias("n (missing)"), col("unrelated_5_max").alias("max"), col("unrelated_5_std").alias("std"), col("unrelated_5_rawn").alias("n"), col("unrelated_5_mean").alias("mean")]<p></p>                SELECT [col("___index___"), col("unrelated_5_min"), col("unrelated_5_rawn_missing"), col("unrelated_5_max"), col("unrelated_5_std"), col("unrelated_5_rawn"), col("unrelated_5_mean")]<p></p>                  DF ["___index___", "_row_index__rawn", "_row_index__mean", "_row_index__std", ...]; PROJECT */103 COLUMNS<p></p>    PLAN 13:<p></p>       WITH_COLUMNS:<p></p>       [col("min").strict_cast(Float64), col("max").strict_cast(Float64)] <p></p>        SELECT [col("Variable"), col("n"), col("n (missing)"), col("mean"), col("std"), col("min"), col("max")]<p></p>           WITH_COLUMNS:<p></p>           ["var_gbm1".alias("Variable")] <p></p>            SELECT [col("min"), col("n (missing)"), col("max"), col("std"), col("n"), col("mean")]<p></p>              SELECT [col("___index___"), col("var_gbm1_min").alias("min"), col("var_gbm1_rawn_missing").alias("n (missing)"), col("var_gbm1_max").alias("max"), col("var_gbm1_std").alias("std"), col("var_gbm1_rawn").alias("n"), col("var_gbm1_mean").alias("mean")]<p></p>                SELECT [col("___index___"), col("var_gbm1_min"), col("var_gbm1_rawn_missing"), col("var_gbm1_max"), col("var_gbm1_std"), col("var_gbm1_rawn"), col("var_gbm1_mean")]<p></p>                  DF ["___index___", "_row_index__rawn", "_row_index__mean", "_row_index__std", ...]; PROJECT */103 COLUMNS<p></p>    PLAN 14:<p></p>      SELECT [col("Variable"), col("n"), col("n (missing)"), col("mean"), col("std"), col("min"), col("max")]<p></p>         WITH_COLUMNS:<p></p>         ["var_gbm2".alias("Variable")] <p></p>          SELECT [col("min"), col("n (missing)"), col("max"), col("std"), col("n"), col("mean")]<p></p>            SELECT [col("___index___"), col("var_gbm2_min").alias("min"), col("var_gbm2_rawn_missing").alias("n (missing)"), col("var_gbm2_max").alias("max"), col("var_gbm2_std").alias("std"), col("var_gbm2_rawn").alias("n"), col("var_gbm2_mean").alias("mean")]<p></p>              SELECT [col("___index___"), col("var_gbm2_min"), col("var_gbm2_rawn_missing"), col("var_gbm2_max"), col("var_gbm2_std"), col("var_gbm2_rawn"), col("var_gbm2_mean")]<p></p>                DF ["___index___", "_row_index__rawn", "_row_index__mean", "_row_index__std", ...]; PROJECT */103 COLUMNS<p></p>    PLAN 15:<p></p>      SELECT [col("Variable"), col("n"), col("n (missing)"), col("mean"), col("std"), col("min"), col("max")]<p></p>         WITH_COLUMNS:<p></p>         ["var_gbm3".alias("Variable")] <p></p>          SELECT [col("min"), col("n (missing)"), col("max"), col("std"), col("n"), col("mean")]<p></p>            SELECT [col("___index___"), col("var_gbm3_min").alias("min"), col("var_gbm3_rawn_missing").alias("n (missing)"), col("var_gbm3_max").alias("max"), col("var_gbm3_std").alias("std"), col("var_gbm3_rawn").alias("n"), col("var_gbm3_mean").alias("mean")]<p></p>              SELECT [col("___index___"), col("var_gbm3_min"), col("var_gbm3_rawn_missing"), col("var_gbm3_max"), col("var_gbm3_std"), col("var_gbm3_rawn"), col("var_gbm3_mean")]<p></p>                DF ["___index___", "_row_index__rawn", "_row_index__mean", "_row_index__std", ...]; PROJECT */103 COLUMNS<p></p>    PLAN 16:<p></p>       WITH_COLUMNS:<p></p>       [col("n (missing)").cast(Int16)] <p></p>        SELECT [col("Variable"), col("n"), col("n (missing)"), col("mean"), col("std"), col("min"), col("max")]<p></p>           WITH_COLUMNS:<p></p>           ["repeat_1".alias("Variable")] <p></p>            SELECT [col("min"), col("n (missing)"), col("max"), col("std"), col("n"), col("mean")]<p></p>              SELECT [col("___index___"), col("repeat_1_min").alias("min"), col("repeat_1_rawn_missing").alias("n (missing)"), col("repeat_1_max").alias("max"), col("repeat_1_std").alias("std"), col("repeat_1_rawn").alias("n"), col("repeat_1_mean").alias("mean")]<p></p>                SELECT [col("___index___"), col("repeat_1_min"), col("repeat_1_rawn_missing"), col("repeat_1_max"), col("repeat_1_std"), col("repeat_1_rawn"), col("repeat_1_mean")]<p></p>                  DF ["___index___", "_row_index__rawn", "_row_index__mean", "_row_index__std", ...]; PROJECT */103 COLUMNS<p></p>  END UNION</div>
+<div>SELECT [col("Variable"), col("n"), col("n (missing)"), col("mean"), col("std"), col("min"), col("max")]<p></p>  UNION<p></p>    PLAN 0:<p></p>       WITH_COLUMNS:<p></p>       [col("n (missing)").cast(Int16), col("min").strict_cast(Float64), col("max").strict_cast(Float64)] <p></p>        SELECT [col("Variable"), col("n"), col("n (missing)"), col("mean"), col("std"), col("min"), col("max")]<p></p>           WITH_COLUMNS:<p></p>           ["_row_index_".alias("Variable")] <p></p>            SELECT [col("min"), col("max"), col("std"), col("n"), col("mean"), col("n (missing)")]<p></p>              SELECT [col("___index___"), col("_row_index__min").alias("min"), col("_row_index__max").alias("max"), col("_row_index__std").alias("std"), col("_row_index__rawn").alias("n"), col("_row_index__mean").alias("mean"), col("_row_index__rawn_missing").alias("n (missing)")]<p></p>                SELECT [col("___index___"), col("_row_index__min"), col("_row_index__max"), col("_row_index__std"), col("_row_index__rawn"), col("_row_index__mean"), col("_row_index__rawn_missing")]<p></p>                  DF ["___index___", "_row_index__rawn", "_row_index__mean", "_row_index__std", ...]; PROJECT */103 COLUMNS<p></p>    PLAN 1:<p></p>       WITH_COLUMNS:<p></p>       [col("n (missing)").cast(Int16), col("min").strict_cast(Float64), col("max").strict_cast(Float64)] <p></p>        SELECT [col("Variable"), col("n"), col("n (missing)"), col("mean"), col("std"), col("min"), col("max")]<p></p>           WITH_COLUMNS:<p></p>           ["index".alias("Variable")] <p></p>            SELECT [col("min"), col("max"), col("std"), col("n"), col("mean"), col("n (missing)")]<p></p>              SELECT [col("___index___"), col("index_min").alias("min"), col("index_max").alias("max"), col("index_std").alias("std"), col("index_rawn").alias("n"), col("index_mean").alias("mean"), col("index_rawn_missing").alias("n (missing)")]<p></p>                SELECT [col("___index___"), col("index_min"), col("index_max"), col("index_std"), col("index_rawn"), col("index_mean"), col("index_rawn_missing")]<p></p>                  DF ["___index___", "_row_index__rawn", "_row_index__mean", "_row_index__std", ...]; PROJECT */103 COLUMNS<p></p>    PLAN 2:<p></p>       WITH_COLUMNS:<p></p>       [col("n (missing)").cast(Int16), col("min").strict_cast(Float64), col("max").strict_cast(Float64)] <p></p>        SELECT [col("Variable"), col("n"), col("n (missing)"), col("mean"), col("std"), col("min"), col("max")]<p></p>           WITH_COLUMNS:<p></p>           ["year".alias("Variable")] <p></p>            SELECT [col("min"), col("max"), col("std"), col("n"), col("mean"), col("n (missing)")]<p></p>              SELECT [col("___index___"), col("year_min").alias("min"), col("year_max").alias("max"), col("year_std").alias("std"), col("year_rawn").alias("n"), col("year_mean").alias("mean"), col("year_rawn_missing").alias("n (missing)")]<p></p>                SELECT [col("___index___"), col("year_min"), col("year_max"), col("year_std"), col("year_rawn"), col("year_mean"), col("year_rawn_missing")]<p></p>                  DF ["___index___", "_row_index__rawn", "_row_index__mean", "_row_index__std", ...]; PROJECT */103 COLUMNS<p></p>    PLAN 3:<p></p>       WITH_COLUMNS:<p></p>       [col("n (missing)").cast(Int16), col("min").strict_cast(Float64), col("max").strict_cast(Float64)] <p></p>        SELECT [col("Variable"), col("n"), col("n (missing)"), col("mean"), col("std"), col("min"), col("max")]<p></p>           WITH_COLUMNS:<p></p>           ["month".alias("Variable")] <p></p>            SELECT [col("min"), col("max"), col("std"), col("n"), col("mean"), col("n (missing)")]<p></p>              SELECT [col("___index___"), col("month_min").alias("min"), col("month_max").alias("max"), col("month_std").alias("std"), col("month_rawn").alias("n"), col("month_mean").alias("mean"), col("month_rawn_missing").alias("n (missing)")]<p></p>                SELECT [col("___index___"), col("month_min"), col("month_max"), col("month_std"), col("month_rawn"), col("month_mean"), col("month_rawn_missing")]<p></p>                  DF ["___index___", "_row_index__rawn", "_row_index__mean", "_row_index__std", ...]; PROJECT */103 COLUMNS<p></p>    PLAN 4:<p></p>       WITH_COLUMNS:<p></p>       [col("n (missing)").cast(Int16), col("min").strict_cast(Float64), col("max").strict_cast(Float64)] <p></p>        SELECT [col("Variable"), col("n"), col("n (missing)"), col("mean"), col("std"), col("min"), col("max")]<p></p>           WITH_COLUMNS:<p></p>           ["var2".alias("Variable")] <p></p>            SELECT [col("min"), col("max"), col("std"), col("n"), col("mean"), col("n (missing)")]<p></p>              SELECT [col("___index___"), col("var2_min").alias("min"), col("var2_max").alias("max"), col("var2_std").alias("std"), col("var2_rawn").alias("n"), col("var2_mean").alias("mean"), col("var2_rawn_missing").alias("n (missing)")]<p></p>                SELECT [col("___index___"), col("var2_min"), col("var2_max"), col("var2_std"), col("var2_rawn"), col("var2_mean"), col("var2_rawn_missing")]<p></p>                  DF ["___index___", "_row_index__rawn", "_row_index__mean", "_row_index__std", ...]; PROJECT */103 COLUMNS<p></p>    PLAN 5:<p></p>       WITH_COLUMNS:<p></p>       [col("n (missing)").cast(Int16), col("min").strict_cast(Float64), col("max").strict_cast(Float64)] <p></p>        SELECT [col("Variable"), col("n"), col("n (missing)"), col("mean"), col("std"), col("min"), col("max")]<p></p>           WITH_COLUMNS:<p></p>           ["var3".alias("Variable")] <p></p>            SELECT [col("min"), col("max"), col("std"), col("n"), col("mean"), col("n (missing)")]<p></p>              SELECT [col("___index___"), col("var3_min").alias("min"), col("var3_max").alias("max"), col("var3_std").alias("std"), col("var3_rawn").alias("n"), col("var3_mean").alias("mean"), col("var3_rawn_missing").alias("n (missing)")]<p></p>                SELECT [col("___index___"), col("var3_min"), col("var3_max"), col("var3_std"), col("var3_rawn"), col("var3_mean"), col("var3_rawn_missing")]<p></p>                  DF ["___index___", "_row_index__rawn", "_row_index__mean", "_row_index__std", ...]; PROJECT */103 COLUMNS<p></p>    PLAN 6:<p></p>       WITH_COLUMNS:<p></p>       [col("n (missing)").cast(Int16)] <p></p>        SELECT [col("Variable"), col("n"), col("n (missing)"), col("mean"), col("std"), col("min"), col("max")]<p></p>           WITH_COLUMNS:<p></p>           ["var4".alias("Variable")] <p></p>            SELECT [col("min"), col("max"), col("std"), col("n"), col("mean"), col("n (missing)")]<p></p>              SELECT [col("___index___"), col("var4_min").alias("min"), col("var4_max").alias("max"), col("var4_std").alias("std"), col("var4_rawn").alias("n"), col("var4_mean").alias("mean"), col("var4_rawn_missing").alias("n (missing)")]<p></p>                SELECT [col("___index___"), col("var4_min"), col("var4_max"), col("var4_std"), col("var4_rawn"), col("var4_mean"), col("var4_rawn_missing")]<p></p>                  DF ["___index___", "_row_index__rawn", "_row_index__mean", "_row_index__std", ...]; PROJECT */103 COLUMNS<p></p>    PLAN 7:<p></p>       WITH_COLUMNS:<p></p>       [col("n (missing)").cast(Int16)] <p></p>        SELECT [col("Variable"), col("n"), col("n (missing)"), col("mean"), col("std"), col("min"), col("max")]<p></p>           WITH_COLUMNS:<p></p>           ["unrelated_1".alias("Variable")] <p></p>            SELECT [col("min"), col("max"), col("std"), col("n"), col("mean"), col("n (missing)")]<p></p>              SELECT [col("___index___"), col("unrelated_1_min").alias("min"), col("unrelated_1_max").alias("max"), col("unrelated_1_std").alias("std"), col("unrelated_1_rawn").alias("n"), col("unrelated_1_mean").alias("mean"), col("unrelated_1_rawn_missing").alias("n (missing)")]<p></p>                SELECT [col("___index___"), col("unrelated_1_min"), col("unrelated_1_max"), col("unrelated_1_std"), col("unrelated_1_rawn"), col("unrelated_1_mean"), col("unrelated_1_rawn_missing")]<p></p>                  DF ["___index___", "_row_index__rawn", "_row_index__mean", "_row_index__std", ...]; PROJECT */103 COLUMNS<p></p>    PLAN 8:<p></p>       WITH_COLUMNS:<p></p>       [col("n (missing)").cast(Int16)] <p></p>        SELECT [col("Variable"), col("n"), col("n (missing)"), col("mean"), col("std"), col("min"), col("max")]<p></p>           WITH_COLUMNS:<p></p>           ["unrelated_2".alias("Variable")] <p></p>            SELECT [col("min"), col("max"), col("std"), col("n"), col("mean"), col("n (missing)")]<p></p>              SELECT [col("___index___"), col("unrelated_2_min").alias("min"), col("unrelated_2_max").alias("max"), col("unrelated_2_std").alias("std"), col("unrelated_2_rawn").alias("n"), col("unrelated_2_mean").alias("mean"), col("unrelated_2_rawn_missing").alias("n (missing)")]<p></p>                SELECT [col("___index___"), col("unrelated_2_min"), col("unrelated_2_max"), col("unrelated_2_std"), col("unrelated_2_rawn"), col("unrelated_2_mean"), col("unrelated_2_rawn_missing")]<p></p>                  DF ["___index___", "_row_index__rawn", "_row_index__mean", "_row_index__std", ...]; PROJECT */103 COLUMNS<p></p>    PLAN 9:<p></p>       WITH_COLUMNS:<p></p>       [col("n (missing)").cast(Int16)] <p></p>        SELECT [col("Variable"), col("n"), col("n (missing)"), col("mean"), col("std"), col("min"), col("max")]<p></p>           WITH_COLUMNS:<p></p>           ["unrelated_3".alias("Variable")] <p></p>            SELECT [col("min"), col("max"), col("std"), col("n"), col("mean"), col("n (missing)")]<p></p>              SELECT [col("___index___"), col("unrelated_3_min").alias("min"), col("unrelated_3_max").alias("max"), col("unrelated_3_std").alias("std"), col("unrelated_3_rawn").alias("n"), col("unrelated_3_mean").alias("mean"), col("unrelated_3_rawn_missing").alias("n (missing)")]<p></p>                SELECT [col("___index___"), col("unrelated_3_min"), col("unrelated_3_max"), col("unrelated_3_std"), col("unrelated_3_rawn"), col("unrelated_3_mean"), col("unrelated_3_rawn_missing")]<p></p>                  DF ["___index___", "_row_index__rawn", "_row_index__mean", "_row_index__std", ...]; PROJECT */103 COLUMNS<p></p>    PLAN 10:<p></p>       WITH_COLUMNS:<p></p>       [col("n (missing)").cast(Int16)] <p></p>        SELECT [col("Variable"), col("n"), col("n (missing)"), col("mean"), col("std"), col("min"), col("max")]<p></p>           WITH_COLUMNS:<p></p>           ["unrelated_4".alias("Variable")] <p></p>            SELECT [col("min"), col("max"), col("std"), col("n"), col("mean"), col("n (missing)")]<p></p>              SELECT [col("___index___"), col("unrelated_4_min").alias("min"), col("unrelated_4_max").alias("max"), col("unrelated_4_std").alias("std"), col("unrelated_4_rawn").alias("n"), col("unrelated_4_mean").alias("mean"), col("unrelated_4_rawn_missing").alias("n (missing)")]<p></p>                SELECT [col("___index___"), col("unrelated_4_min"), col("unrelated_4_max"), col("unrelated_4_std"), col("unrelated_4_rawn"), col("unrelated_4_mean"), col("unrelated_4_rawn_missing")]<p></p>                  DF ["___index___", "_row_index__rawn", "_row_index__mean", "_row_index__std", ...]; PROJECT */103 COLUMNS<p></p>    PLAN 11:<p></p>       WITH_COLUMNS:<p></p>       [col("n (missing)").cast(Int16)] <p></p>        SELECT [col("Variable"), col("n"), col("n (missing)"), col("mean"), col("std"), col("min"), col("max")]<p></p>           WITH_COLUMNS:<p></p>           ["unrelated_5".alias("Variable")] <p></p>            SELECT [col("min"), col("max"), col("std"), col("n"), col("mean"), col("n (missing)")]<p></p>              SELECT [col("___index___"), col("unrelated_5_min").alias("min"), col("unrelated_5_max").alias("max"), col("unrelated_5_std").alias("std"), col("unrelated_5_rawn").alias("n"), col("unrelated_5_mean").alias("mean"), col("unrelated_5_rawn_missing").alias("n (missing)")]<p></p>                SELECT [col("___index___"), col("unrelated_5_min"), col("unrelated_5_max"), col("unrelated_5_std"), col("unrelated_5_rawn"), col("unrelated_5_mean"), col("unrelated_5_rawn_missing")]<p></p>                  DF ["___index___", "_row_index__rawn", "_row_index__mean", "_row_index__std", ...]; PROJECT */103 COLUMNS<p></p>    PLAN 12:<p></p>      SELECT [col("Variable"), col("n"), col("n (missing)"), col("mean"), col("std"), col("min"), col("max")]<p></p>         WITH_COLUMNS:<p></p>         ["var_gbm2".alias("Variable")] <p></p>          SELECT [col("min"), col("max"), col("std"), col("n"), col("mean"), col("n (missing)")]<p></p>            SELECT [col("___index___"), col("var_gbm2_min").alias("min"), col("var_gbm2_max").alias("max"), col("var_gbm2_std").alias("std"), col("var_gbm2_rawn").alias("n"), col("var_gbm2_mean").alias("mean"), col("var_gbm2_rawn_missing").alias("n (missing)")]<p></p>              SELECT [col("___index___"), col("var_gbm2_min"), col("var_gbm2_max"), col("var_gbm2_std"), col("var_gbm2_rawn"), col("var_gbm2_mean"), col("var_gbm2_rawn_missing")]<p></p>                DF ["___index___", "_row_index__rawn", "_row_index__mean", "_row_index__std", ...]; PROJECT */103 COLUMNS<p></p>    PLAN 13:<p></p>      SELECT [col("Variable"), col("n"), col("n (missing)"), col("mean"), col("std"), col("min"), col("max")]<p></p>         WITH_COLUMNS:<p></p>         ["var_gbm3".alias("Variable")] <p></p>          SELECT [col("min"), col("max"), col("std"), col("n"), col("mean"), col("n (missing)")]<p></p>            SELECT [col("___index___"), col("var_gbm3_min").alias("min"), col("var_gbm3_max").alias("max"), col("var_gbm3_std").alias("std"), col("var_gbm3_rawn").alias("n"), col("var_gbm3_mean").alias("mean"), col("var_gbm3_rawn_missing").alias("n (missing)")]<p></p>              SELECT [col("___index___"), col("var_gbm3_min"), col("var_gbm3_max"), col("var_gbm3_std"), col("var_gbm3_rawn"), col("var_gbm3_mean"), col("var_gbm3_rawn_missing")]<p></p>                DF ["___index___", "_row_index__rawn", "_row_index__mean", "_row_index__std", ...]; PROJECT */103 COLUMNS<p></p>    PLAN 14:<p></p>       WITH_COLUMNS:<p></p>       [col("n (missing)").cast(Int16)] <p></p>        SELECT [col("Variable"), col("n"), col("n (missing)"), col("mean"), col("std"), col("min"), col("max")]<p></p>           WITH_COLUMNS:<p></p>           ["repeat_1".alias("Variable")] <p></p>            SELECT [col("min"), col("max"), col("std"), col("n"), col("mean"), col("n (missing)")]<p></p>              SELECT [col("___index___"), col("repeat_1_min").alias("min"), col("repeat_1_max").alias("max"), col("repeat_1_std").alias("std"), col("repeat_1_rawn").alias("n"), col("repeat_1_mean").alias("mean"), col("repeat_1_rawn_missing").alias("n (missing)")]<p></p>                SELECT [col("___index___"), col("repeat_1_min"), col("repeat_1_max"), col("repeat_1_std"), col("repeat_1_rawn"), col("repeat_1_mean"), col("repeat_1_rawn_missing")]<p></p>                  DF ["___index___", "_row_index__rawn", "_row_index__mean", "_row_index__std", ...]; PROJECT */103 COLUMNS<p></p>    PLAN 15:<p></p>       WITH_COLUMNS:<p></p>       [col("n (missing)").cast(Int16), col("min").strict_cast(Float64), col("max").strict_cast(Float64)] <p></p>        SELECT [col("Variable"), col("n"), col("n (missing)"), col("mean"), col("std"), col("min"), col("max")]<p></p>           WITH_COLUMNS:<p></p>           ["var5".alias("Variable")] <p></p>            SELECT [col("min"), col("max"), col("std"), col("n"), col("mean"), col("n (missing)")]<p></p>              SELECT [col("___index___"), col("var5_min").alias("min"), col("var5_max").alias("max"), col("var5_std").alias("std"), col("var5_rawn").alias("n"), col("var5_mean").alias("mean"), col("var5_rawn_missing").alias("n (missing)")]<p></p>                SELECT [col("___index___"), col("var5_min"), col("var5_max"), col("var5_std"), col("var5_rawn"), col("var5_mean"), col("var5_rawn_missing")]<p></p>                  DF ["___index___", "_row_index__rawn", "_row_index__mean", "_row_index__std", ...]; PROJECT */103 COLUMNS<p></p>    PLAN 16:<p></p>       WITH_COLUMNS:<p></p>       [col("min").strict_cast(Float64), col("max").strict_cast(Float64)] <p></p>        SELECT [col("Variable"), col("n"), col("n (missing)"), col("mean"), col("std"), col("min"), col("max")]<p></p>           WITH_COLUMNS:<p></p>           ["var_gbm1".alias("Variable")] <p></p>            SELECT [col("min"), col("max"), col("std"), col("n"), col("mean"), col("n (missing)")]<p></p>              SELECT [col("___index___"), col("var_gbm1_min").alias("min"), col("var_gbm1_max").alias("max"), col("var_gbm1_std").alias("std"), col("var_gbm1_rawn").alias("n"), col("var_gbm1_mean").alias("mean"), col("var_gbm1_rawn_missing").alias("n (missing)")]<p></p>                SELECT [col("___index___"), col("var_gbm1_min"), col("var_gbm1_max"), col("var_gbm1_std"), col("var_gbm1_rawn"), col("var_gbm1_mean"), col("var_gbm1_rawn_missing")]<p></p>                  DF ["___index___", "_row_index__rawn", "_row_index__mean", "_row_index__std", ...]; PROJECT */103 COLUMNS<p></p>  END UNION</div>
 </div>
 </div>
 </div>
 </div>
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=6f03485c">
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=10adcf3e">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -7713,6 +7713,8 @@ a.anchor-link {
 <div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
 <div class="cm-editor cm-s-jupyter">
 <div class="highlight hl-ipython3"><pre><span></span><span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">"Define some dummy functions to run after imputation of 2"</span><span class="p">)</span>
+
+
 <span class="c1">#   Test a simple pre-post function</span>
 <span class="c1">#       These would get run gets run in each iteration (in each implicate)</span>
 <span class="c1">#           before (preFunctions) or after (postFunctions) this variable is imputed</span>
@@ -7759,7 +7761,7 @@ a.anchor-link {
 </div>
 </div>
 </div>
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=4d1fbcc4">
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=920f5560">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -7782,8 +7784,6 @@ a.anchor-link {
 <span class="n">tuner</span><span class="o">.</span><span class="n">hyperparameters</span><span class="p">[</span><span class="s2">"num_iterations"</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="mi">25</span><span class="p">,</span> <span class="mi">200</span><span class="p">]</span>
 <span class="n">tuner</span><span class="o">.</span><span class="n">hyperparameters</span><span class="p">[</span><span class="s2">"bagging_fraction"</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="mf">0.5</span><span class="p">,</span> <span class="mi">1</span><span class="p">]</span>
 <span class="n">tuner</span><span class="o">.</span><span class="n">hyperparameters</span><span class="p">[</span><span class="s2">"bagging_freq"</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">5</span><span class="p">]</span>
-
-
 
 
 <span class="n">vars_impute</span> <span class="o">=</span> <span class="p">[]</span>
@@ -7820,7 +7820,7 @@ a.anchor-link {
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>[I 2025-11-07 14:22:32,308] A new study created in memory with name: no-name-66ac4f39-3d4e-4306-a054-c37b1c0b6041
+<pre>[I 2025-11-10 15:25:36,417] A new study created in memory with name: no-name-a3d7bc93-3a86-403a-b9d6-f5a18122d1ef
 </pre>
 </div>
 </div>
@@ -7833,7 +7833,7 @@ a.anchor-link {
 </div>
 </div>
 </div>
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=ea3f49e0">
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=c3a9408a">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -7849,7 +7849,9 @@ a.anchor-link {
 <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">"First, set up the lightgbm parameters"</span><span class="p">)</span>
 <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">"   This says, do hyperparameter tuning first (tune)"</span><span class="p">)</span>
 <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">"   Redo it at each run (tune_overwrite)"</span><span class="p">)</span>
-<span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">"   And sets the lightgbm parameter defaults (parameters) that the tuning can overwrite"</span><span class="p">)</span>
+<span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span>
+    <span class="s2">"   And sets the lightgbm parameter defaults (parameters) that the tuning can overwrite"</span>
+<span class="p">)</span>
 <span class="n">parameters_lgbm1</span> <span class="o">=</span> <span class="n">Parameters</span><span class="o">.</span><span class="n">LightGBM</span><span class="p">(</span>
     <span class="n">tune</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
     <span class="n">tune_hyperparameter_path</span><span class="o">=</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">config</span><span class="o">.</span><span class="n">data_root</span><span class="si">}</span><span class="s2">/tuner_outputs"</span><span class="p">,</span>
@@ -7874,14 +7876,10 @@ a.anchor-link {
     <span class="n">impute_var</span><span class="o">=</span><span class="s2">"var_gbm1"</span><span class="p">,</span>
     <span class="n">model</span><span class="o">=</span><span class="p">[</span><span class="s2">"var_*"</span><span class="p">,</span> <span class="s2">"var4"</span><span class="p">,</span> <span class="s2">"var3"</span><span class="p">,</span> <span class="s2">"var5"</span><span class="p">,</span> <span class="s2">"unrelated_*"</span><span class="p">,</span> <span class="s2">"repeat_*"</span><span class="p">],</span>
     <span class="n">modeltype</span><span class="o">=</span><span class="n">Variable</span><span class="o">.</span><span class="n">ModelType</span><span class="o">.</span><span class="n">LightGBM</span><span class="p">,</span>
-    <span class="n">parameters</span><span class="o">=</span><span class="n">parameters_lgbm1</span>
+    <span class="n">parameters</span><span class="o">=</span><span class="n">parameters_lgbm1</span><span class="p">,</span>
 <span class="p">)</span>
 <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">"Add the variable to the list to be imputed"</span><span class="p">)</span>
 <span class="n">vars_impute</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">v_gbm1</span><span class="p">)</span>
-
-
-
-
 
 
 <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">"Impute the continuous variable (var_gbm2) "</span><span class="p">)</span>
@@ -7924,25 +7922,15 @@ a.anchor-link {
         <span class="p">),</span>
         <span class="n">Variable</span><span class="o">.</span><span class="n">PrePost</span><span class="o">.</span><span class="n">Function</span><span class="p">(</span>
             <span class="n">recalculate_interaction</span><span class="p">,</span>
-            <span class="n">parameters</span><span class="o">=</span><span class="nb">dict</span><span class="p">(</span>
-                <span class="n">var1</span><span class="o">=</span><span class="s2">"var_gbm1"</span><span class="p">,</span>
-                <span class="n">var2</span><span class="o">=</span><span class="s2">"var_gbm2"</span><span class="p">,</span>
-                <span class="n">name</span><span class="o">=</span><span class="s2">"var_gbm12"</span>
-            <span class="p">),</span>
+            <span class="n">parameters</span><span class="o">=</span><span class="nb">dict</span><span class="p">(</span><span class="n">var1</span><span class="o">=</span><span class="s2">"var_gbm1"</span><span class="p">,</span> <span class="n">var2</span><span class="o">=</span><span class="s2">"var_gbm2"</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s2">"var_gbm12"</span><span class="p">),</span>
         <span class="p">),</span>
         <span class="n">Variable</span><span class="o">.</span><span class="n">PrePost</span><span class="o">.</span><span class="n">Function</span><span class="p">(</span>
-            <span class="n">square_var</span><span class="p">,</span>
-            <span class="n">parameters</span><span class="o">=</span><span class="nb">dict</span><span class="p">(</span>
-                <span class="n">var_to_square</span><span class="o">=</span><span class="s2">"var_gbm2"</span><span class="p">,</span> 
-                <span class="n">name</span><span class="o">=</span><span class="s2">"var_gbm2_sq"</span>
-            <span class="p">)</span>
+            <span class="n">square_var</span><span class="p">,</span> <span class="n">parameters</span><span class="o">=</span><span class="nb">dict</span><span class="p">(</span><span class="n">var_to_square</span><span class="o">=</span><span class="s2">"var_gbm2"</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s2">"var_gbm2_sq"</span><span class="p">)</span>
         <span class="p">),</span>
-    <span class="p">]</span>
+    <span class="p">],</span>
 <span class="p">)</span>
 
 <span class="n">vars_impute</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">v_gbm2</span><span class="p">)</span>
-
-
 
 
 <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">"Now do one with the quantile-regression lightgbm"</span><span class="p">)</span>
@@ -7952,7 +7940,7 @@ a.anchor-link {
     <span class="n">tune_hyperparameter_path</span><span class="o">=</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">config</span><span class="o">.</span><span class="n">data_root</span><span class="si">}</span><span class="s2">/tuner_outputs"</span><span class="p">,</span>
     <span class="n">tuner</span><span class="o">=</span><span class="n">tuner</span><span class="p">,</span>
     <span class="n">tune_overwrite</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
-    <span class="n">quantiles</span><span class="o">=</span><span class="p">[</span><span class="mf">0.25</span><span class="p">,</span><span class="mf">0.5</span><span class="p">,</span><span class="mf">0.75</span><span class="p">],</span>
+    <span class="n">quantiles</span><span class="o">=</span><span class="p">[</span><span class="mf">0.25</span><span class="p">,</span> <span class="mf">0.5</span><span class="p">,</span> <span class="mf">0.75</span><span class="p">],</span>
     <span class="n">parameters</span><span class="o">=</span><span class="p">{</span>
         <span class="s2">"objective"</span><span class="p">:</span> <span class="s2">"quantile"</span><span class="p">,</span>
         <span class="s2">"num_leaves"</span><span class="p">:</span> <span class="mi">32</span><span class="p">,</span>
@@ -7981,7 +7969,7 @@ a.anchor-link {
             <span class="o">.</span><span class="n">otherwise</span><span class="p">(</span><span class="n">nw</span><span class="o">.</span><span class="n">lit</span><span class="p">(</span><span class="mi">0</span><span class="p">))</span>
             <span class="o">.</span><span class="n">alias</span><span class="p">(</span><span class="s2">"var_gbm3"</span><span class="p">)</span>
         <span class="p">)</span>
-    <span class="p">]</span>
+    <span class="p">],</span>
 <span class="p">)</span>
 
 <span class="n">vars_impute</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">v_gbm3</span><span class="p">)</span>
@@ -8115,7 +8103,7 @@ a.anchor-link {
 </div>
 </div>
 </div>
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=8b11a6de">
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=de282923">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -8161,7 +8149,7 @@ a.anchor-link {
 </div>
 </div>
 </div>
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=2ce9283a">
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=6b9fc049">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -8229,350 +8217,350 @@ a.anchor-link {
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>[I 2025-11-07 14:22:32,575] Trial 0 finished with value: 0.006293613988163579 and parameters: {'num_leaves': 38, 'max_depth': 177, 'min_data_in_leaf': 81, 'num_iterations': 94, 'bagging_fraction': 0.6071214413167514, 'bagging_freq': 2}. Best is trial 0 with value: 0.006293613988163579.
+<pre>[I 2025-11-10 15:25:36,632] Trial 0 finished with value: 0.006293613988163579 and parameters: {'num_leaves': 38, 'max_depth': 177, 'min_data_in_leaf': 81, 'num_iterations': 94, 'bagging_fraction': 0.6071214413167514, 'bagging_freq': 2}. Best is trial 0 with value: 0.006293613988163579.
 </pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>[I 2025-11-07 14:22:32,626] Trial 1 finished with value: 0.02030944315858492 and parameters: {'num_leaves': 83, 'max_depth': 27, 'min_data_in_leaf': 177, 'num_iterations': 41, 'bagging_fraction': 0.9889998163277448, 'bagging_freq': 3}. Best is trial 0 with value: 0.006293613988163579.
+<pre>[I 2025-11-10 15:25:36,671] Trial 1 finished with value: 0.02030944315858492 and parameters: {'num_leaves': 83, 'max_depth': 27, 'min_data_in_leaf': 177, 'num_iterations': 41, 'bagging_fraction': 0.9889998163277448, 'bagging_freq': 3}. Best is trial 0 with value: 0.006293613988163579.
 </pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>[I 2025-11-07 14:22:32,679] Trial 2 finished with value: 0.0079340733621239 and parameters: {'num_leaves': 12, 'max_depth': 158, 'min_data_in_leaf': 93, 'num_iterations': 77, 'bagging_fraction': 0.6507690841429046, 'bagging_freq': 1}. Best is trial 0 with value: 0.006293613988163579.
+<pre>[I 2025-11-10 15:25:36,713] Trial 2 finished with value: 0.0079340733621239 and parameters: {'num_leaves': 12, 'max_depth': 158, 'min_data_in_leaf': 93, 'num_iterations': 77, 'bagging_fraction': 0.6507690841429046, 'bagging_freq': 1}. Best is trial 0 with value: 0.006293613988163579.
 </pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>[I 2025-11-07 14:22:32,705] Trial 3 finished with value: 0.05234521224018576 and parameters: {'num_leaves': 82, 'max_depth': 230, 'min_data_in_leaf': 248, 'num_iterations': 30, 'bagging_fraction': 0.6575054481666343, 'bagging_freq': 5}. Best is trial 0 with value: 0.006293613988163579.
+<pre>[I 2025-11-10 15:25:36,734] Trial 3 finished with value: 0.05234521224018576 and parameters: {'num_leaves': 82, 'max_depth': 230, 'min_data_in_leaf': 248, 'num_iterations': 30, 'bagging_fraction': 0.6575054481666343, 'bagging_freq': 5}. Best is trial 0 with value: 0.006293613988163579.
 </pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>[I 2025-11-07 14:22:33,008] Trial 4 finished with value: 0.00461504982766553 and parameters: {'num_leaves': 211, 'max_depth': 30, 'min_data_in_leaf': 22, 'num_iterations': 97, 'bagging_fraction': 0.7923256552747111, 'bagging_freq': 5}. Best is trial 4 with value: 0.00461504982766553.
+<pre>[I 2025-11-10 15:25:36,974] Trial 4 finished with value: 0.00461504982766553 and parameters: {'num_leaves': 211, 'max_depth': 30, 'min_data_in_leaf': 22, 'num_iterations': 97, 'bagging_fraction': 0.7923256552747111, 'bagging_freq': 5}. Best is trial 4 with value: 0.00461504982766553.
 </pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>[I 2025-11-07 14:22:33,147] Trial 5 finished with value: 0.004199373956016338 and parameters: {'num_leaves': 21, 'max_depth': 44, 'min_data_in_leaf': 27, 'num_iterations': 149, 'bagging_fraction': 0.6462482222199595, 'bagging_freq': 1}. Best is trial 5 with value: 0.004199373956016338.
+<pre>[I 2025-11-10 15:25:37,087] Trial 5 finished with value: 0.004199373956016338 and parameters: {'num_leaves': 21, 'max_depth': 44, 'min_data_in_leaf': 27, 'num_iterations': 149, 'bagging_fraction': 0.6462482222199595, 'bagging_freq': 1}. Best is trial 5 with value: 0.004199373956016338.
 </pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>[I 2025-11-07 14:22:33,205] Trial 6 finished with value: 0.010621019610967883 and parameters: {'num_leaves': 138, 'max_depth': 163, 'min_data_in_leaf': 204, 'num_iterations': 72, 'bagging_fraction': 0.5384431993550269, 'bagging_freq': 5}. Best is trial 5 with value: 0.004199373956016338.
+<pre>[I 2025-11-10 15:25:37,136] Trial 6 finished with value: 0.010621019610967883 and parameters: {'num_leaves': 138, 'max_depth': 163, 'min_data_in_leaf': 204, 'num_iterations': 72, 'bagging_fraction': 0.5384431993550269, 'bagging_freq': 5}. Best is trial 5 with value: 0.004199373956016338.
 </pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>[I 2025-11-07 14:22:33,271] Trial 7 finished with value: 0.010563430531137228 and parameters: {'num_leaves': 197, 'max_depth': 92, 'min_data_in_leaf': 177, 'num_iterations': 62, 'bagging_fraction': 0.7192646486876234, 'bagging_freq': 5}. Best is trial 5 with value: 0.004199373956016338.
+<pre>[I 2025-11-10 15:25:37,189] Trial 7 finished with value: 0.010563430531137228 and parameters: {'num_leaves': 197, 'max_depth': 92, 'min_data_in_leaf': 177, 'num_iterations': 62, 'bagging_fraction': 0.7192646486876234, 'bagging_freq': 5}. Best is trial 5 with value: 0.004199373956016338.
 </pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>[I 2025-11-07 14:22:33,350] Trial 8 finished with value: 0.015874280406748566 and parameters: {'num_leaves': 243, 'max_depth': 151, 'min_data_in_leaf': 64, 'num_iterations': 43, 'bagging_fraction': 0.6430830504379776, 'bagging_freq': 3}. Best is trial 5 with value: 0.004199373956016338.
+<pre>[I 2025-11-10 15:25:37,246] Trial 8 finished with value: 0.015874280406748566 and parameters: {'num_leaves': 243, 'max_depth': 151, 'min_data_in_leaf': 64, 'num_iterations': 43, 'bagging_fraction': 0.6430830504379776, 'bagging_freq': 3}. Best is trial 5 with value: 0.004199373956016338.
 </pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>[I 2025-11-07 14:22:33,441] Trial 9 finished with value: 0.009616444926467413 and parameters: {'num_leaves': 31, 'max_depth': 210, 'min_data_in_leaf': 12, 'num_iterations': 48, 'bagging_fraction': 0.764136724165049, 'bagging_freq': 2}. Best is trial 5 with value: 0.004199373956016338.
+<pre>[I 2025-11-10 15:25:37,299] Trial 9 finished with value: 0.009616444926467413 and parameters: {'num_leaves': 31, 'max_depth': 210, 'min_data_in_leaf': 12, 'num_iterations': 48, 'bagging_fraction': 0.764136724165049, 'bagging_freq': 2}. Best is trial 5 with value: 0.004199373956016338.
 </pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>[I 2025-11-07 14:22:33,638] Trial 10 finished with value: 0.00493166101685885 and parameters: {'num_leaves': 135, 'max_depth': 86, 'min_data_in_leaf': 126, 'num_iterations': 160, 'bagging_fraction': 0.8819389978743449, 'bagging_freq': 1}. Best is trial 5 with value: 0.004199373956016338.
+<pre>[I 2025-11-10 15:25:37,453] Trial 10 finished with value: 0.00493166101685885 and parameters: {'num_leaves': 135, 'max_depth': 86, 'min_data_in_leaf': 126, 'num_iterations': 160, 'bagging_fraction': 0.8819389978743449, 'bagging_freq': 1}. Best is trial 5 with value: 0.004199373956016338.
 </pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>[I 2025-11-07 14:22:34,039] Trial 11 finished with value: 0.00373953961413663 and parameters: {'num_leaves': 190, 'max_depth': 12, 'min_data_in_leaf': 11, 'num_iterations': 138, 'bagging_fraction': 0.8078431753255333, 'bagging_freq': 4}. Best is trial 11 with value: 0.00373953961413663.
+<pre>[I 2025-11-10 15:25:37,770] Trial 11 finished with value: 0.00373953961413663 and parameters: {'num_leaves': 190, 'max_depth': 12, 'min_data_in_leaf': 11, 'num_iterations': 138, 'bagging_fraction': 0.8078431753255333, 'bagging_freq': 4}. Best is trial 11 with value: 0.00373953961413663.
 </pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>[I 2025-11-07 14:22:34,248] Trial 12 finished with value: 0.004339122356902152 and parameters: {'num_leaves': 176, 'max_depth': 7, 'min_data_in_leaf': 46, 'num_iterations': 147, 'bagging_fraction': 0.853507574513817, 'bagging_freq': 4}. Best is trial 11 with value: 0.00373953961413663.
+<pre>[I 2025-11-10 15:25:37,933] Trial 12 finished with value: 0.004339122356902152 and parameters: {'num_leaves': 176, 'max_depth': 7, 'min_data_in_leaf': 46, 'num_iterations': 147, 'bagging_fraction': 0.853507574513817, 'bagging_freq': 4}. Best is trial 11 with value: 0.00373953961413663.
 </pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>[I 2025-11-07 14:22:34,591] Trial 13 finished with value: 0.004413928894912943 and parameters: {'num_leaves': 84, 'max_depth': 72, 'min_data_in_leaf': 45, 'num_iterations': 199, 'bagging_fraction': 0.5041106423996129, 'bagging_freq': 4}. Best is trial 11 with value: 0.00373953961413663.
+<pre>[I 2025-11-10 15:25:38,203] Trial 13 finished with value: 0.004413928894912943 and parameters: {'num_leaves': 84, 'max_depth': 72, 'min_data_in_leaf': 45, 'num_iterations': 199, 'bagging_fraction': 0.5041106423996129, 'bagging_freq': 4}. Best is trial 11 with value: 0.00373953961413663.
 </pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>[I 2025-11-07 14:22:34,792] Trial 14 finished with value: 0.00537742265437493 and parameters: {'num_leaves': 249, 'max_depth': 52, 'min_data_in_leaf': 123, 'num_iterations': 137, 'bagging_fraction': 0.840661667279654, 'bagging_freq': 3}. Best is trial 11 with value: 0.00373953961413663.
+<pre>[I 2025-11-10 15:25:38,359] Trial 14 finished with value: 0.00537742265437493 and parameters: {'num_leaves': 249, 'max_depth': 52, 'min_data_in_leaf': 123, 'num_iterations': 137, 'bagging_fraction': 0.840661667279654, 'bagging_freq': 3}. Best is trial 11 with value: 0.00373953961413663.
 </pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>[I 2025-11-07 14:22:34,968] Trial 15 finished with value: 0.004371619670149031 and parameters: {'num_leaves': 166, 'max_depth': 6, 'min_data_in_leaf': 10, 'num_iterations': 122, 'bagging_fraction': 0.7166979219126673, 'bagging_freq': 4}. Best is trial 11 with value: 0.00373953961413663.
+<pre>[I 2025-11-10 15:25:38,494] Trial 15 finished with value: 0.004371619670149031 and parameters: {'num_leaves': 166, 'max_depth': 6, 'min_data_in_leaf': 10, 'num_iterations': 122, 'bagging_fraction': 0.7166979219126673, 'bagging_freq': 4}. Best is trial 11 with value: 0.00373953961413663.
 </pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>[I 2025-11-07 14:22:35,304] Trial 16 finished with value: 0.005054464106091356 and parameters: {'num_leaves': 107, 'max_depth': 114, 'min_data_in_leaf': 89, 'num_iterations': 175, 'bagging_fraction': 0.9492733295644904, 'bagging_freq': 2}. Best is trial 11 with value: 0.00373953961413663.
+<pre>[I 2025-11-10 15:25:38,736] Trial 16 finished with value: 0.005054464106091356 and parameters: {'num_leaves': 107, 'max_depth': 114, 'min_data_in_leaf': 89, 'num_iterations': 175, 'bagging_fraction': 0.9492733295644904, 'bagging_freq': 2}. Best is trial 11 with value: 0.00373953961413663.
 </pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>[I 2025-11-07 14:22:35,563] Trial 17 finished with value: 0.003960244298876707 and parameters: {'num_leaves': 52, 'max_depth': 44, 'min_data_in_leaf': 44, 'num_iterations': 177, 'bagging_fraction': 0.5832980750755009, 'bagging_freq': 1}. Best is trial 11 with value: 0.00373953961413663.
+<pre>[I 2025-11-10 15:25:38,926] Trial 17 finished with value: 0.003960244298876707 and parameters: {'num_leaves': 52, 'max_depth': 44, 'min_data_in_leaf': 44, 'num_iterations': 177, 'bagging_fraction': 0.5832980750755009, 'bagging_freq': 1}. Best is trial 11 with value: 0.00373953961413663.
 </pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>[I 2025-11-07 14:22:35,866] Trial 18 finished with value: 0.004353149056229679 and parameters: {'num_leaves': 52, 'max_depth': 115, 'min_data_in_leaf': 50, 'num_iterations': 187, 'bagging_fraction': 0.5781190965023928, 'bagging_freq': 4}. Best is trial 11 with value: 0.00373953961413663.
+<pre>[I 2025-11-10 15:25:39,163] Trial 18 finished with value: 0.004353149056229679 and parameters: {'num_leaves': 52, 'max_depth': 115, 'min_data_in_leaf': 50, 'num_iterations': 187, 'bagging_fraction': 0.5781190965023928, 'bagging_freq': 4}. Best is trial 11 with value: 0.00373953961413663.
 </pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>[I 2025-11-07 14:22:36,203] Trial 19 finished with value: 0.0049043893450392275 and parameters: {'num_leaves': 214, 'max_depth': 57, 'min_data_in_leaf': 108, 'num_iterations': 169, 'bagging_fraction': 0.8015641272446892, 'bagging_freq': 2}. Best is trial 11 with value: 0.00373953961413663.
+<pre>[I 2025-11-10 15:25:39,356] Trial 19 finished with value: 0.0049043893450392275 and parameters: {'num_leaves': 214, 'max_depth': 57, 'min_data_in_leaf': 108, 'num_iterations': 169, 'bagging_fraction': 0.8015641272446892, 'bagging_freq': 2}. Best is trial 11 with value: 0.00373953961413663.
 </pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>[I 2025-11-07 14:22:36,379] Trial 20 finished with value: 0.006695461279110995 and parameters: {'num_leaves': 159, 'max_depth': 5, 'min_data_in_leaf': 152, 'num_iterations': 120, 'bagging_fraction': 0.9166859696377415, 'bagging_freq': 3}. Best is trial 11 with value: 0.00373953961413663.
+<pre>[I 2025-11-10 15:25:39,443] Trial 20 finished with value: 0.006695461279110995 and parameters: {'num_leaves': 159, 'max_depth': 5, 'min_data_in_leaf': 152, 'num_iterations': 120, 'bagging_fraction': 0.9166859696377415, 'bagging_freq': 3}. Best is trial 11 with value: 0.00373953961413663.
 </pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>[I 2025-11-07 14:22:36,495] Trial 21 finished with value: 0.006113946532124947 and parameters: {'num_leaves': 8, 'max_depth': 39, 'min_data_in_leaf': 32, 'num_iterations': 148, 'bagging_fraction': 0.6953246704052042, 'bagging_freq': 1}. Best is trial 11 with value: 0.00373953961413663.
+<pre>[I 2025-11-10 15:25:39,513] Trial 21 finished with value: 0.006113946532124947 and parameters: {'num_leaves': 8, 'max_depth': 39, 'min_data_in_leaf': 32, 'num_iterations': 148, 'bagging_fraction': 0.6953246704052042, 'bagging_freq': 1}. Best is trial 11 with value: 0.00373953961413663.
 </pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>[I 2025-11-07 14:22:36,720] Trial 22 finished with value: 0.005001451067591096 and parameters: {'num_leaves': 54, 'max_depth': 68, 'min_data_in_leaf': 67, 'num_iterations': 134, 'bagging_fraction': 0.577584083188826, 'bagging_freq': 1}. Best is trial 11 with value: 0.00373953961413663.
+<pre>[I 2025-11-10 15:25:39,659] Trial 22 finished with value: 0.005001451067591096 and parameters: {'num_leaves': 54, 'max_depth': 68, 'min_data_in_leaf': 67, 'num_iterations': 134, 'bagging_fraction': 0.577584083188826, 'bagging_freq': 1}. Best is trial 11 with value: 0.00373953961413663.
 </pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>[I 2025-11-07 14:22:37,205] Trial 23 finished with value: 0.0037789187278397672 and parameters: {'num_leaves': 103, 'max_depth': 34, 'min_data_in_leaf': 29, 'num_iterations': 164, 'bagging_fraction': 0.6213175051289077, 'bagging_freq': 1}. Best is trial 11 with value: 0.00373953961413663.
+<pre>[I 2025-11-10 15:25:39,957] Trial 23 finished with value: 0.0037789187278397672 and parameters: {'num_leaves': 103, 'max_depth': 34, 'min_data_in_leaf': 29, 'num_iterations': 164, 'bagging_fraction': 0.6213175051289077, 'bagging_freq': 1}. Best is trial 11 with value: 0.00373953961413663.
 </pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>[I 2025-11-07 14:22:37,551] Trial 24 finished with value: 0.00457744302530845 and parameters: {'num_leaves': 109, 'max_depth': 27, 'min_data_in_leaf': 63, 'num_iterations': 178, 'bagging_fraction': 0.5350277728945482, 'bagging_freq': 2}. Best is trial 11 with value: 0.00373953961413663.
+<pre>[I 2025-11-10 15:25:40,166] Trial 24 finished with value: 0.00457744302530845 and parameters: {'num_leaves': 109, 'max_depth': 27, 'min_data_in_leaf': 63, 'num_iterations': 178, 'bagging_fraction': 0.5350277728945482, 'bagging_freq': 2}. Best is trial 11 with value: 0.00373953961413663.
 </pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>[I 2025-11-07 14:22:38,038] Trial 25 finished with value: 0.003977273953594933 and parameters: {'num_leaves': 118, 'max_depth': 93, 'min_data_in_leaf': 38, 'num_iterations': 198, 'bagging_fraction': 0.5985625792598168, 'bagging_freq': 1}. Best is trial 11 with value: 0.00373953961413663.
+<pre>[I 2025-11-10 15:25:40,459] Trial 25 finished with value: 0.003977273953594933 and parameters: {'num_leaves': 118, 'max_depth': 93, 'min_data_in_leaf': 38, 'num_iterations': 198, 'bagging_fraction': 0.5985625792598168, 'bagging_freq': 1}. Best is trial 11 with value: 0.00373953961413663.
 </pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>[I 2025-11-07 14:22:38,467] Trial 26 finished with value: 0.003595277821078484 and parameters: {'num_leaves': 65, 'max_depth': 20, 'min_data_in_leaf': 10, 'num_iterations': 162, 'bagging_fraction': 0.7589445430378556, 'bagging_freq': 4}. Best is trial 26 with value: 0.003595277821078484.
+<pre>[I 2025-11-10 15:25:40,684] Trial 26 finished with value: 0.003595277821078484 and parameters: {'num_leaves': 65, 'max_depth': 20, 'min_data_in_leaf': 10, 'num_iterations': 162, 'bagging_fraction': 0.7589445430378556, 'bagging_freq': 4}. Best is trial 26 with value: 0.003595277821078484.
 </pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>[I 2025-11-07 14:22:39,029] Trial 27 finished with value: 0.0037965257659618246 and parameters: {'num_leaves': 147, 'max_depth': 16, 'min_data_in_leaf': 15, 'num_iterations': 158, 'bagging_fraction': 0.756635795646212, 'bagging_freq': 4}. Best is trial 26 with value: 0.003595277821078484.
+<pre>[I 2025-11-10 15:25:41,014] Trial 27 finished with value: 0.0037965257659618246 and parameters: {'num_leaves': 147, 'max_depth': 16, 'min_data_in_leaf': 15, 'num_iterations': 158, 'bagging_fraction': 0.756635795646212, 'bagging_freq': 4}. Best is trial 26 with value: 0.003595277821078484.
 </pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>[I 2025-11-07 14:22:39,354] Trial 28 finished with value: 0.004656774471421873 and parameters: {'num_leaves': 186, 'max_depth': 71, 'min_data_in_leaf': 65, 'num_iterations': 131, 'bagging_fraction': 0.8072148913420076, 'bagging_freq': 4}. Best is trial 26 with value: 0.003595277821078484.
+<pre>[I 2025-11-10 15:25:41,211] Trial 28 finished with value: 0.004656774471421873 and parameters: {'num_leaves': 186, 'max_depth': 71, 'min_data_in_leaf': 65, 'num_iterations': 131, 'bagging_fraction': 0.8072148913420076, 'bagging_freq': 4}. Best is trial 26 with value: 0.003595277821078484.
 </pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>[I 2025-11-07 14:22:39,533] Trial 29 finished with value: 0.006115649170889443 and parameters: {'num_leaves': 72, 'max_depth': 194, 'min_data_in_leaf': 77, 'num_iterations': 97, 'bagging_fraction': 0.6953081958377136, 'bagging_freq': 3}. Best is trial 26 with value: 0.003595277821078484.
+<pre>[I 2025-11-10 15:25:41,330] Trial 29 finished with value: 0.006115649170889443 and parameters: {'num_leaves': 72, 'max_depth': 194, 'min_data_in_leaf': 77, 'num_iterations': 97, 'bagging_fraction': 0.6953081958377136, 'bagging_freq': 3}. Best is trial 26 with value: 0.003595277821078484.
 </pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>[I 2025-11-07 14:22:39,737] Trial 30 finished with value: 0.005723325846994529 and parameters: {'num_leaves': 100, 'max_depth': 129, 'min_data_in_leaf': 102, 'num_iterations': 110, 'bagging_fraction': 0.8341726302673887, 'bagging_freq': 4}. Best is trial 26 with value: 0.003595277821078484.
+<pre>[I 2025-11-10 15:25:41,459] Trial 30 finished with value: 0.005723325846994529 and parameters: {'num_leaves': 100, 'max_depth': 129, 'min_data_in_leaf': 102, 'num_iterations': 110, 'bagging_fraction': 0.8341726302673887, 'bagging_freq': 4}. Best is trial 26 with value: 0.003595277821078484.
 </pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>[I 2025-11-07 14:22:40,266] Trial 31 finished with value: 0.003713537124780219 and parameters: {'num_leaves': 153, 'max_depth': 17, 'min_data_in_leaf': 10, 'num_iterations': 160, 'bagging_fraction': 0.7568989850011942, 'bagging_freq': 4}. Best is trial 26 with value: 0.003595277821078484.
+<pre>[I 2025-11-10 15:25:41,817] Trial 31 finished with value: 0.003713537124780219 and parameters: {'num_leaves': 153, 'max_depth': 17, 'min_data_in_leaf': 10, 'num_iterations': 160, 'bagging_fraction': 0.7568989850011942, 'bagging_freq': 4}. Best is trial 26 with value: 0.003595277821078484.
 </pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>[I 2025-11-07 14:22:40,720] Trial 32 finished with value: 0.003835200507887722 and parameters: {'num_leaves': 121, 'max_depth': 22, 'min_data_in_leaf': 31, 'num_iterations': 161, 'bagging_fraction': 0.7656307055803864, 'bagging_freq': 3}. Best is trial 26 with value: 0.003595277821078484.
+<pre>[I 2025-11-10 15:25:42,152] Trial 32 finished with value: 0.003835200507887722 and parameters: {'num_leaves': 121, 'max_depth': 22, 'min_data_in_leaf': 31, 'num_iterations': 161, 'bagging_fraction': 0.7656307055803864, 'bagging_freq': 3}. Best is trial 26 with value: 0.003595277821078484.
 </pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>[I 2025-11-07 14:22:41,329] Trial 33 finished with value: 0.003878830248534503 and parameters: {'num_leaves': 156, 'max_depth': 23, 'min_data_in_leaf': 10, 'num_iterations': 142, 'bagging_fraction': 0.7375449661019617, 'bagging_freq': 4}. Best is trial 26 with value: 0.003595277821078484.
+<pre>[I 2025-11-10 15:25:42,494] Trial 33 finished with value: 0.003878830248534503 and parameters: {'num_leaves': 156, 'max_depth': 23, 'min_data_in_leaf': 10, 'num_iterations': 142, 'bagging_fraction': 0.7375449661019617, 'bagging_freq': 4}. Best is trial 26 with value: 0.003595277821078484.
 </pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>[I 2025-11-07 14:22:41,415] Trial 34 finished with value: 0.010267898695211825 and parameters: {'num_leaves': 93, 'max_depth': 2, 'min_data_in_leaf': 27, 'num_iterations': 185, 'bagging_fraction': 0.682346245092663, 'bagging_freq': 5}. Best is trial 26 with value: 0.003595277821078484.
+<pre>[I 2025-11-10 15:25:42,559] Trial 34 finished with value: 0.010267898695211825 and parameters: {'num_leaves': 93, 'max_depth': 2, 'min_data_in_leaf': 27, 'num_iterations': 185, 'bagging_fraction': 0.682346245092663, 'bagging_freq': 5}. Best is trial 26 with value: 0.003595277821078484.
 </pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>[I 2025-11-07 14:22:41,887] Trial 35 finished with value: 0.004207679104339624 and parameters: {'num_leaves': 223, 'max_depth': 33, 'min_data_in_leaf': 56, 'num_iterations': 166, 'bagging_fraction': 0.891198149863283, 'bagging_freq': 3}. Best is trial 26 with value: 0.003595277821078484.
+<pre>[I 2025-11-10 15:25:42,848] Trial 35 finished with value: 0.004207679104339624 and parameters: {'num_leaves': 223, 'max_depth': 33, 'min_data_in_leaf': 56, 'num_iterations': 166, 'bagging_fraction': 0.891198149863283, 'bagging_freq': 3}. Best is trial 26 with value: 0.003595277821078484.
 </pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>[I 2025-11-07 14:22:42,372] Trial 36 finished with value: 0.0035836660043942837 and parameters: {'num_leaves': 187, 'max_depth': 58, 'min_data_in_leaf': 24, 'num_iterations': 155, 'bagging_fraction': 0.7790472750239636, 'bagging_freq': 4}. Best is trial 36 with value: 0.0035836660043942837.
+<pre>[I 2025-11-10 15:25:43,183] Trial 36 finished with value: 0.0035836660043942837 and parameters: {'num_leaves': 187, 'max_depth': 58, 'min_data_in_leaf': 24, 'num_iterations': 155, 'bagging_fraction': 0.7790472750239636, 'bagging_freq': 4}. Best is trial 36 with value: 0.0035836660043942837.
 </pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>[I 2025-11-07 14:22:42,537] Trial 37 finished with value: 0.006943833603274368 and parameters: {'num_leaves': 192, 'max_depth': 55, 'min_data_in_leaf': 243, 'num_iterations': 153, 'bagging_fraction': 0.7864824490040053, 'bagging_freq': 5}. Best is trial 36 with value: 0.0035836660043942837.
+<pre>[I 2025-11-10 15:25:43,293] Trial 37 finished with value: 0.006943833603274368 and parameters: {'num_leaves': 192, 'max_depth': 55, 'min_data_in_leaf': 243, 'num_iterations': 153, 'bagging_fraction': 0.7864824490040053, 'bagging_freq': 5}. Best is trial 36 with value: 0.0035836660043942837.
 </pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>[I 2025-11-07 14:22:42,781] Trial 38 finished with value: 0.004872274824714764 and parameters: {'num_leaves': 174, 'max_depth': 240, 'min_data_in_leaf': 80, 'num_iterations': 125, 'bagging_fraction': 0.819415916649063, 'bagging_freq': 4}. Best is trial 36 with value: 0.0035836660043942837.
+<pre>[I 2025-11-10 15:25:43,462] Trial 38 finished with value: 0.004872274824714764 and parameters: {'num_leaves': 174, 'max_depth': 240, 'min_data_in_leaf': 80, 'num_iterations': 125, 'bagging_fraction': 0.819415916649063, 'bagging_freq': 4}. Best is trial 36 with value: 0.0035836660043942837.
 </pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>[I 2025-11-07 14:22:43,059] Trial 39 finished with value: 0.004122748203759727 and parameters: {'num_leaves': 232, 'max_depth': 48, 'min_data_in_leaf': 19, 'num_iterations': 105, 'bagging_fraction': 0.8640664508276489, 'bagging_freq': 5}. Best is trial 36 with value: 0.0035836660043942837.
+<pre>[I 2025-11-10 15:25:43,716] Trial 39 finished with value: 0.004122748203759727 and parameters: {'num_leaves': 232, 'max_depth': 48, 'min_data_in_leaf': 19, 'num_iterations': 105, 'bagging_fraction': 0.8640664508276489, 'bagging_freq': 5}. Best is trial 36 with value: 0.0035836660043942837.
 </pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>[I 2025-11-07 14:22:43,195] Trial 40 finished with value: 0.005713792468500361 and parameters: {'num_leaves': 196, 'max_depth': 14, 'min_data_in_leaf': 153, 'num_iterations': 143, 'bagging_fraction': 0.785208881972336, 'bagging_freq': 4}. Best is trial 36 with value: 0.0035836660043942837.
+<pre>[I 2025-11-10 15:25:43,852] Trial 40 finished with value: 0.005713792468500361 and parameters: {'num_leaves': 196, 'max_depth': 14, 'min_data_in_leaf': 153, 'num_iterations': 143, 'bagging_fraction': 0.785208881972336, 'bagging_freq': 4}. Best is trial 36 with value: 0.0035836660043942837.
 </pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>[I 2025-11-07 14:22:43,579] Trial 41 finished with value: 0.003926609244013986 and parameters: {'num_leaves': 208, 'max_depth': 31, 'min_data_in_leaf': 27, 'num_iterations': 168, 'bagging_fraction': 0.7324691075928659, 'bagging_freq': 4}. Best is trial 36 with value: 0.0035836660043942837.
+<pre>[I 2025-11-10 15:25:44,197] Trial 41 finished with value: 0.003926609244013986 and parameters: {'num_leaves': 208, 'max_depth': 31, 'min_data_in_leaf': 27, 'num_iterations': 168, 'bagging_fraction': 0.7324691075928659, 'bagging_freq': 4}. Best is trial 36 with value: 0.0035836660043942837.
 </pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>[I 2025-11-07 14:22:44,044] Trial 42 finished with value: 0.004264133352820557 and parameters: {'num_leaves': 147, 'max_depth': 36, 'min_data_in_leaf': 21, 'num_iterations': 153, 'bagging_fraction': 0.6327928638546756, 'bagging_freq': 5}. Best is trial 36 with value: 0.0035836660043942837.
+<pre>[I 2025-11-10 15:25:44,536] Trial 42 finished with value: 0.004264133352820557 and parameters: {'num_leaves': 147, 'max_depth': 36, 'min_data_in_leaf': 21, 'num_iterations': 153, 'bagging_fraction': 0.6327928638546756, 'bagging_freq': 5}. Best is trial 36 with value: 0.0035836660043942837.
 </pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>[I 2025-11-07 14:22:44,479] Trial 43 finished with value: 0.0038495556031894755 and parameters: {'num_leaves': 67, 'max_depth': 18, 'min_data_in_leaf': 36, 'num_iterations': 187, 'bagging_fraction': 0.6715736613418856, 'bagging_freq': 4}. Best is trial 36 with value: 0.0035836660043942837.
+<pre>[I 2025-11-10 15:25:44,815] Trial 43 finished with value: 0.0038495556031894755 and parameters: {'num_leaves': 67, 'max_depth': 18, 'min_data_in_leaf': 36, 'num_iterations': 187, 'bagging_fraction': 0.6715736613418856, 'bagging_freq': 4}. Best is trial 36 with value: 0.0035836660043942837.
 </pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>[I 2025-11-07 14:22:45,002] Trial 44 finished with value: 0.003887009328010064 and parameters: {'num_leaves': 129, 'max_depth': 62, 'min_data_in_leaf': 20, 'num_iterations': 156, 'bagging_fraction': 0.7707274338715906, 'bagging_freq': 3}. Best is trial 36 with value: 0.0035836660043942837.
+<pre>[I 2025-11-10 15:25:45,143] Trial 44 finished with value: 0.003887009328010064 and parameters: {'num_leaves': 129, 'max_depth': 62, 'min_data_in_leaf': 20, 'num_iterations': 156, 'bagging_fraction': 0.7707274338715906, 'bagging_freq': 3}. Best is trial 36 with value: 0.0035836660043942837.
 </pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>[I 2025-11-07 14:22:45,170] Trial 45 finished with value: 0.004327082058649623 and parameters: {'num_leaves': 24, 'max_depth': 83, 'min_data_in_leaf': 40, 'num_iterations': 139, 'bagging_fraction': 0.7198871973326627, 'bagging_freq': 5}. Best is trial 36 with value: 0.0035836660043942837.
+<pre>[I 2025-11-10 15:25:45,259] Trial 45 finished with value: 0.004327082058649623 and parameters: {'num_leaves': 24, 'max_depth': 83, 'min_data_in_leaf': 40, 'num_iterations': 139, 'bagging_fraction': 0.7198871973326627, 'bagging_freq': 5}. Best is trial 36 with value: 0.0035836660043942837.
 </pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>[I 2025-11-07 14:22:45,442] Trial 46 finished with value: 0.004249659215031347 and parameters: {'num_leaves': 180, 'max_depth': 42, 'min_data_in_leaf': 54, 'num_iterations': 128, 'bagging_fraction': 0.7462890352620398, 'bagging_freq': 4}. Best is trial 36 with value: 0.0035836660043942837.
+<pre>[I 2025-11-10 15:25:45,454] Trial 46 finished with value: 0.004249659215031347 and parameters: {'num_leaves': 180, 'max_depth': 42, 'min_data_in_leaf': 54, 'num_iterations': 128, 'bagging_fraction': 0.7462890352620398, 'bagging_freq': 4}. Best is trial 36 with value: 0.0035836660043942837.
 </pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>[I 2025-11-07 14:22:45,919] Trial 47 finished with value: 0.003642558996562752 and parameters: {'num_leaves': 165, 'max_depth': 12, 'min_data_in_leaf': 10, 'num_iterations': 163, 'bagging_fraction': 0.8273959786089049, 'bagging_freq': 3}. Best is trial 36 with value: 0.0035836660043942837.
+<pre>[I 2025-11-10 15:25:45,785] Trial 47 finished with value: 0.003642558996562752 and parameters: {'num_leaves': 165, 'max_depth': 12, 'min_data_in_leaf': 10, 'num_iterations': 163, 'bagging_fraction': 0.8273959786089049, 'bagging_freq': 3}. Best is trial 36 with value: 0.0035836660043942837.
 </pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>[I 2025-11-07 14:22:46,506] Trial 48 finished with value: 0.0038036546122467035 and parameters: {'num_leaves': 168, 'max_depth': 13, 'min_data_in_leaf': 10, 'num_iterations': 174, 'bagging_fraction': 0.8188483012160651, 'bagging_freq': 3}. Best is trial 36 with value: 0.0035836660043942837.
+<pre>[I 2025-11-10 15:25:46,127] Trial 48 finished with value: 0.0038036546122467035 and parameters: {'num_leaves': 168, 'max_depth': 13, 'min_data_in_leaf': 10, 'num_iterations': 174, 'bagging_fraction': 0.8188483012160651, 'bagging_freq': 3}. Best is trial 36 with value: 0.0035836660043942837.
 </pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>[I 2025-11-07 14:22:46,544] Trial 49 finished with value: 0.10681747203086593 and parameters: {'num_leaves': 204, 'max_depth': 2, 'min_data_in_leaf': 216, 'num_iterations': 28, 'bagging_fraction': 0.8615774978483814, 'bagging_freq': 4}. Best is trial 36 with value: 0.0035836660043942837.
+<pre>[I 2025-11-10 15:25:46,154] Trial 49 finished with value: 0.10681747203086593 and parameters: {'num_leaves': 204, 'max_depth': 2, 'min_data_in_leaf': 216, 'num_iterations': 28, 'bagging_fraction': 0.8615774978483814, 'bagging_freq': 4}. Best is trial 36 with value: 0.0035836660043942837.
 </pre>
 </div>
 </div>
@@ -8649,350 +8637,350 @@ a.anchor-link {
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>[I 2025-11-07 14:22:46,714] Trial 0 finished with value: 2.217463987037395 and parameters: {'num_leaves': 38, 'max_depth': 177, 'min_data_in_leaf': 81, 'num_iterations': 94, 'bagging_fraction': 0.6071214413167514, 'bagging_freq': 2}. Best is trial 0 with value: 2.217463987037395.
+<pre>[I 2025-11-10 15:25:46,281] Trial 0 finished with value: 2.217463987037395 and parameters: {'num_leaves': 38, 'max_depth': 177, 'min_data_in_leaf': 81, 'num_iterations': 94, 'bagging_fraction': 0.6071214413167514, 'bagging_freq': 2}. Best is trial 0 with value: 2.217463987037395.
 </pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>[I 2025-11-07 14:22:46,735] Trial 1 finished with value: 2.5302756809068074 and parameters: {'num_leaves': 83, 'max_depth': 27, 'min_data_in_leaf': 177, 'num_iterations': 41, 'bagging_fraction': 0.9889998163277448, 'bagging_freq': 3}. Best is trial 0 with value: 2.217463987037395.
+<pre>[I 2025-11-10 15:25:46,293] Trial 1 finished with value: 2.5302756809068074 and parameters: {'num_leaves': 83, 'max_depth': 27, 'min_data_in_leaf': 177, 'num_iterations': 41, 'bagging_fraction': 0.9889998163277448, 'bagging_freq': 3}. Best is trial 0 with value: 2.217463987037395.
 </pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>[I 2025-11-07 14:22:46,768] Trial 2 finished with value: 2.233297829437584 and parameters: {'num_leaves': 12, 'max_depth': 158, 'min_data_in_leaf': 93, 'num_iterations': 77, 'bagging_fraction': 0.6507690841429046, 'bagging_freq': 1}. Best is trial 0 with value: 2.217463987037395.
+<pre>[I 2025-11-10 15:25:46,313] Trial 2 finished with value: 2.233297829437584 and parameters: {'num_leaves': 12, 'max_depth': 158, 'min_data_in_leaf': 93, 'num_iterations': 77, 'bagging_fraction': 0.6507690841429046, 'bagging_freq': 1}. Best is trial 0 with value: 2.217463987037395.
 </pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>[I 2025-11-07 14:22:46,779] Trial 3 finished with value: 3.6325172590587522 and parameters: {'num_leaves': 82, 'max_depth': 230, 'min_data_in_leaf': 248, 'num_iterations': 30, 'bagging_fraction': 0.6575054481666343, 'bagging_freq': 5}. Best is trial 0 with value: 2.217463987037395.
+<pre>[I 2025-11-10 15:25:46,320] Trial 3 finished with value: 3.6325172590587522 and parameters: {'num_leaves': 82, 'max_depth': 230, 'min_data_in_leaf': 248, 'num_iterations': 30, 'bagging_fraction': 0.6575054481666343, 'bagging_freq': 5}. Best is trial 0 with value: 2.217463987037395.
 </pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>[I 2025-11-07 14:22:46,915] Trial 4 finished with value: 1.9519395540436342 and parameters: {'num_leaves': 211, 'max_depth': 30, 'min_data_in_leaf': 22, 'num_iterations': 97, 'bagging_fraction': 0.7923256552747111, 'bagging_freq': 5}. Best is trial 4 with value: 1.9519395540436342.
+<pre>[I 2025-11-10 15:25:46,417] Trial 4 finished with value: 1.9519395540436342 and parameters: {'num_leaves': 211, 'max_depth': 30, 'min_data_in_leaf': 22, 'num_iterations': 97, 'bagging_fraction': 0.7923256552747111, 'bagging_freq': 5}. Best is trial 4 with value: 1.9519395540436342.
 </pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>[I 2025-11-07 14:22:46,994] Trial 5 finished with value: 2.037375936599948 and parameters: {'num_leaves': 21, 'max_depth': 44, 'min_data_in_leaf': 27, 'num_iterations': 149, 'bagging_fraction': 0.6462482222199595, 'bagging_freq': 1}. Best is trial 4 with value: 1.9519395540436342.
+<pre>[I 2025-11-10 15:25:46,474] Trial 5 finished with value: 2.037375936599948 and parameters: {'num_leaves': 21, 'max_depth': 44, 'min_data_in_leaf': 27, 'num_iterations': 149, 'bagging_fraction': 0.6462482222199595, 'bagging_freq': 1}. Best is trial 4 with value: 1.9519395540436342.
 </pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>[I 2025-11-07 14:22:47,011] Trial 6 finished with value: 2.913697492362779 and parameters: {'num_leaves': 138, 'max_depth': 163, 'min_data_in_leaf': 204, 'num_iterations': 72, 'bagging_fraction': 0.5384431993550269, 'bagging_freq': 5}. Best is trial 4 with value: 1.9519395540436342.
+<pre>[I 2025-11-10 15:25:46,486] Trial 6 finished with value: 2.913697492362779 and parameters: {'num_leaves': 138, 'max_depth': 163, 'min_data_in_leaf': 204, 'num_iterations': 72, 'bagging_fraction': 0.5384431993550269, 'bagging_freq': 5}. Best is trial 4 with value: 1.9519395540436342.
 </pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>[I 2025-11-07 14:22:47,032] Trial 7 finished with value: 2.5973745983469736 and parameters: {'num_leaves': 197, 'max_depth': 92, 'min_data_in_leaf': 177, 'num_iterations': 62, 'bagging_fraction': 0.7192646486876234, 'bagging_freq': 5}. Best is trial 4 with value: 1.9519395540436342.
+<pre>[I 2025-11-10 15:25:46,504] Trial 7 finished with value: 2.5973745983469736 and parameters: {'num_leaves': 197, 'max_depth': 92, 'min_data_in_leaf': 177, 'num_iterations': 62, 'bagging_fraction': 0.7192646486876234, 'bagging_freq': 5}. Best is trial 4 with value: 1.9519395540436342.
 </pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>[I 2025-11-07 14:22:47,060] Trial 8 finished with value: 2.1793693704233816 and parameters: {'num_leaves': 243, 'max_depth': 151, 'min_data_in_leaf': 64, 'num_iterations': 43, 'bagging_fraction': 0.6430830504379776, 'bagging_freq': 3}. Best is trial 4 with value: 1.9519395540436342.
+<pre>[I 2025-11-10 15:25:46,528] Trial 8 finished with value: 2.1793693704233816 and parameters: {'num_leaves': 243, 'max_depth': 151, 'min_data_in_leaf': 64, 'num_iterations': 43, 'bagging_fraction': 0.6430830504379776, 'bagging_freq': 3}. Best is trial 4 with value: 1.9519395540436342.
 </pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>[I 2025-11-07 14:22:47,110] Trial 9 finished with value: 1.872271198862132 and parameters: {'num_leaves': 31, 'max_depth': 210, 'min_data_in_leaf': 12, 'num_iterations': 48, 'bagging_fraction': 0.764136724165049, 'bagging_freq': 2}. Best is trial 9 with value: 1.872271198862132.
+<pre>[I 2025-11-10 15:25:46,563] Trial 9 finished with value: 1.872271198862132 and parameters: {'num_leaves': 31, 'max_depth': 210, 'min_data_in_leaf': 12, 'num_iterations': 48, 'bagging_fraction': 0.764136724165049, 'bagging_freq': 2}. Best is trial 9 with value: 1.872271198862132.
 </pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>[I 2025-11-07 14:22:47,220] Trial 10 finished with value: 2.125854736566008 and parameters: {'num_leaves': 132, 'max_depth': 252, 'min_data_in_leaf': 131, 'num_iterations': 200, 'bagging_fraction': 0.8533703418149945, 'bagging_freq': 3}. Best is trial 9 with value: 1.872271198862132.
+<pre>[I 2025-11-10 15:25:46,630] Trial 10 finished with value: 2.125854736566008 and parameters: {'num_leaves': 132, 'max_depth': 252, 'min_data_in_leaf': 131, 'num_iterations': 200, 'bagging_fraction': 0.8533703418149945, 'bagging_freq': 3}. Best is trial 9 with value: 1.872271198862132.
 </pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>[I 2025-11-07 14:22:47,583] Trial 11 finished with value: 1.9563295360623236 and parameters: {'num_leaves': 190, 'max_depth': 91, 'min_data_in_leaf': 11, 'num_iterations': 126, 'bagging_fraction': 0.8444973389242248, 'bagging_freq': 4}. Best is trial 9 with value: 1.872271198862132.
+<pre>[I 2025-11-10 15:25:46,877] Trial 11 finished with value: 1.9563295360623236 and parameters: {'num_leaves': 190, 'max_depth': 91, 'min_data_in_leaf': 11, 'num_iterations': 126, 'bagging_fraction': 0.8444973389242248, 'bagging_freq': 4}. Best is trial 9 with value: 1.872271198862132.
 </pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>[I 2025-11-07 14:22:47,686] Trial 12 finished with value: 2.0210693633110064 and parameters: {'num_leaves': 256, 'max_depth': 206, 'min_data_in_leaf': 43, 'num_iterations': 116, 'bagging_fraction': 0.8057658259017626, 'bagging_freq': 2}. Best is trial 9 with value: 1.872271198862132.
+<pre>[I 2025-11-10 15:25:46,958] Trial 12 finished with value: 2.0210693633110064 and parameters: {'num_leaves': 256, 'max_depth': 206, 'min_data_in_leaf': 43, 'num_iterations': 116, 'bagging_fraction': 0.8057658259017626, 'bagging_freq': 2}. Best is trial 9 with value: 1.872271198862132.
 </pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>[I 2025-11-07 14:22:47,747] Trial 13 finished with value: 2.165285008708338 and parameters: {'num_leaves': 185, 'max_depth': 6, 'min_data_in_leaf': 118, 'num_iterations': 144, 'bagging_fraction': 0.7710591745502531, 'bagging_freq': 4}. Best is trial 9 with value: 1.872271198862132.
+<pre>[I 2025-11-10 15:25:47,007] Trial 13 finished with value: 2.165285008708338 and parameters: {'num_leaves': 185, 'max_depth': 6, 'min_data_in_leaf': 118, 'num_iterations': 144, 'bagging_fraction': 0.7710591745502531, 'bagging_freq': 4}. Best is trial 9 with value: 1.872271198862132.
 </pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>[I 2025-11-07 14:22:47,836] Trial 14 finished with value: 1.9952545766123988 and parameters: {'num_leaves': 78, 'max_depth': 102, 'min_data_in_leaf': 48, 'num_iterations': 95, 'bagging_fraction': 0.9064532050051144, 'bagging_freq': 2}. Best is trial 9 with value: 1.872271198862132.
+<pre>[I 2025-11-10 15:25:47,077] Trial 14 finished with value: 1.9952545766123988 and parameters: {'num_leaves': 78, 'max_depth': 102, 'min_data_in_leaf': 48, 'num_iterations': 95, 'bagging_fraction': 0.9064532050051144, 'bagging_freq': 2}. Best is trial 9 with value: 1.872271198862132.
 </pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>[I 2025-11-07 14:22:48,350] Trial 15 finished with value: 2.062143153061911 and parameters: {'num_leaves': 162, 'max_depth': 62, 'min_data_in_leaf': 10, 'num_iterations': 174, 'bagging_fraction': 0.7420356253486351, 'bagging_freq': 4}. Best is trial 9 with value: 1.872271198862132.
+<pre>[I 2025-11-10 15:25:47,418] Trial 15 finished with value: 2.062143153061911 and parameters: {'num_leaves': 162, 'max_depth': 62, 'min_data_in_leaf': 10, 'num_iterations': 174, 'bagging_fraction': 0.7420356253486351, 'bagging_freq': 4}. Best is trial 9 with value: 1.872271198862132.
 </pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>[I 2025-11-07 14:22:48,415] Trial 16 finished with value: 2.17217502729263 and parameters: {'num_leaves': 219, 'max_depth': 199, 'min_data_in_leaf': 105, 'num_iterations': 60, 'bagging_fraction': 0.9218035876065989, 'bagging_freq': 2}. Best is trial 9 with value: 1.872271198862132.
+<pre>[I 2025-11-10 15:25:47,449] Trial 16 finished with value: 2.17217502729263 and parameters: {'num_leaves': 219, 'max_depth': 199, 'min_data_in_leaf': 105, 'num_iterations': 60, 'bagging_fraction': 0.9218035876065989, 'bagging_freq': 2}. Best is trial 9 with value: 1.872271198862132.
 </pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>[I 2025-11-07 14:22:48,495] Trial 17 finished with value: 2.1579706435998407 and parameters: {'num_leaves': 53, 'max_depth': 127, 'min_data_in_leaf': 62, 'num_iterations': 95, 'bagging_fraction': 0.7029366669485296, 'bagging_freq': 3}. Best is trial 9 with value: 1.872271198862132.
+<pre>[I 2025-11-10 15:25:47,497] Trial 17 finished with value: 2.1579706435998407 and parameters: {'num_leaves': 53, 'max_depth': 127, 'min_data_in_leaf': 62, 'num_iterations': 95, 'bagging_fraction': 0.7029366669485296, 'bagging_freq': 3}. Best is trial 9 with value: 1.872271198862132.
 </pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>[I 2025-11-07 14:22:48,520] Trial 18 finished with value: 2.90316442949979 and parameters: {'num_leaves': 109, 'max_depth': 126, 'min_data_in_leaf': 146, 'num_iterations': 27, 'bagging_fraction': 0.7977861740784461, 'bagging_freq': 4}. Best is trial 9 with value: 1.872271198862132.
+<pre>[I 2025-11-10 15:25:47,513] Trial 18 finished with value: 2.90316442949979 and parameters: {'num_leaves': 109, 'max_depth': 126, 'min_data_in_leaf': 146, 'num_iterations': 27, 'bagging_fraction': 0.7977861740784461, 'bagging_freq': 4}. Best is trial 9 with value: 1.872271198862132.
 </pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>[I 2025-11-07 14:22:48,686] Trial 19 finished with value: 1.9977606230640301 and parameters: {'num_leaves': 153, 'max_depth': 255, 'min_data_in_leaf': 32, 'num_iterations': 135, 'bagging_fraction': 0.8744088503511349, 'bagging_freq': 1}. Best is trial 9 with value: 1.872271198862132.
+<pre>[I 2025-11-10 15:25:47,614] Trial 19 finished with value: 1.9977606230640301 and parameters: {'num_leaves': 153, 'max_depth': 255, 'min_data_in_leaf': 32, 'num_iterations': 135, 'bagging_fraction': 0.8744088503511349, 'bagging_freq': 1}. Best is trial 9 with value: 1.872271198862132.
 </pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>[I 2025-11-07 14:22:48,742] Trial 20 finished with value: 2.261410588456024 and parameters: {'num_leaves': 227, 'max_depth': 60, 'min_data_in_leaf': 73, 'num_iterations': 83, 'bagging_fraction': 0.5070012438647024, 'bagging_freq': 2}. Best is trial 9 with value: 1.872271198862132.
+<pre>[I 2025-11-10 15:25:47,649] Trial 20 finished with value: 2.261410588456024 and parameters: {'num_leaves': 227, 'max_depth': 60, 'min_data_in_leaf': 73, 'num_iterations': 83, 'bagging_fraction': 0.5070012438647024, 'bagging_freq': 2}. Best is trial 9 with value: 1.872271198862132.
 </pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>[I 2025-11-07 14:22:49,115] Trial 21 finished with value: 2.0183628788684 and parameters: {'num_leaves': 197, 'max_depth': 90, 'min_data_in_leaf': 10, 'num_iterations': 117, 'bagging_fraction': 0.8352224583866932, 'bagging_freq': 4}. Best is trial 9 with value: 1.872271198862132.
+<pre>[I 2025-11-10 15:25:47,919] Trial 21 finished with value: 2.0183628788684 and parameters: {'num_leaves': 197, 'max_depth': 90, 'min_data_in_leaf': 10, 'num_iterations': 117, 'bagging_fraction': 0.8352224583866932, 'bagging_freq': 4}. Best is trial 9 with value: 1.872271198862132.
 </pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>[I 2025-11-07 14:22:49,177] Trial 22 finished with value: 2.0074493721597415 and parameters: {'num_leaves': 178, 'max_depth': 4, 'min_data_in_leaf': 25, 'num_iterations': 123, 'bagging_fraction': 0.7742969417293077, 'bagging_freq': 5}. Best is trial 9 with value: 1.872271198862132.
+<pre>[I 2025-11-10 15:25:47,967] Trial 22 finished with value: 2.0074493721597415 and parameters: {'num_leaves': 178, 'max_depth': 4, 'min_data_in_leaf': 25, 'num_iterations': 123, 'bagging_fraction': 0.7742969417293077, 'bagging_freq': 5}. Best is trial 9 with value: 1.872271198862132.
 </pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>[I 2025-11-07 14:22:49,367] Trial 23 finished with value: 2.0721488527054612 and parameters: {'num_leaves': 214, 'max_depth': 69, 'min_data_in_leaf': 49, 'num_iterations': 166, 'bagging_fraction': 0.9517339433107506, 'bagging_freq': 4}. Best is trial 9 with value: 1.872271198862132.
+<pre>[I 2025-11-10 15:25:48,088] Trial 23 finished with value: 2.0721488527054612 and parameters: {'num_leaves': 214, 'max_depth': 69, 'min_data_in_leaf': 49, 'num_iterations': 166, 'bagging_fraction': 0.9517339433107506, 'bagging_freq': 4}. Best is trial 9 with value: 1.872271198862132.
 </pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>[I 2025-11-07 14:22:49,627] Trial 24 finished with value: 1.9803059100178555 and parameters: {'num_leaves': 109, 'max_depth': 27, 'min_data_in_leaf': 10, 'num_iterations': 105, 'bagging_fraction': 0.825031322982918, 'bagging_freq': 5}. Best is trial 9 with value: 1.872271198862132.
+<pre>[I 2025-11-10 15:25:48,276] Trial 24 finished with value: 1.9803059100178555 and parameters: {'num_leaves': 109, 'max_depth': 27, 'min_data_in_leaf': 10, 'num_iterations': 105, 'bagging_fraction': 0.825031322982918, 'bagging_freq': 5}. Best is trial 9 with value: 1.872271198862132.
 </pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>[I 2025-11-07 14:22:49,774] Trial 25 finished with value: 1.9241809364399243 and parameters: {'num_leaves': 164, 'max_depth': 109, 'min_data_in_leaf': 38, 'num_iterations': 134, 'bagging_fraction': 0.8821368807499915, 'bagging_freq': 4}. Best is trial 9 with value: 1.872271198862132.
+<pre>[I 2025-11-10 15:25:48,388] Trial 25 finished with value: 1.9241809364399243 and parameters: {'num_leaves': 164, 'max_depth': 109, 'min_data_in_leaf': 38, 'num_iterations': 134, 'bagging_fraction': 0.8821368807499915, 'bagging_freq': 4}. Best is trial 9 with value: 1.872271198862132.
 </pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>[I 2025-11-07 14:22:49,998] Trial 26 finished with value: 2.042154116843384 and parameters: {'num_leaves': 163, 'max_depth': 195, 'min_data_in_leaf': 37, 'num_iterations': 151, 'bagging_fraction': 0.8970099585380352, 'bagging_freq': 5}. Best is trial 9 with value: 1.872271198862132.
+<pre>[I 2025-11-10 15:25:48,507] Trial 26 finished with value: 2.042154116843384 and parameters: {'num_leaves': 163, 'max_depth': 195, 'min_data_in_leaf': 37, 'num_iterations': 151, 'bagging_fraction': 0.8970099585380352, 'bagging_freq': 5}. Best is trial 9 with value: 1.872271198862132.
 </pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>[I 2025-11-07 14:22:50,047] Trial 27 finished with value: 2.1791748687274626 and parameters: {'num_leaves': 107, 'max_depth': 116, 'min_data_in_leaf': 56, 'num_iterations': 54, 'bagging_fraction': 0.7037757061890791, 'bagging_freq': 4}. Best is trial 9 with value: 1.872271198862132.
+<pre>[I 2025-11-10 15:25:48,541] Trial 27 finished with value: 2.1791748687274626 and parameters: {'num_leaves': 107, 'max_depth': 116, 'min_data_in_leaf': 56, 'num_iterations': 54, 'bagging_fraction': 0.7037757061890791, 'bagging_freq': 4}. Best is trial 9 with value: 1.872271198862132.
 </pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>[I 2025-11-07 14:22:50,165] Trial 28 finished with value: 2.1543985025384313 and parameters: {'num_leaves': 149, 'max_depth': 145, 'min_data_in_leaf': 87, 'num_iterations': 161, 'bagging_fraction': 0.9486364266937175, 'bagging_freq': 3}. Best is trial 9 with value: 1.872271198862132.
+<pre>[I 2025-11-10 15:25:48,621] Trial 28 finished with value: 2.1543985025384313 and parameters: {'num_leaves': 149, 'max_depth': 145, 'min_data_in_leaf': 87, 'num_iterations': 161, 'bagging_fraction': 0.9486364266937175, 'bagging_freq': 3}. Best is trial 9 with value: 1.872271198862132.
 </pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>[I 2025-11-07 14:22:50,232] Trial 29 finished with value: 2.150121549602934 and parameters: {'num_leaves': 55, 'max_depth': 183, 'min_data_in_leaf': 79, 'num_iterations': 104, 'bagging_fraction': 0.7408637637528088, 'bagging_freq': 5}. Best is trial 9 with value: 1.872271198862132.
+<pre>[I 2025-11-10 15:25:48,666] Trial 29 finished with value: 2.150121549602934 and parameters: {'num_leaves': 55, 'max_depth': 183, 'min_data_in_leaf': 79, 'num_iterations': 104, 'bagging_fraction': 0.7408637637528088, 'bagging_freq': 5}. Best is trial 9 with value: 1.872271198862132.
 </pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>[I 2025-11-07 14:22:50,373] Trial 30 finished with value: 2.0224462155221183 and parameters: {'num_leaves': 28, 'max_depth': 219, 'min_data_in_leaf': 24, 'num_iterations': 185, 'bagging_fraction': 0.5764387451635581, 'bagging_freq': 2}. Best is trial 9 with value: 1.872271198862132.
+<pre>[I 2025-11-10 15:25:48,764] Trial 30 finished with value: 2.0224462155221183 and parameters: {'num_leaves': 28, 'max_depth': 219, 'min_data_in_leaf': 24, 'num_iterations': 185, 'bagging_fraction': 0.5764387451635581, 'bagging_freq': 2}. Best is trial 9 with value: 1.872271198862132.
 </pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>[I 2025-11-07 14:22:50,518] Trial 31 finished with value: 1.9699657035299674 and parameters: {'num_leaves': 183, 'max_depth': 74, 'min_data_in_leaf': 33, 'num_iterations': 130, 'bagging_fraction': 0.8740268777217409, 'bagging_freq': 4}. Best is trial 9 with value: 1.872271198862132.
+<pre>[I 2025-11-10 15:25:48,869] Trial 31 finished with value: 1.9699657035299674 and parameters: {'num_leaves': 183, 'max_depth': 74, 'min_data_in_leaf': 33, 'num_iterations': 130, 'bagging_fraction': 0.8740268777217409, 'bagging_freq': 4}. Best is trial 9 with value: 1.872271198862132.
 </pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>[I 2025-11-07 14:22:50,765] Trial 32 finished with value: 2.0352331219100432 and parameters: {'num_leaves': 209, 'max_depth': 107, 'min_data_in_leaf': 19, 'num_iterations': 136, 'bagging_fraction': 0.7958608679341295, 'bagging_freq': 3}. Best is trial 9 with value: 1.872271198862132.
+<pre>[I 2025-11-10 15:25:49,031] Trial 32 finished with value: 2.0352331219100432 and parameters: {'num_leaves': 209, 'max_depth': 107, 'min_data_in_leaf': 19, 'num_iterations': 136, 'bagging_fraction': 0.7958608679341295, 'bagging_freq': 3}. Best is trial 9 with value: 1.872271198862132.
 </pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>[I 2025-11-07 14:22:50,892] Trial 33 finished with value: 2.0094730110556194 and parameters: {'num_leaves': 234, 'max_depth': 37, 'min_data_in_leaf': 47, 'num_iterations': 107, 'bagging_fraction': 0.9877389765370235, 'bagging_freq': 4}. Best is trial 9 with value: 1.872271198862132.
+<pre>[I 2025-11-10 15:25:49,118] Trial 33 finished with value: 2.0094730110556194 and parameters: {'num_leaves': 234, 'max_depth': 37, 'min_data_in_leaf': 47, 'num_iterations': 107, 'bagging_fraction': 0.9877389765370235, 'bagging_freq': 4}. Best is trial 9 with value: 1.872271198862132.
 </pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>[I 2025-11-07 14:22:51,005] Trial 34 finished with value: 2.138591450593486 and parameters: {'num_leaves': 201, 'max_depth': 88, 'min_data_in_leaf': 69, 'num_iterations': 127, 'bagging_fraction': 0.8524896132873623, 'bagging_freq': 3}. Best is trial 9 with value: 1.872271198862132.
+<pre>[I 2025-11-10 15:25:49,190] Trial 34 finished with value: 2.138591450593486 and parameters: {'num_leaves': 201, 'max_depth': 88, 'min_data_in_leaf': 69, 'num_iterations': 127, 'bagging_fraction': 0.8524896132873623, 'bagging_freq': 3}. Best is trial 9 with value: 1.872271198862132.
 </pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>[I 2025-11-07 14:22:51,063] Trial 35 finished with value: 2.214893071549789 and parameters: {'num_leaves': 171, 'max_depth': 174, 'min_data_in_leaf': 101, 'num_iterations': 84, 'bagging_fraction': 0.8187682405680394, 'bagging_freq': 1}. Best is trial 9 with value: 1.872271198862132.
+<pre>[I 2025-11-10 15:25:49,225] Trial 35 finished with value: 2.214893071549789 and parameters: {'num_leaves': 171, 'max_depth': 174, 'min_data_in_leaf': 101, 'num_iterations': 84, 'bagging_fraction': 0.8187682405680394, 'bagging_freq': 1}. Best is trial 9 with value: 1.872271198862132.
 </pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>[I 2025-11-07 14:22:51,129] Trial 36 finished with value: 2.0215456021974463 and parameters: {'num_leaves': 11, 'max_depth': 53, 'min_data_in_leaf': 20, 'num_iterations': 143, 'bagging_fraction': 0.7725922929820237, 'bagging_freq': 5}. Best is trial 9 with value: 1.872271198862132.
+<pre>[I 2025-11-10 15:25:49,270] Trial 36 finished with value: 2.0215456021974463 and parameters: {'num_leaves': 11, 'max_depth': 53, 'min_data_in_leaf': 20, 'num_iterations': 143, 'bagging_fraction': 0.7725922929820237, 'bagging_freq': 5}. Best is trial 9 with value: 1.872271198862132.
 </pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>[I 2025-11-07 14:22:51,155] Trial 37 finished with value: 3.1700198157833253 and parameters: {'num_leaves': 192, 'max_depth': 135, 'min_data_in_leaf': 243, 'num_iterations': 45, 'bagging_fraction': 0.6703261086572104, 'bagging_freq': 4}. Best is trial 9 with value: 1.872271198862132.
+<pre>[I 2025-11-10 15:25:49,288] Trial 37 finished with value: 3.1700198157833253 and parameters: {'num_leaves': 192, 'max_depth': 135, 'min_data_in_leaf': 243, 'num_iterations': 45, 'bagging_fraction': 0.6703261086572104, 'bagging_freq': 4}. Best is trial 9 with value: 1.872271198862132.
 </pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>[I 2025-11-07 14:22:51,186] Trial 38 finished with value: 2.660664659000483 and parameters: {'num_leaves': 125, 'max_depth': 21, 'min_data_in_leaf': 163, 'num_iterations': 35, 'bagging_fraction': 0.870679355468466, 'bagging_freq': 5}. Best is trial 9 with value: 1.872271198862132.
+<pre>[I 2025-11-10 15:25:49,306] Trial 38 finished with value: 2.660664659000483 and parameters: {'num_leaves': 125, 'max_depth': 21, 'min_data_in_leaf': 163, 'num_iterations': 35, 'bagging_fraction': 0.870679355468466, 'bagging_freq': 5}. Best is trial 9 with value: 1.872271198862132.
 </pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>[I 2025-11-07 14:22:51,277] Trial 39 finished with value: 1.9367224404770074 and parameters: {'num_leaves': 243, 'max_depth': 76, 'min_data_in_leaf': 35, 'num_iterations': 71, 'bagging_fraction': 0.9367697755831724, 'bagging_freq': 4}. Best is trial 9 with value: 1.872271198862132.
+<pre>[I 2025-11-10 15:25:49,372] Trial 39 finished with value: 1.9367224404770074 and parameters: {'num_leaves': 243, 'max_depth': 76, 'min_data_in_leaf': 35, 'num_iterations': 71, 'bagging_fraction': 0.9367697755831724, 'bagging_freq': 4}. Best is trial 9 with value: 1.872271198862132.
 </pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>[I 2025-11-07 14:22:51,358] Trial 40 finished with value: 1.8972582560225357 and parameters: {'num_leaves': 246, 'max_depth': 43, 'min_data_in_leaf': 36, 'num_iterations': 54, 'bagging_fraction': 0.9607267204239914, 'bagging_freq': 3}. Best is trial 9 with value: 1.872271198862132.
+<pre>[I 2025-11-10 15:25:49,427] Trial 40 finished with value: 1.8972582560225357 and parameters: {'num_leaves': 246, 'max_depth': 43, 'min_data_in_leaf': 36, 'num_iterations': 54, 'bagging_fraction': 0.9607267204239914, 'bagging_freq': 3}. Best is trial 9 with value: 1.872271198862132.
 </pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>[I 2025-11-07 14:22:51,458] Trial 41 finished with value: 1.9381244966433602 and parameters: {'num_leaves': 252, 'max_depth': 39, 'min_data_in_leaf': 37, 'num_iterations': 72, 'bagging_fraction': 0.9497382014847314, 'bagging_freq': 3}. Best is trial 9 with value: 1.872271198862132.
+<pre>[I 2025-11-10 15:25:49,494] Trial 41 finished with value: 1.9381244966433602 and parameters: {'num_leaves': 252, 'max_depth': 39, 'min_data_in_leaf': 37, 'num_iterations': 72, 'bagging_fraction': 0.9497382014847314, 'bagging_freq': 3}. Best is trial 9 with value: 1.872271198862132.
 </pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>[I 2025-11-07 14:22:51,534] Trial 42 finished with value: 2.0000126108471177 and parameters: {'num_leaves': 251, 'max_depth': 46, 'min_data_in_leaf': 55, 'num_iterations': 71, 'bagging_fraction': 0.9957057309768894, 'bagging_freq': 3}. Best is trial 9 with value: 1.872271198862132.
+<pre>[I 2025-11-10 15:25:49,549] Trial 42 finished with value: 2.0000126108471177 and parameters: {'num_leaves': 251, 'max_depth': 46, 'min_data_in_leaf': 55, 'num_iterations': 71, 'bagging_fraction': 0.9957057309768894, 'bagging_freq': 3}. Best is trial 9 with value: 1.872271198862132.
 </pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>[I 2025-11-07 14:22:51,607] Trial 43 finished with value: 1.8944267968552124 and parameters: {'num_leaves': 236, 'max_depth': 78, 'min_data_in_leaf': 36, 'num_iterations': 51, 'bagging_fraction': 0.9612889096428789, 'bagging_freq': 3}. Best is trial 9 with value: 1.872271198862132.
+<pre>[I 2025-11-10 15:25:49,604] Trial 43 finished with value: 1.8944267968552124 and parameters: {'num_leaves': 236, 'max_depth': 78, 'min_data_in_leaf': 36, 'num_iterations': 51, 'bagging_fraction': 0.9612889096428789, 'bagging_freq': 3}. Best is trial 9 with value: 1.872271198862132.
 </pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>[I 2025-11-07 14:22:51,672] Trial 44 finished with value: 1.8873534400753882 and parameters: {'num_leaves': 240, 'max_depth': 71, 'min_data_in_leaf': 41, 'num_iterations': 53, 'bagging_fraction': 0.925811820500564, 'bagging_freq': 2}. Best is trial 9 with value: 1.872271198862132.
+<pre>[I 2025-11-10 15:25:49,653] Trial 44 finished with value: 1.8873534400753882 and parameters: {'num_leaves': 240, 'max_depth': 71, 'min_data_in_leaf': 41, 'num_iterations': 53, 'bagging_fraction': 0.925811820500564, 'bagging_freq': 2}. Best is trial 9 with value: 1.872271198862132.
 </pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>[I 2025-11-07 14:22:51,724] Trial 45 finished with value: 2.006015586499559 and parameters: {'num_leaves': 233, 'max_depth': 107, 'min_data_in_leaf': 60, 'num_iterations': 50, 'bagging_fraction': 0.9762511478264861, 'bagging_freq': 2}. Best is trial 9 with value: 1.872271198862132.
+<pre>[I 2025-11-10 15:25:49,690] Trial 45 finished with value: 2.006015586499559 and parameters: {'num_leaves': 233, 'max_depth': 107, 'min_data_in_leaf': 60, 'num_iterations': 50, 'bagging_fraction': 0.9762511478264861, 'bagging_freq': 2}. Best is trial 9 with value: 1.872271198862132.
 </pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>[I 2025-11-07 14:22:51,764] Trial 46 finished with value: 2.195634699056772 and parameters: {'num_leaves': 223, 'max_depth': 82, 'min_data_in_leaf': 79, 'num_iterations': 37, 'bagging_fraction': 0.9649096526995171, 'bagging_freq': 2}. Best is trial 9 with value: 1.872271198862132.
+<pre>[I 2025-11-10 15:25:49,718] Trial 46 finished with value: 2.195634699056772 and parameters: {'num_leaves': 223, 'max_depth': 82, 'min_data_in_leaf': 79, 'num_iterations': 37, 'bagging_fraction': 0.9649096526995171, 'bagging_freq': 2}. Best is trial 9 with value: 1.872271198862132.
 </pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>[I 2025-11-07 14:22:51,801] Trial 47 finished with value: 2.5590992929405614 and parameters: {'num_leaves': 240, 'max_depth': 17, 'min_data_in_leaf': 207, 'num_iterations': 62, 'bagging_fraction': 0.9029781597102765, 'bagging_freq': 1}. Best is trial 9 with value: 1.872271198862132.
+<pre>[I 2025-11-10 15:25:49,745] Trial 47 finished with value: 2.5590992929405614 and parameters: {'num_leaves': 240, 'max_depth': 17, 'min_data_in_leaf': 207, 'num_iterations': 62, 'bagging_fraction': 0.9029781597102765, 'bagging_freq': 1}. Best is trial 9 with value: 1.872271198862132.
 </pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>[I 2025-11-07 14:22:51,875] Trial 48 finished with value: 1.8961435777415487 and parameters: {'num_leaves': 203, 'max_depth': 100, 'min_data_in_leaf': 44, 'num_iterations': 60, 'bagging_fraction': 0.9228064675129292, 'bagging_freq': 2}. Best is trial 9 with value: 1.872271198862132.
+<pre>[I 2025-11-10 15:25:49,800] Trial 48 finished with value: 1.8961435777415487 and parameters: {'num_leaves': 203, 'max_depth': 100, 'min_data_in_leaf': 44, 'num_iterations': 60, 'bagging_fraction': 0.9228064675129292, 'bagging_freq': 2}. Best is trial 9 with value: 1.872271198862132.
 </pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>[I 2025-11-07 14:22:51,927] Trial 49 finished with value: 2.1524838871044163 and parameters: {'num_leaves': 256, 'max_depth': 239, 'min_data_in_leaf': 94, 'num_iterations': 54, 'bagging_fraction': 0.9250060081103659, 'bagging_freq': 2}. Best is trial 9 with value: 1.872271198862132.
+<pre>[I 2025-11-10 15:25:49,835] Trial 49 finished with value: 2.1524838871044163 and parameters: {'num_leaves': 256, 'max_depth': 239, 'min_data_in_leaf': 94, 'num_iterations': 54, 'bagging_fraction': 0.9250060081103659, 'bagging_freq': 2}. Best is trial 9 with value: 1.872271198862132.
 </pre>
 </div>
 </div>
@@ -9069,350 +9057,350 @@ a.anchor-link {
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>[I 2025-11-07 14:22:52,078] Trial 0 finished with value: 4.601963942696513 and parameters: {'num_leaves': 38, 'max_depth': 177, 'min_data_in_leaf': 81, 'num_iterations': 94, 'bagging_fraction': 0.6071214413167514, 'bagging_freq': 2}. Best is trial 0 with value: 4.601963942696513.
+<pre>[I 2025-11-10 15:25:49,960] Trial 0 finished with value: 4.601963942696513 and parameters: {'num_leaves': 38, 'max_depth': 177, 'min_data_in_leaf': 81, 'num_iterations': 94, 'bagging_fraction': 0.6071214413167514, 'bagging_freq': 2}. Best is trial 0 with value: 4.601963942696513.
 </pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>[I 2025-11-07 14:22:52,094] Trial 1 finished with value: 7.674971387201009 and parameters: {'num_leaves': 83, 'max_depth': 27, 'min_data_in_leaf': 177, 'num_iterations': 41, 'bagging_fraction': 0.9889998163277448, 'bagging_freq': 3}. Best is trial 0 with value: 4.601963942696513.
+<pre>[I 2025-11-10 15:25:49,972] Trial 1 finished with value: 7.674971387201009 and parameters: {'num_leaves': 83, 'max_depth': 27, 'min_data_in_leaf': 177, 'num_iterations': 41, 'bagging_fraction': 0.9889998163277448, 'bagging_freq': 3}. Best is trial 0 with value: 4.601963942696513.
 </pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>[I 2025-11-07 14:22:52,117] Trial 2 finished with value: 5.0838050157876475 and parameters: {'num_leaves': 12, 'max_depth': 158, 'min_data_in_leaf': 93, 'num_iterations': 77, 'bagging_fraction': 0.6507690841429046, 'bagging_freq': 1}. Best is trial 0 with value: 4.601963942696513.
+<pre>[I 2025-11-10 15:25:49,991] Trial 2 finished with value: 5.0838050157876475 and parameters: {'num_leaves': 12, 'max_depth': 158, 'min_data_in_leaf': 93, 'num_iterations': 77, 'bagging_fraction': 0.6507690841429046, 'bagging_freq': 1}. Best is trial 0 with value: 4.601963942696513.
 </pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>[I 2025-11-07 14:22:52,125] Trial 3 finished with value: 11.037136186360756 and parameters: {'num_leaves': 82, 'max_depth': 230, 'min_data_in_leaf': 248, 'num_iterations': 30, 'bagging_fraction': 0.6575054481666343, 'bagging_freq': 5}. Best is trial 0 with value: 4.601963942696513.
+<pre>[I 2025-11-10 15:25:49,997] Trial 3 finished with value: 11.037136186360756 and parameters: {'num_leaves': 82, 'max_depth': 230, 'min_data_in_leaf': 248, 'num_iterations': 30, 'bagging_fraction': 0.6575054481666343, 'bagging_freq': 5}. Best is trial 0 with value: 4.601963942696513.
 </pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>[I 2025-11-07 14:22:52,218] Trial 4 finished with value: 4.015313676597538 and parameters: {'num_leaves': 211, 'max_depth': 30, 'min_data_in_leaf': 22, 'num_iterations': 97, 'bagging_fraction': 0.7923256552747111, 'bagging_freq': 5}. Best is trial 4 with value: 4.015313676597538.
+<pre>[I 2025-11-10 15:25:50,064] Trial 4 finished with value: 4.015313676597538 and parameters: {'num_leaves': 211, 'max_depth': 30, 'min_data_in_leaf': 22, 'num_iterations': 97, 'bagging_fraction': 0.7923256552747111, 'bagging_freq': 5}. Best is trial 4 with value: 4.015313676597538.
 </pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>[I 2025-11-07 14:22:52,307] Trial 5 finished with value: 3.592534838776857 and parameters: {'num_leaves': 21, 'max_depth': 44, 'min_data_in_leaf': 27, 'num_iterations': 149, 'bagging_fraction': 0.6462482222199595, 'bagging_freq': 1}. Best is trial 5 with value: 3.592534838776857.
+<pre>[I 2025-11-10 15:25:50,127] Trial 5 finished with value: 3.592534838776857 and parameters: {'num_leaves': 21, 'max_depth': 44, 'min_data_in_leaf': 27, 'num_iterations': 149, 'bagging_fraction': 0.6462482222199595, 'bagging_freq': 1}. Best is trial 5 with value: 3.592534838776857.
 </pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>[I 2025-11-07 14:22:52,329] Trial 6 finished with value: 7.36155073833501 and parameters: {'num_leaves': 138, 'max_depth': 163, 'min_data_in_leaf': 204, 'num_iterations': 72, 'bagging_fraction': 0.5384431993550269, 'bagging_freq': 5}. Best is trial 5 with value: 3.592534838776857.
+<pre>[I 2025-11-10 15:25:50,139] Trial 6 finished with value: 7.36155073833501 and parameters: {'num_leaves': 138, 'max_depth': 163, 'min_data_in_leaf': 204, 'num_iterations': 72, 'bagging_fraction': 0.5384431993550269, 'bagging_freq': 5}. Best is trial 5 with value: 3.592534838776857.
 </pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>[I 2025-11-07 14:22:52,355] Trial 7 finished with value: 6.59602832048508 and parameters: {'num_leaves': 197, 'max_depth': 92, 'min_data_in_leaf': 177, 'num_iterations': 62, 'bagging_fraction': 0.7192646486876234, 'bagging_freq': 5}. Best is trial 5 with value: 3.592534838776857.
+<pre>[I 2025-11-10 15:25:50,158] Trial 7 finished with value: 6.59602832048508 and parameters: {'num_leaves': 197, 'max_depth': 92, 'min_data_in_leaf': 177, 'num_iterations': 62, 'bagging_fraction': 0.7192646486876234, 'bagging_freq': 5}. Best is trial 5 with value: 3.592534838776857.
 </pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>[I 2025-11-07 14:22:52,382] Trial 8 finished with value: 8.14426534186587 and parameters: {'num_leaves': 243, 'max_depth': 151, 'min_data_in_leaf': 64, 'num_iterations': 43, 'bagging_fraction': 0.6430830504379776, 'bagging_freq': 3}. Best is trial 5 with value: 3.592534838776857.
+<pre>[I 2025-11-10 15:25:50,176] Trial 8 finished with value: 8.14426534186587 and parameters: {'num_leaves': 243, 'max_depth': 151, 'min_data_in_leaf': 64, 'num_iterations': 43, 'bagging_fraction': 0.6430830504379776, 'bagging_freq': 3}. Best is trial 5 with value: 3.592534838776857.
 </pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>[I 2025-11-07 14:22:52,430] Trial 9 finished with value: 7.348511969981209 and parameters: {'num_leaves': 31, 'max_depth': 210, 'min_data_in_leaf': 12, 'num_iterations': 48, 'bagging_fraction': 0.764136724165049, 'bagging_freq': 2}. Best is trial 5 with value: 3.592534838776857.
+<pre>[I 2025-11-10 15:25:50,208] Trial 9 finished with value: 7.348511969981209 and parameters: {'num_leaves': 31, 'max_depth': 210, 'min_data_in_leaf': 12, 'num_iterations': 48, 'bagging_fraction': 0.764136724165049, 'bagging_freq': 2}. Best is trial 5 with value: 3.592534838776857.
 </pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>[I 2025-11-07 14:22:52,505] Trial 10 finished with value: 3.628506880589847 and parameters: {'num_leaves': 135, 'max_depth': 86, 'min_data_in_leaf': 126, 'num_iterations': 160, 'bagging_fraction': 0.8819389978743449, 'bagging_freq': 1}. Best is trial 5 with value: 3.592534838776857.
+<pre>[I 2025-11-10 15:25:50,256] Trial 10 finished with value: 3.628506880589847 and parameters: {'num_leaves': 135, 'max_depth': 86, 'min_data_in_leaf': 126, 'num_iterations': 160, 'bagging_fraction': 0.8819389978743449, 'bagging_freq': 1}. Best is trial 5 with value: 3.592534838776857.
 </pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>[I 2025-11-07 14:22:52,578] Trial 11 finished with value: 3.65287366407973 and parameters: {'num_leaves': 149, 'max_depth': 91, 'min_data_in_leaf': 130, 'num_iterations': 162, 'bagging_fraction': 0.8846666306301009, 'bagging_freq': 1}. Best is trial 5 with value: 3.592534838776857.
+<pre>[I 2025-11-10 15:25:50,306] Trial 11 finished with value: 3.65287366407973 and parameters: {'num_leaves': 149, 'max_depth': 91, 'min_data_in_leaf': 130, 'num_iterations': 162, 'bagging_fraction': 0.8846666306301009, 'bagging_freq': 1}. Best is trial 5 with value: 3.592534838776857.
 </pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>[I 2025-11-07 14:22:52,643] Trial 12 finished with value: 3.6679562292607124 and parameters: {'num_leaves': 94, 'max_depth': 87, 'min_data_in_leaf': 122, 'num_iterations': 152, 'bagging_fraction': 0.8702897753840738, 'bagging_freq': 1}. Best is trial 5 with value: 3.592534838776857.
+<pre>[I 2025-11-10 15:25:50,357] Trial 12 finished with value: 3.6679562292607124 and parameters: {'num_leaves': 94, 'max_depth': 87, 'min_data_in_leaf': 122, 'num_iterations': 152, 'bagging_fraction': 0.8702897753840738, 'bagging_freq': 1}. Best is trial 5 with value: 3.592534838776857.
 </pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>[I 2025-11-07 14:22:52,811] Trial 13 finished with value: 3.413346071954213 and parameters: {'num_leaves': 158, 'max_depth': 53, 'min_data_in_leaf': 51, 'num_iterations': 199, 'bagging_fraction': 0.9884252411626588, 'bagging_freq': 2}. Best is trial 13 with value: 3.413346071954213.
+<pre>[I 2025-11-10 15:25:50,487] Trial 13 finished with value: 3.413346071954213 and parameters: {'num_leaves': 158, 'max_depth': 53, 'min_data_in_leaf': 51, 'num_iterations': 199, 'bagging_fraction': 0.9884252411626588, 'bagging_freq': 2}. Best is trial 13 with value: 3.413346071954213.
 </pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>[I 2025-11-07 14:22:52,974] Trial 14 finished with value: 3.2774348166481557 and parameters: {'num_leaves': 177, 'max_depth': 11, 'min_data_in_leaf': 46, 'num_iterations': 199, 'bagging_fraction': 0.9989791438935978, 'bagging_freq': 2}. Best is trial 14 with value: 3.2774348166481557.
+<pre>[I 2025-11-10 15:25:50,613] Trial 14 finished with value: 3.2774348166481557 and parameters: {'num_leaves': 177, 'max_depth': 11, 'min_data_in_leaf': 46, 'num_iterations': 199, 'bagging_fraction': 0.9989791438935978, 'bagging_freq': 2}. Best is trial 14 with value: 3.2774348166481557.
 </pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>[I 2025-11-07 14:22:53,084] Trial 15 finished with value: 3.4656981727765466 and parameters: {'num_leaves': 177, 'max_depth': 6, 'min_data_in_leaf': 55, 'num_iterations': 196, 'bagging_fraction': 0.9774320313234164, 'bagging_freq': 2}. Best is trial 14 with value: 3.2774348166481557.
+<pre>[I 2025-11-10 15:25:50,696] Trial 15 finished with value: 3.4656981727765466 and parameters: {'num_leaves': 177, 'max_depth': 6, 'min_data_in_leaf': 55, 'num_iterations': 196, 'bagging_fraction': 0.9774320313234164, 'bagging_freq': 2}. Best is trial 14 with value: 3.2774348166481557.
 </pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>[I 2025-11-07 14:22:53,236] Trial 16 finished with value: 3.374440155115852 and parameters: {'num_leaves': 172, 'max_depth': 60, 'min_data_in_leaf': 48, 'num_iterations': 187, 'bagging_fraction': 0.9218035876065989, 'bagging_freq': 4}. Best is trial 14 with value: 3.2774348166481557.
+<pre>[I 2025-11-10 15:25:50,812] Trial 16 finished with value: 3.374440155115852 and parameters: {'num_leaves': 172, 'max_depth': 60, 'min_data_in_leaf': 48, 'num_iterations': 187, 'bagging_fraction': 0.9218035876065989, 'bagging_freq': 4}. Best is trial 14 with value: 3.2774348166481557.
 </pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>[I 2025-11-07 14:22:53,330] Trial 17 finished with value: 3.594549787430422 and parameters: {'num_leaves': 242, 'max_depth': 7, 'min_data_in_leaf': 96, 'num_iterations': 183, 'bagging_fraction': 0.9331396192083916, 'bagging_freq': 4}. Best is trial 14 with value: 3.2774348166481557.
+<pre>[I 2025-11-10 15:25:50,884] Trial 17 finished with value: 3.594549787430422 and parameters: {'num_leaves': 242, 'max_depth': 7, 'min_data_in_leaf': 96, 'num_iterations': 183, 'bagging_fraction': 0.9331396192083916, 'bagging_freq': 4}. Best is trial 14 with value: 3.2774348166481557.
 </pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>[I 2025-11-07 14:22:53,426] Trial 18 finished with value: 3.6102982327003392 and parameters: {'num_leaves': 109, 'max_depth': 117, 'min_data_in_leaf': 46, 'num_iterations': 127, 'bagging_fraction': 0.8348577478798135, 'bagging_freq': 4}. Best is trial 14 with value: 3.2774348166481557.
+<pre>[I 2025-11-10 15:25:50,956] Trial 18 finished with value: 3.6102982327003392 and parameters: {'num_leaves': 109, 'max_depth': 117, 'min_data_in_leaf': 46, 'num_iterations': 127, 'bagging_fraction': 0.8348577478798135, 'bagging_freq': 4}. Best is trial 14 with value: 3.2774348166481557.
 </pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>[I 2025-11-07 14:22:53,537] Trial 19 finished with value: 3.537982130383315 and parameters: {'num_leaves': 208, 'max_depth': 59, 'min_data_in_leaf': 80, 'num_iterations': 177, 'bagging_fraction': 0.9243396098015331, 'bagging_freq': 4}. Best is trial 14 with value: 3.2774348166481557.
+<pre>[I 2025-11-10 15:25:51,042] Trial 19 finished with value: 3.537982130383315 and parameters: {'num_leaves': 208, 'max_depth': 59, 'min_data_in_leaf': 80, 'num_iterations': 177, 'bagging_fraction': 0.9243396098015331, 'bagging_freq': 4}. Best is trial 14 with value: 3.2774348166481557.
 </pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>[I 2025-11-07 14:22:53,595] Trial 20 finished with value: 3.947734551224533 and parameters: {'num_leaves': 176, 'max_depth': 116, 'min_data_in_leaf': 152, 'num_iterations': 130, 'bagging_fraction': 0.8232048850379108, 'bagging_freq': 3}. Best is trial 14 with value: 3.2774348166481557.
+<pre>[I 2025-11-10 15:25:51,088] Trial 20 finished with value: 3.947734551224533 and parameters: {'num_leaves': 176, 'max_depth': 116, 'min_data_in_leaf': 152, 'num_iterations': 130, 'bagging_fraction': 0.8232048850379108, 'bagging_freq': 3}. Best is trial 14 with value: 3.2774348166481557.
 </pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>[I 2025-11-07 14:22:53,772] Trial 21 finished with value: 3.2683519784084916 and parameters: {'num_leaves': 169, 'max_depth': 51, 'min_data_in_leaf': 40, 'num_iterations': 196, 'bagging_fraction': 0.9479777779674912, 'bagging_freq': 2}. Best is trial 21 with value: 3.2683519784084916.
+<pre>[I 2025-11-10 15:25:51,230] Trial 21 finished with value: 3.2683519784084916 and parameters: {'num_leaves': 169, 'max_depth': 51, 'min_data_in_leaf': 40, 'num_iterations': 196, 'bagging_fraction': 0.9479777779674912, 'bagging_freq': 2}. Best is trial 21 with value: 3.2683519784084916.
 </pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>[I 2025-11-07 14:22:53,951] Trial 22 finished with value: 3.2018691316035346 and parameters: {'num_leaves': 173, 'max_depth': 68, 'min_data_in_leaf': 34, 'num_iterations': 178, 'bagging_fraction': 0.9393559380812958, 'bagging_freq': 3}. Best is trial 22 with value: 3.2018691316035346.
+<pre>[I 2025-11-10 15:25:51,368] Trial 22 finished with value: 3.2018691316035346 and parameters: {'num_leaves': 173, 'max_depth': 68, 'min_data_in_leaf': 34, 'num_iterations': 178, 'bagging_fraction': 0.9393559380812958, 'bagging_freq': 3}. Best is trial 22 with value: 3.2018691316035346.
 </pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>[I 2025-11-07 14:22:54,131] Trial 23 finished with value: 3.3516081280159304 and parameters: {'num_leaves': 222, 'max_depth': 27, 'min_data_in_leaf': 31, 'num_iterations': 173, 'bagging_fraction': 0.9492267918413101, 'bagging_freq': 2}. Best is trial 22 with value: 3.2018691316035346.
+<pre>[I 2025-11-10 15:25:51,509] Trial 23 finished with value: 3.3516081280159304 and parameters: {'num_leaves': 222, 'max_depth': 27, 'min_data_in_leaf': 31, 'num_iterations': 173, 'bagging_fraction': 0.9492267918413101, 'bagging_freq': 2}. Best is trial 22 with value: 3.2018691316035346.
 </pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>[I 2025-11-07 14:22:54,345] Trial 24 finished with value: 3.1617934353578363 and parameters: {'num_leaves': 190, 'max_depth': 71, 'min_data_in_leaf': 11, 'num_iterations': 135, 'bagging_fraction': 0.9536436683958104, 'bagging_freq': 3}. Best is trial 24 with value: 3.1617934353578363.
+<pre>[I 2025-11-10 15:25:51,676] Trial 24 finished with value: 3.1617934353578363 and parameters: {'num_leaves': 190, 'max_depth': 71, 'min_data_in_leaf': 11, 'num_iterations': 135, 'bagging_fraction': 0.9536436683958104, 'bagging_freq': 3}. Best is trial 24 with value: 3.1617934353578363.
 </pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>[I 2025-11-07 14:22:54,552] Trial 25 finished with value: 3.3161083924208405 and parameters: {'num_leaves': 112, 'max_depth': 69, 'min_data_in_leaf': 12, 'num_iterations': 128, 'bagging_fraction': 0.8584945398036755, 'bagging_freq': 3}. Best is trial 24 with value: 3.1617934353578363.
+<pre>[I 2025-11-10 15:25:51,820] Trial 25 finished with value: 3.3161083924208405 and parameters: {'num_leaves': 112, 'max_depth': 69, 'min_data_in_leaf': 12, 'num_iterations': 128, 'bagging_fraction': 0.8584945398036755, 'bagging_freq': 3}. Best is trial 24 with value: 3.1617934353578363.
 </pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>[I 2025-11-07 14:22:54,668] Trial 26 finished with value: 3.5908789322883305 and parameters: {'num_leaves': 197, 'max_depth': 132, 'min_data_in_leaf': 73, 'num_iterations': 144, 'bagging_fraction': 0.9040822649864813, 'bagging_freq': 3}. Best is trial 24 with value: 3.1617934353578363.
+<pre>[I 2025-11-10 15:25:51,890] Trial 26 finished with value: 3.5908789322883305 and parameters: {'num_leaves': 197, 'max_depth': 132, 'min_data_in_leaf': 73, 'num_iterations': 144, 'bagging_fraction': 0.9040822649864813, 'bagging_freq': 3}. Best is trial 24 with value: 3.1617934353578363.
 </pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>[I 2025-11-07 14:22:54,766] Trial 27 finished with value: 3.5643712552991507 and parameters: {'num_leaves': 159, 'max_depth': 77, 'min_data_in_leaf': 104, 'num_iterations': 169, 'bagging_fraction': 0.9566263518249185, 'bagging_freq': 3}. Best is trial 24 with value: 3.1617934353578363.
+<pre>[I 2025-11-10 15:25:51,965] Trial 27 finished with value: 3.5643712552991507 and parameters: {'num_leaves': 159, 'max_depth': 77, 'min_data_in_leaf': 104, 'num_iterations': 169, 'bagging_fraction': 0.9566263518249185, 'bagging_freq': 3}. Best is trial 24 with value: 3.1617934353578363.
 </pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>[I 2025-11-07 14:22:54,852] Trial 28 finished with value: 3.837770310729258 and parameters: {'num_leaves': 195, 'max_depth': 102, 'min_data_in_leaf': 35, 'num_iterations': 108, 'bagging_fraction': 0.7230344180948712, 'bagging_freq': 3}. Best is trial 24 with value: 3.1617934353578363.
+<pre>[I 2025-11-10 15:25:52,032] Trial 28 finished with value: 3.837770310729258 and parameters: {'num_leaves': 195, 'max_depth': 102, 'min_data_in_leaf': 35, 'num_iterations': 108, 'bagging_fraction': 0.7230344180948712, 'bagging_freq': 3}. Best is trial 24 with value: 3.1617934353578363.
 </pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>[I 2025-11-07 14:22:55,005] Trial 29 finished with value: 3.55323093924367 and parameters: {'num_leaves': 55, 'max_depth': 191, 'min_data_in_leaf': 10, 'num_iterations': 116, 'bagging_fraction': 0.8156528142378011, 'bagging_freq': 2}. Best is trial 24 with value: 3.1617934353578363.
+<pre>[I 2025-11-10 15:25:52,142] Trial 29 finished with value: 3.55323093924367 and parameters: {'num_leaves': 55, 'max_depth': 191, 'min_data_in_leaf': 10, 'num_iterations': 116, 'bagging_fraction': 0.8156528142378011, 'bagging_freq': 2}. Best is trial 24 with value: 3.1617934353578363.
 </pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>[I 2025-11-07 14:22:55,120] Trial 30 finished with value: 3.6383159778076886 and parameters: {'num_leaves': 231, 'max_depth': 136, 'min_data_in_leaf': 62, 'num_iterations': 186, 'bagging_fraction': 0.5085048733763315, 'bagging_freq': 4}. Best is trial 24 with value: 3.1617934353578363.
+<pre>[I 2025-11-10 15:25:52,215] Trial 30 finished with value: 3.6383159778076886 and parameters: {'num_leaves': 231, 'max_depth': 136, 'min_data_in_leaf': 62, 'num_iterations': 186, 'bagging_fraction': 0.5085048733763315, 'bagging_freq': 4}. Best is trial 24 with value: 3.1617934353578363.
 </pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>[I 2025-11-07 14:22:55,335] Trial 31 finished with value: 3.236385358092919 and parameters: {'num_leaves': 181, 'max_depth': 41, 'min_data_in_leaf': 38, 'num_iterations': 198, 'bagging_fraction': 0.9595612382944431, 'bagging_freq': 2}. Best is trial 24 with value: 3.1617934353578363.
+<pre>[I 2025-11-10 15:25:52,366] Trial 31 finished with value: 3.236385358092919 and parameters: {'num_leaves': 181, 'max_depth': 41, 'min_data_in_leaf': 38, 'num_iterations': 198, 'bagging_fraction': 0.9595612382944431, 'bagging_freq': 2}. Best is trial 24 with value: 3.1617934353578363.
 </pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>[I 2025-11-07 14:22:55,522] Trial 32 finished with value: 3.197344368064135 and parameters: {'num_leaves': 160, 'max_depth': 43, 'min_data_in_leaf': 32, 'num_iterations': 188, 'bagging_fraction': 0.96016102646282, 'bagging_freq': 2}. Best is trial 24 with value: 3.1617934353578363.
+<pre>[I 2025-11-10 15:25:52,523] Trial 32 finished with value: 3.197344368064135 and parameters: {'num_leaves': 160, 'max_depth': 43, 'min_data_in_leaf': 32, 'num_iterations': 188, 'bagging_fraction': 0.96016102646282, 'bagging_freq': 2}. Best is trial 24 with value: 3.1617934353578363.
 </pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>[I 2025-11-07 14:22:55,676] Trial 33 finished with value: 3.2330335527167384 and parameters: {'num_leaves': 127, 'max_depth': 36, 'min_data_in_leaf': 25, 'num_iterations': 140, 'bagging_fraction': 0.96957138574753, 'bagging_freq': 3}. Best is trial 24 with value: 3.1617934353578363.
+<pre>[I 2025-11-10 15:25:52,652] Trial 33 finished with value: 3.2330335527167384 and parameters: {'num_leaves': 127, 'max_depth': 36, 'min_data_in_leaf': 25, 'num_iterations': 140, 'bagging_fraction': 0.96957138574753, 'bagging_freq': 3}. Best is trial 24 with value: 3.1617934353578363.
 </pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>[I 2025-11-07 14:22:55,857] Trial 34 finished with value: 3.383218983138875 and parameters: {'num_leaves': 113, 'max_depth': 36, 'min_data_in_leaf': 24, 'num_iterations': 139, 'bagging_fraction': 0.9111316922474577, 'bagging_freq': 3}. Best is trial 24 with value: 3.1617934353578363.
+<pre>[I 2025-11-10 15:25:52,777] Trial 34 finished with value: 3.383218983138875 and parameters: {'num_leaves': 113, 'max_depth': 36, 'min_data_in_leaf': 24, 'num_iterations': 139, 'bagging_fraction': 0.9111316922474577, 'bagging_freq': 3}. Best is trial 24 with value: 3.1617934353578363.
 </pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>[I 2025-11-07 14:22:55,974] Trial 35 finished with value: 3.5360153781416783 and parameters: {'num_leaves': 124, 'max_depth': 22, 'min_data_in_leaf': 71, 'num_iterations': 158, 'bagging_fraction': 0.9758189505549886, 'bagging_freq': 3}. Best is trial 24 with value: 3.1617934353578363.
+<pre>[I 2025-11-10 15:25:52,858] Trial 35 finished with value: 3.5360153781416783 and parameters: {'num_leaves': 124, 'max_depth': 22, 'min_data_in_leaf': 71, 'num_iterations': 158, 'bagging_fraction': 0.9758189505549886, 'bagging_freq': 3}. Best is trial 24 with value: 3.1617934353578363.
 </pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>[I 2025-11-07 14:22:56,099] Trial 36 finished with value: 3.860853919238995 and parameters: {'num_leaves': 90, 'max_depth': 76, 'min_data_in_leaf': 18, 'num_iterations': 95, 'bagging_fraction': 0.8987058862856597, 'bagging_freq': 4}. Best is trial 24 with value: 3.1617934353578363.
+<pre>[I 2025-11-10 15:25:52,940] Trial 36 finished with value: 3.860853919238995 and parameters: {'num_leaves': 90, 'max_depth': 76, 'min_data_in_leaf': 18, 'num_iterations': 95, 'bagging_fraction': 0.8987058862856597, 'bagging_freq': 4}. Best is trial 24 with value: 3.1617934353578363.
 </pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>[I 2025-11-07 14:22:56,145] Trial 37 finished with value: 4.777407751629921 and parameters: {'num_leaves': 142, 'max_depth': 65, 'min_data_in_leaf': 243, 'num_iterations': 116, 'bagging_fraction': 0.843068622221608, 'bagging_freq': 3}. Best is trial 24 with value: 3.1617934353578363.
+<pre>[I 2025-11-10 15:25:52,980] Trial 37 finished with value: 4.777407751629921 and parameters: {'num_leaves': 142, 'max_depth': 65, 'min_data_in_leaf': 243, 'num_iterations': 116, 'bagging_fraction': 0.843068622221608, 'bagging_freq': 3}. Best is trial 24 with value: 3.1617934353578363.
 </pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>[I 2025-11-07 14:22:56,227] Trial 38 finished with value: 3.798355169434281 and parameters: {'num_leaves': 125, 'max_depth': 21, 'min_data_in_leaf': 88, 'num_iterations': 105, 'bagging_fraction': 0.9992150136053723, 'bagging_freq': 4}. Best is trial 24 with value: 3.1617934353578363.
+<pre>[I 2025-11-10 15:25:53,028] Trial 38 finished with value: 3.798355169434281 and parameters: {'num_leaves': 125, 'max_depth': 21, 'min_data_in_leaf': 88, 'num_iterations': 105, 'bagging_fraction': 0.9992150136053723, 'bagging_freq': 4}. Best is trial 24 with value: 3.1617934353578363.
 </pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>[I 2025-11-07 14:22:56,351] Trial 39 finished with value: 3.4023711355380453 and parameters: {'num_leaves': 69, 'max_depth': 104, 'min_data_in_leaf': 30, 'num_iterations': 137, 'bagging_fraction': 0.7851840357150944, 'bagging_freq': 2}. Best is trial 24 with value: 3.1617934353578363.
+<pre>[I 2025-11-10 15:25:53,122] Trial 39 finished with value: 3.4023711355380453 and parameters: {'num_leaves': 69, 'max_depth': 104, 'min_data_in_leaf': 30, 'num_iterations': 137, 'bagging_fraction': 0.7851840357150944, 'bagging_freq': 2}. Best is trial 24 with value: 3.1617934353578363.
 </pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>[I 2025-11-07 14:22:56,426] Trial 40 finished with value: 4.646240381230011 and parameters: {'num_leaves': 156, 'max_depth': 43, 'min_data_in_leaf': 24, 'num_iterations': 86, 'bagging_fraction': 0.5856626911744915, 'bagging_freq': 3}. Best is trial 24 with value: 3.1617934353578363.
+<pre>[I 2025-11-10 15:25:53,178] Trial 40 finished with value: 4.646240381230011 and parameters: {'num_leaves': 156, 'max_depth': 43, 'min_data_in_leaf': 24, 'num_iterations': 86, 'bagging_fraction': 0.5856626911744915, 'bagging_freq': 3}. Best is trial 24 with value: 3.1617934353578363.
 </pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>[I 2025-11-07 14:22:56,652] Trial 41 finished with value: 3.3012676281296196 and parameters: {'num_leaves': 190, 'max_depth': 39, 'min_data_in_leaf': 36, 'num_iterations': 180, 'bagging_fraction': 0.9636544395522539, 'bagging_freq': 2}. Best is trial 24 with value: 3.1617934353578363.
+<pre>[I 2025-11-10 15:25:53,318] Trial 41 finished with value: 3.3012676281296196 and parameters: {'num_leaves': 190, 'max_depth': 39, 'min_data_in_leaf': 36, 'num_iterations': 180, 'bagging_fraction': 0.9636544395522539, 'bagging_freq': 2}. Best is trial 24 with value: 3.1617934353578363.
 </pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>[I 2025-11-07 14:22:56,812] Trial 42 finished with value: 3.4398367354304527 and parameters: {'num_leaves': 213, 'max_depth': 46, 'min_data_in_leaf': 65, 'num_iterations': 167, 'bagging_fraction': 0.9398023522140762, 'bagging_freq': 2}. Best is trial 24 with value: 3.1617934353578363.
+<pre>[I 2025-11-10 15:25:53,412] Trial 42 finished with value: 3.4398367354304527 and parameters: {'num_leaves': 213, 'max_depth': 46, 'min_data_in_leaf': 65, 'num_iterations': 167, 'bagging_fraction': 0.9398023522140762, 'bagging_freq': 2}. Best is trial 24 with value: 3.1617934353578363.
 </pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>[I 2025-11-07 14:22:57,006] Trial 43 finished with value: 3.3630990000935057 and parameters: {'num_leaves': 184, 'max_depth': 256, 'min_data_in_leaf': 38, 'num_iterations': 190, 'bagging_fraction': 0.9635296525384189, 'bagging_freq': 1}. Best is trial 24 with value: 3.1617934353578363.
+<pre>[I 2025-11-10 15:25:53,535] Trial 43 finished with value: 3.3630990000935057 and parameters: {'num_leaves': 184, 'max_depth': 256, 'min_data_in_leaf': 38, 'num_iterations': 190, 'bagging_fraction': 0.9635296525384189, 'bagging_freq': 1}. Best is trial 24 with value: 3.1617934353578363.
 </pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>[I 2025-11-07 14:22:57,257] Trial 44 finished with value: 3.21035367241177 and parameters: {'num_leaves': 255, 'max_depth': 31, 'min_data_in_leaf': 19, 'num_iterations': 149, 'bagging_fraction': 0.8892913156255134, 'bagging_freq': 3}. Best is trial 24 with value: 3.1617934353578363.
+<pre>[I 2025-11-10 15:25:53,686] Trial 44 finished with value: 3.21035367241177 and parameters: {'num_leaves': 255, 'max_depth': 31, 'min_data_in_leaf': 19, 'num_iterations': 149, 'bagging_fraction': 0.8892913156255134, 'bagging_freq': 3}. Best is trial 24 with value: 3.1617934353578363.
 </pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>[I 2025-11-07 14:22:57,467] Trial 45 finished with value: 3.1612476860837733 and parameters: {'num_leaves': 256, 'max_depth': 20, 'min_data_in_leaf': 22, 'num_iterations': 152, 'bagging_fraction': 0.887433232987156, 'bagging_freq': 3}. Best is trial 45 with value: 3.1612476860837733.
+<pre>[I 2025-11-10 15:25:53,832] Trial 45 finished with value: 3.1612476860837733 and parameters: {'num_leaves': 256, 'max_depth': 20, 'min_data_in_leaf': 22, 'num_iterations': 152, 'bagging_fraction': 0.887433232987156, 'bagging_freq': 3}. Best is trial 45 with value: 3.1612476860837733.
 </pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>[I 2025-11-07 14:22:57,704] Trial 46 finished with value: 3.155966581928284 and parameters: {'num_leaves': 254, 'max_depth': 15, 'min_data_in_leaf': 17, 'num_iterations': 154, 'bagging_fraction': 0.8850924133798566, 'bagging_freq': 3}. Best is trial 46 with value: 3.155966581928284.
+<pre>[I 2025-11-10 15:25:53,994] Trial 46 finished with value: 3.155966581928284 and parameters: {'num_leaves': 254, 'max_depth': 15, 'min_data_in_leaf': 17, 'num_iterations': 154, 'bagging_fraction': 0.8850924133798566, 'bagging_freq': 3}. Best is trial 46 with value: 3.155966581928284.
 </pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>[I 2025-11-07 14:22:58,024] Trial 47 finished with value: 3.1189111554857276 and parameters: {'num_leaves': 255, 'max_depth': 18, 'min_data_in_leaf': 10, 'num_iterations': 157, 'bagging_fraction': 0.8765313708349454, 'bagging_freq': 3}. Best is trial 47 with value: 3.1189111554857276.
+<pre>[I 2025-11-10 15:25:54,228] Trial 47 finished with value: 3.1189111554857276 and parameters: {'num_leaves': 255, 'max_depth': 18, 'min_data_in_leaf': 10, 'num_iterations': 157, 'bagging_fraction': 0.8765313708349454, 'bagging_freq': 3}. Best is trial 47 with value: 3.1189111554857276.
 </pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>[I 2025-11-07 14:22:58,309] Trial 48 finished with value: 3.0582936230499485 and parameters: {'num_leaves': 254, 'max_depth': 16, 'min_data_in_leaf': 10, 'num_iterations': 155, 'bagging_fraction': 0.8606968457336602, 'bagging_freq': 3}. Best is trial 48 with value: 3.0582936230499485.
+<pre>[I 2025-11-10 15:25:54,445] Trial 48 finished with value: 3.0582936230499485 and parameters: {'num_leaves': 254, 'max_depth': 16, 'min_data_in_leaf': 10, 'num_iterations': 155, 'bagging_fraction': 0.8606968457336602, 'bagging_freq': 3}. Best is trial 48 with value: 3.0582936230499485.
 </pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>[I 2025-11-07 14:22:58,352] Trial 49 finished with value: 5.166806476621995 and parameters: {'num_leaves': 256, 'max_depth': 2, 'min_data_in_leaf': 155, 'num_iterations': 154, 'bagging_fraction': 0.8567507837291886, 'bagging_freq': 3}. Best is trial 48 with value: 3.0582936230499485.
+<pre>[I 2025-11-10 15:25:54,479] Trial 49 finished with value: 5.166806476621995 and parameters: {'num_leaves': 256, 'max_depth': 2, 'min_data_in_leaf': 155, 'num_iterations': 154, 'bagging_fraction': 0.8567507837291886, 'bagging_freq': 3}. Best is trial 48 with value: 3.0582936230499485.
 </pre>
 </div>
 </div>
@@ -12949,7 +12937,7 @@ Final Estimates by Iteration
 </div>
 </div>
 </div>
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=e1689d1b">
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=b39e2e91">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -12977,7 +12965,7 @@ Final Estimates by Iteration
 </div>
 </div>
 </div>
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=575f44ea">
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=e2b1ab5b">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -12986,16 +12974,16 @@ Final Estimates by Iteration
 <div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
 <div class="cm-editor cm-s-jupyter">
 <div class="highlight hl-ipython3"><pre><span></span><span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">"</span><span class="se">\n\n</span><span class="s2">Look at the original"</span><span class="p">)</span>
-<span class="n">_</span> <span class="o">=</span> <span class="n">summary</span><span class="p">(</span><span class="n">df_original</span><span class="p">,</span><span class="n">detailed</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span><span class="n">drb_round</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="n">_</span> <span class="o">=</span> <span class="n">summary</span><span class="p">(</span><span class="n">df_original</span><span class="p">,</span> <span class="n">detailed</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">drb_round</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 
 <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">"</span><span class="se">\n\n</span><span class="s2">Look at the imputes"</span><span class="p">)</span>
-<span class="n">_</span> <span class="o">=</span> <span class="n">df_list</span><span class="o">.</span><span class="n">pipe</span><span class="p">(</span><span class="n">summary</span><span class="p">,</span><span class="n">detailed</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span><span class="n">drb_round</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="n">_</span> <span class="o">=</span> <span class="n">df_list</span><span class="o">.</span><span class="n">pipe</span><span class="p">(</span><span class="n">summary</span><span class="p">,</span> <span class="n">detailed</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">drb_round</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 
 <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">"</span><span class="se">\n\n</span><span class="s2">Look at the imputes | var_gbm1 == 0"</span><span class="p">)</span>
-<span class="n">_</span> <span class="o">=</span> <span class="n">df_list</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="o">~</span><span class="n">nw</span><span class="o">.</span><span class="n">col</span><span class="p">(</span><span class="s2">"var_gbm1"</span><span class="p">))</span><span class="o">.</span><span class="n">pipe</span><span class="p">(</span><span class="n">summary</span><span class="p">,</span><span class="n">detailed</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span><span class="n">drb_round</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="n">_</span> <span class="o">=</span> <span class="n">df_list</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="o">~</span><span class="n">nw</span><span class="o">.</span><span class="n">col</span><span class="p">(</span><span class="s2">"var_gbm1"</span><span class="p">))</span><span class="o">.</span><span class="n">pipe</span><span class="p">(</span><span class="n">summary</span><span class="p">,</span> <span class="n">detailed</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">drb_round</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 
 <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">"</span><span class="se">\n\n</span><span class="s2">Look at the imputes | var_gbm1 == 1"</span><span class="p">)</span>
-<span class="n">_</span> <span class="o">=</span> <span class="n">df_list</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">nw</span><span class="o">.</span><span class="n">col</span><span class="p">(</span><span class="s2">"var_gbm1"</span><span class="p">))</span><span class="o">.</span><span class="n">pipe</span><span class="p">(</span><span class="n">summary</span><span class="p">,</span><span class="n">detailed</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span><span class="n">drb_round</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="n">_</span> <span class="o">=</span> <span class="n">df_list</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">nw</span><span class="o">.</span><span class="n">col</span><span class="p">(</span><span class="s2">"var_gbm1"</span><span class="p">))</span><span class="o">.</span><span class="n">pipe</span><span class="p">(</span><span class="n">summary</span><span class="p">,</span> <span class="n">detailed</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">drb_round</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
@@ -13027,7 +13015,6 @@ Look at the original
 │         var2 ┆ 10,000 ┆           0 ┆   4.978 ┆   3.155 ┆       0.0 ┆     2.0 ┆     5.0 ┆     8.0 ┆    10.0 │
 │         var3 ┆ 10,000 ┆           0 ┆   25.11 ┆   14.75 ┆       0.0 ┆    12.0 ┆    25.0 ┆    38.0 ┆    50.0 │
 │         var4 ┆ 10,000 ┆           0 ┆  0.5057 ┆  0.2879 ┆  0.000027 ┆  0.2559 ┆  0.5086 ┆  0.7543 ┆     1.0 │
-│         var5 ┆ 10,000 ┆           0 ┆  0.4999 ┆     0.5 ┆       0.0 ┆     0.0 ┆     0.0 ┆     1.0 ┆     1.0 │
 │  unrelated_1 ┆ 10,000 ┆           0 ┆  0.5024 ┆  0.2884 ┆ 0.0001191 ┆   0.253 ┆  0.5037 ┆   0.753 ┆     1.0 │
 │  unrelated_2 ┆ 10,000 ┆           0 ┆  0.5001 ┆  0.2876 ┆  0.000049 ┆  0.2531 ┆  0.4975 ┆  0.7487 ┆  0.9995 │
 │  unrelated_3 ┆ 10,000 ┆           0 ┆  0.4992 ┆  0.2888 ┆  0.000129 ┆  0.2513 ┆  0.4961 ┆  0.7508 ┆  0.9999 │
@@ -13036,9 +13023,10 @@ Look at the original
 │ missing_gbm1 ┆ 10,000 ┆           0 ┆  0.5026 ┆   0.289 ┆  0.000006 ┆  0.2517 ┆  0.5074 ┆  0.7523 ┆     1.0 │
 │ missing_gbm2 ┆ 10,000 ┆           0 ┆  0.5032 ┆  0.2905 ┆  0.000005 ┆  0.2531 ┆  0.5041 ┆   0.756 ┆     1.0 │
 │ missing_gbm3 ┆ 10,000 ┆           0 ┆  0.4939 ┆  0.2907 ┆ 0.0001079 ┆  0.2408 ┆  0.4907 ┆  0.7412 ┆  0.9998 │
-│     var_gbm1 ┆ 10,000 ┆           0 ┆  0.5229 ┆  0.4995 ┆       0.0 ┆     0.0 ┆     1.0 ┆     1.0 ┆     1.0 │
 │     var_gbm2 ┆ 10,000 ┆           0 ┆  -2.402 ┆   10.33 ┆    -55.35 ┆  -3.023 ┆     0.0 ┆     0.0 ┆   26.21 │
 │     var_gbm3 ┆ 10,000 ┆           0 ┆  -2.402 ┆   10.33 ┆    -55.35 ┆  -3.023 ┆     0.0 ┆     0.0 ┆   26.21 │
+│         var5 ┆ 10,000 ┆           0 ┆  0.4999 ┆     0.5 ┆       0.0 ┆     0.0 ┆     0.0 ┆     1.0 ┆     1.0 │
+│     var_gbm1 ┆ 10,000 ┆           0 ┆  0.5229 ┆  0.4995 ┆       0.0 ┆     0.0 ┆     1.0 ┆     1.0 ┆     1.0 │
 └──────────────┴────────┴─────────────┴─────────┴─────────┴───────────┴─────────┴─────────┴─────────┴─────────┘
 </pre>
 </div>
@@ -13065,18 +13053,18 @@ Look at the imputes
 │        var2 ┆ 10,000 ┆           0 ┆   4.978 ┆   3.155 ┆       0.0 ┆     2.0 ┆     5.0 ┆     8.0 ┆    10.0 │
 │        var3 ┆ 10,000 ┆           0 ┆   25.11 ┆   14.75 ┆       0.0 ┆    12.0 ┆    25.0 ┆    38.0 ┆    50.0 │
 │        var4 ┆ 10,000 ┆           0 ┆  0.5057 ┆  0.2879 ┆  0.000027 ┆  0.2559 ┆  0.5086 ┆  0.7543 ┆     1.0 │
-│        var5 ┆ 10,000 ┆           0 ┆  0.4999 ┆     0.5 ┆       0.0 ┆     0.0 ┆     0.0 ┆     1.0 ┆     1.0 │
 │ unrelated_1 ┆ 10,000 ┆           0 ┆  0.5024 ┆  0.2884 ┆ 0.0001191 ┆   0.253 ┆  0.5037 ┆   0.753 ┆     1.0 │
 │ unrelated_2 ┆ 10,000 ┆           0 ┆  0.5001 ┆  0.2876 ┆  0.000049 ┆  0.2531 ┆  0.4975 ┆  0.7487 ┆  0.9995 │
 │ unrelated_3 ┆ 10,000 ┆           0 ┆  0.4992 ┆  0.2888 ┆  0.000129 ┆  0.2513 ┆  0.4961 ┆  0.7508 ┆  0.9999 │
 │ unrelated_4 ┆ 10,000 ┆           0 ┆  0.5007 ┆  0.2887 ┆ 0.0001329 ┆  0.2501 ┆  0.5006 ┆   0.752 ┆     1.0 │
 │ unrelated_5 ┆ 10,000 ┆           0 ┆  0.4988 ┆   0.289 ┆  0.000071 ┆  0.2496 ┆  0.4969 ┆    0.75 ┆  0.9999 │
 │    repeat_1 ┆ 10,000 ┆           0 ┆  0.5024 ┆  0.2884 ┆ 0.0001191 ┆   0.253 ┆  0.5037 ┆   0.753 ┆     1.0 │
-│    var_gbm1 ┆ 10,000 ┆           0 ┆  0.5272 ┆  0.4993 ┆       0.0 ┆     0.0 ┆     1.0 ┆     1.0 ┆     1.0 │
 │    var_gbm2 ┆ 10,000 ┆           0 ┆  -2.406 ┆    10.2 ┆    -55.35 ┆  -2.753 ┆     0.0 ┆     0.0 ┆   26.21 │
 │    var_gbm3 ┆ 10,000 ┆           0 ┆  -2.363 ┆   10.15 ┆    -55.35 ┆  -2.785 ┆     0.0 ┆     0.0 ┆   26.21 │
 │   var_gbm12 ┆ 10,000 ┆           0 ┆  -2.406 ┆    10.2 ┆    -55.35 ┆  -2.753 ┆     0.0 ┆     0.0 ┆   26.21 │
 │ var_gbm2_sq ┆ 10,000 ┆           0 ┆   109.8 ┆   271.1 ┆       0.0 ┆     0.0 ┆  0.2379 ┆   80.29 ┆ 3,064.0 │
+│        var5 ┆ 10,000 ┆           0 ┆  0.4999 ┆     0.5 ┆       0.0 ┆     0.0 ┆     0.0 ┆     1.0 ┆     1.0 │
+│    var_gbm1 ┆ 10,000 ┆           0 ┆  0.5272 ┆  0.4993 ┆       0.0 ┆     0.0 ┆     1.0 ┆     1.0 ┆     1.0 │
 └─────────────┴────────┴─────────────┴─────────┴─────────┴───────────┴─────────┴─────────┴─────────┴─────────┘
 </pre>
 </div>
@@ -13094,18 +13082,18 @@ Look at the imputes
 │        var2 ┆ 10,000 ┆           0 ┆   4.978 ┆   3.155 ┆       0.0 ┆     2.0 ┆     5.0 ┆     8.0 ┆    10.0 │
 │        var3 ┆ 10,000 ┆           0 ┆   25.11 ┆   14.75 ┆       0.0 ┆    12.0 ┆    25.0 ┆    38.0 ┆    50.0 │
 │        var4 ┆ 10,000 ┆           0 ┆  0.5057 ┆  0.2879 ┆  0.000027 ┆  0.2559 ┆  0.5086 ┆  0.7543 ┆     1.0 │
-│        var5 ┆ 10,000 ┆           0 ┆  0.4999 ┆     0.5 ┆       0.0 ┆     0.0 ┆     0.0 ┆     1.0 ┆     1.0 │
 │ unrelated_1 ┆ 10,000 ┆           0 ┆  0.5024 ┆  0.2884 ┆ 0.0001191 ┆   0.253 ┆  0.5037 ┆   0.753 ┆     1.0 │
 │ unrelated_2 ┆ 10,000 ┆           0 ┆  0.5001 ┆  0.2876 ┆  0.000049 ┆  0.2531 ┆  0.4975 ┆  0.7487 ┆  0.9995 │
 │ unrelated_3 ┆ 10,000 ┆           0 ┆  0.4992 ┆  0.2888 ┆  0.000129 ┆  0.2513 ┆  0.4961 ┆  0.7508 ┆  0.9999 │
 │ unrelated_4 ┆ 10,000 ┆           0 ┆  0.5007 ┆  0.2887 ┆ 0.0001329 ┆  0.2501 ┆  0.5006 ┆   0.752 ┆     1.0 │
 │ unrelated_5 ┆ 10,000 ┆           0 ┆  0.4988 ┆   0.289 ┆  0.000071 ┆  0.2496 ┆  0.4969 ┆    0.75 ┆  0.9999 │
 │    repeat_1 ┆ 10,000 ┆           0 ┆  0.5024 ┆  0.2884 ┆ 0.0001191 ┆   0.253 ┆  0.5037 ┆   0.753 ┆     1.0 │
-│    var_gbm1 ┆ 10,000 ┆           0 ┆  0.5276 ┆  0.4993 ┆       0.0 ┆     0.0 ┆     1.0 ┆     1.0 ┆     1.0 │
 │    var_gbm2 ┆ 10,000 ┆           0 ┆  -2.334 ┆   10.15 ┆    -55.35 ┆  -2.737 ┆     0.0 ┆     0.0 ┆   26.21 │
 │    var_gbm3 ┆ 10,000 ┆           0 ┆  -2.323 ┆    10.1 ┆    -55.35 ┆  -2.745 ┆     0.0 ┆     0.0 ┆   26.21 │
 │   var_gbm12 ┆ 10,000 ┆           0 ┆  -2.334 ┆   10.15 ┆    -55.35 ┆  -2.737 ┆     0.0 ┆     0.0 ┆   26.21 │
 │ var_gbm2_sq ┆ 10,000 ┆           0 ┆   108.4 ┆   266.6 ┆       0.0 ┆     0.0 ┆  0.1858 ┆   80.87 ┆ 3,064.0 │
+│        var5 ┆ 10,000 ┆           0 ┆  0.4999 ┆     0.5 ┆       0.0 ┆     0.0 ┆     0.0 ┆     1.0 ┆     1.0 │
+│    var_gbm1 ┆ 10,000 ┆           0 ┆  0.5276 ┆  0.4993 ┆       0.0 ┆     0.0 ┆     1.0 ┆     1.0 ┆     1.0 │
 └─────────────┴────────┴─────────────┴─────────┴─────────┴───────────┴─────────┴─────────┴─────────┴─────────┘
 </pre>
 </div>
@@ -13132,18 +13120,18 @@ Look at the imputes | var_gbm1 == 0
 │        var2 ┆ 4,700 ┆           0 ┆   4.626 ┆   3.238 ┆       0.0 ┆     2.0 ┆     4.0 ┆     7.0 ┆    10.0 │
 │        var3 ┆ 4,700 ┆           0 ┆   24.79 ┆   13.02 ┆       0.0 ┆    14.0 ┆    25.0 ┆    36.0 ┆    50.0 │
 │        var4 ┆ 4,700 ┆           0 ┆  0.5086 ┆  0.2885 ┆  0.000027 ┆  0.2545 ┆  0.5123 ┆  0.7586 ┆     1.0 │
-│        var5 ┆ 4,700 ┆           0 ┆  0.8997 ┆  0.3004 ┆       0.0 ┆     1.0 ┆     1.0 ┆     1.0 ┆     1.0 │
 │ unrelated_1 ┆ 4,700 ┆           0 ┆  0.5033 ┆  0.2868 ┆ 0.0001191 ┆  0.2579 ┆  0.5035 ┆  0.7517 ┆     1.0 │
 │ unrelated_2 ┆ 4,700 ┆           0 ┆   0.502 ┆  0.2866 ┆  0.000079 ┆   0.262 ┆  0.4973 ┆  0.7501 ┆  0.9995 │
 │ unrelated_3 ┆ 4,700 ┆           0 ┆  0.5016 ┆  0.2895 ┆ 0.0001387 ┆  0.2521 ┆  0.4987 ┆   0.755 ┆  0.9999 │
 │ unrelated_4 ┆ 4,700 ┆           0 ┆  0.5014 ┆  0.2898 ┆ 0.0001414 ┆  0.2506 ┆  0.5012 ┆  0.7568 ┆  0.9999 │
 │ unrelated_5 ┆ 4,700 ┆           0 ┆  0.5018 ┆  0.2917 ┆  0.000071 ┆  0.2498 ┆  0.4999 ┆  0.7542 ┆  0.9998 │
 │    repeat_1 ┆ 4,700 ┆           0 ┆  0.5033 ┆  0.2868 ┆ 0.0001191 ┆  0.2579 ┆  0.5035 ┆  0.7517 ┆     1.0 │
-│    var_gbm1 ┆ 4,700 ┆           0 ┆     0.0 ┆     0.0 ┆       0.0 ┆     0.0 ┆     0.0 ┆     0.0 ┆     0.0 │
 │    var_gbm2 ┆ 4,700 ┆           0 ┆     0.0 ┆     0.0 ┆       0.0 ┆     0.0 ┆     0.0 ┆     0.0 ┆     0.0 │
 │    var_gbm3 ┆ 4,700 ┆           0 ┆     0.0 ┆     0.0 ┆       0.0 ┆     0.0 ┆     0.0 ┆     0.0 ┆     0.0 │
 │   var_gbm12 ┆ 4,700 ┆           0 ┆     0.0 ┆     0.0 ┆       0.0 ┆     0.0 ┆     0.0 ┆     0.0 ┆     0.0 │
 │ var_gbm2_sq ┆ 4,700 ┆           0 ┆     0.0 ┆     0.0 ┆       0.0 ┆     0.0 ┆     0.0 ┆     0.0 ┆     0.0 │
+│        var5 ┆ 4,700 ┆           0 ┆  0.8997 ┆  0.3004 ┆       0.0 ┆     1.0 ┆     1.0 ┆     1.0 ┆     1.0 │
+│    var_gbm1 ┆ 4,700 ┆           0 ┆     0.0 ┆     0.0 ┆       0.0 ┆     0.0 ┆     0.0 ┆     0.0 ┆     0.0 │
 └─────────────┴───────┴─────────────┴─────────┴─────────┴───────────┴─────────┴─────────┴─────────┴─────────┘
 </pre>
 </div>
@@ -13161,18 +13149,18 @@ Look at the imputes | var_gbm1 == 0
 │        var2 ┆ 4,700 ┆           0 ┆   4.617 ┆   3.238 ┆       0.0 ┆     2.0 ┆     4.0 ┆     7.0 ┆    10.0 │
 │        var3 ┆ 4,700 ┆           0 ┆   24.94 ┆   12.99 ┆       0.0 ┆    14.0 ┆    25.0 ┆    36.0 ┆    50.0 │
 │        var4 ┆ 4,700 ┆           0 ┆  0.5088 ┆  0.2885 ┆  0.000027 ┆  0.2543 ┆  0.5137 ┆  0.7586 ┆     1.0 │
-│        var5 ┆ 4,700 ┆           0 ┆  0.8984 ┆  0.3022 ┆       0.0 ┆     1.0 ┆     1.0 ┆     1.0 ┆     1.0 │
 │ unrelated_1 ┆ 4,700 ┆           0 ┆  0.5032 ┆  0.2869 ┆ 0.0001191 ┆  0.2578 ┆  0.5029 ┆  0.7526 ┆     1.0 │
 │ unrelated_2 ┆ 4,700 ┆           0 ┆  0.5017 ┆  0.2866 ┆  0.000079 ┆  0.2621 ┆  0.4961 ┆  0.7502 ┆  0.9995 │
 │ unrelated_3 ┆ 4,700 ┆           0 ┆  0.5031 ┆  0.2897 ┆ 0.0001387 ┆  0.2534 ┆   0.501 ┆  0.7574 ┆  0.9999 │
 │ unrelated_4 ┆ 4,700 ┆           0 ┆  0.5012 ┆  0.2898 ┆ 0.0001414 ┆  0.2504 ┆  0.5008 ┆  0.7558 ┆  0.9999 │
 │ unrelated_5 ┆ 4,700 ┆           0 ┆  0.5016 ┆  0.2915 ┆  0.000071 ┆  0.2495 ┆  0.4995 ┆  0.7551 ┆  0.9998 │
 │    repeat_1 ┆ 4,700 ┆           0 ┆  0.5032 ┆  0.2869 ┆ 0.0001191 ┆  0.2578 ┆  0.5029 ┆  0.7526 ┆     1.0 │
-│    var_gbm1 ┆ 4,700 ┆           0 ┆     0.0 ┆     0.0 ┆       0.0 ┆     0.0 ┆     0.0 ┆     0.0 ┆     0.0 │
 │    var_gbm2 ┆ 4,700 ┆           0 ┆     0.0 ┆     0.0 ┆       0.0 ┆     0.0 ┆     0.0 ┆     0.0 ┆     0.0 │
 │    var_gbm3 ┆ 4,700 ┆           0 ┆     0.0 ┆     0.0 ┆       0.0 ┆     0.0 ┆     0.0 ┆     0.0 ┆     0.0 │
 │   var_gbm12 ┆ 4,700 ┆           0 ┆     0.0 ┆     0.0 ┆       0.0 ┆     0.0 ┆     0.0 ┆     0.0 ┆     0.0 │
 │ var_gbm2_sq ┆ 4,700 ┆           0 ┆     0.0 ┆     0.0 ┆       0.0 ┆     0.0 ┆     0.0 ┆     0.0 ┆     0.0 │
+│        var5 ┆ 4,700 ┆           0 ┆  0.8984 ┆  0.3022 ┆       0.0 ┆     1.0 ┆     1.0 ┆     1.0 ┆     1.0 │
+│    var_gbm1 ┆ 4,700 ┆           0 ┆     0.0 ┆     0.0 ┆       0.0 ┆     0.0 ┆     0.0 ┆     0.0 ┆     0.0 │
 └─────────────┴───────┴─────────────┴─────────┴─────────┴───────────┴─────────┴─────────┴─────────┴─────────┘
 </pre>
 </div>
@@ -13199,18 +13187,18 @@ Look at the imputes | var_gbm1 == 1
 │        var2 ┆ 5,300 ┆           0 ┆   5.294 ┆   3.044 ┆       0.0 ┆     3.0 ┆     5.0 ┆     8.0 ┆    10.0 │
 │        var3 ┆ 5,300 ┆           0 ┆   25.39 ┆   16.15 ┆       0.0 ┆    10.0 ┆    26.0 ┆    40.0 ┆    50.0 │
 │        var4 ┆ 5,300 ┆           0 ┆   0.503 ┆  0.2873 ┆ 0.0001044 ┆  0.2569 ┆  0.5071 ┆  0.7521 ┆  0.9999 │
-│        var5 ┆ 5,300 ┆           0 ┆  0.1413 ┆  0.3484 ┆       0.0 ┆     0.0 ┆     0.0 ┆     0.0 ┆     1.0 │
 │ unrelated_1 ┆ 5,300 ┆           0 ┆  0.5017 ┆  0.2898 ┆ 0.0002485 ┆  0.2506 ┆  0.5043 ┆  0.7562 ┆  0.9993 │
 │ unrelated_2 ┆ 5,300 ┆           0 ┆  0.4984 ┆  0.2886 ┆  0.000049 ┆  0.2462 ┆  0.4976 ┆  0.7463 ┆  0.9995 │
 │ unrelated_3 ┆ 5,300 ┆           0 ┆   0.497 ┆  0.2881 ┆  0.000129 ┆  0.2508 ┆  0.4932 ┆  0.7473 ┆  0.9999 │
 │ unrelated_4 ┆ 5,300 ┆           0 ┆     0.5 ┆  0.2877 ┆ 0.0001329 ┆    0.25 ┆  0.4995 ┆  0.7475 ┆     1.0 │
 │ unrelated_5 ┆ 5,300 ┆           0 ┆   0.496 ┆  0.2865 ┆ 0.0001807 ┆  0.2496 ┆  0.4938 ┆  0.7454 ┆  0.9999 │
 │    repeat_1 ┆ 5,300 ┆           0 ┆  0.5017 ┆  0.2898 ┆ 0.0002485 ┆  0.2506 ┆  0.5043 ┆  0.7562 ┆  0.9993 │
-│    var_gbm1 ┆ 5,300 ┆           0 ┆     1.0 ┆     0.0 ┆       1.0 ┆     1.0 ┆     1.0 ┆     1.0 ┆     1.0 │
 │    var_gbm2 ┆ 5,300 ┆           0 ┆  -4.564 ┆   13.69 ┆    -55.35 ┆  -12.55 ┆  -1.855 ┆   5.651 ┆   26.21 │
 │    var_gbm3 ┆ 5,300 ┆           0 ┆  -4.481 ┆   13.63 ┆    -55.35 ┆  -12.44 ┆  -1.832 ┆   5.733 ┆   26.21 │
 │   var_gbm12 ┆ 5,300 ┆           0 ┆  -4.564 ┆   13.69 ┆    -55.35 ┆  -12.55 ┆  -1.855 ┆   5.651 ┆   26.21 │
 │ var_gbm2_sq ┆ 5,300 ┆           0 ┆   208.3 ┆   344.9 ┆       0.0 ┆   14.31 ┆   72.18 ┆   220.9 ┆ 3,064.0 │
+│        var5 ┆ 5,300 ┆           0 ┆  0.1413 ┆  0.3484 ┆       0.0 ┆     0.0 ┆     0.0 ┆     0.0 ┆     1.0 │
+│    var_gbm1 ┆ 5,300 ┆           0 ┆     1.0 ┆     0.0 ┆       1.0 ┆     1.0 ┆     1.0 ┆     1.0 ┆     1.0 │
 └─────────────┴───────┴─────────────┴─────────┴─────────┴───────────┴─────────┴─────────┴─────────┴─────────┘
 </pre>
 </div>
@@ -13228,18 +13216,18 @@ Look at the imputes | var_gbm1 == 1
 │        var2 ┆ 5,300 ┆           0 ┆   5.301 ┆   3.042 ┆       0.0 ┆     3.0 ┆     5.0 ┆     8.0 ┆    10.0 │
 │        var3 ┆ 5,300 ┆           0 ┆   25.26 ┆   16.17 ┆       0.0 ┆    10.0 ┆    25.0 ┆    40.0 ┆    50.0 │
 │        var4 ┆ 5,300 ┆           0 ┆  0.5029 ┆  0.2873 ┆ 0.0001044 ┆  0.2569 ┆  0.5065 ┆  0.7515 ┆  0.9999 │
-│        var5 ┆ 5,300 ┆           0 ┆  0.1431 ┆  0.3502 ┆       0.0 ┆     0.0 ┆     0.0 ┆     0.0 ┆     1.0 │
 │ unrelated_1 ┆ 5,300 ┆           0 ┆  0.5018 ┆  0.2897 ┆ 0.0002485 ┆  0.2507 ┆  0.5044 ┆  0.7547 ┆  0.9993 │
 │ unrelated_2 ┆ 5,300 ┆           0 ┆  0.4986 ┆  0.2886 ┆  0.000049 ┆  0.2462 ┆  0.5002 ┆  0.7457 ┆  0.9995 │
 │ unrelated_3 ┆ 5,300 ┆           0 ┆  0.4956 ┆  0.2879 ┆  0.000129 ┆  0.2479 ┆  0.4906 ┆  0.7452 ┆  0.9999 │
 │ unrelated_4 ┆ 5,300 ┆           0 ┆  0.5002 ┆  0.2877 ┆ 0.0001329 ┆    0.25 ┆  0.4999 ┆  0.7493 ┆     1.0 │
 │ unrelated_5 ┆ 5,300 ┆           0 ┆  0.4962 ┆  0.2867 ┆ 0.0001807 ┆  0.2501 ┆  0.4948 ┆  0.7452 ┆  0.9999 │
 │    repeat_1 ┆ 5,300 ┆           0 ┆  0.5018 ┆  0.2897 ┆ 0.0002485 ┆  0.2507 ┆  0.5044 ┆  0.7547 ┆  0.9993 │
-│    var_gbm1 ┆ 5,300 ┆           0 ┆     1.0 ┆     0.0 ┆       1.0 ┆     1.0 ┆     1.0 ┆     1.0 ┆     1.0 │
 │    var_gbm2 ┆ 5,300 ┆           0 ┆  -4.424 ┆   13.64 ┆    -55.35 ┆  -12.44 ┆  -1.753 ┆    5.73 ┆   26.21 │
 │    var_gbm3 ┆ 5,300 ┆           0 ┆  -4.402 ┆   13.57 ┆    -55.35 ┆   -12.4 ┆  -1.796 ┆   5.694 ┆   26.21 │
 │   var_gbm12 ┆ 5,300 ┆           0 ┆  -4.424 ┆   13.64 ┆    -55.35 ┆  -12.44 ┆  -1.753 ┆    5.73 ┆   26.21 │
 │ var_gbm2_sq ┆ 5,300 ┆           0 ┆   205.5 ┆   338.8 ┆       0.0 ┆   14.58 ┆   72.55 ┆   223.9 ┆ 3,064.0 │
+│        var5 ┆ 5,300 ┆           0 ┆  0.1431 ┆  0.3502 ┆       0.0 ┆     0.0 ┆     0.0 ┆     0.0 ┆     1.0 │
+│    var_gbm1 ┆ 5,300 ┆           0 ┆     1.0 ┆     0.0 ┆       1.0 ┆     1.0 ┆     1.0 ┆     1.0 ┆     1.0 │
 └─────────────┴───────┴─────────────┴─────────┴─────────┴───────────┴─────────┴─────────┴─────────┴─────────┘
 </pre>
 </div>

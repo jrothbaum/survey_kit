@@ -53,7 +53,7 @@ df_joined = compress_df(
 logger.info("Collect after the join to avoid repeat load/join at replicate calculation")
 df_joined = df_joined.collect().lazy()
 
-summary(df_joined)
+_ = summary(df_joined)
 
 
 

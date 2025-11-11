@@ -48,7 +48,7 @@ df_salary = DataFrameList(
     ]
 )
 
-df_salary.pipe(summary)
+_ = df_salary.pipe(summary)
 
 
 # %%

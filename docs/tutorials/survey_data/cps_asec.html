@@ -3,7 +3,7 @@
 <html lang="en">
 <head><meta charset="utf-8"/>
 <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
-<title>arbitrary_srmi</title><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.1.10/require.min.js"></script>
+<title>cps_asec</title><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.1.10/require.min.js"></script>
 <style type="text/css">
     pre { line-height: 125%; }
 td.linenos .normal { color: inherit; background-color: transparent; padding-left: 5px; padding-right: 5px; }
@@ -7510,7 +7510,7 @@ a.anchor-link {
 </style>
 <!-- End of mermaid configuration --></head>
 <body class="jp-Notebook" data-jp-theme-light="true" data-jp-theme-name="JupyterLab Light">
-<main><div class="jp-Cell jp-CodeCell jp-Notebook-cell jp-mod-noOutputs" id="cell-id=7a3bc654">
+<main><div class="jp-Cell jp-CodeCell jp-Notebook-cell jp-mod-noOutputs" id="cell-id=790bca45">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -7518,25 +7518,23 @@ a.anchor-link {
 <div class="jp-InputPrompt jp-InputArea-prompt">In [1]:</div>
 <div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
 <div class="cm-editor cm-s-jupyter">
-<div class="highlight hl-ipython3"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
-
-<span class="kn">import</span><span class="w"> </span><span class="nn">polars</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pl</span>
-
-<span class="kn">from</span><span class="w"> </span><span class="nn">survey_kit.utilities.dataframe</span><span class="w"> </span><span class="kn">import</span> <span class="n">summary</span><span class="p">,</span> <span class="n">join_wrapper</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">survey_kit.imputation.srmi</span><span class="w"> </span><span class="kn">import</span> <span class="n">SRMI</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">survey_kit</span><span class="w"> </span><span class="kn">import</span> <span class="n">logger</span><span class="p">,</span> <span class="n">config</span>
-
-<span class="kn">from</span><span class="w"> </span><span class="nn">survey_kit.statistics.multiple_imputation</span><span class="w"> </span><span class="kn">import</span> <span class="n">mi_ses_from_function</span>
+<div class="highlight hl-ipython3"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">polars</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pl</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">survey_kit_data.census.cps_asec</span><span class="w"> </span><span class="kn">import</span> <span class="n">cps_asec</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">survey_kit.utilities.compress</span><span class="w"> </span><span class="kn">import</span> <span class="n">compress_df</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">survey_kit.utilities.dataframe</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
+    <span class="n">summary</span><span class="p">,</span>
+    <span class="n">columns_from_list</span>
+<span class="p">)</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">survey_kit.statistics.calculator</span><span class="w"> </span><span class="kn">import</span> <span class="n">StatCalculator</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">survey_kit.statistics.replicates</span><span class="w"> </span><span class="kn">import</span> <span class="n">Replicates</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">survey_kit.utilities.dataframe</span><span class="w"> </span><span class="kn">import</span> <span class="n">safe_height</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">survey_kit.statistics.bootstrap</span><span class="w"> </span><span class="kn">import</span> <span class="n">bayes_bootstrap</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">survey_kit.statistics.statistics</span><span class="w"> </span><span class="kn">import</span> <span class="n">Statistics</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">survey_kit</span><span class="w"> </span><span class="kn">import</span> <span class="n">logger</span><span class="p">,</span> <span class="n">config</span>
 </pre></div>
 </div>
 </div>
 </div>
 </div>
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=584f10ae">
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=00fcaefe">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -7544,10 +7542,13 @@ a.anchor-link {
 <div class="jp-InputPrompt jp-InputArea-prompt">In [2]:</div>
 <div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
 <div class="cm-editor cm-s-jupyter">
-<div class="highlight hl-ipython3"><pre><span></span><span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">"Load the data from the SRMI tutorial"</span><span class="p">)</span>
-<span class="n">path_model</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">config</span><span class="o">.</span><span class="n">path_temp_files</span><span class="si">}</span><span class="s2">/py_srmi_test_gbm"</span>
-<span class="n">srmi</span> <span class="o">=</span> <span class="n">SRMI</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">path_model</span><span class="p">)</span>
-<span class="n">df_implicates</span> <span class="o">=</span> <span class="n">srmi</span><span class="o">.</span><span class="n">df_implicates</span>
+<div class="highlight hl-ipython3"><pre><span></span><span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">"Download the CPS ASEC (using in-development survey-kit-data package)"</span><span class="p">)</span>
+<span class="n">d_cps</span> <span class="o">=</span> <span class="n">cps_asec</span><span class="p">(</span><span class="mi">2025</span><span class="p">)</span>
+<span class="k">for</span> <span class="n">keyi</span><span class="p">,</span> <span class="n">dfi</span> <span class="ow">in</span> <span class="n">d_cps</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+    <span class="n">d_cps</span><span class="p">[</span><span class="n">keyi</span><span class="p">]</span> <span class="o">=</span> <span class="n">dfi</span><span class="o">.</span><span class="n">select</span><span class="p">(</span><span class="n">pl</span><span class="o">.</span><span class="n">all</span><span class="p">()</span><span class="o">.</span><span class="n">name</span><span class="o">.</span><span class="n">to_lowercase</span><span class="p">())</span>
+<span class="n">df_rep_weights</span> <span class="o">=</span> <span class="n">d_cps</span><span class="p">[</span><span class="s2">"replicate_weights"</span><span class="p">]</span>
+<span class="n">df_hhld</span> <span class="o">=</span> <span class="n">d_cps</span><span class="p">[</span><span class="s2">"hhld"</span><span class="p">]</span>
+<span class="n">df_person</span> <span class="o">=</span> <span class="n">d_cps</span><span class="p">[</span><span class="s2">"person"</span><span class="p">]</span>
 </pre></div>
 </div>
 </div>
@@ -7560,13 +7561,20 @@ a.anchor-link {
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>Load the data from the SRMI tutorial
+<pre>Download the CPS ASEC (using in-development survey-kit-data package)
+</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>Loading from cached data
 </pre>
 </div>
 </div>
 </div>
 </div>
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=83fb3ad0">
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=c9e32c0f">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -7574,17 +7582,14 @@ a.anchor-link {
 <div class="jp-InputPrompt jp-InputArea-prompt">In [3]:</div>
 <div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
 <div class="cm-editor cm-s-jupyter">
-<div class="highlight hl-ipython3"><pre><span></span><span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">"Make random weights for the bootstrap"</span><span class="p">)</span>
-<span class="n">n_rows</span> <span class="o">=</span> <span class="n">safe_height</span><span class="p">(</span><span class="n">df_implicates</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
-<span class="n">n_replicates</span> <span class="o">=</span> <span class="mi">10</span>
+<div class="highlight hl-ipython3"><pre><span></span><span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">"Get the columns we need for household income"</span><span class="p">)</span>
+<span class="n">df_hhld</span> <span class="o">=</span> <span class="n">df_hhld</span><span class="o">.</span><span class="n">select</span><span class="p">(</span>
+    <span class="n">columns_from_list</span><span class="p">(</span><span class="n">df_hhld</span><span class="p">,</span><span class="n">columns</span><span class="o">=</span><span class="p">[</span><span class="s2">"*seq"</span><span class="p">,</span><span class="s2">"htotval"</span><span class="p">,</span><span class="s2">"hrhtype"</span><span class="p">])</span>
+<span class="p">)</span>
 
-<span class="n">df_weights</span> <span class="o">=</span> <span class="n">bayes_bootstrap</span><span class="p">(</span>
-    <span class="n">n_rows</span><span class="o">=</span><span class="n">n_rows</span><span class="p">,</span>
-    <span class="n">n_draws</span><span class="o">=</span><span class="n">n_replicates</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span>
-    <span class="n">seed</span><span class="o">=</span><span class="mi">8345</span><span class="p">,</span>
-    <span class="n">prefix</span><span class="o">=</span><span class="s2">"weight_"</span><span class="p">,</span>
-    <span class="n">initial_weight_index</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
-<span class="p">)</span><span class="o">.</span><span class="n">with_row_index</span><span class="p">(</span><span class="s2">"index"</span><span class="p">)</span>
+<span class="n">df_person</span> <span class="o">=</span> <span class="n">df_person</span><span class="o">.</span><span class="n">select</span><span class="p">(</span>
+    <span class="n">columns_from_list</span><span class="p">(</span><span class="n">df_person</span><span class="p">,</span><span class="n">columns</span><span class="o">=</span><span class="p">[</span><span class="s2">"*seq"</span><span class="p">,</span><span class="s2">"pppos"</span><span class="p">,</span><span class="s2">"hhdrel"</span><span class="p">,</span><span class="s2">"prdtrace"</span><span class="p">])</span>
+<span class="p">)</span>
 </pre></div>
 </div>
 </div>
@@ -7597,13 +7602,13 @@ a.anchor-link {
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>Make random weights for the bootstrap
+<pre>Get the columns we need for household income
 </pre>
 </div>
 </div>
 </div>
 </div>
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=af44e367">
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=07da7385">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -7611,11 +7616,21 @@ a.anchor-link {
 <div class="jp-InputPrompt jp-InputArea-prompt">In [4]:</div>
 <div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
 <div class="cm-editor cm-s-jupyter">
-<div class="highlight hl-ipython3"><pre><span></span><span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">"What's the data look like"</span><span class="p">)</span>
-<span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">"   The SRMI data - both implicates"</span><span class="p">)</span>
-<span class="n">_</span> <span class="o">=</span> <span class="n">df_implicates</span><span class="o">.</span><span class="n">pipe</span><span class="p">(</span><span class="n">summary</span><span class="p">)</span>
-<span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">"   The weights"</span><span class="p">)</span>
-<span class="n">_</span> <span class="o">=</span> <span class="n">summary</span><span class="p">(</span><span class="n">df_weights</span><span class="p">)</span>
+<div class="highlight hl-ipython3"><pre><span></span><span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">"Merge the household and person data sets together"</span><span class="p">)</span>
+<span class="n">df_joined</span> <span class="o">=</span> <span class="n">df_hhld</span><span class="o">.</span><span class="n">join</span><span class="p">(</span>
+    <span class="n">df_person</span><span class="p">,</span>
+    <span class="n">how</span><span class="o">=</span><span class="s2">"inner"</span><span class="p">,</span>
+    <span class="n">left_on</span><span class="o">=</span><span class="p">[</span><span class="s2">"h_seq"</span><span class="p">],</span>
+    <span class="n">right_on</span><span class="o">=</span><span class="p">[</span><span class="s2">"ph_seq"</span><span class="p">]</span>
+<span class="p">)</span>
+<span class="n">df_joined</span> <span class="o">=</span> <span class="n">compress_df</span><span class="p">(</span>
+    <span class="n">df_joined</span><span class="o">.</span><span class="n">join</span><span class="p">(</span>
+        <span class="n">df_rep_weights</span><span class="p">,</span>
+        <span class="n">on</span><span class="o">=</span><span class="p">[</span><span class="s2">"h_seq"</span><span class="p">,</span><span class="s2">"pppos"</span><span class="p">],</span>
+        <span class="n">how</span><span class="o">=</span><span class="s2">"inner"</span>
+    <span class="p">),</span>
+    <span class="n">check_string</span><span class="o">=</span><span class="kc">True</span>
+<span class="p">)</span>
 </pre></div>
 </div>
 </div>
@@ -7628,107 +7643,13 @@ a.anchor-link {
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>What's the data look like
-</pre>
-</div>
-</div>
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>   The SRMI data - both implicates
-</pre>
-</div>
-</div>
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>┌─────────────┬────────┬─────────────┬────────────┬─────────────┬────────────┬──────────────┐
-│    Variable ┆      n ┆ n (missing) ┆       mean ┆         std ┆        min ┆          max │
-╞═════════════╪════════╪═════════════╪════════════╪═════════════╪════════════╪══════════════╡
-│       index ┆ 10,000 ┆           0 ┆    4,999.5 ┆ 2,886.89568 ┆        0.0 ┆      9,999.0 │
-│ _row_index_ ┆ 10,000 ┆           0 ┆    4,999.5 ┆ 2,886.89568 ┆        0.0 ┆      9,999.0 │
-│        year ┆ 10,000 ┆           0 ┆ 2,017.9851 ┆    1.415937 ┆    2,016.0 ┆      2,020.0 │
-│       month ┆ 10,000 ┆           0 ┆     6.5137 ┆    3.432141 ┆        1.0 ┆         12.0 │
-│        var2 ┆ 10,000 ┆           0 ┆     4.9782 ┆    3.154508 ┆        0.0 ┆         10.0 │
-│        var3 ┆ 10,000 ┆           0 ┆    25.1084 ┆   14.752302 ┆        0.0 ┆         50.0 │
-│        var4 ┆ 10,000 ┆           0 ┆   0.505666 ┆    0.287861 ┆   0.000027 ┆     0.999997 │
-│ unrelated_1 ┆ 10,000 ┆           0 ┆   0.502449 ┆    0.288359 ┆   0.000119 ┆     0.999997 │
-│ unrelated_2 ┆ 10,000 ┆           0 ┆   0.500105 ┆    0.287638 ┆   0.000049 ┆     0.999539 │
-│ unrelated_3 ┆ 10,000 ┆           0 ┆   0.499175 ┆     0.28876 ┆   0.000129 ┆      0.99994 │
-│ unrelated_4 ┆ 10,000 ┆           0 ┆   0.500655 ┆    0.288698 ┆   0.000133 ┆     0.999972 │
-│ unrelated_5 ┆ 10,000 ┆           0 ┆    0.49876 ┆    0.288979 ┆   0.000071 ┆     0.999867 │
-│    repeat_1 ┆ 10,000 ┆           0 ┆   0.502449 ┆    0.288359 ┆   0.000119 ┆     0.999997 │
-│    var_gbm2 ┆ 10,000 ┆           0 ┆  -2.405997 ┆   10.199102 ┆ -55.354108 ┆    26.213084 │
-│    var_gbm3 ┆ 10,000 ┆           0 ┆  -2.362588 ┆    10.14679 ┆ -55.354108 ┆    26.213084 │
-│   var_gbm12 ┆ 10,000 ┆           0 ┆  -2.405997 ┆   10.199102 ┆ -55.354108 ┆    26.213084 │
-│ var_gbm2_sq ┆ 10,000 ┆           0 ┆ 109.800094 ┆  271.148843 ┆        0.0 ┆ 3,064.077326 │
-│        var5 ┆ 10,000 ┆           0 ┆     0.4999 ┆    0.500025 ┆        0.0 ┆          1.0 │
-│    var_gbm1 ┆ 10,000 ┆           0 ┆     0.5272 ┆    0.499285 ┆        0.0 ┆          1.0 │
-└─────────────┴────────┴─────────────┴────────────┴─────────────┴────────────┴──────────────┘
-</pre>
-</div>
-</div>
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>┌─────────────┬────────┬─────────────┬────────────┬─────────────┬────────────┬──────────────┐
-│    Variable ┆      n ┆ n (missing) ┆       mean ┆         std ┆        min ┆          max │
-╞═════════════╪════════╪═════════════╪════════════╪═════════════╪════════════╪══════════════╡
-│       index ┆ 10,000 ┆           0 ┆    4,999.5 ┆ 2,886.89568 ┆        0.0 ┆      9,999.0 │
-│ _row_index_ ┆ 10,000 ┆           0 ┆    4,999.5 ┆ 2,886.89568 ┆        0.0 ┆      9,999.0 │
-│        year ┆ 10,000 ┆           0 ┆ 2,017.9851 ┆    1.415937 ┆    2,016.0 ┆      2,020.0 │
-│       month ┆ 10,000 ┆           0 ┆     6.5137 ┆    3.432141 ┆        1.0 ┆         12.0 │
-│        var2 ┆ 10,000 ┆           0 ┆     4.9782 ┆    3.154508 ┆        0.0 ┆         10.0 │
-│        var3 ┆ 10,000 ┆           0 ┆    25.1084 ┆   14.752302 ┆        0.0 ┆         50.0 │
-│        var4 ┆ 10,000 ┆           0 ┆   0.505666 ┆    0.287861 ┆   0.000027 ┆     0.999997 │
-│ unrelated_1 ┆ 10,000 ┆           0 ┆   0.502449 ┆    0.288359 ┆   0.000119 ┆     0.999997 │
-│ unrelated_2 ┆ 10,000 ┆           0 ┆   0.500105 ┆    0.287638 ┆   0.000049 ┆     0.999539 │
-│ unrelated_3 ┆ 10,000 ┆           0 ┆   0.499175 ┆     0.28876 ┆   0.000129 ┆      0.99994 │
-│ unrelated_4 ┆ 10,000 ┆           0 ┆   0.500655 ┆    0.288698 ┆   0.000133 ┆     0.999972 │
-│ unrelated_5 ┆ 10,000 ┆           0 ┆    0.49876 ┆    0.288979 ┆   0.000071 ┆     0.999867 │
-│    repeat_1 ┆ 10,000 ┆           0 ┆   0.502449 ┆    0.288359 ┆   0.000119 ┆     0.999997 │
-│    var_gbm2 ┆ 10,000 ┆           0 ┆  -2.334157 ┆   10.148004 ┆ -55.354108 ┆    26.213084 │
-│    var_gbm3 ┆ 10,000 ┆           0 ┆  -2.322527 ┆   10.098587 ┆ -55.354108 ┆    26.213084 │
-│   var_gbm12 ┆ 10,000 ┆           0 ┆  -2.334157 ┆   10.148004 ┆ -55.354108 ┆    26.213084 │
-│ var_gbm2_sq ┆ 10,000 ┆           0 ┆ 108.419985 ┆  266.593764 ┆        0.0 ┆ 3,064.077326 │
-│        var5 ┆ 10,000 ┆           0 ┆     0.4999 ┆    0.500025 ┆        0.0 ┆          1.0 │
-│    var_gbm1 ┆ 10,000 ┆           0 ┆     0.5276 ┆    0.499263 ┆        0.0 ┆          1.0 │
-└─────────────┴────────┴─────────────┴────────────┴─────────────┴────────────┴──────────────┘
-</pre>
-</div>
-</div>
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>   The weights
-</pre>
-</div>
-</div>
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>┌───────────┬────────┬─────────────┬──────────┬─────────────┬──────────┬───────────┐
-│  Variable ┆      n ┆ n (missing) ┆     mean ┆         std ┆      min ┆       max │
-╞═══════════╪════════╪═════════════╪══════════╪═════════════╪══════════╪═══════════╡
-│     index ┆ 10,000 ┆           0 ┆  4,999.5 ┆ 2,886.89568 ┆      0.0 ┆   9,999.0 │
-│  weight_0 ┆ 10,000 ┆           0 ┆ 0.996552 ┆    0.988544 ┆ 0.000027 ┆  9.548572 │
-│  weight_1 ┆ 10,000 ┆           0 ┆ 0.994871 ┆    1.013359 ┆ 0.000087 ┆   9.40968 │
-│  weight_2 ┆ 10,000 ┆           0 ┆ 1.013333 ┆    0.990934 ┆ 0.000017 ┆ 10.246139 │
-│  weight_3 ┆ 10,000 ┆           0 ┆ 1.015993 ┆    1.017586 ┆ 0.000047 ┆ 10.149365 │
-│  weight_4 ┆ 10,000 ┆           0 ┆ 1.000038 ┆    1.003878 ┆  0.00001 ┆  8.684298 │
-│  weight_5 ┆ 10,000 ┆           0 ┆ 1.015135 ┆    1.023968 ┆ 0.000229 ┆  9.941725 │
-│  weight_6 ┆ 10,000 ┆           0 ┆ 1.001943 ┆    0.990688 ┆ 0.000108 ┆  9.909087 │
-│  weight_7 ┆ 10,000 ┆           0 ┆ 1.003338 ┆    0.992315 ┆  0.00015 ┆ 10.318354 │
-│  weight_8 ┆ 10,000 ┆           0 ┆ 1.000687 ┆    1.001554 ┆ 0.000318 ┆  11.09299 │
-│  weight_9 ┆ 10,000 ┆           0 ┆ 0.991478 ┆    1.005367 ┆ 0.000052 ┆  8.802607 │
-│ weight_10 ┆ 10,000 ┆           0 ┆ 0.983393 ┆    0.980691 ┆ 0.000005 ┆  8.388088 │
-└───────────┴────────┴─────────────┴──────────┴─────────────┴──────────┴───────────┘
+<pre>Merge the household and person data sets together
 </pre>
 </div>
 </div>
 </div>
 </div>
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=9d72cdcd">
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=bc4c0390">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -7736,41 +7657,10 @@ a.anchor-link {
 <div class="jp-InputPrompt jp-InputArea-prompt">In [5]:</div>
 <div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
 <div class="cm-editor cm-s-jupyter">
-<div class="highlight hl-ipython3"><pre><span></span><span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">"To run an arbitrary stat, you need"</span><span class="p">)</span>
-<span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span>
-    <span class="s2">"   any function that takes a dataframe and a weight and returns a dataframe"</span>
-<span class="p">)</span>
-<span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">"The function will be run for each boostrap/replicate weight"</span><span class="p">)</span>
-<span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">"   Note: you may need to import packages within the function"</span><span class="p">)</span>
-<span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">"   if executed in parallel (it will get pickled and reloaded)"</span><span class="p">)</span>
+<div class="highlight hl-ipython3"><pre><span></span><span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">"Collect after the join to avoid repeat load/join at replicate calculation"</span><span class="p">)</span>
+<span class="n">df_joined</span> <span class="o">=</span> <span class="n">df_joined</span><span class="o">.</span><span class="n">collect</span><span class="p">()</span><span class="o">.</span><span class="n">lazy</span><span class="p">()</span>
 
-
-<span class="k">def</span><span class="w"> </span><span class="nf">run_regression</span><span class="p">(</span>
-    <span class="n">df</span><span class="p">:</span> <span class="n">pl</span><span class="o">.</span><span class="n">LazyFrame</span> <span class="o">|</span> <span class="n">pl</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="n">y</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">X</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span> <span class="n">weight</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">""</span>
-<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pl</span><span class="o">.</span><span class="n">LazyFrame</span> <span class="o">|</span> <span class="n">pl</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
-    <span class="kn">import</span><span class="w"> </span><span class="nn">polars</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pl</span>
-    <span class="kn">from</span><span class="w"> </span><span class="nn">sklearn.linear_model</span><span class="w"> </span><span class="kn">import</span> <span class="n">LinearRegression</span>
-
-    <span class="n">df</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">lazy</span><span class="p">()</span><span class="o">.</span><span class="n">collect</span><span class="p">()</span>
-    <span class="n">model</span> <span class="o">=</span> <span class="n">LinearRegression</span><span class="p">()</span>
-    <span class="n">d_weight</span> <span class="o">=</span> <span class="p">{}</span>
-    <span class="k">if</span> <span class="n">weight</span> <span class="o">!=</span> <span class="s2">""</span><span class="p">:</span>
-        <span class="n">d_weight</span><span class="p">[</span><span class="s2">"sample_weight"</span><span class="p">]</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="n">weight</span><span class="p">]</span>
-
-    <span class="n">model</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">X</span><span class="o">=</span><span class="n">df</span><span class="o">.</span><span class="n">select</span><span class="p">(</span><span class="n">X</span><span class="p">),</span> <span class="n">y</span><span class="o">=</span><span class="n">df</span><span class="o">.</span><span class="n">select</span><span class="p">(</span><span class="n">y</span><span class="p">),</span> <span class="o">**</span><span class="n">d_weight</span><span class="p">)</span>
-
-    <span class="n">df_betas</span> <span class="o">=</span> <span class="n">pl</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span>
-        <span class="nb">dict</span><span class="p">(</span>
-            <span class="n">Variable</span><span class="o">=</span><span class="n">df</span><span class="o">.</span><span class="n">select</span><span class="p">(</span><span class="n">X</span><span class="p">)</span><span class="o">.</span><span class="n">lazy</span><span class="p">()</span><span class="o">.</span><span class="n">collect_schema</span><span class="p">()</span><span class="o">.</span><span class="n">names</span><span class="p">()</span> <span class="o">+</span> <span class="p">[</span><span class="s2">"_Intercept_"</span><span class="p">],</span>
-            <span class="n">Beta</span><span class="o">=</span><span class="p">[</span>
-                <span class="nb">float</span><span class="p">(</span><span class="n">vali</span><span class="p">)</span>
-                <span class="k">for</span> <span class="n">vali</span> <span class="ow">in</span> <span class="p">[</span><span class="nb">float</span><span class="p">(</span><span class="n">coefi</span><span class="p">)</span> <span class="k">for</span> <span class="n">coefi</span> <span class="ow">in</span> <span class="n">model</span><span class="o">.</span><span class="n">coef_</span><span class="p">[</span><span class="mi">0</span><span class="p">]]</span>
-                <span class="o">+</span> <span class="p">[</span><span class="nb">float</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">intercept_</span><span class="p">[</span><span class="mi">0</span><span class="p">])]</span>
-            <span class="p">],</span>
-        <span class="p">)</span>
-    <span class="p">)</span>
-
-    <span class="k">return</span> <span class="n">df_betas</span>
+<span class="n">_</span> <span class="o">=</span> <span class="n">summary</span><span class="p">(</span><span class="n">df_joined</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
@@ -7783,41 +7673,193 @@ a.anchor-link {
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>To run an arbitrary stat, you need
+<pre>Collect after the join to avoid repeat load/join at replicate calculation
 </pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>   any function that takes a dataframe and a weight and returns a dataframe
+<pre>┌──────────┬─────────┬─────────────┬────────────────┬────────────────┬─────────────┬───────────────┐
+│ Variable ┆       n ┆ n (missing) ┆           mean ┆            std ┆         min ┆           max │
+╞══════════╪═════════╪═════════════╪════════════════╪════════════════╪═════════════╪═══════════════╡
+│  hrhtype ┆ 142,125 ┆           0 ┆       2.487458 ┆       2.084595 ┆         1.0 ┆          10.0 │
+│  htotval ┆ 142,125 ┆           0 ┆ 141,590.224577 ┆ 153,422.202035 ┆   -12,997.0 ┆    3.350997e6 │
+│    h_seq ┆ 142,125 ┆           0 ┆  45,659.914442 ┆  25,993.902909 ┆         1.0 ┆      88,932.0 │
+│    p_seq ┆ 142,125 ┆           0 ┆       2.198262 ┆       1.357154 ┆         1.0 ┆          15.0 │
+│   pf_seq ┆ 142,125 ┆           0 ┆       1.061566 ┆       0.306842 ┆         1.0 ┆          10.0 │
+│  phf_seq ┆ 142,125 ┆           0 ┆       1.098526 ┆       0.358336 ┆         1.0 ┆          10.0 │
+│ prdtrace ┆ 142,125 ┆           0 ┆       1.612341 ┆       1.685208 ┆         1.0 ┆          26.0 │
+│   hhdrel ┆ 142,125 ┆           0 ┆       2.597249 ┆       1.831261 ┆         1.0 ┆           8.0 │
+│    pppos ┆ 142,125 ┆           0 ┆      42.198262 ┆       1.357154 ┆        41.0 ┆          55.0 │
+│   pwwgt0 ┆ 142,125 ┆           0 ┆   2,376.004454 ┆   1,470.155644 ┆   96.940711 ┆   18,956.7085 │
+│   pwwgt1 ┆ 142,125 ┆           0 ┆   2,376.286714 ┆   1,587.493138 ┆   78.446398 ┆ 19,778.063338 │
+│   pwwgt2 ┆ 142,125 ┆           0 ┆    2,376.02862 ┆   2,017.144415 ┆   27.581935 ┆ 25,317.759828 │
+│   pwwgt3 ┆ 142,125 ┆           0 ┆   2,376.071102 ┆   2,009.208157 ┆   27.930301 ┆ 25,262.808851 │
+│   pwwgt4 ┆ 142,125 ┆           0 ┆    2,376.05464 ┆    2,026.57207 ┆   24.602724 ┆ 32,539.932471 │
+│   pwwgt5 ┆ 142,125 ┆           0 ┆    2,375.56427 ┆    2,017.80176 ┆   30.794854 ┆ 28,769.620147 │
+│   pwwgt6 ┆ 142,125 ┆           0 ┆   2,376.038711 ┆   2,025.860888 ┆    24.88777 ┆  32,318.88067 │
+│   pwwgt7 ┆ 142,125 ┆           0 ┆   2,375.839477 ┆   2,026.158825 ┆   25.879027 ┆ 26,091.051298 │
+│   pwwgt8 ┆ 142,125 ┆           0 ┆    2,376.21953 ┆   2,017.363463 ┆   30.871371 ┆ 24,314.079555 │
+│   pwwgt9 ┆ 142,125 ┆           0 ┆   2,376.019134 ┆   2,025.529998 ┆    33.04064 ┆ 29,397.170012 │
+│  pwwgt10 ┆ 142,125 ┆           0 ┆   2,375.714295 ┆   2,015.489232 ┆   34.904843 ┆ 26,082.378553 │
+│  pwwgt11 ┆ 142,125 ┆           0 ┆   2,375.571707 ┆   2,014.078444 ┆   25.086137 ┆ 24,320.203886 │
+│  pwwgt12 ┆ 142,125 ┆           0 ┆   2,376.338688 ┆   2,020.994408 ┆   29.362888 ┆ 27,160.595875 │
+│  pwwgt13 ┆ 142,125 ┆           0 ┆   2,376.177464 ┆   2,014.154252 ┆   30.470266 ┆ 25,579.005786 │
+│  pwwgt14 ┆ 142,125 ┆           0 ┆   2,376.148722 ┆   2,021.544807 ┆   15.532941 ┆ 23,998.690537 │
+│  pwwgt15 ┆ 142,125 ┆           0 ┆   2,375.830458 ┆   2,022.887768 ┆   24.210127 ┆ 27,201.755243 │
+│  pwwgt16 ┆ 142,125 ┆           0 ┆   2,376.258335 ┆    1,996.48467 ┆   33.231134 ┆  28,957.19043 │
+│  pwwgt17 ┆ 142,125 ┆           0 ┆    2,375.99674 ┆   2,005.456422 ┆   17.528512 ┆ 20,208.622553 │
+│  pwwgt18 ┆ 142,125 ┆           0 ┆   2,376.034092 ┆   2,025.858015 ┆   29.090226 ┆ 34,727.918003 │
+│  pwwgt19 ┆ 142,125 ┆           0 ┆   2,376.065705 ┆   2,011.886202 ┆   28.150353 ┆ 24,439.832095 │
+│  pwwgt20 ┆ 142,125 ┆           0 ┆   2,375.876864 ┆   2,004.312094 ┆   27.931663 ┆ 28,215.398226 │
+│  pwwgt21 ┆ 142,125 ┆           0 ┆   2,376.026749 ┆   2,032.528437 ┆   23.926523 ┆ 28,545.542249 │
+│  pwwgt22 ┆ 142,125 ┆           0 ┆   2,376.087347 ┆   2,028.670658 ┆   28.845886 ┆ 23,437.885608 │
+│  pwwgt23 ┆ 142,125 ┆           0 ┆   2,376.057489 ┆   2,011.881457 ┆   26.641387 ┆ 22,418.570272 │
+│  pwwgt24 ┆ 142,125 ┆           0 ┆   2,376.247625 ┆   2,027.256601 ┆   23.799685 ┆ 29,936.365001 │
+│  pwwgt25 ┆ 142,125 ┆           0 ┆   2,376.168607 ┆   2,029.244151 ┆   27.576983 ┆ 25,169.508758 │
+│  pwwgt26 ┆ 142,125 ┆           0 ┆   2,375.877863 ┆   2,008.746347 ┆   26.786468 ┆ 28,851.060693 │
+│  pwwgt27 ┆ 142,125 ┆           0 ┆   2,376.062063 ┆   2,016.606511 ┆   26.556274 ┆ 27,361.751081 │
+│  pwwgt28 ┆ 142,125 ┆           0 ┆   2,375.334332 ┆   2,022.142685 ┆ -139.410694 ┆  26,445.01213 │
+│  pwwgt29 ┆ 142,125 ┆           0 ┆   2,376.298033 ┆   2,024.329405 ┆   30.199742 ┆ 27,119.992501 │
+│  pwwgt30 ┆ 142,125 ┆           0 ┆   2,375.863515 ┆   2,020.832021 ┆   29.227684 ┆ 21,107.653103 │
+│  pwwgt31 ┆ 142,125 ┆           0 ┆   2,376.188196 ┆   2,014.798762 ┆   25.924162 ┆ 25,203.929889 │
+│  pwwgt32 ┆ 142,125 ┆           0 ┆   2,375.981073 ┆   2,020.389426 ┆    28.79808 ┆ 30,228.473356 │
+│  pwwgt33 ┆ 142,125 ┆           0 ┆   2,375.987481 ┆   2,001.771325 ┆   32.307344 ┆ 26,314.152564 │
+│  pwwgt34 ┆ 142,125 ┆           0 ┆   2,376.015572 ┆   2,027.328009 ┆   28.859414 ┆ 23,558.533636 │
+│  pwwgt35 ┆ 142,125 ┆           0 ┆   2,375.773379 ┆   2,019.830043 ┆   26.610618 ┆ 24,250.536422 │
+│  pwwgt36 ┆ 142,125 ┆           0 ┆   2,376.191128 ┆   2,021.050544 ┆   31.770172 ┆  25,380.25885 │
+│  pwwgt37 ┆ 142,125 ┆           0 ┆   2,375.888209 ┆   2,017.700224 ┆ -211.627172 ┆ 24,673.447862 │
+│  pwwgt38 ┆ 142,125 ┆           0 ┆   2,376.000739 ┆   2,030.996201 ┆   26.547024 ┆ 35,247.886472 │
+│  pwwgt39 ┆ 142,125 ┆           0 ┆   2,376.060984 ┆   2,016.592404 ┆   25.958299 ┆ 29,407.674825 │
+│  pwwgt40 ┆ 142,125 ┆           0 ┆   2,376.202523 ┆   2,015.111764 ┆   31.109639 ┆  31,300.26329 │
+│  pwwgt41 ┆ 142,125 ┆           0 ┆   2,376.230148 ┆   2,068.602149 ┆   18.952088 ┆ 24,431.448617 │
+│  pwwgt42 ┆ 142,125 ┆           0 ┆   2,375.871677 ┆   2,017.306098 ┆   26.603756 ┆ 22,930.678161 │
+│  pwwgt43 ┆ 142,125 ┆           0 ┆   2,375.774726 ┆   2,035.997682 ┆   20.633669 ┆ 27,268.863582 │
+│  pwwgt44 ┆ 142,125 ┆           0 ┆   2,375.998684 ┆   2,019.082852 ┆   27.612731 ┆ 24,537.284751 │
+│  pwwgt45 ┆ 142,125 ┆           0 ┆   2,375.964228 ┆   2,032.868027 ┆   36.754366 ┆ 30,822.466137 │
+│  pwwgt46 ┆ 142,125 ┆           0 ┆   2,376.239593 ┆   2,028.301726 ┆   27.921059 ┆ 25,551.063174 │
+│  pwwgt47 ┆ 142,125 ┆           0 ┆   2,376.073343 ┆   2,037.470635 ┆   33.225141 ┆ 26,695.463977 │
+│  pwwgt48 ┆ 142,125 ┆           0 ┆   2,375.912566 ┆   2,036.883643 ┆   25.885013 ┆ 25,111.994776 │
+│  pwwgt49 ┆ 142,125 ┆           0 ┆   2,375.873291 ┆    2,028.78797 ┆   33.995057 ┆ 35,669.593065 │
+│  pwwgt50 ┆ 142,125 ┆           0 ┆   2,376.031431 ┆   2,023.911233 ┆   14.386842 ┆ 31,158.475316 │
+│  pwwgt51 ┆ 142,125 ┆           0 ┆   2,375.142592 ┆    2,011.06038 ┆   27.458622 ┆ 27,479.145195 │
+│  pwwgt52 ┆ 142,125 ┆           0 ┆   2,375.638434 ┆   2,028.190688 ┆   28.227204 ┆ 23,318.579448 │
+│  pwwgt53 ┆ 142,125 ┆           0 ┆   2,376.376351 ┆   2,040.633063 ┆    30.04099 ┆ 39,086.269805 │
+│  pwwgt54 ┆ 142,125 ┆           0 ┆   2,376.155701 ┆   2,037.994245 ┆   27.631586 ┆ 32,244.663418 │
+│  pwwgt55 ┆ 142,125 ┆           0 ┆   2,376.295994 ┆   2,031.880565 ┆   30.200355 ┆ 27,459.803328 │
+│  pwwgt56 ┆ 142,125 ┆           0 ┆    2,376.06421 ┆   2,029.854206 ┆   26.311542 ┆ 23,262.818996 │
+│  pwwgt57 ┆ 142,125 ┆           0 ┆   2,375.957255 ┆   2,031.131888 ┆   26.491668 ┆ 26,838.116128 │
+│  pwwgt58 ┆ 142,125 ┆           0 ┆   2,376.307136 ┆    2,038.59207 ┆   24.937851 ┆ 27,282.951902 │
+│  pwwgt59 ┆ 142,125 ┆           0 ┆   2,375.584323 ┆   2,026.955405 ┆   30.050999 ┆ 31,130.977993 │
+│  pwwgt60 ┆ 142,125 ┆           0 ┆   2,376.037014 ┆   2,029.465018 ┆   30.478071 ┆ 27,340.394231 │
+│  pwwgt61 ┆ 142,125 ┆           0 ┆   2,375.904414 ┆   2,000.083589 ┆   27.470116 ┆ 27,899.484893 │
+│  pwwgt62 ┆ 142,125 ┆           0 ┆    2,376.10438 ┆   2,014.117217 ┆   29.028517 ┆  25,760.31994 │
+│  pwwgt63 ┆ 142,125 ┆           0 ┆   2,376.037446 ┆   2,031.217248 ┆   24.797306 ┆ 32,821.569528 │
+│  pwwgt64 ┆ 142,125 ┆           0 ┆   2,376.556225 ┆   2,020.584261 ┆   26.650903 ┆ 28,946.411945 │
+│  pwwgt65 ┆ 142,125 ┆           0 ┆   2,376.233339 ┆   2,017.848477 ┆   25.856114 ┆ 34,205.599438 │
+│  pwwgt66 ┆ 142,125 ┆           0 ┆   2,376.082766 ┆   2,020.529524 ┆   35.377981 ┆  24,857.39488 │
+│  pwwgt67 ┆ 142,125 ┆           0 ┆   2,375.882378 ┆    2,025.29964 ┆   32.253785 ┆ 23,220.467426 │
+│  pwwgt68 ┆ 142,125 ┆           0 ┆   2,376.285419 ┆   2,030.953412 ┆   29.711429 ┆ 26,922.044562 │
+│  pwwgt69 ┆ 142,125 ┆           0 ┆    2,376.43283 ┆   2,024.161459 ┆   26.253224 ┆ 29,250.009114 │
+│  pwwgt70 ┆ 142,125 ┆           0 ┆    2,376.03169 ┆   2,025.969636 ┆   30.151646 ┆ 28,632.783295 │
+│  pwwgt71 ┆ 142,125 ┆           0 ┆   2,376.107986 ┆    2,034.99306 ┆   24.959151 ┆ 29,918.521434 │
+│  pwwgt72 ┆ 142,125 ┆           0 ┆    2,376.11045 ┆    2,034.45183 ┆   28.475863 ┆ 24,754.647274 │
+│  pwwgt73 ┆ 142,125 ┆           0 ┆    2,375.39206 ┆   2,011.322512 ┆     35.1464 ┆ 29,217.552349 │
+│  pwwgt74 ┆ 142,125 ┆           0 ┆    2,375.63777 ┆   2,023.800071 ┆   26.004004 ┆ 28,435.604456 │
+│  pwwgt75 ┆ 142,125 ┆           0 ┆     2,375.8044 ┆   2,029.470636 ┆    32.56664 ┆ 28,582.706923 │
+│  pwwgt76 ┆ 142,125 ┆           0 ┆   2,375.457927 ┆   2,019.390034 ┆   28.365277 ┆ 25,744.146216 │
+│  pwwgt77 ┆ 142,125 ┆           0 ┆   2,376.268754 ┆   2,043.810365 ┆   21.325762 ┆ 30,100.797572 │
+│  pwwgt78 ┆ 142,125 ┆           0 ┆   2,375.859391 ┆   2,023.785384 ┆   29.320079 ┆ 31,438.243625 │
+│  pwwgt79 ┆ 142,125 ┆           0 ┆   2,376.224317 ┆   2,020.827563 ┆   32.215022 ┆ 28,464.532976 │
+│  pwwgt80 ┆ 142,125 ┆           0 ┆    2,375.83161 ┆   2,019.221387 ┆   25.411893 ┆ 27,164.234089 │
+│  pwwgt81 ┆ 142,125 ┆           0 ┆   2,375.817482 ┆   2,051.421699 ┆   23.992269 ┆   26,379.6447 │
+│  pwwgt82 ┆ 142,125 ┆           0 ┆   2,376.449713 ┆   2,027.901818 ┆   10.373171 ┆ 24,989.325657 │
+│  pwwgt83 ┆ 142,125 ┆           0 ┆   2,375.970355 ┆   2,027.740939 ┆   33.077705 ┆  30,137.15638 │
+│  pwwgt84 ┆ 142,125 ┆           0 ┆   2,376.170246 ┆   2,033.286407 ┆   24.979146 ┆ 34,016.252031 │
+│  pwwgt85 ┆ 142,125 ┆           0 ┆   2,376.153571 ┆   2,025.779893 ┆    30.50652 ┆ 30,126.759074 │
+│  pwwgt86 ┆ 142,125 ┆           0 ┆   2,376.185981 ┆   2,033.837544 ┆   18.301593 ┆ 31,148.298926 │
+│  pwwgt87 ┆ 142,125 ┆           0 ┆   2,376.087898 ┆   2,033.774707 ┆   25.296429 ┆ 26,265.346774 │
+│  pwwgt88 ┆ 142,125 ┆           0 ┆   2,375.472974 ┆   2,027.618192 ┆   25.187028 ┆ 23,680.485693 │
+│  pwwgt89 ┆ 142,125 ┆           0 ┆   2,376.394044 ┆   2,028.263793 ┆   33.942383 ┆ 25,928.145004 │
+│  pwwgt90 ┆ 142,125 ┆           0 ┆   2,376.555188 ┆   2,024.904198 ┆   29.957837 ┆ 26,592.109169 │
+│  pwwgt91 ┆ 142,125 ┆           0 ┆   2,375.647025 ┆   2,020.410083 ┆   26.059796 ┆ 24,233.156707 │
+│  pwwgt92 ┆ 142,125 ┆           0 ┆   2,376.460351 ┆    2,015.64952 ┆   31.545134 ┆ 28,781.770199 │
+│  pwwgt93 ┆ 142,125 ┆           0 ┆   2,375.606692 ┆   2,025.460081 ┆   30.553548 ┆ 28,971.771336 │
+│  pwwgt94 ┆ 142,125 ┆           0 ┆   2,376.217037 ┆   2,043.047809 ┆   31.024282 ┆ 23,620.274662 │
+│  pwwgt95 ┆ 142,125 ┆           0 ┆   2,376.276219 ┆   2,022.659763 ┆   28.112237 ┆  26,671.85395 │
+│  pwwgt96 ┆ 142,125 ┆           0 ┆   2,375.720788 ┆    2,025.98651 ┆ -617.535735 ┆ 27,805.784428 │
+│  pwwgt97 ┆ 142,125 ┆           0 ┆   2,375.897663 ┆   2,029.703658 ┆   36.831191 ┆  29,742.84009 │
+│  pwwgt98 ┆ 142,125 ┆           0 ┆   2,376.369697 ┆   2,026.972868 ┆   29.139047 ┆ 43,096.937496 │
+│  pwwgt99 ┆ 142,125 ┆           0 ┆   2,376.162205 ┆   2,028.219595 ┆    27.30353 ┆ 25,548.411269 │
+│ pwwgt100 ┆ 142,125 ┆           0 ┆   2,375.755424 ┆   2,024.258851 ┆    20.48072 ┆ 30,337.207192 │
+│ pwwgt101 ┆ 142,125 ┆           0 ┆   2,376.209396 ┆   2,030.199595 ┆   31.389098 ┆ 25,572.680528 │
+│ pwwgt102 ┆ 142,125 ┆           0 ┆   2,376.166819 ┆   2,014.753597 ┆    27.41942 ┆ 25,516.292626 │
+│ pwwgt103 ┆ 142,125 ┆           0 ┆   2,376.391041 ┆   2,009.982994 ┆     30.3369 ┆ 23,057.303639 │
+│ pwwgt104 ┆ 142,125 ┆           0 ┆   2,376.402441 ┆   2,023.622794 ┆   23.224351 ┆ 25,844.102979 │
+│ pwwgt105 ┆ 142,125 ┆           0 ┆   2,376.072443 ┆   2,030.824146 ┆   30.430527 ┆   29,596.3399 │
+│ pwwgt106 ┆ 142,125 ┆           0 ┆   2,375.796349 ┆   2,007.301391 ┆   32.541696 ┆  32,887.32723 │
+│ pwwgt107 ┆ 142,125 ┆           0 ┆   2,375.895914 ┆   2,027.377092 ┆   27.421706 ┆ 25,011.265596 │
+│ pwwgt108 ┆ 142,125 ┆           0 ┆   2,376.219318 ┆   2,037.218863 ┆    28.07531 ┆ 23,804.834767 │
+│ pwwgt109 ┆ 142,125 ┆           0 ┆   2,375.863751 ┆       2,029.98 ┆   31.206659 ┆ 21,412.082151 │
+│ pwwgt110 ┆ 142,125 ┆           0 ┆   2,375.358137 ┆   2,035.394284 ┆   27.714328 ┆ 24,063.822222 │
+│ pwwgt111 ┆ 142,125 ┆           0 ┆   2,375.735428 ┆   2,020.385639 ┆   30.459465 ┆  27,015.41704 │
+│ pwwgt112 ┆ 142,125 ┆           0 ┆   2,375.774242 ┆   2,035.594827 ┆   33.430107 ┆ 26,112.123656 │
+│ pwwgt113 ┆ 142,125 ┆           0 ┆   2,375.927433 ┆   2,026.805412 ┆   23.591029 ┆ 30,987.107331 │
+│ pwwgt114 ┆ 142,125 ┆           0 ┆   2,375.609799 ┆   2,025.080185 ┆   32.008036 ┆ 25,796.954295 │
+│ pwwgt115 ┆ 142,125 ┆           0 ┆   2,375.761743 ┆   2,028.942039 ┆   34.901426 ┆ 24,039.183147 │
+│ pwwgt116 ┆ 142,125 ┆           0 ┆   2,376.539146 ┆   2,025.857322 ┆   28.328332 ┆ 24,120.633467 │
+│ pwwgt117 ┆ 142,125 ┆           0 ┆    2,375.97249 ┆   2,019.429231 ┆    8.755582 ┆ 26,506.970723 │
+│ pwwgt118 ┆ 142,125 ┆           0 ┆   2,375.717052 ┆   2,009.583244 ┆   25.739986 ┆ 29,862.298675 │
+│ pwwgt119 ┆ 142,125 ┆           0 ┆   2,376.146784 ┆   2,022.780141 ┆   30.972836 ┆ 23,724.478693 │
+│ pwwgt120 ┆ 142,125 ┆           0 ┆   2,375.851744 ┆   2,017.800136 ┆   30.255906 ┆ 36,000.809326 │
+│ pwwgt121 ┆ 142,125 ┆           0 ┆   2,375.730964 ┆   2,009.417458 ┆   34.810684 ┆  26,772.10703 │
+│ pwwgt122 ┆ 142,125 ┆           0 ┆   2,376.367167 ┆   2,017.869313 ┆   27.705187 ┆ 23,595.515334 │
+│ pwwgt123 ┆ 142,125 ┆           0 ┆   2,376.131818 ┆   2,017.755259 ┆   30.722692 ┆ 33,229.938302 │
+│ pwwgt124 ┆ 142,125 ┆           0 ┆   2,376.122737 ┆   2,026.558211 ┆   27.863801 ┆ 24,492.593732 │
+│ pwwgt125 ┆ 142,125 ┆           0 ┆   2,376.126254 ┆   2,014.123968 ┆   26.220047 ┆ 28,962.191785 │
+│ pwwgt126 ┆ 142,125 ┆           0 ┆   2,375.591626 ┆   2,025.550062 ┆   28.018102 ┆ 27,557.165203 │
+│ pwwgt127 ┆ 142,125 ┆           0 ┆   2,375.845567 ┆   2,019.416508 ┆   29.492681 ┆ 23,605.409395 │
+│ pwwgt128 ┆ 142,125 ┆           0 ┆   2,376.099483 ┆   2,024.567597 ┆   25.905877 ┆ 26,073.410258 │
+│ pwwgt129 ┆ 142,125 ┆           0 ┆   2,376.467014 ┆   2,014.613146 ┆   30.316935 ┆ 31,809.866951 │
+│ pwwgt130 ┆ 142,125 ┆           0 ┆   2,375.827969 ┆   2,026.919254 ┆   29.731767 ┆ 33,880.689673 │
+│ pwwgt131 ┆ 142,125 ┆           0 ┆   2,376.440205 ┆   2,016.232136 ┆   31.287787 ┆ 26,831.221087 │
+│ pwwgt132 ┆ 142,125 ┆           0 ┆   2,376.447251 ┆   2,025.509551 ┆   31.419792 ┆ 25,815.019819 │
+│ pwwgt133 ┆ 142,125 ┆           0 ┆   2,376.009068 ┆   2,034.643173 ┆    8.707957 ┆ 30,779.413171 │
+│ pwwgt134 ┆ 142,125 ┆           0 ┆   2,375.896214 ┆    2,020.28149 ┆   34.549391 ┆ 29,068.568445 │
+│ pwwgt135 ┆ 142,125 ┆           0 ┆   2,375.842632 ┆   2,019.012698 ┆   31.987441 ┆ 22,511.728676 │
+│ pwwgt136 ┆ 142,125 ┆           0 ┆   2,375.563016 ┆     2,014.8797 ┆   27.011118 ┆ 22,067.035292 │
+│ pwwgt137 ┆ 142,125 ┆           0 ┆   2,376.104567 ┆   2,016.671022 ┆   28.621066 ┆ 26,882.458741 │
+│ pwwgt138 ┆ 142,125 ┆           0 ┆    2,375.98058 ┆   2,024.749093 ┆   31.745653 ┆ 28,455.971735 │
+│ pwwgt139 ┆ 142,125 ┆           0 ┆   2,376.000623 ┆    2,021.93226 ┆   29.124326 ┆ 28,835.261786 │
+│ pwwgt140 ┆ 142,125 ┆           0 ┆   2,375.665157 ┆   2,019.478135 ┆   24.520498 ┆ 28,624.725105 │
+│ pwwgt141 ┆ 142,125 ┆           0 ┆   2,376.304017 ┆   2,067.130294 ┆   27.624359 ┆ 27,773.199557 │
+│ pwwgt142 ┆ 142,125 ┆           0 ┆   2,375.990652 ┆    2,024.26112 ┆   12.746177 ┆ 32,007.325456 │
+│ pwwgt143 ┆ 142,125 ┆           0 ┆   2,375.812857 ┆   2,018.354603 ┆   29.752535 ┆ 30,188.035271 │
+│ pwwgt144 ┆ 142,125 ┆           0 ┆   2,375.933065 ┆   2,025.704455 ┆   26.775578 ┆ 26,476.603881 │
+│ pwwgt145 ┆ 142,125 ┆           0 ┆   2,375.603028 ┆   2,036.629101 ┆   33.584096 ┆ 31,447.135146 │
+│ pwwgt146 ┆ 142,125 ┆           0 ┆   2,375.735892 ┆   2,021.196461 ┆   33.361881 ┆ 31,788.179467 │
+│ pwwgt147 ┆ 142,125 ┆           0 ┆   2,376.331571 ┆   2,021.722849 ┆   29.221763 ┆ 28,905.206339 │
+│ pwwgt148 ┆ 142,125 ┆           0 ┆   2,375.900051 ┆   2,029.532227 ┆   24.338259 ┆ 22,048.902376 │
+│ pwwgt149 ┆ 142,125 ┆           0 ┆   2,375.957382 ┆   2,024.513067 ┆   25.539695 ┆ 28,994.596153 │
+│ pwwgt150 ┆ 142,125 ┆           0 ┆   2,375.945604 ┆   2,021.508073 ┆   29.178585 ┆ 31,965.380977 │
+│ pwwgt151 ┆ 142,125 ┆           0 ┆   2,375.722161 ┆   2,022.835041 ┆    4.577544 ┆  28,021.40528 │
+│ pwwgt152 ┆ 142,125 ┆           0 ┆   2,375.480246 ┆   2,021.188085 ┆   25.137603 ┆ 24,310.198011 │
+│ pwwgt153 ┆ 142,125 ┆           0 ┆   2,375.665944 ┆   2,012.894362 ┆   30.095088 ┆ 26,864.236888 │
+│ pwwgt154 ┆ 142,125 ┆           0 ┆   2,376.042327 ┆   2,025.995797 ┆   28.266154 ┆ 25,345.493071 │
+│ pwwgt155 ┆ 142,125 ┆           0 ┆   2,376.312329 ┆   2,015.122824 ┆   28.240052 ┆ 26,628.857272 │
+│ pwwgt156 ┆ 142,125 ┆           0 ┆   2,376.185213 ┆   2,025.741568 ┆   28.731084 ┆ 27,588.553962 │
+│ pwwgt157 ┆ 142,125 ┆           0 ┆   2,376.279075 ┆   2,027.136895 ┆   28.103398 ┆ 29,499.055737 │
+│ pwwgt158 ┆ 142,125 ┆           0 ┆     2,376.1599 ┆   2,011.786555 ┆   30.171485 ┆ 26,033.958924 │
+│ pwwgt159 ┆ 142,125 ┆           0 ┆   2,375.929162 ┆   2,012.994342 ┆   25.676384 ┆  23,131.10636 │
+│ pwwgt160 ┆ 142,125 ┆           0 ┆   2,376.080582 ┆   2,015.413081 ┆    32.25922 ┆ 26,285.174898 │
+└──────────┴─────────┴─────────────┴────────────────┴────────────────┴─────────────┴───────────────┘
 </pre>
 </div>
 </div>
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>The function will be run for each boostrap/replicate weight
-</pre>
 </div>
 </div>
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>   Note: you may need to import packages within the function
-</pre>
-</div>
-</div>
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>   if executed in parallel (it will get pickled and reloaded)
-</pre>
-</div>
-</div>
-</div>
-</div>
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=d31efc10">
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=09ff8bcc">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -7825,11 +7867,12 @@ a.anchor-link {
 <div class="jp-InputPrompt jp-InputArea-prompt">In [6]:</div>
 <div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
 <div class="cm-editor cm-s-jupyter">
-<div class="highlight hl-ipython3"><pre><span></span><span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">"The betas from the regression (no weights, implicate 0)"</span><span class="p">)</span>
-<span class="n">y</span> <span class="o">=</span> <span class="s2">"var_gbm2"</span>
-<span class="n">X</span> <span class="o">=</span> <span class="p">[</span><span class="s2">"var2"</span><span class="p">,</span> <span class="s2">"var3"</span><span class="p">,</span> <span class="s2">"var4"</span><span class="p">,</span> <span class="s2">"var5"</span><span class="p">]</span>
-<span class="n">df_betas</span> <span class="o">=</span> <span class="n">run_regression</span><span class="p">(</span><span class="n">df</span><span class="o">=</span><span class="n">df_implicates</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">y</span><span class="o">=</span><span class="n">y</span><span class="p">,</span> <span class="n">X</span><span class="o">=</span><span class="n">X</span><span class="p">)</span>
-<span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="n">df_betas</span><span class="p">)</span>
+<div class="highlight hl-ipython3"><pre><span></span><span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">"Get the estimates"</span><span class="p">)</span>
+<span class="n">replicates</span> <span class="o">=</span> <span class="n">Replicates</span><span class="p">(</span>
+    <span class="n">weight_stub</span><span class="o">=</span><span class="s2">"pwwgt"</span><span class="p">,</span>
+    <span class="n">df</span><span class="o">=</span><span class="n">df_joined</span><span class="p">,</span>
+    <span class="n">bootstrap</span><span class="o">=</span><span class="kc">False</span>
+<span class="p">)</span>
 </pre></div>
 </div>
 </div>
@@ -7842,31 +7885,13 @@ a.anchor-link {
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>The betas from the regression (no weights, implicate 0)
-</pre>
-</div>
-</div>
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>shape: (5, 2)
-┌─────────────┬───────────┐
-│ Variable    ┆ Beta      │
-│ ---         ┆ ---       │
-│ str         ┆ f64       │
-╞═════════════╪═══════════╡
-│ var2        ┆ 0.583644  │
-│ var3        ┆ -0.330792 │
-│ var4        ┆ -13.05279 │
-│ var5        ┆ 3.005503  │
-│ _Intercept_ ┆ 8.092053  │
-└─────────────┴───────────┘
+<pre>Get the estimates
 </pre>
 </div>
 </div>
 </div>
 </div>
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=e6d91d28">
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=549fc424">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -7874,23 +7899,18 @@ a.anchor-link {
 <div class="jp-InputPrompt jp-InputArea-prompt">In [7]:</div>
 <div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
 <div class="cm-editor cm-s-jupyter">
-<div class="highlight hl-ipython3"><pre><span></span><span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">"Confirming how to run it on one implicate"</span><span class="p">)</span>
-<span class="n">arguments_sc</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span>
-    <span class="n">y</span><span class="o">=</span><span class="n">y</span><span class="p">,</span>
-    <span class="n">X</span><span class="o">=</span><span class="n">X</span><span class="p">,</span>
+<div class="highlight hl-ipython3"><pre><span></span><span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">"   For all households"</span><span class="p">)</span>
+<span class="n">c_all_households</span> <span class="o">=</span> <span class="n">pl</span><span class="o">.</span><span class="n">col</span><span class="p">(</span><span class="s2">"hhdrel"</span><span class="p">)</span><span class="o">.</span><span class="n">eq</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span> <span class="o">&amp;</span> <span class="n">pl</span><span class="o">.</span><span class="n">col</span><span class="p">(</span><span class="s2">"hrhtype"</span><span class="p">)</span><span class="o">.</span><span class="n">lt</span><span class="p">(</span><span class="mi">9</span><span class="p">)</span>
+<span class="n">c_white_only</span> <span class="o">=</span> <span class="n">pl</span><span class="o">.</span><span class="n">col</span><span class="p">(</span><span class="s2">"prdtrace"</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span>
+<span class="n">sc</span> <span class="o">=</span> <span class="n">StatCalculator</span><span class="p">(</span>
+    <span class="n">df_joined</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">c_all_households</span><span class="p">)</span><span class="o">.</span><span class="n">collect</span><span class="p">()</span><span class="o">.</span><span class="n">lazy</span><span class="p">(),</span>
+    <span class="n">statistics</span><span class="o">=</span><span class="n">Statistics</span><span class="p">(</span>
+        <span class="n">stats</span><span class="o">=</span><span class="p">[</span><span class="s2">"n"</span><span class="p">,</span><span class="s2">"mean"</span><span class="p">,</span><span class="s2">"p25"</span><span class="p">,</span><span class="s2">"p50"</span><span class="p">,</span><span class="s2">"p75"</span><span class="p">],</span>
+        <span class="n">columns</span><span class="o">=</span><span class="s2">"htotval"</span><span class="p">,</span>
+        <span class="c1"># quantile_interpolated=True</span>
+    <span class="p">),</span>
+    <span class="n">replicates</span><span class="o">=</span><span class="n">replicates</span>
 <span class="p">)</span>
-<span class="n">replicates</span> <span class="o">=</span> <span class="n">Replicates</span><span class="p">(</span>
-    <span class="n">weight_stub</span><span class="o">=</span><span class="s2">"weight_"</span><span class="p">,</span> <span class="n">n_replicates</span><span class="o">=</span><span class="n">n_replicates</span><span class="p">,</span> <span class="n">bootstrap</span><span class="o">=</span><span class="kc">True</span>
-<span class="p">)</span>
-<span class="n">sc_compare</span> <span class="o">=</span> <span class="n">StatCalculator</span><span class="o">.</span><span class="n">from_function</span><span class="p">(</span>
-    <span class="n">run_regression</span><span class="p">,</span>
-    <span class="n">df</span><span class="o">=</span><span class="n">join_wrapper</span><span class="p">(</span><span class="n">df_implicates</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">df_weights</span><span class="p">,</span> <span class="n">on</span><span class="o">=</span><span class="p">[</span><span class="s2">"index"</span><span class="p">],</span> <span class="n">how</span><span class="o">=</span><span class="s2">"left"</span><span class="p">),</span>
-    <span class="n">estimate_ids</span><span class="o">=</span><span class="p">[</span><span class="s2">"Variable"</span><span class="p">],</span>
-    <span class="n">arguments</span><span class="o">=</span><span class="n">arguments_sc</span><span class="p">,</span>
-    <span class="n">replicates</span><span class="o">=</span><span class="n">replicates</span><span class="p">,</span>
-    <span class="n">display</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
-<span class="p">)</span>
-<span class="n">sc_compare</span><span class="o">.</span><span class="n">print</span><span class="p">()</span>
 </pre></div>
 </div>
 </div>
@@ -7903,14 +7923,7 @@ a.anchor-link {
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>Confirming how to run it on one implicate
-</pre>
-</div>
-</div>
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>Running run_regression
+<pre>   For all households
 </pre>
 </div>
 </div>
@@ -7983,20 +7996,933 @@ a.anchor-link {
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>┌─────────────┬────────────┐
-│    Variable ┆       Beta │
-╞═════════════╪════════════╡
-│        var2 ┆   0.575825 │
-│             ┆   0.085591 │
-│        var3 ┆  -0.332087 │
-│             ┆   0.009964 │
-│        var4 ┆ -13.095352 │
-│             ┆   0.584783 │
-│        var5 ┆   2.769605 │
-│             ┆   0.737985 │
-│ _Intercept_ ┆   8.308586 │
-│             ┆     0.8383 │
-└─────────────┴────────────┘
+<pre>.</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>.</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>.</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>.</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>15</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>.</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>.</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>.</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>.</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>20</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>.</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>.</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>.</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>.</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>25</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>.</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>.</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>.</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>.</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>30</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>.</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>.</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>.</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>.</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>35</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>.</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>.</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>.</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>.</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>40</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>.</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>.</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>.</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>.</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>45</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>.</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>.</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>.</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>.</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>50</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>
+</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>.</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>.</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>.</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>.</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>55</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>.</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>.</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>.</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>.</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>60</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>.</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>.</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>.</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>.</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>65</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>.</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>.</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>.</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>.</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>70</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>.</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>.</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>.</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>.</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>75</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>.</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>.</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>.</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>.</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>80</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>.</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>.</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>.</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>.</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>85</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>.</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>.</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>.</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>.</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>90</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>.</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>.</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>.</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>.</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>95</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>.</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>.</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>.</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>.</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>100</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>
+</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>.</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>.</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>.</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>.</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>105</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>.</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>.</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>.</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>.</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>110</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>.</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>.</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>.</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>.</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>115</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>.</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>.</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>.</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>.</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>120</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>.</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>.</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>.</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>.</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>125</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>.</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>.</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>.</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>.</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>130</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>.</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>.</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>.</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>.</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>135</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>.</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>.</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>.</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>.</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>140</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>.</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>.</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>.</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>.</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>145</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>.</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>.</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>.</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>.</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>150</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>
+</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>.</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>.</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>.</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>.</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>155</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>.</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>.</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>.</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>.</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>160</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>┌──────────┬──────────┬───────────────┬────────────┬────────────┬──────────────┐
+│ Variable ┆        n ┆          mean ┆        p25 ┆        p50 ┆          p75 │
+╞══════════╪══════════╪═══════════════╪════════════╪════════════╪══════════════╡
+│  htotval ┆ 55,701.0 ┆ 121,016.04458 ┆   41,500.0 ┆   83,698.0 ┆    153,003.0 │
+│          ┆      0.0 ┆    744.940396 ┆ 414.495446 ┆ 640.623427 ┆ 1,050.828958 │
+└──────────┴──────────┴───────────────┴────────────┴────────────┴──────────────┘
 </pre>
 </div>
 </div>
@@ -8009,7 +8935,7 @@ a.anchor-link {
 </div>
 </div>
 </div>
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=3b47d3b2">
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=c5435936">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -8017,35 +8943,16 @@ a.anchor-link {
 <div class="jp-InputPrompt jp-InputArea-prompt">In [8]:</div>
 <div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
 <div class="cm-editor cm-s-jupyter">
-<div class="highlight hl-ipython3"><pre><span></span><span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">"Now the full function"</span><span class="p">)</span>
-<span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">"   Note the nested arguments..."</span><span class="p">)</span>
-<span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">"       Maybe not the best API, but it does mean"</span><span class="p">)</span>
-<span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">"       that you can run ANYTHING that takes in a"</span><span class="p">)</span>
-<span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">"       dataframe and a weight and returns a dataframe of estiamtes"</span><span class="p">)</span>
-<span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">"        and run it through the bootstrap + MI process"</span><span class="p">)</span>
-<span class="n">arguments_sc</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span>
-    <span class="n">y</span><span class="o">=</span><span class="n">y</span><span class="p">,</span>
-    <span class="n">X</span><span class="o">=</span><span class="n">X</span><span class="p">,</span>
+<div class="highlight hl-ipython3"><pre><span></span><span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">"   For all households with white householder"</span><span class="p">)</span>
+<span class="n">sc_white</span> <span class="o">=</span> <span class="n">StatCalculator</span><span class="p">(</span>
+    <span class="n">df_joined</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">c_all_households</span> <span class="o">&amp;</span> <span class="n">c_white_only</span><span class="p">)</span><span class="o">.</span><span class="n">collect</span><span class="p">()</span><span class="o">.</span><span class="n">lazy</span><span class="p">(),</span>
+    <span class="n">statistics</span><span class="o">=</span><span class="n">Statistics</span><span class="p">(</span>
+        <span class="n">stats</span><span class="o">=</span><span class="p">[</span><span class="s2">"n"</span><span class="p">,</span><span class="s2">"mean"</span><span class="p">,</span><span class="s2">"p25"</span><span class="p">,</span><span class="s2">"p50"</span><span class="p">,</span><span class="s2">"p75"</span><span class="p">],</span>
+        <span class="n">columns</span><span class="o">=</span><span class="s2">"htotval"</span><span class="p">,</span>
+        <span class="c1"># quantile_interpolated=True</span>
+    <span class="p">),</span>
+    <span class="n">replicates</span><span class="o">=</span><span class="n">replicates</span>
 <span class="p">)</span>
-<span class="n">arguments_mi</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span>
-    <span class="n">delegate</span><span class="o">=</span><span class="n">run_regression</span><span class="p">,</span>
-    <span class="n">arguments</span><span class="o">=</span><span class="n">arguments_sc</span><span class="p">,</span>
-    <span class="n">estimate_ids</span><span class="o">=</span><span class="p">[</span><span class="s2">"Variable"</span><span class="p">],</span>
-    <span class="n">replicates</span><span class="o">=</span><span class="n">replicates</span><span class="p">,</span>
-<span class="p">)</span>
-
-<span class="n">mi_results_seq</span> <span class="o">=</span> <span class="n">mi_ses_from_function</span><span class="p">(</span>
-    <span class="n">delegate</span><span class="o">=</span><span class="n">StatCalculator</span><span class="o">.</span><span class="n">from_function</span><span class="p">,</span>
-    <span class="n">df_implicates</span><span class="o">=</span><span class="n">df_implicates</span><span class="p">,</span>
-    <span class="n">path_srmi</span><span class="o">=</span><span class="n">path_model</span><span class="p">,</span>
-    <span class="n">df_noimputes</span><span class="o">=</span><span class="n">df_weights</span><span class="p">,</span>
-    <span class="n">index</span><span class="o">=</span><span class="p">[</span><span class="s2">"index"</span><span class="p">],</span>
-    <span class="n">arguments</span><span class="o">=</span><span class="n">arguments_mi</span><span class="p">,</span>
-    <span class="n">join_on</span><span class="o">=</span><span class="p">[</span><span class="s2">"Variable"</span><span class="p">],</span>
-    <span class="n">parallel</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
-<span class="p">)</span>
-
-<span class="n">mi_results_seq</span><span class="o">.</span><span class="n">print</span><span class="p">()</span>
 </pre></div>
 </div>
 </div>
@@ -8058,56 +8965,7 @@ a.anchor-link {
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>Now the full function
-</pre>
-</div>
-</div>
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>   Note the nested arguments...
-</pre>
-</div>
-</div>
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>       Maybe not the best API, but it does mean
-</pre>
-</div>
-</div>
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>       that you can run ANYTHING that takes in a
-</pre>
-</div>
-</div>
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>       dataframe and a weight and returns a dataframe of estiamtes
-</pre>
-</div>
-</div>
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>        and run it through the bootstrap + MI process
-</pre>
-</div>
-</div>
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>Implicate #1
-</pre>
-</div>
-</div>
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>Running run_regression
+<pre>   For all households with white householder
 </pre>
 </div>
 </div>
@@ -8180,41 +9038,892 @@ a.anchor-link {
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>┌─────────────┬────────────┐
-│    Variable ┆       Beta │
-╞═════════════╪════════════╡
-│        var2 ┆   0.575825 │
-│             ┆   0.085591 │
-│        var3 ┆  -0.332087 │
-│             ┆   0.009964 │
-│        var4 ┆ -13.095352 │
-│             ┆   0.584783 │
-│        var5 ┆   2.769605 │
-│             ┆   0.737985 │
-│ _Intercept_ ┆   8.308586 │
-│             ┆     0.8383 │
-└─────────────┴────────────┘
+<pre>.</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>.</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>.</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>.</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>15</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>.</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>.</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>.</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>.</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>20</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>.</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>.</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>.</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>.</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>25</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>.</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>.</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>.</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>.</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>30</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>.</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>.</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>.</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>.</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>35</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>.</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>.</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>.</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>.</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>40</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>.</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>.</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>.</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>.</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>45</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>.</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>.</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>.</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>.</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>50</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>
 </pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>Implicate #2
+<pre>.</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>.</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>.</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>.</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>55</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>.</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>.</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>.</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>.</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>60</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>.</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>.</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>.</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>.</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>65</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>.</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>.</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>.</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>.</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>70</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>.</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>.</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>.</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>.</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>75</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>.</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>.</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>.</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>.</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>80</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>.</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>.</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>.</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>.</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>85</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>.</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>.</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>.</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>.</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>90</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>.</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>.</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>.</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>.</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>95</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>.</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>.</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>.</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>.</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>100</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>
 </pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>Running run_regression
+<pre>.</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>.</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>.</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>.</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>105</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>.</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>.</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>.</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>.</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>110</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>.</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>.</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>.</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>.</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>115</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>.</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>.</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>.</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>.</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>120</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>.</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>.</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>.</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>.</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>125</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>.</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>.</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>.</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>.</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>130</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>.</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>.</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>.</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>.</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>135</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>.</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>.</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>.</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>.</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>140</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>.</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>.</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>.</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>.</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>145</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>.</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>.</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>.</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>.</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>150</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>
 </pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>0</pre>
+<pre>.</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>.</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>.</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>.</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>155</pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
@@ -8244,31 +9953,19 @@ a.anchor-link {
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>5</pre>
+<pre>160</pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>.</pre>
-</div>
-</div>
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>.</pre>
-</div>
-</div>
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>.</pre>
-</div>
-</div>
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>.</pre>
+<pre>┌──────────┬──────────┬────────────────┬────────────┬────────────┬──────────────┐
+│ Variable ┆        n ┆           mean ┆        p25 ┆        p50 ┆          p75 │
+╞══════════╪══════════╪════════════════╪════════════╪════════════╪══════════════╡
+│  htotval ┆ 42,528.0 ┆ 124,490.904972 ┆   45,000.0 ┆   88,025.0 ┆    156,644.0 │
+│          ┆      0.0 ┆       868.9298 ┆ 214.334843 ┆ 755.746154 ┆ 1,176.725457 │
+└──────────┴──────────┴────────────────┴────────────┴────────────┴──────────────┘
+</pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
@@ -8278,62 +9975,9 @@ a.anchor-link {
 </pre>
 </div>
 </div>
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>10</pre>
 </div>
 </div>
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>┌─────────────┬────────────┐
-│    Variable ┆       Beta │
-╞═════════════╪════════════╡
-│        var2 ┆   0.570787 │
-│             ┆   0.074242 │
-│        var3 ┆  -0.335643 │
-│             ┆   0.019819 │
-│        var4 ┆ -13.152631 │
-│             ┆   0.604451 │
-│        var5 ┆   2.741469 │
-│             ┆   0.673906 │
-│ _Intercept_ ┆   8.535823 │
-│             ┆   1.168383 │
-└─────────────┴────────────┘
-</pre>
-</div>
-</div>
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>┌─────────────┬────────────┐
-│    Variable ┆       Beta │
-╞═════════════╪════════════╡
-│        var2 ┆   0.573306 │
-│             ┆   0.080237 │
-│        var3 ┆  -0.333865 │
-│             ┆   0.015985 │
-│        var4 ┆ -13.123991 │
-│             ┆   0.596763 │
-│        var5 ┆   2.755537 │
-│             ┆   0.707092 │
-│ _Intercept_ ┆   8.422204 │
-│             ┆   1.035693 │
-└─────────────┴────────────┘
-</pre>
-</div>
-</div>
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="text/plain" tabindex="0">
-<pre>
-</pre>
-</div>
-</div>
-</div>
-</div>
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=321880de">
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=8602fc72">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -8341,19 +9985,10 @@ a.anchor-link {
 <div class="jp-InputPrompt jp-InputArea-prompt">In [9]:</div>
 <div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
 <div class="cm-editor cm-s-jupyter">
-<div class="highlight hl-ipython3"><pre><span></span><span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">"For parallel, it's better to pass the path of the model"</span><span class="p">)</span>
-<span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">"   To avoid unnecessary I/O"</span><span class="p">)</span>
-<span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">"   (For sequential it doesn't really matter)"</span><span class="p">)</span>
-<span class="n">mi_results</span> <span class="o">=</span> <span class="n">mi_ses_from_function</span><span class="p">(</span>
-    <span class="n">delegate</span><span class="o">=</span><span class="n">StatCalculator</span><span class="o">.</span><span class="n">from_function</span><span class="p">,</span>
-    <span class="c1"># df_implicates=df_implicates,</span>
-    <span class="n">path_srmi</span><span class="o">=</span><span class="n">path_model</span><span class="p">,</span>
-    <span class="n">df_noimputes</span><span class="o">=</span><span class="n">df_weights</span><span class="p">,</span>
-    <span class="n">index</span><span class="o">=</span><span class="p">[</span><span class="s2">"index"</span><span class="p">],</span>
-    <span class="n">arguments</span><span class="o">=</span><span class="n">arguments_mi</span><span class="p">,</span>
-    <span class="n">join_on</span><span class="o">=</span><span class="p">[</span><span class="s2">"Variable"</span><span class="p">],</span>
-    <span class="n">parallel</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
-<span class="p">)</span>
+<div class="highlight hl-ipython3"><pre><span></span><span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">"Compare all households to households with white householder"</span><span class="p">)</span>
+<span class="n">sc_all_white</span> <span class="o">=</span> <span class="n">sc</span><span class="o">.</span><span class="n">compare</span><span class="p">(</span><span class="n">sc_white</span><span class="p">,</span><span class="n">display</span><span class="o">=</span><span class="kc">False</span><span class="p">)[</span><span class="s2">"ratio"</span><span class="p">]</span>
+
+<span class="n">sc_all_white</span><span class="o">.</span><span class="n">print</span><span class="p">()</span>
 </pre></div>
 </div>
 </div>
@@ -8366,407 +10001,26 @@ a.anchor-link {
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>For parallel, it's better to pass the path of the model
+<pre>Compare all households to households with white householder
 </pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>   To avoid unnecessary I/O
+<pre>Comparing estimates using replicate weights
 </pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>   (For sequential it doesn't really matter)
-</pre>
-</div>
-</div>
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>Defaulting to shell for parallel estimation
-</pre>
-</div>
-</div>
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>
-
-Starting call:
-</pre>
-</div>
-</div>
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>
-</pre>
-</div>
-</div>
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>Starting call at 0 seconds
-</pre>
-</div>
-</div>
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>      Because:    RunBecause.SetToRun
-</pre>
-</div>
-</div>
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>Function: _mi_ses_from_function_one_implicate
-language: Languages.Python
-
-BEGIN CODE
-
-from survey_kit.orchestration.config import Config
-Config().cpus = 1
-from survey_kit.utilities.logging import set_logging, PrintLogger
-set_logging(path_log='.',force=True,to_console=False,append_to_file=True,name='.')
-capture_prints_log = PrintLogger('.',to_console=False)
-from survey_kit.statistics.multiple_imputation import _mi_ses_from_function_one_implicate
-from survey_kit.serializable import SerializableDictionary
-d_implicate = SerializableDictionary.load(path='C:/Users/jonro/OneDrive/Documents/Coding/survey_kit/.scratch/temp_files/3wtpdirw')
-_mi_ses_from_function_one_implicate(implicate_number=0,path_save='C:/Users/jonro/OneDrive/Documents/Coding/survey_kit/.scratch/temp_files/3wtpdirw_implicate_0',**d_implicate)
-
-
-END CODE
-
-
-</pre>
-</div>
-</div>
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>
-</pre>
-</div>
-</div>
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>Starting call at 0 seconds
-</pre>
-</div>
-</div>
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>      Because:    RunBecause.SetToRun
-</pre>
-</div>
-</div>
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>Function: _mi_ses_from_function_one_implicate
-language: Languages.Python
-
-BEGIN CODE
-
-from survey_kit.orchestration.config import Config
-Config().cpus = 1
-from survey_kit.utilities.logging import set_logging, PrintLogger
-set_logging(path_log='.',force=True,to_console=False,append_to_file=True,name='.')
-capture_prints_log = PrintLogger('.',to_console=False)
-from survey_kit.statistics.multiple_imputation import _mi_ses_from_function_one_implicate
-from survey_kit.serializable import SerializableDictionary
-d_implicate = SerializableDictionary.load(path='C:/Users/jonro/OneDrive/Documents/Coding/survey_kit/.scratch/temp_files/3wtpdirw')
-_mi_ses_from_function_one_implicate(implicate_number=1,path_save='C:/Users/jonro/OneDrive/Documents/Coding/survey_kit/.scratch/temp_files/3wtpdirw_implicate_1',**d_implicate)
-
-
-END CODE
-
-
-</pre>
-</div>
-</div>
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>.</pre>
-</div>
-</div>
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>.</pre>
-</div>
-</div>
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>.</pre>
-</div>
-</div>
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>.</pre>
-</div>
-</div>
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>.</pre>
-</div>
-</div>
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>.</pre>
-</div>
-</div>
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>.</pre>
-</div>
-</div>
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>.</pre>
-</div>
-</div>
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>.</pre>
-</div>
-</div>
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>.</pre>
-</div>
-</div>
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>.</pre>
-</div>
-</div>
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>.</pre>
-</div>
-</div>
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>
-LOGGING INFORMATION FOR:
-    FILE:       C:\Users\jonro\OneDrive\Documents\Coding\survey_kit\.scratch\temp_files\001__mi_ses_from_function_one_implicate__4e30mfc.py
-PRINT OUTPUT BEGIN
-
-
-
-PRINT OUTPUT END
-
-
-</pre>
-</div>
-</div>
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>
-LOGGING INFORMATION FOR:
-    FILE:       C:\Users\jonro\OneDrive\Documents\Coding\survey_kit\.scratch\temp_files\002__mi_ses_from_function_one_implicate_ik4naak8.py
-PRINT OUTPUT BEGIN
-
-
-
-PRINT OUTPUT END
-
-
-</pre>
-</div>
-</div>
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>
-</pre>
-</div>
-</div>
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>Complete=True
-</pre>
-</div>
-</div>
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>Removing existing directory C:/Users/jonro/OneDrive/Documents/Coding/survey_kit/.scratch/temp_files/3wtpdirw_implicate_0.replicate_stats
-</pre>
-</div>
-</div>
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>Removing existing directory C:/Users/jonro/OneDrive/Documents/Coding/survey_kit/.scratch/temp_files/3wtpdirw_implicate_1.replicate_stats
-</pre>
-</div>
-</div>
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>Removing existing directory C:/Users/jonro/OneDrive/Documents/Coding/survey_kit/.scratch/temp_files/3wtpdirw.dict
-</pre>
-</div>
-</div>
-</div>
-</div>
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=cc893899">
-<div class="jp-Cell-inputWrapper" tabindex="0">
-<div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
-</div>
-<div class="jp-InputArea jp-Cell-inputArea">
-<div class="jp-InputPrompt jp-InputArea-prompt">In [10]:</div>
-<div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
-<div class="cm-editor cm-s-jupyter">
-<div class="highlight hl-ipython3"><pre><span></span><span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">"The results"</span><span class="p">)</span>
-<span class="n">mi_results</span><span class="o">.</span><span class="n">print</span><span class="p">()</span>
-<span class="n">mi_results_seq</span><span class="o">.</span><span class="n">print</span><span class="p">()</span>
-</pre></div>
-</div>
-</div>
-</div>
-</div>
-<div class="jp-Cell-outputWrapper">
-<div class="jp-Collapser jp-OutputCollapser jp-Cell-outputCollapser">
-</div>
-<div class="jp-OutputArea jp-Cell-outputArea">
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>The results
-</pre>
-</div>
-</div>
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>┌─────────────┬────────────┐
-│    Variable ┆       Beta │
-╞═════════════╪════════════╡
-│        var2 ┆   0.573306 │
-│             ┆   0.080237 │
-│        var3 ┆  -0.333865 │
-│             ┆   0.015985 │
-│        var4 ┆ -13.123991 │
-│             ┆   0.596763 │
-│        var5 ┆   2.755537 │
-│             ┆   0.707092 │
-│ _Intercept_ ┆   8.422204 │
-│             ┆   1.035693 │
-└─────────────┴────────────┘
-</pre>
-</div>
-</div>
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>┌─────────────┬────────────┐
-│    Variable ┆       Beta │
-╞═════════════╪════════════╡
-│        var2 ┆   0.573306 │
-│             ┆   0.080237 │
-│        var3 ┆  -0.333865 │
-│             ┆   0.015985 │
-│        var4 ┆ -13.123991 │
-│             ┆   0.596763 │
-│        var5 ┆   2.755537 │
-│             ┆   0.707092 │
-│ _Intercept_ ┆   8.422204 │
-│             ┆   1.035693 │
-└─────────────┴────────────┘
-</pre>
-</div>
-</div>
-</div>
-</div>
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=81355f5a">
-<div class="jp-Cell-inputWrapper" tabindex="0">
-<div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
-</div>
-<div class="jp-InputArea jp-Cell-inputArea">
-<div class="jp-InputPrompt jp-InputArea-prompt">In [11]:</div>
-<div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
-<div class="cm-editor cm-s-jupyter">
-<div class="highlight hl-ipython3"><pre><span></span><span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">"Compare two sets of results"</span><span class="p">)</span>
-<span class="n">d_comparison</span> <span class="o">=</span> <span class="n">mi_results</span><span class="o">.</span><span class="n">compare</span><span class="p">(</span><span class="n">mi_results_seq</span><span class="p">)</span>
-<span class="n">d_comparison</span><span class="p">[</span><span class="s2">"difference"</span><span class="p">]</span><span class="o">.</span><span class="n">print</span><span class="p">()</span>
-<span class="n">d_comparison</span><span class="p">[</span><span class="s2">"ratio"</span><span class="p">]</span><span class="o">.</span><span class="n">print</span><span class="p">()</span>
-</pre></div>
-</div>
-</div>
-</div>
-</div>
-<div class="jp-Cell-outputWrapper">
-<div class="jp-Collapser jp-OutputCollapser jp-Cell-outputCollapser">
-</div>
-<div class="jp-OutputArea jp-Cell-outputArea">
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>Compare two sets of results
-</pre>
-</div>
-</div>
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>┌─────────────┬──────┐
-│    Variable ┆ Beta │
-╞═════════════╪══════╡
-│        var2 ┆  0.0 │
-│             ┆  0.0 │
-│        var3 ┆  0.0 │
-│             ┆  0.0 │
-│        var4 ┆  0.0 │
-│             ┆  0.0 │
-│        var5 ┆  0.0 │
-│             ┆  0.0 │
-│ _Intercept_ ┆  0.0 │
-│             ┆  0.0 │
-└─────────────┴──────┘
-</pre>
-</div>
-</div>
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>┌─────────────┬──────┐
-│    Variable ┆ Beta │
-╞═════════════╪══════╡
-│        var2 ┆  0.0 │
-│             ┆  0.0 │
-│        var3 ┆  0.0 │
-│             ┆  0.0 │
-│        var4 ┆  0.0 │
-│             ┆  0.0 │
-│        var5 ┆  0.0 │
-│             ┆  0.0 │
-│ _Intercept_ ┆  0.0 │
-│             ┆  0.0 │
-└─────────────┴──────┘
+<pre>┌──────────┬───────────┬──────────┬──────────┬──────────┬──────────┐
+│ Variable ┆         n ┆     mean ┆      p25 ┆      p50 ┆      p75 │
+╞══════════╪═══════════╪══════════╪══════════╪══════════╪══════════╡
+│  htotval ┆ -0.236495 ┆ 0.028714 ┆ 0.084337 ┆ 0.051698 ┆ 0.023797 │
+│          ┆       0.0 ┆ 0.003055 ┆ 0.008397 ┆ 0.004659 ┆  0.00343 │
+└──────────┴───────────┴──────────┴──────────┴──────────┴──────────┘
 </pre>
 </div>
 </div>

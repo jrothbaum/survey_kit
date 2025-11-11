@@ -7510,7 +7510,7 @@ a.anchor-link {
 </style>
 <!-- End of mermaid configuration --></head>
 <body class="jp-Notebook" data-jp-theme-light="true" data-jp-theme-name="JupyterLab Light">
-<main><div class="jp-Cell jp-CodeCell jp-Notebook-cell jp-mod-noOutputs" id="cell-id=72eeee3d">
+<main><div class="jp-Cell jp-CodeCell jp-Notebook-cell jp-mod-noOutputs" id="cell-id=8ef5f2e3">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -7541,7 +7541,7 @@ a.anchor-link {
 </div>
 </div>
 </div>
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=8539e0dd">
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=1706786a">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -7582,14 +7582,14 @@ a.anchor-link {
 
 
 <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">"var_hd1 is binary and conditional on other variables"</span><span class="p">)</span>
-<span class="n">c_hd1</span> <span class="o">=</span> <span class="p">((</span><span class="n">c_var2</span> <span class="o">*</span> <span class="mi">2</span> <span class="o">-</span> <span class="n">c_var3</span> <span class="o">*</span> <span class="mi">3</span> <span class="o">*</span> <span class="n">c_var5</span> <span class="o">+</span> <span class="n">c_e_hd1</span><span class="p">)</span>  <span class="o">&gt;</span> <span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">alias</span><span class="p">(</span><span class="s2">"var_hd1"</span><span class="p">)</span>
+<span class="n">c_hd1</span> <span class="o">=</span> <span class="p">((</span><span class="n">c_var2</span> <span class="o">*</span> <span class="mi">2</span> <span class="o">-</span> <span class="n">c_var3</span> <span class="o">*</span> <span class="mi">3</span> <span class="o">*</span> <span class="n">c_var5</span> <span class="o">+</span> <span class="n">c_e_hd1</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">alias</span><span class="p">(</span><span class="s2">"var_hd1"</span><span class="p">)</span>
 
 <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">"var_hd2 is != 0 only if var_hd1 == True"</span><span class="p">)</span>
 <span class="n">c_hd2</span> <span class="o">=</span> <span class="p">(</span>
     <span class="n">pl</span><span class="o">.</span><span class="n">when</span><span class="p">(</span><span class="n">pl</span><span class="o">.</span><span class="n">col</span><span class="p">(</span><span class="s2">"var_hd1"</span><span class="p">))</span>
-      <span class="o">.</span><span class="n">then</span><span class="p">(((</span><span class="n">c_var2</span> <span class="o">*</span> <span class="mf">1.5</span> <span class="o">-</span> <span class="n">c_var3</span> <span class="o">*</span> <span class="mi">1</span> <span class="o">*</span> <span class="n">c_var4</span> <span class="o">+</span> <span class="n">c_e_hd2</span><span class="p">)))</span>
-      <span class="o">.</span><span class="n">otherwise</span><span class="p">(</span><span class="n">pl</span><span class="o">.</span><span class="n">lit</span><span class="p">(</span><span class="mi">0</span><span class="p">))</span>
-      <span class="o">.</span><span class="n">alias</span><span class="p">(</span><span class="s2">"var_hd2"</span><span class="p">)</span>
+    <span class="o">.</span><span class="n">then</span><span class="p">((</span><span class="n">c_var2</span> <span class="o">*</span> <span class="mf">1.5</span> <span class="o">-</span> <span class="n">c_var3</span> <span class="o">*</span> <span class="mi">1</span> <span class="o">*</span> <span class="n">c_var4</span> <span class="o">+</span> <span class="n">c_e_hd2</span><span class="p">))</span>
+    <span class="o">.</span><span class="n">otherwise</span><span class="p">(</span><span class="n">pl</span><span class="o">.</span><span class="n">lit</span><span class="p">(</span><span class="mi">0</span><span class="p">))</span>
+    <span class="o">.</span><span class="n">alias</span><span class="p">(</span><span class="s2">"var_hd2"</span><span class="p">)</span>
 <span class="p">)</span>
 <span class="c1">#   Create a bunch of variables that are functions of the variables created above</span>
 <span class="n">df</span> <span class="o">=</span> <span class="p">(</span>
@@ -7676,16 +7676,16 @@ a.anchor-link {
 │        var2 ┆ 10,000 ┆           0 ┆     4.9782 ┆    3.154508 ┆        0.0 ┆      10.0 │
 │        var3 ┆ 10,000 ┆           0 ┆    25.1084 ┆   14.752302 ┆        0.0 ┆      50.0 │
 │        var4 ┆ 10,000 ┆           0 ┆   0.505666 ┆    0.287861 ┆   0.000027 ┆  0.999997 │
+│     var_hd2 ┆ 10,000 ┆       2,515 ┆  -2.409894 ┆   10.378084 ┆ -51.051306 ┆ 26.725014 │
 │        var5 ┆ 10,000 ┆           0 ┆     0.4999 ┆    0.500025 ┆        0.0 ┆       1.0 │
 │     var_hd1 ┆ 10,000 ┆       2,486 ┆   0.530077 ┆    0.499128 ┆        0.0 ┆       1.0 │
-│     var_hd2 ┆ 10,000 ┆       2,515 ┆  -2.409894 ┆   10.378084 ┆ -51.051306 ┆ 26.725014 │
 └─────────────┴────────┴─────────────┴────────────┴─────────────┴────────────┴───────────┘
 </pre>
 </div>
 </div>
 </div>
 </div>
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=6ae1a02f">
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=c6efbf65">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -7701,9 +7701,7 @@ a.anchor-link {
 <span class="n">v_hd1</span> <span class="o">=</span> <span class="n">Variable</span><span class="p">(</span>
     <span class="n">impute_var</span><span class="o">=</span><span class="s2">"var_hd1"</span><span class="p">,</span>
     <span class="n">modeltype</span><span class="o">=</span><span class="n">Variable</span><span class="o">.</span><span class="n">ModelType</span><span class="o">.</span><span class="n">StatMatch</span><span class="p">,</span>
-    <span class="n">parameters</span><span class="o">=</span><span class="n">Parameters</span><span class="o">.</span><span class="n">HotDeck</span><span class="p">(</span>
-        <span class="n">model_list</span><span class="o">=</span><span class="p">[</span><span class="s2">"var2"</span><span class="p">,</span> <span class="s2">"var3"</span><span class="p">,</span> <span class="s2">"var5"</span><span class="p">]</span>
-    <span class="p">)</span>
+    <span class="n">parameters</span><span class="o">=</span><span class="n">Parameters</span><span class="o">.</span><span class="n">HotDeck</span><span class="p">(</span><span class="n">model_list</span><span class="o">=</span><span class="p">[</span><span class="s2">"var2"</span><span class="p">,</span> <span class="s2">"var3"</span><span class="p">,</span> <span class="s2">"var5"</span><span class="p">]),</span>
 <span class="p">)</span>
 
 <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">"Add the variable to the list to be imputed"</span><span class="p">)</span>
@@ -7721,15 +7719,13 @@ a.anchor-link {
     <span class="n">Where</span><span class="o">=</span><span class="n">nw</span><span class="o">.</span><span class="n">col</span><span class="p">(</span><span class="s2">"var_hd1"</span><span class="p">),</span>
     <span class="n">By</span><span class="o">=</span><span class="p">[</span><span class="s2">"year"</span><span class="p">,</span> <span class="s2">"month"</span><span class="p">],</span>
     <span class="n">modeltype</span><span class="o">=</span><span class="n">Variable</span><span class="o">.</span><span class="n">ModelType</span><span class="o">.</span><span class="n">HotDeck</span><span class="p">,</span>
-    <span class="n">parameters</span><span class="o">=</span><span class="n">Parameters</span><span class="o">.</span><span class="n">HotDeck</span><span class="p">(</span>
-        <span class="n">model_list</span><span class="o">=</span><span class="p">[</span><span class="s2">"var2"</span><span class="p">,</span> <span class="s2">"var3"</span><span class="p">,</span> <span class="s2">"var5"</span><span class="p">]</span>
-    <span class="p">),</span>
+    <span class="n">parameters</span><span class="o">=</span><span class="n">Parameters</span><span class="o">.</span><span class="n">HotDeck</span><span class="p">(</span><span class="n">model_list</span><span class="o">=</span><span class="p">[</span><span class="s2">"var2"</span><span class="p">,</span> <span class="s2">"var3"</span><span class="p">,</span> <span class="s2">"var5"</span><span class="p">]),</span>
     <span class="n">postFunctions</span><span class="o">=</span><span class="p">(</span>
         <span class="n">nw</span><span class="o">.</span><span class="n">when</span><span class="p">(</span><span class="n">nw</span><span class="o">.</span><span class="n">col</span><span class="p">(</span><span class="s2">"var_hd1"</span><span class="p">))</span>
-          <span class="o">.</span><span class="n">then</span><span class="p">(</span><span class="n">nw</span><span class="o">.</span><span class="n">col</span><span class="p">(</span><span class="s2">"var_hd2"</span><span class="p">))</span>
-          <span class="o">.</span><span class="n">otherwise</span><span class="p">(</span><span class="n">nw</span><span class="o">.</span><span class="n">lit</span><span class="p">(</span><span class="mi">0</span><span class="p">))</span>
-          <span class="o">.</span><span class="n">alias</span><span class="p">(</span><span class="s2">"var_hd2"</span><span class="p">)</span>
-    <span class="p">)</span>
+        <span class="o">.</span><span class="n">then</span><span class="p">(</span><span class="n">nw</span><span class="o">.</span><span class="n">col</span><span class="p">(</span><span class="s2">"var_hd2"</span><span class="p">))</span>
+        <span class="o">.</span><span class="n">otherwise</span><span class="p">(</span><span class="n">nw</span><span class="o">.</span><span class="n">lit</span><span class="p">(</span><span class="mi">0</span><span class="p">))</span>
+        <span class="o">.</span><span class="n">alias</span><span class="p">(</span><span class="s2">"var_hd2"</span><span class="p">)</span>
+    <span class="p">),</span>
 <span class="p">)</span>
 <span class="n">vars_impute</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">v_hd2</span><span class="p">)</span>
 </pre></div>
@@ -7806,7 +7802,7 @@ a.anchor-link {
 </div>
 </div>
 </div>
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=a76a775b">
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=a94459d4">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -7842,9 +7838,16 @@ a.anchor-link {
 </pre>
 </div>
 </div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>Removing existing directory C:\Users\jonro\OneDrive\Documents\Coding\survey_kit\.scratch\temp_files/py_srmi_test_hd.srmi
+</pre>
 </div>
 </div>
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=cf10a996">
+</div>
+</div>
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=7e37133c">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -8993,7 +8996,7 @@ Final Estimates by Iteration
 </div>
 </div>
 </div>
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=c8326244">
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=83918b17">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -9021,7 +9024,7 @@ Final Estimates by Iteration
 </div>
 </div>
 </div>
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=2a15f222">
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=cca1395a">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -9071,11 +9074,11 @@ Look at the original
 │        var2 ┆ 10,000 ┆           0 ┆     4.9782 ┆    3.154508 ┆        0.0 ┆     10.0 │
 │        var3 ┆ 10,000 ┆           0 ┆    25.1084 ┆   14.752302 ┆        0.0 ┆     50.0 │
 │        var4 ┆ 10,000 ┆           0 ┆   0.505666 ┆    0.287861 ┆   0.000027 ┆ 0.999997 │
-│        var5 ┆ 10,000 ┆           0 ┆     0.4999 ┆    0.500025 ┆        0.0 ┆      1.0 │
 │ missing_hd1 ┆ 10,000 ┆           0 ┆   0.499985 ┆    0.288921 ┆   0.000129 ┆  0.99994 │
 │ missing_hd2 ┆ 10,000 ┆           0 ┆   0.499133 ┆    0.288946 ┆   0.000133 ┆ 0.999972 │
-│     var_hd1 ┆ 10,000 ┆           0 ┆      0.523 ┆    0.499496 ┆        0.0 ┆      1.0 │
 │     var_hd2 ┆ 10,000 ┆           0 ┆  -2.416816 ┆   10.339524 ┆ -53.647677 ┆ 27.06033 │
+│        var5 ┆ 10,000 ┆           0 ┆     0.4999 ┆    0.500025 ┆        0.0 ┆      1.0 │
+│     var_hd1 ┆ 10,000 ┆           0 ┆      0.523 ┆    0.499496 ┆        0.0 ┆      1.0 │
 └─────────────┴────────┴─────────────┴────────────┴─────────────┴────────────┴──────────┘
 </pre>
 </div>
@@ -9103,9 +9106,9 @@ Look at the imputes
 │         var2 ┆ 10,000 ┆           0 ┆     4.9782 ┆    3.154508 ┆        0.0 ┆      10.0 │
 │         var3 ┆ 10,000 ┆           0 ┆    25.1084 ┆   14.752302 ┆        0.0 ┆      50.0 │
 │         var4 ┆ 10,000 ┆           0 ┆   0.505666 ┆    0.287861 ┆   0.000027 ┆  0.999997 │
+│      var_hd2 ┆ 10,000 ┆           0 ┆  -2.318508 ┆   10.219462 ┆ -51.051306 ┆ 26.725014 │
 │         var5 ┆ 10,000 ┆           0 ┆     0.4999 ┆    0.500025 ┆        0.0 ┆       1.0 │
 │      var_hd1 ┆ 10,000 ┆           0 ┆     0.5246 ┆    0.499419 ┆        0.0 ┆       1.0 │
-│      var_hd2 ┆ 10,000 ┆           0 ┆  -2.318508 ┆   10.219462 ┆ -51.051306 ┆ 26.725014 │
 └──────────────┴────────┴─────────────┴────────────┴─────────────┴────────────┴───────────┘
 </pre>
 </div>
@@ -9124,9 +9127,9 @@ Look at the imputes
 │         var2 ┆ 10,000 ┆           0 ┆     4.9782 ┆    3.154508 ┆        0.0 ┆      10.0 │
 │         var3 ┆ 10,000 ┆           0 ┆    25.1084 ┆   14.752302 ┆        0.0 ┆      50.0 │
 │         var4 ┆ 10,000 ┆           0 ┆   0.505666 ┆    0.287861 ┆   0.000027 ┆  0.999997 │
+│      var_hd2 ┆ 10,000 ┆           0 ┆  -2.303672 ┆   10.243192 ┆ -51.051306 ┆ 26.725014 │
 │         var5 ┆ 10,000 ┆           0 ┆     0.4999 ┆    0.500025 ┆        0.0 ┆       1.0 │
 │      var_hd1 ┆ 10,000 ┆           0 ┆      0.526 ┆    0.499349 ┆        0.0 ┆       1.0 │
-│      var_hd2 ┆ 10,000 ┆           0 ┆  -2.303672 ┆   10.243192 ┆ -51.051306 ┆ 26.725014 │
 └──────────────┴────────┴─────────────┴────────────┴─────────────┴────────────┴───────────┘
 </pre>
 </div>
@@ -9154,9 +9157,9 @@ Look at the imputes | var_hd1 == 0
 │         var2 ┆ 4,754 ┆           0 ┆     4.490745 ┆     3.246844 ┆      0.0 ┆     10.0 │
 │         var3 ┆ 4,754 ┆           0 ┆    24.912495 ┆    12.861361 ┆      0.0 ┆     50.0 │
 │         var4 ┆ 4,754 ┆           0 ┆     0.506516 ┆     0.289372 ┆ 0.000027 ┆ 0.999997 │
+│      var_hd2 ┆ 4,754 ┆           0 ┆          0.0 ┆          0.0 ┆      0.0 ┆      0.0 │
 │         var5 ┆ 4,754 ┆           0 ┆     0.877787 ┆     0.327566 ┆      0.0 ┆      1.0 │
 │      var_hd1 ┆ 4,754 ┆           0 ┆          0.0 ┆          0.0 ┆      0.0 ┆      0.0 │
-│      var_hd2 ┆ 4,754 ┆           0 ┆          0.0 ┆          0.0 ┆      0.0 ┆      0.0 │
 └──────────────┴───────┴─────────────┴──────────────┴──────────────┴──────────┴──────────┘
 </pre>
 </div>
@@ -9175,9 +9178,9 @@ Look at the imputes | var_hd1 == 0
 │         var2 ┆ 4,740 ┆           0 ┆     4.505696 ┆     3.244384 ┆      0.0 ┆     10.0 │
 │         var3 ┆ 4,740 ┆           0 ┆    24.888608 ┆    12.864506 ┆      0.0 ┆     50.0 │
 │         var4 ┆ 4,740 ┆           0 ┆     0.507112 ┆     0.289628 ┆ 0.000027 ┆ 0.999997 │
+│      var_hd2 ┆ 4,740 ┆           0 ┆          0.0 ┆          0.0 ┆      0.0 ┆      0.0 │
 │         var5 ┆ 4,740 ┆           0 ┆     0.882068 ┆     0.322562 ┆      0.0 ┆      1.0 │
 │      var_hd1 ┆ 4,740 ┆           0 ┆          0.0 ┆          0.0 ┆      0.0 ┆      0.0 │
-│      var_hd2 ┆ 4,740 ┆           0 ┆          0.0 ┆          0.0 ┆      0.0 ┆      0.0 │
 └──────────────┴───────┴─────────────┴──────────────┴──────────────┴──────────┴──────────┘
 </pre>
 </div>
@@ -9205,9 +9208,9 @@ Look at the imputes | var_hd1 == 1
 │         var2 ┆ 5,246 ┆           0 ┆     5.419939 ┆     3.001108 ┆        0.0 ┆      10.0 │
 │         var3 ┆ 5,246 ┆           0 ┆    25.285932 ┆    16.276467 ┆        0.0 ┆      50.0 │
 │         var4 ┆ 5,246 ┆           0 ┆     0.504895 ┆      0.28651 ┆   0.000104 ┆  0.999885 │
+│      var_hd2 ┆ 5,246 ┆           0 ┆    -4.419574 ┆    13.777174 ┆ -51.051306 ┆ 26.725014 │
 │         var5 ┆ 5,246 ┆           0 ┆     0.157453 ┆     0.364262 ┆        0.0 ┆       1.0 │
 │      var_hd1 ┆ 5,246 ┆           0 ┆          1.0 ┆          0.0 ┆        1.0 ┆       1.0 │
-│      var_hd2 ┆ 5,246 ┆           0 ┆    -4.419574 ┆    13.777174 ┆ -51.051306 ┆ 26.725014 │
 └──────────────┴───────┴─────────────┴──────────────┴──────────────┴────────────┴───────────┘
 </pre>
 </div>
@@ -9226,9 +9229,9 @@ Look at the imputes | var_hd1 == 1
 │         var2 ┆ 5,260 ┆           0 ┆     5.403992 ┆     3.008656 ┆        0.0 ┆      10.0 │
 │         var3 ┆ 5,260 ┆           0 ┆    25.306464 ┆    16.265575 ┆        0.0 ┆      50.0 │
 │         var4 ┆ 5,260 ┆           0 ┆     0.504362 ┆     0.286281 ┆   0.000104 ┆  0.999885 │
+│      var_hd2 ┆ 5,260 ┆           0 ┆    -4.379605 ┆    13.798472 ┆ -51.051306 ┆ 26.725014 │
 │         var5 ┆ 5,260 ┆           0 ┆     0.155513 ┆     0.362428 ┆        0.0 ┆       1.0 │
 │      var_hd1 ┆ 5,260 ┆           0 ┆          1.0 ┆          0.0 ┆        1.0 ┆       1.0 │
-│      var_hd2 ┆ 5,260 ┆           0 ┆    -4.379605 ┆    13.798472 ┆ -51.051306 ┆ 26.725014 │
 └──────────────┴───────┴─────────────┴──────────────┴──────────────┴────────────┴───────────┘
 </pre>
 </div>

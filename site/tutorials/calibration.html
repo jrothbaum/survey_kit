@@ -7510,7 +7510,7 @@ a.anchor-link {
 </style>
 <!-- End of mermaid configuration --></head>
 <body class="jp-Notebook" data-jp-theme-light="true" data-jp-theme-name="JupyterLab Light">
-<main><div class="jp-Cell jp-CodeCell jp-Notebook-cell jp-mod-noOutputs" id="cell-id=eede8bd1">
+<main><div class="jp-Cell jp-CodeCell jp-Notebook-cell jp-mod-noOutputs" id="cell-id=6a655bde">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -7531,7 +7531,7 @@ a.anchor-link {
 </div>
 </div>
 </div>
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=52fa22b1">
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=19516852">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -7593,7 +7593,7 @@ a.anchor-link {
 </div>
 </div>
 </div>
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=3219173c">
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=8fd68cfc">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -7659,7 +7659,7 @@ a.anchor-link {
 </div>
 </div>
 </div>
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=448ad6c3">
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=b3d8f675">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -7669,19 +7669,16 @@ a.anchor-link {
 <div class="cm-editor cm-s-jupyter">
 <div class="highlight hl-ipython3"><pre><span></span><span class="c1">#   Calibrate the data in df_treatment to the moment above</span>
 <span class="n">c</span> <span class="o">=</span> <span class="n">Calibration</span><span class="p">(</span>
-    <span class="n">df</span><span class="o">=</span><span class="n">df_treatment</span><span class="p">,</span>
-    <span class="n">moments</span><span class="o">=</span><span class="n">m</span><span class="p">,</span>
-    <span class="n">weight</span><span class="o">=</span><span class="s2">"weight_1"</span><span class="p">,</span>
-    <span class="n">final_weight</span><span class="o">=</span><span class="s2">"weight_final"</span>
+    <span class="n">df</span><span class="o">=</span><span class="n">df_treatment</span><span class="p">,</span> <span class="n">moments</span><span class="o">=</span><span class="n">m</span><span class="p">,</span> <span class="n">weight</span><span class="o">=</span><span class="s2">"weight_1"</span><span class="p">,</span> <span class="n">final_weight</span><span class="o">=</span><span class="s2">"weight_final"</span>
 <span class="p">)</span>
 
 <span class="n">c</span><span class="o">.</span><span class="n">run</span><span class="p">(</span>
     <span class="c1">#   Drop a moment if there are too few observations</span>
     <span class="n">min_obs</span><span class="o">=</span><span class="mi">5</span><span class="p">,</span>
-    <span class="c1"># If it fails to converge, set bounds on the weights </span>
+    <span class="c1"># If it fails to converge, set bounds on the weights</span>
     <span class="c1">#   final weights = (base*ratio) where the bounds are on the ratio</span>
-    <span class="c1">#   for "best possible" weights   </span>
-    <span class="n">bounds</span><span class="o">=</span><span class="p">(</span><span class="mf">0.001</span><span class="p">,</span> <span class="mi">1000</span><span class="p">)</span>
+    <span class="c1">#   for "best possible" weights</span>
+    <span class="n">bounds</span><span class="o">=</span><span class="p">(</span><span class="mf">0.001</span><span class="p">,</span> <span class="mi">1000</span><span class="p">),</span>
 <span class="p">)</span>
 
 <span class="c1">#   Merge the final weights back on the treatment data</span>
@@ -7818,7 +7815,7 @@ Entropy Balance Rewighting, Sanders (2024)
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>Time elapsed: 0.11071370000718161
+<pre>Time elapsed: 0.0797323000151664
 </pre>
 </div>
 </div>
@@ -7846,7 +7843,7 @@ Entropy Balance Rewighting, Sanders (2024)
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>Maximum Difference: 3.6637359812630166e-15
+<pre>Maximum Difference: 3.774758283725532e-15
 </pre>
 </div>
 </div>
@@ -7857,17 +7854,17 @@ Entropy Balance Rewighting, Sanders (2024)
 ┌─────────────────────┬──────────┬─────────┬───────────┬────────────┬─────────┬─────────────┬─────────────┐
 │            Variable ┆  Initial ┆ Targets ┆ Estimates ┆ Calibrated ┆ NonZero ┆        diff ┆     percent │
 ╞═════════════════════╪══════════╪═════════╪═══════════╪════════════╪═════════╪═════════════╪═════════════╡
-│ m0_v_f_continuous_0 ┆ 1.100747 ┆       1 ┆       1.0 ┆          1 ┆  100000 ┆ -3.6637e-15 ┆ -3.6637e-13 │
-│ m0_v_f_continuous_1 ┆ 1.101187 ┆       1 ┆       1.0 ┆          1 ┆  100000 ┆  2.8866e-15 ┆  2.8866e-13 │
-│ m0_v_f_continuous_2 ┆ 1.100447 ┆       1 ┆       1.0 ┆          1 ┆  100000 ┆ -2.6645e-15 ┆ -2.6645e-13 │
-│              m0_v_1 ┆ 1.005134 ┆       1 ┆       1.0 ┆          1 ┆  100000 ┆ -3.3307e-16 ┆ -3.3307e-14 │
+│ m0_v_f_continuous_0 ┆ 1.100747 ┆       1 ┆       1.0 ┆          1 ┆  100000 ┆ -3.7748e-15 ┆ -3.7748e-13 │
+│ m0_v_f_continuous_1 ┆ 1.101187 ┆       1 ┆       1.0 ┆          1 ┆  100000 ┆  3.1086e-15 ┆  3.1086e-13 │
+│ m0_v_f_continuous_2 ┆ 1.100447 ┆       1 ┆       1.0 ┆          1 ┆  100000 ┆ -2.8866e-15 ┆ -2.8866e-13 │
+│              m0_v_1 ┆ 1.005134 ┆       1 ┆       1.0 ┆          1 ┆  100000 ┆ -1.1102e-16 ┆ -1.1102e-14 │
 └─────────────────────┴──────────┴─────────┴───────────┴────────────┴─────────┴─────────────┴─────────────┘
 </pre>
 </div>
 </div>
 </div>
 </div>
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=27e48a31">
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=9a9b045b">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -7876,8 +7873,7 @@ Entropy Balance Rewighting, Sanders (2024)
 <div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
 <div class="cm-editor cm-s-jupyter">
 <div class="highlight hl-ipython3"><pre><span></span><span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">"'Population' estimates"</span><span class="p">)</span>
-<span class="n">_</span> <span class="o">=</span> <span class="n">summary</span><span class="p">(</span><span class="n">df_population</span><span class="p">,</span>
-        <span class="n">weight</span><span class="o">=</span><span class="s2">"weight_0"</span><span class="p">)</span>
+<span class="n">_</span> <span class="o">=</span> <span class="n">summary</span><span class="p">(</span><span class="n">df_population</span><span class="p">,</span> <span class="n">weight</span><span class="o">=</span><span class="s2">"weight_0"</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
@@ -7915,7 +7911,7 @@ Entropy Balance Rewighting, Sanders (2024)
 </div>
 </div>
 </div>
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=36f53df3">
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=31911baf">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -7924,8 +7920,7 @@ Entropy Balance Rewighting, Sanders (2024)
 <div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
 <div class="cm-editor cm-s-jupyter">
 <div class="highlight hl-ipython3"><pre><span></span><span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">"</span><span class="se">\n\n</span><span class="s2">'Treatment', original weights"</span><span class="p">)</span>
-<span class="n">_</span> <span class="o">=</span> <span class="n">summary</span><span class="p">(</span><span class="n">df_treatment</span><span class="p">,</span>
-        <span class="n">weight</span><span class="o">=</span><span class="s2">"weight_1"</span><span class="p">)</span>
+<span class="n">_</span> <span class="o">=</span> <span class="n">summary</span><span class="p">(</span><span class="n">df_treatment</span><span class="p">,</span> <span class="n">weight</span><span class="o">=</span><span class="s2">"weight_1"</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
@@ -7966,7 +7961,7 @@ Entropy Balance Rewighting, Sanders (2024)
 </div>
 </div>
 </div>
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=01961288">
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=902d7b70">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -7975,8 +7970,7 @@ Entropy Balance Rewighting, Sanders (2024)
 <div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
 <div class="cm-editor cm-s-jupyter">
 <div class="highlight hl-ipython3"><pre><span></span><span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">"</span><span class="se">\n\n</span><span class="s2">'Treatment', calibrated"</span><span class="p">)</span>
-<span class="n">_</span> <span class="o">=</span> <span class="n">summary</span><span class="p">(</span><span class="n">df_treatment</span><span class="p">,</span>
-        <span class="n">weight</span><span class="o">=</span><span class="s2">"weight_final"</span><span class="p">)</span>
+<span class="n">_</span> <span class="o">=</span> <span class="n">summary</span><span class="p">(</span><span class="n">df_treatment</span><span class="p">,</span> <span class="n">weight</span><span class="o">=</span><span class="s2">"weight_final"</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>

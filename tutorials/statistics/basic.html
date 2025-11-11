@@ -7510,7 +7510,7 @@ a.anchor-link {
 </style>
 <!-- End of mermaid configuration --></head>
 <body class="jp-Notebook" data-jp-theme-light="true" data-jp-theme-name="JupyterLab Light">
-<main><div class="jp-Cell jp-CodeCell jp-Notebook-cell jp-mod-noOutputs" id="cell-id=bf08156d">
+<main><div class="jp-Cell jp-CodeCell jp-Notebook-cell jp-mod-noOutputs" id="cell-id=cbadfe83">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -7527,7 +7527,7 @@ a.anchor-link {
 </div>
 </div>
 </div>
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=e068582c">
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=eb089c98">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -7567,7 +7567,7 @@ a.anchor-link {
 </div>
 </div>
 </div>
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=fa398a85">
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=051ab775">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -7576,7 +7576,9 @@ a.anchor-link {
 <div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
 <div class="cm-editor cm-s-jupyter">
 <div class="highlight hl-ipython3"><pre><span></span><span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">"The simplest option: just call summary(df)"</span><span class="p">)</span>
-<span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">"  Note the '_ =' is to prevent it from being printed twice in jupyter when generating the html, you can ignore"</span><span class="p">)</span>
+<span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span>
+    <span class="s2">"  Note the '_ =' is to prevent it from being printed twice in jupyter when generating the html, you can ignore"</span>
+<span class="p">)</span>
 <span class="n">_</span> <span class="o">=</span> <span class="n">summary</span><span class="p">(</span><span class="n">df</span><span class="p">)</span>
 </pre></div>
 </div>
@@ -7609,18 +7611,18 @@ a.anchor-link {
 ╞══════════╪═══════╪═════════════╪═════════════╪════════════════╪═══════════╪═══════════╡
 │    index ┆ 1,000 ┆           0 ┆       499.5 ┆     288.819436 ┆       0.0 ┆     999.0 │
 │    v_int ┆ 1,000 ┆           0 ┆       5.249 ┆       3.219529 ┆       0.0 ┆      10.0 │
-│   v_bool ┆ 1,000 ┆           0 ┆       0.526 ┆       0.499573 ┆       0.0 ┆       1.0 │
 │  v_float ┆ 1,000 ┆           0 ┆   -0.008732 ┆       0.566353 ┆ -0.999491 ┆  0.997346 │
 │ weight_0 ┆ 1,000 ┆           0 ┆ 486,959.621 ┆ 289,853.075294 ┆     310.0 ┆ 997,443.0 │
 │     year ┆ 1,000 ┆           0 ┆   2,017.001 ┆       0.818333 ┆   2,016.0 ┆   2,018.0 │
 │  quarter ┆ 1,000 ┆           0 ┆       2.396 ┆       1.121803 ┆       1.0 ┆       4.0 │
+│   v_bool ┆ 1,000 ┆           0 ┆       0.526 ┆       0.499573 ┆       0.0 ┆       1.0 │
 └──────────┴───────┴─────────────┴─────────────┴────────────────┴───────────┴───────────┘
 </pre>
 </div>
 </div>
 </div>
 </div>
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=b355b1e2">
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=74d82619">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -7629,7 +7631,7 @@ a.anchor-link {
 <div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
 <div class="cm-editor cm-s-jupyter">
 <div class="highlight hl-ipython3"><pre><span></span><span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">"</span><span class="se">\n\n</span><span class="s2"> + Weighted"</span><span class="p">)</span>
-<span class="n">_</span> <span class="o">=</span> <span class="n">summary</span><span class="p">(</span><span class="n">df</span><span class="p">,</span><span class="n">weight</span><span class="o">=</span><span class="s2">"weight_0"</span><span class="p">)</span>
+<span class="n">_</span> <span class="o">=</span> <span class="n">summary</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="n">weight</span><span class="o">=</span><span class="s2">"weight_0"</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
@@ -7656,17 +7658,17 @@ a.anchor-link {
 ╞══════════╪═══════╪═════════════╪══════════════╪════════════╪═══════════╪══════════╡
 │    index ┆ 1,000 ┆           0 ┆   496.843854 ┆ 286.146045 ┆       0.0 ┆    999.0 │
 │    v_int ┆ 1,000 ┆           0 ┆     5.072391 ┆   3.240389 ┆       0.0 ┆     10.0 │
-│   v_bool ┆ 1,000 ┆           0 ┆     0.532826 ┆   0.499171 ┆       0.0 ┆      1.0 │
 │  v_float ┆ 1,000 ┆           0 ┆    -0.010976 ┆   0.572573 ┆ -0.999491 ┆ 0.997346 │
 │     year ┆ 1,000 ┆           0 ┆ 2,016.996002 ┆   0.819454 ┆   2,016.0 ┆  2,018.0 │
 │  quarter ┆ 1,000 ┆           0 ┆     2.362683 ┆   1.106768 ┆       1.0 ┆      4.0 │
+│   v_bool ┆ 1,000 ┆           0 ┆     0.532826 ┆   0.499171 ┆       0.0 ┆      1.0 │
 └──────────┴───────┴─────────────┴──────────────┴────────────┴───────────┴──────────┘
 </pre>
 </div>
 </div>
 </div>
 </div>
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=19e25f24">
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=6d3e1320">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -7675,16 +7677,8 @@ a.anchor-link {
 <div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
 <div class="cm-editor cm-s-jupyter">
 <div class="highlight hl-ipython3"><pre><span></span><span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">"</span><span class="se">\n\n</span><span class="s2"> + by something"</span><span class="p">)</span>
-<span class="n">_</span> <span class="o">=</span> <span class="n">summary</span><span class="p">(</span>
-    <span class="n">df</span><span class="p">,</span>
-    <span class="n">weight</span><span class="o">=</span><span class="s2">"weight_0"</span><span class="p">,</span>
-    <span class="n">by</span><span class="o">=</span><span class="s2">"year"</span>
-<span class="p">)</span>
-<span class="n">_</span> <span class="o">=</span> <span class="n">summary</span><span class="p">(</span>
-    <span class="n">df</span><span class="p">,</span>
-    <span class="n">weight</span><span class="o">=</span><span class="s2">"weight_0"</span><span class="p">,</span>
-    <span class="n">by</span><span class="o">=</span><span class="p">[</span><span class="s2">"quarter"</span><span class="p">,</span><span class="s2">"year"</span><span class="p">]</span>
-<span class="p">)</span>
+<span class="n">_</span> <span class="o">=</span> <span class="n">summary</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="n">weight</span><span class="o">=</span><span class="s2">"weight_0"</span><span class="p">,</span> <span class="n">by</span><span class="o">=</span><span class="s2">"year"</span><span class="p">)</span>
+<span class="n">_</span> <span class="o">=</span> <span class="n">summary</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="n">weight</span><span class="o">=</span><span class="s2">"weight_0"</span><span class="p">,</span> <span class="n">by</span><span class="o">=</span><span class="p">[</span><span class="s2">"quarter"</span><span class="p">,</span> <span class="s2">"year"</span><span class="p">])</span>
 </pre></div>
 </div>
 </div>
@@ -7711,22 +7705,22 @@ a.anchor-link {
 ╞══════════╪═══════╪═════╪═════════════╪════════════╪════════════╪═══════════╪══════════╡
 │    index ┆ 2,016 ┆ 334 ┆           0 ┆ 486.128098 ┆ 283.286092 ┆       0.0 ┆    999.0 │
 │    v_int ┆ 2,016 ┆ 334 ┆           0 ┆   5.269086 ┆   3.103884 ┆       0.0 ┆     10.0 │
-│   v_bool ┆ 2,016 ┆ 334 ┆           0 ┆   0.551305 ┆   0.498107 ┆       0.0 ┆      1.0 │
 │  v_float ┆ 2,016 ┆ 334 ┆           0 ┆   0.027195 ┆   0.570638 ┆ -0.999491 ┆ 0.975701 │
 │     year ┆ 2,016 ┆ 334 ┆           0 ┆    2,016.0 ┆        0.0 ┆   2,016.0 ┆  2,016.0 │
 │  quarter ┆ 2,016 ┆ 334 ┆           0 ┆   2.274366 ┆    1.13241 ┆       1.0 ┆      4.0 │
+│   v_bool ┆ 2,016 ┆ 334 ┆           0 ┆   0.551305 ┆   0.498107 ┆       0.0 ┆      1.0 │
 │    index ┆ 2,017 ┆ 331 ┆           0 ┆ 507.821051 ┆ 297.416171 ┆       1.0 ┆    996.0 │
 │    v_int ┆ 2,017 ┆ 331 ┆           0 ┆   5.162113 ┆   3.195672 ┆       0.0 ┆     10.0 │
-│   v_bool ┆ 2,017 ┆ 331 ┆           0 ┆   0.536114 ┆   0.499449 ┆       0.0 ┆      1.0 │
 │  v_float ┆ 2,017 ┆ 331 ┆           0 ┆  -0.027223 ┆   0.567753 ┆ -0.995767 ┆ 0.997331 │
 │     year ┆ 2,017 ┆ 331 ┆           0 ┆    2,017.0 ┆        0.0 ┆   2,017.0 ┆  2,017.0 │
 │  quarter ┆ 2,017 ┆ 331 ┆           0 ┆   2.419146 ┆   1.079548 ┆       1.0 ┆      4.0 │
+│   v_bool ┆ 2,017 ┆ 331 ┆           0 ┆   0.536114 ┆   0.499449 ┆       0.0 ┆      1.0 │
 │    index ┆ 2,018 ┆ 335 ┆           0 ┆ 496.851669 ┆ 278.014603 ┆      12.0 ┆    998.0 │
 │    v_int ┆ 2,018 ┆ 335 ┆           0 ┆   4.784767 ┆   3.404934 ┆       0.0 ┆     10.0 │
-│   v_bool ┆ 2,018 ┆ 335 ┆           0 ┆   0.510881 ┆   0.500629 ┆       0.0 ┆      1.0 │
 │  v_float ┆ 2,018 ┆ 335 ┆           0 ┆  -0.033567 ┆   0.578986 ┆ -0.998525 ┆ 0.997346 │
 │     year ┆ 2,018 ┆ 335 ┆           0 ┆    2,018.0 ┆        0.0 ┆   2,018.0 ┆  2,018.0 │
 │  quarter ┆ 2,018 ┆ 335 ┆           0 ┆   2.396321 ┆   1.104871 ┆       1.0 ┆      4.0 │
+│   v_bool ┆ 2,018 ┆ 335 ┆           0 ┆   0.510881 ┆   0.500629 ┆       0.0 ┆      1.0 │
 └──────────┴───────┴─────┴─────────────┴────────────┴────────────┴───────────┴──────────┘
 </pre>
 </div>
@@ -7738,84 +7732,84 @@ a.anchor-link {
 │ Variable ┆ quarter ┆  year ┆   n ┆ n (missing) ┆       mean ┆        std ┆       min ┆      max │
 ╞══════════╪═════════╪═══════╪═════╪═════════════╪════════════╪════════════╪═══════════╪══════════╡
 │    v_int ┆       1 ┆ 2,016 ┆ 107 ┆           0 ┆   5.239025 ┆    3.13823 ┆       0.0 ┆     10.0 │
+│  quarter ┆       1 ┆ 2,016 ┆ 107 ┆           0 ┆        1.0 ┆        0.0 ┆       1.0 ┆      1.0 │
+│  v_float ┆       1 ┆ 2,016 ┆ 107 ┆           0 ┆   0.058056 ┆   0.578111 ┆ -0.988261 ┆ 0.967682 │
+│    index ┆       1 ┆ 2,016 ┆ 107 ┆           0 ┆ 483.122409 ┆ 269.780627 ┆       7.0 ┆    948.0 │
 │     year ┆       1 ┆ 2,016 ┆ 107 ┆           0 ┆    2,016.0 ┆        0.0 ┆   2,016.0 ┆  2,016.0 │
 │   v_bool ┆       1 ┆ 2,016 ┆ 107 ┆           0 ┆   0.540621 ┆   0.500692 ┆       0.0 ┆      1.0 │
-│    index ┆       1 ┆ 2,016 ┆ 107 ┆           0 ┆ 483.122409 ┆ 269.780627 ┆       7.0 ┆    948.0 │
-│  v_float ┆       1 ┆ 2,016 ┆ 107 ┆           0 ┆   0.058056 ┆   0.578111 ┆ -0.988261 ┆ 0.967682 │
-│  quarter ┆       1 ┆ 2,016 ┆ 107 ┆           0 ┆        1.0 ┆        0.0 ┆       1.0 ┆      1.0 │
 │    index ┆       1 ┆ 2,017 ┆  92 ┆           0 ┆ 514.370763 ┆ 308.869663 ┆       2.0 ┆    996.0 │
-│  v_float ┆       1 ┆ 2,017 ┆  92 ┆           0 ┆   0.018866 ┆   0.508264 ┆ -0.995767 ┆ 0.940043 │
-│   v_bool ┆       1 ┆ 2,017 ┆  92 ┆           0 ┆    0.58388 ┆   0.495615 ┆       0.0 ┆      1.0 │
 │     year ┆       1 ┆ 2,017 ┆  92 ┆           0 ┆    2,017.0 ┆        0.0 ┆   2,017.0 ┆  2,017.0 │
-│    v_int ┆       1 ┆ 2,017 ┆  92 ┆           0 ┆   5.516611 ┆   3.099276 ┆       0.0 ┆     10.0 │
+│  v_float ┆       1 ┆ 2,017 ┆  92 ┆           0 ┆   0.018866 ┆   0.508264 ┆ -0.995767 ┆ 0.940043 │
 │  quarter ┆       1 ┆ 2,017 ┆  92 ┆           0 ┆        1.0 ┆        0.0 ┆       1.0 ┆      1.0 │
-│  quarter ┆       1 ┆ 2,018 ┆  93 ┆           0 ┆        1.0 ┆        0.0 ┆       1.0 ┆      1.0 │
+│    v_int ┆       1 ┆ 2,017 ┆  92 ┆           0 ┆   5.516611 ┆   3.099276 ┆       0.0 ┆     10.0 │
+│   v_bool ┆       1 ┆ 2,017 ┆  92 ┆           0 ┆    0.58388 ┆   0.495615 ┆       0.0 ┆      1.0 │
 │   v_bool ┆       1 ┆ 2,018 ┆  93 ┆           0 ┆   0.514732 ┆   0.502492 ┆       0.0 ┆      1.0 │
-│    v_int ┆       1 ┆ 2,018 ┆  93 ┆           0 ┆   4.619132 ┆   3.218857 ┆       0.0 ┆     10.0 │
 │  v_float ┆       1 ┆ 2,018 ┆  93 ┆           0 ┆  -0.004038 ┆   0.570817 ┆  -0.97286 ┆ 0.989248 │
+│    v_int ┆       1 ┆ 2,018 ┆  93 ┆           0 ┆   4.619132 ┆   3.218857 ┆       0.0 ┆     10.0 │
 │     year ┆       1 ┆ 2,018 ┆  93 ┆           0 ┆    2,018.0 ┆        0.0 ┆   2,018.0 ┆  2,018.0 │
+│  quarter ┆       1 ┆ 2,018 ┆  93 ┆           0 ┆        1.0 ┆        0.0 ┆       1.0 ┆      1.0 │
 │    index ┆       1 ┆ 2,018 ┆  93 ┆           0 ┆ 515.436698 ┆ 283.490921 ┆      15.0 ┆    998.0 │
-│  quarter ┆       2 ┆ 2,016 ┆  77 ┆           0 ┆        2.0 ┆        0.0 ┆       2.0 ┆      2.0 │
+│   v_bool ┆       2 ┆ 2,016 ┆  77 ┆           0 ┆   0.601523 ┆   0.492795 ┆       0.0 ┆      1.0 │
 │    v_int ┆       2 ┆ 2,016 ┆  77 ┆           0 ┆   5.274277 ┆   2.924144 ┆       0.0 ┆     10.0 │
 │    index ┆       2 ┆ 2,016 ┆  77 ┆           0 ┆ 526.327132 ┆ 313.245997 ┆       0.0 ┆    999.0 │
-│  v_float ┆       2 ┆ 2,016 ┆  77 ┆           0 ┆  -0.006372 ┆   0.620484 ┆ -0.999491 ┆ 0.962807 │
-│   v_bool ┆       2 ┆ 2,016 ┆  77 ┆           0 ┆   0.601523 ┆   0.492795 ┆       0.0 ┆      1.0 │
 │     year ┆       2 ┆ 2,016 ┆  77 ┆           0 ┆    2,016.0 ┆        0.0 ┆   2,016.0 ┆  2,016.0 │
-│   v_bool ┆       2 ┆ 2,017 ┆  74 ┆           0 ┆   0.624111 ┆   0.487658 ┆       0.0 ┆      1.0 │
-│    v_int ┆       2 ┆ 2,017 ┆  74 ┆           0 ┆   5.088332 ┆   3.316678 ┆       0.0 ┆     10.0 │
-│  quarter ┆       2 ┆ 2,017 ┆  74 ┆           0 ┆        2.0 ┆        0.0 ┆       2.0 ┆      2.0 │
-│    index ┆       2 ┆ 2,017 ┆  74 ┆           0 ┆ 448.633377 ┆ 296.580915 ┆       1.0 ┆    980.0 │
+│  v_float ┆       2 ┆ 2,016 ┆  77 ┆           0 ┆  -0.006372 ┆   0.620484 ┆ -0.999491 ┆ 0.962807 │
+│  quarter ┆       2 ┆ 2,016 ┆  77 ┆           0 ┆        2.0 ┆        0.0 ┆       2.0 ┆      2.0 │
 │  v_float ┆       2 ┆ 2,017 ┆  74 ┆           0 ┆  -0.005669 ┆   0.554615 ┆ -0.994302 ┆ 0.984019 │
+│    v_int ┆       2 ┆ 2,017 ┆  74 ┆           0 ┆   5.088332 ┆   3.316678 ┆       0.0 ┆     10.0 │
+│   v_bool ┆       2 ┆ 2,017 ┆  74 ┆           0 ┆   0.624111 ┆   0.487658 ┆       0.0 ┆      1.0 │
+│    index ┆       2 ┆ 2,017 ┆  74 ┆           0 ┆ 448.633377 ┆ 296.580915 ┆       1.0 ┆    980.0 │
 │     year ┆       2 ┆ 2,017 ┆  74 ┆           0 ┆    2,017.0 ┆        0.0 ┆   2,017.0 ┆  2,017.0 │
+│  quarter ┆       2 ┆ 2,017 ┆  74 ┆           0 ┆        2.0 ┆        0.0 ┆       2.0 ┆      2.0 │
 │    index ┆       2 ┆ 2,018 ┆  86 ┆           0 ┆ 477.091581 ┆ 255.789134 ┆      12.0 ┆    991.0 │
-│  quarter ┆       2 ┆ 2,018 ┆  86 ┆           0 ┆        2.0 ┆        0.0 ┆       2.0 ┆      2.0 │
 │   v_bool ┆       2 ┆ 2,018 ┆  86 ┆           0 ┆   0.564853 ┆   0.498684 ┆       0.0 ┆      1.0 │
 │  v_float ┆       2 ┆ 2,018 ┆  86 ┆           0 ┆   -0.04156 ┆   0.572493 ┆ -0.952341 ┆ 0.997346 │
 │     year ┆       2 ┆ 2,018 ┆  86 ┆           0 ┆    2,018.0 ┆        0.0 ┆   2,018.0 ┆  2,018.0 │
+│  quarter ┆       2 ┆ 2,018 ┆  86 ┆           0 ┆        2.0 ┆        0.0 ┆       2.0 ┆      2.0 │
 │    v_int ┆       2 ┆ 2,018 ┆  86 ┆           0 ┆   5.095363 ┆   3.249096 ┆       0.0 ┆     10.0 │
 │    v_int ┆       3 ┆ 2,016 ┆  77 ┆           0 ┆   5.202285 ┆   3.205959 ┆       0.0 ┆     10.0 │
-│     year ┆       3 ┆ 2,016 ┆  77 ┆           0 ┆    2,016.0 ┆        0.0 ┆   2,016.0 ┆  2,016.0 │
 │  quarter ┆       3 ┆ 2,016 ┆  77 ┆           0 ┆        3.0 ┆        0.0 ┆       3.0 ┆      3.0 │
-│  v_float ┆       3 ┆ 2,016 ┆  77 ┆           0 ┆  -0.046187 ┆   0.513666 ┆ -0.959875 ┆ 0.894917 │
-│    index ┆       3 ┆ 2,016 ┆  77 ┆           0 ┆ 388.122653 ┆ 265.811365 ┆       5.0 ┆    971.0 │
 │   v_bool ┆       3 ┆ 2,016 ┆  77 ┆           0 ┆    0.51981 ┆   0.502884 ┆       0.0 ┆      1.0 │
-│  quarter ┆       3 ┆ 2,017 ┆  98 ┆           0 ┆        3.0 ┆        0.0 ┆       3.0 ┆      3.0 │
-│  v_float ┆       3 ┆ 2,017 ┆  98 ┆           0 ┆  -0.021895 ┆   0.545729 ┆ -0.988515 ┆ 0.972384 │
-│    index ┆       3 ┆ 2,017 ┆  98 ┆           0 ┆ 520.111434 ┆ 297.978958 ┆      18.0 ┆    992.0 │
+│     year ┆       3 ┆ 2,016 ┆  77 ┆           0 ┆    2,016.0 ┆        0.0 ┆   2,016.0 ┆  2,016.0 │
+│    index ┆       3 ┆ 2,016 ┆  77 ┆           0 ┆ 388.122653 ┆ 265.811365 ┆       5.0 ┆    971.0 │
+│  v_float ┆       3 ┆ 2,016 ┆  77 ┆           0 ┆  -0.046187 ┆   0.513666 ┆ -0.959875 ┆ 0.894917 │
 │   v_bool ┆       3 ┆ 2,017 ┆  98 ┆           0 ┆   0.443429 ┆   0.499344 ┆       0.0 ┆      1.0 │
-│    v_int ┆       3 ┆ 2,017 ┆  98 ┆           0 ┆   5.065961 ┆   3.245897 ┆       0.0 ┆     10.0 │
 │     year ┆       3 ┆ 2,017 ┆  98 ┆           0 ┆    2,017.0 ┆        0.0 ┆   2,017.0 ┆  2,017.0 │
-│  quarter ┆       3 ┆ 2,018 ┆  79 ┆           0 ┆        3.0 ┆        0.0 ┆       3.0 ┆      3.0 │
+│    index ┆       3 ┆ 2,017 ┆  98 ┆           0 ┆ 520.111434 ┆ 297.978958 ┆      18.0 ┆    992.0 │
+│  v_float ┆       3 ┆ 2,017 ┆  98 ┆           0 ┆  -0.021895 ┆   0.545729 ┆ -0.988515 ┆ 0.972384 │
+│    v_int ┆       3 ┆ 2,017 ┆  98 ┆           0 ┆   5.065961 ┆   3.245897 ┆       0.0 ┆     10.0 │
+│  quarter ┆       3 ┆ 2,017 ┆  98 ┆           0 ┆        3.0 ┆        0.0 ┆       3.0 ┆      3.0 │
 │   v_bool ┆       3 ┆ 2,018 ┆  79 ┆           0 ┆   0.499181 ┆   0.503194 ┆       0.0 ┆      1.0 │
 │  v_float ┆       3 ┆ 2,018 ┆  79 ┆           0 ┆   0.027964 ┆   0.627752 ┆ -0.942277 ┆ 0.989259 │
-│    index ┆       3 ┆ 2,018 ┆  79 ┆           0 ┆ 530.929471 ┆ 251.285676 ┆      32.0 ┆    986.0 │
 │     year ┆       3 ┆ 2,018 ┆  79 ┆           0 ┆    2,018.0 ┆        0.0 ┆   2,018.0 ┆  2,018.0 │
+│    index ┆       3 ┆ 2,018 ┆  79 ┆           0 ┆ 530.929471 ┆ 251.285676 ┆      32.0 ┆    986.0 │
+│  quarter ┆       3 ┆ 2,018 ┆  79 ┆           0 ┆        3.0 ┆        0.0 ┆       3.0 ┆      3.0 │
 │    v_int ┆       3 ┆ 2,018 ┆  79 ┆           0 ┆   4.437614 ┆      3.599 ┆       0.0 ┆     10.0 │
-│  v_float ┆       4 ┆ 2,016 ┆  73 ┆           0 ┆   0.095992 ┆   0.554796 ┆ -0.956735 ┆ 0.975701 │
-│    v_int ┆       4 ┆ 2,016 ┆  73 ┆           0 ┆   5.388377 ┆   3.207175 ┆       0.0 ┆     10.0 │
 │     year ┆       4 ┆ 2,016 ┆  73 ┆           0 ┆    2,016.0 ┆        0.0 ┆   2,016.0 ┆  2,016.0 │
-│    index ┆       4 ┆ 2,016 ┆  73 ┆           0 ┆ 550.770264 ┆ 262.063451 ┆      27.0 ┆    981.0 │
-│   v_bool ┆       4 ┆ 2,016 ┆  73 ┆           0 ┆   0.543459 ┆   0.501555 ┆       0.0 ┆      1.0 │
+│    v_int ┆       4 ┆ 2,016 ┆  73 ┆           0 ┆   5.388377 ┆   3.207175 ┆       0.0 ┆     10.0 │
 │  quarter ┆       4 ┆ 2,016 ┆  73 ┆           0 ┆        4.0 ┆        0.0 ┆       4.0 ┆      4.0 │
-│     year ┆       4 ┆ 2,017 ┆  67 ┆           0 ┆    2,017.0 ┆        0.0 ┆   2,017.0 ┆  2,017.0 │
+│    index ┆       4 ┆ 2,016 ┆  73 ┆           0 ┆ 550.770264 ┆ 262.063451 ┆      27.0 ┆    981.0 │
+│  v_float ┆       4 ┆ 2,016 ┆  73 ┆           0 ┆   0.095992 ┆   0.554796 ┆ -0.956735 ┆ 0.975701 │
+│   v_bool ┆       4 ┆ 2,016 ┆  73 ┆           0 ┆   0.543459 ┆   0.501555 ┆       0.0 ┆      1.0 │
+│  quarter ┆       4 ┆ 2,017 ┆  67 ┆           0 ┆        4.0 ┆        0.0 ┆       4.0 ┆      4.0 │
 │    v_int ┆       4 ┆ 2,017 ┆  67 ┆           0 ┆    4.90337 ┆   3.132349 ┆       0.0 ┆     10.0 │
 │    index ┆       4 ┆ 2,017 ┆  67 ┆           0 ┆ 550.096655 ┆ 276.360832 ┆      26.0 ┆    994.0 │
+│     year ┆       4 ┆ 2,017 ┆  67 ┆           0 ┆    2,017.0 ┆        0.0 ┆   2,017.0 ┆  2,017.0 │
 │  v_float ┆       4 ┆ 2,017 ┆  67 ┆           0 ┆  -0.128034 ┆   0.688683 ┆ -0.975363 ┆ 0.997331 │
 │   v_bool ┆       4 ┆ 2,017 ┆  67 ┆           0 ┆   0.513582 ┆   0.503588 ┆       0.0 ┆      1.0 │
-│  quarter ┆       4 ┆ 2,017 ┆  67 ┆           0 ┆        4.0 ┆        0.0 ┆       4.0 ┆      4.0 │
-│   v_bool ┆       4 ┆ 2,018 ┆  77 ┆           0 ┆   0.449839 ┆    0.50074 ┆       0.0 ┆      1.0 │
-│     year ┆       4 ┆ 2,018 ┆  77 ┆           0 ┆    2,018.0 ┆        0.0 ┆   2,018.0 ┆  2,018.0 │
-│    index ┆       4 ┆ 2,018 ┆  77 ┆           0 ┆ 461.974306 ┆  321.94043 ┆      14.0 ┆    995.0 │
-│    v_int ┆       4 ┆ 2,018 ┆  77 ┆           0 ┆   4.970949 ┆   3.627099 ┆       0.0 ┆     10.0 │
 │  v_float ┆       4 ┆ 2,018 ┆  77 ┆           0 ┆  -0.126811 ┆   0.541178 ┆ -0.998525 ┆ 0.972137 │
 │  quarter ┆       4 ┆ 2,018 ┆  77 ┆           0 ┆        4.0 ┆        0.0 ┆       4.0 ┆      4.0 │
+│    index ┆       4 ┆ 2,018 ┆  77 ┆           0 ┆ 461.974306 ┆  321.94043 ┆      14.0 ┆    995.0 │
+│    v_int ┆       4 ┆ 2,018 ┆  77 ┆           0 ┆   4.970949 ┆   3.627099 ┆       0.0 ┆     10.0 │
+│     year ┆       4 ┆ 2,018 ┆  77 ┆           0 ┆    2,018.0 ┆        0.0 ┆   2,018.0 ┆  2,018.0 │
+│   v_bool ┆       4 ┆ 2,018 ┆  77 ┆           0 ┆   0.449839 ┆    0.50074 ┆       0.0 ┆      1.0 │
 └──────────┴─────────┴───────┴─────┴─────────────┴────────────┴────────────┴───────────┴──────────┘
 </pre>
 </div>
 </div>
 </div>
 </div>
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=f61cd5ed">
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=1d819c1a">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -7824,12 +7818,7 @@ a.anchor-link {
 <div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
 <div class="cm-editor cm-s-jupyter">
 <div class="highlight hl-ipython3"><pre><span></span><span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">"</span><span class="se">\n\n</span><span class="s2"> with detailed stats and 4-sig digit rounding"</span><span class="p">)</span>
-<span class="n">_</span> <span class="o">=</span> <span class="n">summary</span><span class="p">(</span>
-    <span class="n">df</span><span class="p">,</span>
-    <span class="n">weight</span><span class="o">=</span><span class="s2">"weight_0"</span><span class="p">,</span>
-    <span class="n">detailed</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
-    <span class="n">drb_round</span><span class="o">=</span><span class="kc">True</span>
-<span class="p">)</span>
+<span class="n">_</span> <span class="o">=</span> <span class="n">summary</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="n">weight</span><span class="o">=</span><span class="s2">"weight_0"</span><span class="p">,</span> <span class="n">detailed</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">drb_round</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
@@ -7856,17 +7845,17 @@ a.anchor-link {
 ╞══════════╪═══════╪═════════════╪══════════╪════════╪═════════╪═════════╪══════════╪═════════╪═════════╡
 │    index ┆ 1,000 ┆           0 ┆    496.8 ┆  286.1 ┆     0.0 ┆   250.0 ┆    507.0 ┆   737.0 ┆   999.0 │
 │    v_int ┆ 1,000 ┆           0 ┆    5.072 ┆   3.24 ┆     0.0 ┆     2.0 ┆      5.0 ┆     8.0 ┆    10.0 │
-│   v_bool ┆ 1,000 ┆           0 ┆   0.5328 ┆ 0.4992 ┆     0.0 ┆     0.0 ┆      1.0 ┆     1.0 ┆     1.0 │
 │  v_float ┆ 1,000 ┆           0 ┆ -0.01098 ┆ 0.5726 ┆ -0.9995 ┆ -0.4828 ┆ -0.02787 ┆   0.483 ┆  0.9973 │
 │     year ┆ 1,000 ┆           0 ┆  2,017.0 ┆ 0.8195 ┆ 2,016.0 ┆ 2,016.0 ┆  2,017.0 ┆ 2,018.0 ┆ 2,018.0 │
 │  quarter ┆ 1,000 ┆           0 ┆    2.363 ┆  1.107 ┆     1.0 ┆     1.0 ┆      2.0 ┆     3.0 ┆     4.0 │
+│   v_bool ┆ 1,000 ┆           0 ┆   0.5328 ┆ 0.4992 ┆     0.0 ┆     0.0 ┆      1.0 ┆     1.0 ┆     1.0 │
 └──────────┴───────┴─────────────┴──────────┴────────┴─────────┴─────────┴──────────┴─────────┴─────────┘
 </pre>
 </div>
 </div>
 </div>
 </div>
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=0607f81e">
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=9cba64d9">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -7878,9 +7867,7 @@ a.anchor-link {
 <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">"What is available:"</span><span class="p">)</span>
 <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="n">Statistics</span><span class="o">.</span><span class="n">available_stats</span><span class="p">())</span>
 <span class="n">_</span> <span class="o">=</span> <span class="n">summary</span><span class="p">(</span>
-    <span class="n">df</span><span class="p">,</span>
-    <span class="n">weight</span><span class="o">=</span><span class="s2">"weight_0"</span><span class="p">,</span>
-    <span class="n">additional_stats</span><span class="o">=</span><span class="p">[</span><span class="s2">"q10"</span><span class="p">,</span><span class="s2">"q95"</span><span class="p">,</span><span class="s2">"n|not0"</span><span class="p">,</span><span class="s2">"share|not0"</span><span class="p">]</span>
+    <span class="n">df</span><span class="p">,</span> <span class="n">weight</span><span class="o">=</span><span class="s2">"weight_0"</span><span class="p">,</span> <span class="n">additional_stats</span><span class="o">=</span><span class="p">[</span><span class="s2">"q10"</span><span class="p">,</span> <span class="s2">"q95"</span><span class="p">,</span> <span class="s2">"n|not0"</span><span class="p">,</span> <span class="s2">"share|not0"</span><span class="p">]</span>
 <span class="p">)</span>
 
 
@@ -7889,7 +7876,7 @@ a.anchor-link {
 <span class="n">df_stats</span> <span class="o">=</span> <span class="n">summary</span><span class="p">(</span>
     <span class="n">df</span><span class="p">,</span>
     <span class="n">weight</span><span class="o">=</span><span class="s2">"weight_0"</span><span class="p">,</span>
-    <span class="n">additional_stats</span><span class="o">=</span><span class="p">[</span><span class="s2">"q10"</span><span class="p">,</span><span class="s2">"q95"</span><span class="p">,</span><span class="s2">"n|not0"</span><span class="p">,</span><span class="s2">"share|not0"</span><span class="p">],</span>
+    <span class="n">additional_stats</span><span class="o">=</span><span class="p">[</span><span class="s2">"q10"</span><span class="p">,</span> <span class="s2">"q95"</span><span class="p">,</span> <span class="s2">"n|not0"</span><span class="p">,</span> <span class="s2">"share|not0"</span><span class="p">],</span>
     <span class="nb">print</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
 <span class="p">)</span>
 
@@ -8025,10 +8012,10 @@ a.anchor-link {
 ╞══════════╪═══════╪═════════════╪══════════════╪════════════╪═══════════╪══════════╪═══════════╪══════════╪═══════════╪═══════════════╡
 │    index ┆ 1,000 ┆           0 ┆   496.843854 ┆ 286.146045 ┆       0.0 ┆    999.0 ┆      96.0 ┆    945.0 ┆       999 ┆      0.998502 │
 │    v_int ┆ 1,000 ┆           0 ┆     5.072391 ┆   3.240389 ┆       0.0 ┆     10.0 ┆       1.0 ┆     10.0 ┆       915 ┆      0.916751 │
-│   v_bool ┆ 1,000 ┆           0 ┆     0.532826 ┆   0.499171 ┆       0.0 ┆      1.0 ┆       0.0 ┆      1.0 ┆       526 ┆      0.532826 │
 │  v_float ┆ 1,000 ┆           0 ┆    -0.010976 ┆   0.572573 ┆ -0.999491 ┆ 0.997346 ┆ -0.818888 ┆ 0.883018 ┆     1,000 ┆           1.0 │
 │     year ┆ 1,000 ┆           0 ┆ 2,016.996002 ┆   0.819454 ┆   2,016.0 ┆  2,018.0 ┆   2,016.0 ┆  2,018.0 ┆     1,000 ┆           1.0 │
 │  quarter ┆ 1,000 ┆           0 ┆     2.362683 ┆   1.106768 ┆       1.0 ┆      4.0 ┆       1.0 ┆      4.0 ┆     1,000 ┆           1.0 │
+│   v_bool ┆ 1,000 ┆           0 ┆     0.532826 ┆   0.499171 ┆       0.0 ┆      1.0 ┆       0.0 ┆      1.0 ┆       526 ┆      0.532826 │
 └──────────┴───────┴─────────────┴──────────────┴────────────┴───────────┴──────────┴───────────┴──────────┴───────────┴───────────────┘
 </pre>
 </div>
@@ -8052,10 +8039,10 @@ a.anchor-link {
 ╞══════════╪══════╪═════════════╪═════════════╪═══╪═══════════╪══════════╪═══════════╪═════════════╡
 │ index    ┆ 1000 ┆ 0           ┆ 496.843854  ┆ … ┆ 96.0      ┆ 945.0    ┆ 999       ┆ 0.998502    │
 │ v_int    ┆ 1000 ┆ 0           ┆ 5.072391    ┆ … ┆ 1.0       ┆ 10.0     ┆ 915       ┆ 0.916751    │
-│ v_bool   ┆ 1000 ┆ 0           ┆ 0.532826    ┆ … ┆ 0.0       ┆ 1.0      ┆ 526       ┆ 0.532826    │
 │ v_float  ┆ 1000 ┆ 0           ┆ -0.010976   ┆ … ┆ -0.818888 ┆ 0.883018 ┆ 1000      ┆ 1.0         │
 │ year     ┆ 1000 ┆ 0           ┆ 2016.996002 ┆ … ┆ 2016.0    ┆ 2018.0   ┆ 1000      ┆ 1.0         │
 │ quarter  ┆ 1000 ┆ 0           ┆ 2.362683    ┆ … ┆ 1.0       ┆ 4.0      ┆ 1000      ┆ 1.0         │
+│ v_bool   ┆ 1000 ┆ 0           ┆ 0.532826    ┆ … ┆ 0.0       ┆ 1.0      ┆ 526       ┆ 0.532826    │
 └──────────┴──────┴─────────────┴─────────────┴───┴───────────┴──────────┴───────────┴─────────────┘
 </pre>
 </div>

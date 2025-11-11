@@ -77,6 +77,8 @@ See the [Multiple Imputation documentation](../api/multiple_imputation.md) estim
 
 ## Example/Tutorial
 
+How to get standard errors (SEs) using replicate weights or the bootstrap + multiple imputation (MI).
+
 === "Quick Summaries"
     The `summary()` function provides easy data summaries (with more control than the default `describe()` methods in pandas or polars)
 
@@ -91,7 +93,7 @@ See the [Multiple Imputation documentation](../api/multiple_imputation.md) estim
             style="width: 100%; height: 800px; border: none;">
         </iframe>
 
-=== "Bootstrap/Replicate Standard Errors"
+=== "Bootstrap/Replicate SEs"
     For proper variance estimation with complex survey designs or using bootstrap weights
 
     === "Code (basic stats)"
@@ -120,7 +122,7 @@ See the [Multiple Imputation documentation](../api/multiple_imputation.md) estim
             style="width: 100%; height: 800px; border: none;">
         </iframe>
 
-=== "Multiple Imputation Standard Errors"
+=== "MI SEs"
     Combine estimates properly across multiply imputed datasets using Rubin's rule.  This incorporates the bootstrap/replicate factor code internally.
 
 
@@ -152,3 +154,28 @@ See the [Multiple Imputation documentation](../api/multiple_imputation.md) estim
 
 
 
+=== "Using Real Data"
+    Here are tutorials for replicate-weight standard errors for household income from the public use Current Population Annual Social and Economic Supplement (CPS ASEC)  and for multiple imputation + replicate-weight standard errors from the Consumer Expenditure Survey (CEX).
+
+    === "Code (CPS ASEC)"
+        ```python
+        --8<-- "tutorials/survey_data/cps_asec.py"
+        ```
+
+    === "Log (CPS ASEC)"
+        [View in separate window](../../tutorials/survey_data/cps_asec.html){:target="_blank"}
+        <iframe src="../../tutorials/survey_data/cps_asec.html" 
+            style="width: 100%; height: 800px; border: none;">
+        </iframe>
+ 
+
+    === "Code (CEX)"
+        ```python
+        --8<-- "tutorials/survey_data/cex.py"
+        ```
+
+    === "Log (CEX)"
+        [View in separate window](../../tutorials/survey_data/cex.html){:target="_blank"}
+        <iframe src="../../tutorials/survey_data/cex.html" 
+            style="width: 100%; height: 800px; border: none;">
+        </iframe>
