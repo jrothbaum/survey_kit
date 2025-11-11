@@ -842,25 +842,31 @@
 <li><strong>Imputation uncertainty</strong> - When working with multiply imputed data</li>
 <li><strong>Both combined</strong> - Full uncertainty accounting when you have imputed data with replicate weights</li>
 </ul>
-<p>The package supports:
-- Quick exploratory summaries with <code>summary()</code>
-- Replicate weight standard errors (Bootstrap and Balanced Repeated Replication)
-- Multiple imputation inference using Rubin's rules
-- Statistical comparisons with proper standard errors
-- Custom analysis functions with automatic variance estimation</p>
+<p>The package supports:</p>
+<ul>
+<li>Quick exploratory summaries with <code>summary()</code></li>
+<li>Replicate weight standard errors (Bootstrap and Balanced Repeated Replication)</li>
+<li>Multiple imputation inference using Rubin's rules</li>
+<li>Statistical comparisons with proper standard errors</li>
+<li>Custom analysis functions with automatic variance estimation</li>
+</ul>
 <h2 id="why-use-it">Why Use It<a class="headerlink" href="#why-use-it" title="Permanent link">&para;</a></h2>
 <p>Standard statistical software often gets uncertainty wrong:</p>
-<p><strong>The problem:</strong>
-- Using design weights without replicate weights → Standard errors too small
-- Simple variance formulas with complex samples → Wrong confidence intervals
-- Ignoring imputation uncertainty → Overstated precision
-- Ad-hoc comparisons → Invalid hypothesis tests.  </p>
+<p><strong>The problem:</strong></p>
+<ul>
+<li>Using design weights without replicate weights → Standard errors too small</li>
+<li>Simple variance formulas with complex samples → Wrong confidence intervals</li>
+<li>Ignoring imputation uncertainty → Overstated precision</li>
+<li>Ad-hoc comparisons → Invalid hypothesis tests.  </li>
+</ul>
 <p>For example, replicate weights are intended to account for correlation over space and time in sample selection, so using them for comparisons will account for correlation in estimates across the different replicate factors.  To give a concrete example, addresses in the CPS are in sample for consecutive months, so if you want to get the correct confidence intervals on the change in unemployment, you need to use the replicate weights in the month-to-month comparison.  The standard errors will be much narrower than if you compared the unemployment rates as if they were two independent samples.</p>
-<p><strong>This package:</strong>
-- Implements proper variance estimation for complex surveys (as used by Census Bureau, BLS, etc.)
-- Correctly combines uncertainty from multiple imputations
-- Makes it easy to do the right thing (comparisons, custom functions, etc.)
-- Fast enough for production use with millions of observations (assuming you use polars)</p>
+<p><strong>This package:</strong></p>
+<ul>
+<li>Implements proper variance estimation for complex surveys (as used by Census Bureau, BLS, etc.)</li>
+<li>Correctly combines uncertainty from multiple imputations</li>
+<li>Makes it easy to do the right thing (comparisons, custom functions, etc.)</li>
+<li>Fast enough for production use with millions of observations (assuming you use polars)</li>
+</ul>
 <h2 id="key-features">Key Features<a class="headerlink" href="#key-features" title="Permanent link">&para;</a></h2>
 <ul>
 <li><strong>DataFrame agnostic</strong> - Works with Polars, Pandas, Arrow, DuckDB via Narwhals</li>
@@ -876,11 +882,13 @@
 - <strong>Bootstrap</strong> (<code>bootstrap=True</code>) - Standard bootstrap resampling variance
 - <strong>BRR</strong> (<code>bootstrap=False</code>) - Balanced Repeated Replication as used by Census Bureau</p>
 <h3 id="multiple-imputation">Multiple Imputation<a class="headerlink" href="#multiple-imputation" title="Permanent link">&para;</a></h3>
-<p>Implements Rubin's (1987) combining rules:
-- <strong>Combined estimate</strong> = average across implicates
-- <strong>Total variance</strong> = within-imputation variance + between-imputation variance
-- <strong>Degrees of freedom</strong> account for finite number of implicates
-- <strong>Missing information rate</strong> quantifies uncertainty from imputation</p>
+<p>Implements Rubin's (1987) combining rules:</p>
+<ul>
+<li><strong>Combined estimate</strong> = average across implicates</li>
+<li><strong>Total variance</strong> = within-imputation variance + between-imputation variance</li>
+<li><strong>Degrees of freedom</strong> account for finite number of implicates</li>
+<li><strong>Missing information rate</strong> quantifies uncertainty from imputation</li>
+</ul>
 <h3 id="when-to-use-what">When to Use What<a class="headerlink" href="#when-to-use-what" title="Permanent link">&para;</a></h3>
 <table>
 <thead>
