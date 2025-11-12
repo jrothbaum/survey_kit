@@ -9,6 +9,7 @@ The Statistics module provides tools for calculating summary statistics with pro
 - **Both combined** - Full uncertainty accounting when you have imputed data with replicate weights
 
 The package supports:
+
 - Quick exploratory summaries with `summary()`
 - Replicate weight standard errors (Bootstrap and Balanced Repeated Replication)
 - Multiple imputation inference using Rubin's rules
@@ -20,6 +21,7 @@ The package supports:
 Standard statistical software often gets uncertainty wrong:
 
 **The problem:**
+
 - Using design weights without replicate weights → Standard errors too small
 - Simple variance formulas with complex samples → Wrong confidence intervals
 - Ignoring imputation uncertainty → Overstated precision
@@ -29,6 +31,7 @@ For example, replicate weights are intended to account for correlation over spac
 
 
 **This package:**
+
 - Implements proper variance estimation for complex surveys (as used by Census Bureau, BLS, etc.)
 - Correctly combines uncertainty from multiple imputations
 - Makes it easy to do the right thing (comparisons, custom functions, etc.)
@@ -54,6 +57,7 @@ Two variance estimation approaches:
 ### Multiple Imputation
 
 Implements Rubin's (1987) combining rules:
+
 - **Combined estimate** = average across implicates
 - **Total variance** = within-imputation variance + between-imputation variance
 - **Degrees of freedom** account for finite number of implicates
