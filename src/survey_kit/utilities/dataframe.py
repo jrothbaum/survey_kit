@@ -417,6 +417,33 @@ class NarwhalsType(Serializable):
             return df
 
 
+def upcast_uint_to_int(df:IntoFrameT) -> IntoFrameT:
+    schema = (
+        nw.from_native(df)
+        .lazy()
+        .collect_schema()
+    )
+
+    new_schema = {}
+    for vari, typei in schema.items():
+        if typei == nw.UInt8:
+            new_schema[vari] = pl.Int16
+        elif typei == nw.UInt16:
+            new_schema[vari] = pl.Int32
+        elif typei == nw.UInt32:
+            new_schema[vari] = pl.Int64
+        elif typei == nw.UInt64:
+            new_schema[vari] = pl.Int128
+        elif typei == nw.UInt128:
+            new_schema[vari] = pl.Int128
+
+    
+    if len(new_schema) == 0:
+        return df
+    else:
+        df_comp = pl.DataFrame(schema=new_schema)
+        return safe_upcast_list([df,df_comp])[0]
+
 def safe_upcast_list(
     dfs: list[IntoFrameT | nw.LazyFrame | nw.DataFrame],
 ) -> list[IntoFrameT | nw.LazyFrame | nw.DataFrame]:

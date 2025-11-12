@@ -20,7 +20,7 @@ from .replicates import (
     replicates_ses_from_function,
 )
 
-from .comparisons import ComparisonItem, statistical_comparison_item, compare
+from .comparisons import ComparisonItem, statistical_comparison_item, compare, process_compare_lists
 
 from ..utilities.dataframe import (
     join_wrapper,
@@ -29,6 +29,8 @@ from ..utilities.dataframe import (
     NarwhalsType,
     safe_sum_cast,
     safe_columns,
+    safe_upcast_list,
+    drop_if_exists
 )
 from ..utilities.rounding import drb_round_table
 from ..serializable import Serializable
@@ -106,14 +108,14 @@ class StatCalculator(Serializable):
     --------
     Basic usage with simple statistics:
 
-    >>> from NEWS.CodeUtilities.Python.SummaryStats import Statistics
+    >>> from survey_kit.statistics.statistics import Statistics
     >>> stats = Statistics(columns=["income", "age"], statistics=["mean", "median"])
     >>> sc = StatCalculator(df=my_data, statistics=stats, weight="survey_wgt")
     >>> sc.print()
 
     With replicate weights for standard errors:
 
-    >>> from NEWS.CodeUtilities.Python.SummaryStats import Replicates
+    >>> from survey_kit.statistics.replicates import Replicates
     >>> reps = Replicates(weight_stub="rep_wgt_", n_replicates=80)
     >>> sc = StatCalculator(df=my_data, statistics=stats, replicates=reps)
     >>> sc.print()  # Will show standard errors
@@ -821,8 +823,15 @@ class StatCalculator(Serializable):
                 .alias(coli)
             )
 
-        df_out = df_out.with_columns(with_clear).news.drop_if_exists(["__row_index_*"])
-        return df_out.to_native()
+        df_out = (
+            drop_if_exists(
+                nw.from_native(df_out)
+                .with_columns(with_clear)
+                .to_native(),
+                columns=["__row_index_*"]
+            )
+        )
+        return df_out
 
     def _df_t(self) -> IntoFrameT:
         join_on = self.variable_ids + self.summarize_vars
@@ -966,10 +975,12 @@ class StatCalculator(Serializable):
             if not quietly:
                 logger.info("Comparing estimates")
 
-            df1 = self.df_estimates
-            df2 = compare_to.df_estimates
+            nw_type1 = NarwhalsType(self.df_estimates)
+            nw_type2 = NarwhalsType(compare_to.df_estimates)
+            df1 = nw_type1.to_polars()
+            df2 = nw_type2.to_polars()
 
-            (df1, df2) = StatComp.process_compare_lists(
+            (df1, df2) = process_compare_lists(
                 df1=df1,
                 df2=df2,
                 join_on=self._by_vars() + self.variable_ids,
@@ -982,21 +993,20 @@ class StatCalculator(Serializable):
             )
 
             cols_index = self.variable_ids + self.summarize_vars
-            cols_nonindex = df1.drop(cols_index).columns
-
-            df1 = SafeCollect(df1)
-            df2 = SafeCollect(df2)
+            cols_nonindex = safe_columns(df1.drop(cols_index))
 
             #   logger.info(df1.schema)
             #   Upcast any columns that need to be
-            [df1, df2] = _polars_safe_upcast(
-                df1.with_columns(pl.col(pl.Boolean).cast(pl.Int8)),
-                df2.with_columns(pl.col(pl.Boolean).cast(pl.Int8)),
-                cols1=cols_nonindex,
-                cols2=cols_nonindex,
+            [df1, df2] = safe_upcast_list(
+                [
+                    df1.with_columns(pl.col(pl.Boolean).cast(pl.Int8)),
+                    df2.with_columns(pl.col(pl.Boolean).cast(pl.Int8))
+                ]
             )
 
-            df_difference = SafeCollect(df2.select(cols_nonindex)) - df1.select(
+            df1 = df1.lazy().collect()
+            df2 = df2.lazy().collect()
+            df_difference = df2.select(cols_nonindex) - df1.select(
                 cols_nonindex
             )
             df_ratio = (df_difference) / df1.select(cols_nonindex)
@@ -1007,8 +1017,10 @@ class StatCalculator(Serializable):
                 if ratio:
                     sm_compare = deepcopy(sm_diff)
 
-                sm_diff.df_estimates = pl.concat(
-                    [df1.select(cols_index), df_difference], how="horizontal"
+                sm_diff.df_estimates = nw_type1.from_polars(
+                    pl.concat(
+                        [df1.select(cols_index), df_difference], how="horizontal"
+                    )
                 )
 
                 outputs["difference"] = sm_diff
@@ -1021,8 +1033,10 @@ class StatCalculator(Serializable):
             if ratio:
                 sm_ratio = sm_compare
 
-                sm_ratio.df_estimates = pl.concat(
-                    [df1.select(cols_index), df_ratio], how="horizontal"
+                sm_ratio.df_estimates = nw_type1.from_polars(
+                    pl.concat(
+                        [df1.select(cols_index), df_ratio], how="horizontal"
+                    )
                 )
 
                 outputs["ratio"] = sm_ratio
