@@ -1228,13 +1228,6 @@ class Calibration(Serializable):
             if only_bounds:
                 aebw_options["bounds"] = bounds
 
-        # WriteParquet(Xi,
-        #               "/projects/data/NEWS/TempFiles/x_sample.parquet")
-        # WriteParquet(initial_guess,
-        #               "/projects/data/NEWS/TempFiles/weights0.parquet")
-        # WriteParquet(Targetsi,
-        #               "/projects/data/NEWS/TempFiles/mean_population_moments.parquet")
-
         #   Initial weights
         if base_weight is None:
             base_weight = (
@@ -1297,7 +1290,7 @@ class Calibration(Serializable):
         try:
             aebw_options["max_steps"] = self.iterations
             aebw_options["optimality_violation"] = self.tolerance * tol_adj
-            #   aebw_options["save_problem_data"] = "/projects/data/NEWS/TempFiles/ebw.zip"
+
             results = ebw_routines.entropy_balance(
                 mean_population_moments=targetsi,
                 x_sample=xi,

@@ -18,7 +18,6 @@ from .config import Config
 from .from_python import FunctionFromPython
 from .utilities import CallInputs, FileLoaderUtilities
 
-# from NEWS.CodeUtilities.Python.FileLoaderUtilities import FileLoaderUtilities
 if TYPE_CHECKING:
     from .function import Function
 

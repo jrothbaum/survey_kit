@@ -116,7 +116,7 @@ class MultipleImputation(Serializable):
     ...     "display": False
     ... }
     >>> # Load SRMI data
-    >>> srmi = SRMI.load(path_model="/projects/data/NEWS/Test/py_srmi_test.srmi/",
+    >>> srmi = SRMI.load(path_model="/projects/py_srmi_test.srmi/",
     ...                  LazyLoad=False)
     >>>
     >>> # Calculate MI estimates
@@ -267,8 +267,7 @@ class MultipleImputation(Serializable):
             columns_ordered=cols_stats,
         )
 
-        #   Notation from Joe Schaffer MI FAQ page (downloaded from the Wayback Machine)
-        #       NEWS/Documentation/Background/MultipleImputation/MI_FAQ.htm
+        #   Notation from Joe Schaffer MI FAQ page (you can download from the Wayback Machine)
         df_estimates = (
             nw.from_native(df_estimates_stacked)
             .group_by(self.join_on)
@@ -533,8 +532,8 @@ class MultipleImputation(Serializable):
 
         Examples
         --------
-        Compare mi_news to sc_survey (StatCalculator)
-        >>> comparison = mi_news.compare(
+        Compare mi_stats to sc_survey (StatCalculator)
+        >>> comparison = mi_stats.compare(
         ...     sc_survey
         ... )
 
@@ -1339,13 +1338,13 @@ def mi_ses_from_function(
     --------
     Basic usage with StatCalculator:
 
-    >>> from NEWS.CodeUtilities.Python.Statistics.StatCalculator import StatCalculator
-    >>> from NEWS.CodeUtilities.Python.SummaryStats import Statistics, Replicates
-    >>> from NEWS.CodeUtilities.Python.SRMI.SRMI import SRMI
+    >>> from survey_kit.statistics.calculator import StatCalculator
+    >>> from survey_kit.statistics.statistics import Statistics
+    >>> from survey_kit.statistics.replicates import Replicates
+    >>> from survey_kit.imputation.srmi import SRMI
     >>>
     >>> # Load SRMI data
-    >>> srmi = SRMI.load(path_model="/projects/data/NEWS/Test/py_srmi_test.srmi/",
-    ...                  LazyLoad=False)
+    >>> srmi = SRMI.load(path_model="/data/py_srmi_test.srmi/")
     >>>
     >>>
     >>> # Define what to calculate
@@ -1399,7 +1398,7 @@ def mi_ses_from_function(
 
     Parallel processing for faster computation:
 
-    >>> from NEWS.CodeUtilities.Python.Function.Utilities import CallInputs, CallTypes
+    >>> from survey_kit.orchestration.utilities import CallInputs, CallTypes
     >>>
     >>> parallel_config = CallInputs(CallType=CallTypes.shell)
     >>> mi_results = mi_ses_from_function(
@@ -1667,114 +1666,3 @@ def _mi_ses_from_function_one_implicate(
     if path_save != "":
         imp_statsi.save(path_save)
     return imp_statsi
-
-
-# if __name__ == "__main__":
-#     def test():
-#         from NEWS.CodeUtilities.Python.SRMI.SRMI import SRMI
-#         from NEWS.CodeUtilities.Python.Random import RandomNumberGenerator,\
-#                                                      SetSeed
-
-#         # Some convenience function for calculating summary stats
-
-
-#         SetSeed(98482224)
-#         rng = RandomNumberGenerator()
-
-
-#         srmi = SRMI.load(path_model="/projects/data/NEWS/Test/py_srmi_test.srmi/",
-#                          LazyLoad=False)
-
-
-#         df_implicates = srmi.df_implicates
-
-#         n_rows = df_implicates[0].height
-#         #   Make the "weights" (base + 10 replicates)
-#         n_replicates = 2
-#         df_weights = pl.DataFrame(
-#                 {"weights":rng.uniform(low=0.5,high=1.5,size=(n_replicates + 1)*n_rows)}
-#             )
-
-#         rename = {f"field_{i}":f"weight_{i}" for i in range(0,n_replicates+1)}
-#         df_weights = (df_weights.select(pl.col("weights").reshape((n_rows,n_replicates+1))
-#                                                          .arr.to_struct())
-#                                  .unnest("weights")
-#                                  .rename(rename))
-
-#         #   Multiply weight_0 by each other weight to get something more rep weight like
-#         df_weights = df_weights.with_columns(
-#                 [(pl.col(f"weight_{i}")*pl.col("weight_0")).alias(f"weight_{i}") for i in range(1,n_replicates+1)]
-#             )
-
-
-#         #   Calculate these statistics (stats) for these variables (columns)
-#         stats = Statistics(stats=["mean"],
-#                             columns=["var_*"])
-
-#         # stats = Statistics(stats=["mean","median","q25|not0"],
-#         #                    columns=["var_hd1"])
-#         #   Tell it what the weights are
-#         replicates = Replicates(weight_stub="weight_",
-#                                 n_replicates=n_replicates,
-#                                 bootstrap=False)
-
-
-#         delegate = StatCalculator
-#         arguments = {"statistics":stats,
-#                      "replicates":replicates,
-#                      "round_output":False,
-#                      "display":False}
-
-
-#         mi_mean = mi_ses_from_function(delegate,
-#                                        df_implicates=df_implicates,
-#                                        df_noimputes=df_weights,
-#                                        arguments=arguments,
-#                                        join_on=["Variable"],
-#                                        parallel=True)
-
-
-#         mi_mean_seq = mi_ses_from_function(delegate,
-#                                            df_implicates=df_implicates,
-#                                            df_noimputes=df_weights,
-#                                            arguments=arguments,
-#                                            join_on=["Variable"],
-#                                            parallel=False)
-
-#         mi_comp = mi_mean.compare(mi_mean_seq)
-#         mi_comp["difference"].print()
-#         mi_comp["ratio"].print()
-
-#     def table_test():
-#         from NEWS.CodeUtilities.Python.Serializable import Serializable
-#         results = Serializable.load_any("/projects/data/NEWS/Test/cid_comparison")
-#         df = SafeCollect(results.table_of_estimates(estimates_to_show=["estimate",
-#                                                                                "se",
-#                                                                                "ci"]))
-
-#         return df
-
-#     def filter_select_test():
-#         mi = MultipleImputation.load("/projects/data/NEWS/V2/Estimates/CPS/2019/Income/NEWS/InKind.mi",
-#                                           LazyLoad=False)
-
-#         mi.print()
-#         mi.filter(pl.col("ShortName") == "allhh")
-#         mi.select(["q10",
-#                    "q25",
-#                    "q50",
-#                    "q75",
-#                    "q90"])
-#         mi.with_columns(pl.col("q90")/1_000_000)
-#         mi.rename({coli:coli.replace("q","") for coli in mi.df_estimates.columns if coli.startswith("q")})
-
-#         mi.print(round_output=True)
-#         mi.print(round_output=False)
-
-#         mi.drb_round_table()
-#         mi.print()
-
-#     # out = table_test()
-#     # dfp = out.to_pandas()
-
-#     #   filter_select_test()

@@ -108,10 +108,8 @@ class Parameters:
             Overwrite existing tuned parameters, by default False
         parameters : dict | None, optional
             LightGBM model parameters, by default None
-            From NEWS.CodeUtilities.Python.LightGBM
         tuner : Tuner, optional
             Hyperparameter tuner object, by default None
-            From NEWS.CodeUtilities.Python.LightGBM
         tune_hyperparameter_path : str, optional
             Path for saving/loading tuned parameters, by default ""
         quantiles : list, optional

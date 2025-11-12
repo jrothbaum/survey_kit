@@ -96,7 +96,7 @@ class Function(Serializable):
     force : bool, optional
         force execution regardless of dependency status (i.e. even if the output data already exists). Default is False.
     load_parameters : bool, optional
-        Whether to load NEWS environment parameters automatically. Default is True.
+        Whether to load any language=specific parameters automatically. Default is True (if set in config).
     load_utilities : bool, optional
         Whether to load language-specific utility functions. Default is True.
     call_input: CallInput, optional
@@ -185,7 +185,7 @@ class Function(Serializable):
     - Functions are executed in isolated environments with appropriate language setup
     - Dependencies between functions are automatically resolved via inputs/outputs
     - Resource requirements can be specified per-function or globally
-    - All languages have access to NEWS environment parameters and utilities
+    - All languages can have parameters and utilities set with config
     """
 
     def __init__(

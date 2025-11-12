@@ -483,7 +483,6 @@ class SRMI(Serializable):
                                 },
                                 inputs=inputs,
                                 outputs=outputs,
-                                #    namespace="NEWS.CodeUtilities.Python.SRMI.SRMI"                               )
                             )
                         )
 
@@ -947,7 +946,7 @@ class SRMI(Serializable):
     def df_implicates_with_appended_cols(self) -> DataFrameList:
         """
         Get all completed implicates as a DataFrameList with any downstream
-            data appended to them.  We use this in NEWS for getting
+            data appended to them.  We use this for getting
             post-imputation variables, such as NEWS's final household
             income estimates that are calculated separately for
             each implicate.
