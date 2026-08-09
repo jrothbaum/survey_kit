@@ -2,8 +2,8 @@ import narwhals as nw
 import narwhals.selectors as cs
 from narwhals.typing import IntoFrameT
 
-from formulaic import Formula
 from .rounding import Rounding
+from ..utilities.formula_builder import get_model_frame
 from ..utilities.inputs import list_input
 from ..utilities.dataframe import (
     concat_wrapper,
@@ -29,7 +29,7 @@ class Statistics:
         List of statistics to calculate (mean, median, etc.)
         Call Statistics.available_stats() for options
     formula : str, optional
-        formulaic (or R)-style formula for defining statistics to be calculated.
+        R/polars_formula-style formula for defining statistics to be calculated.
         The default is "".  This takes precedence over columns
     columns : list[str]|str|None, optional
         List of columns to calculate statistics over. The default is None.
@@ -77,16 +77,62 @@ class Statistics:
         if rounding is None:
             rounding = Rounding(round_output=False)
 
+        by = self._normalize_by(by)
+
+        (df_summary, cols_summary) = self._resolve_summary_df(
+            df=df, nw_type=nw_type, weight=weight, summarize_vars=summarize_vars
+        )
+
+        stats_dict = self._build_column_stats(
+            df_summary=df_summary, cols_summary=cols_summary
+        )
+
+        summary_tables = calculate_by(
+            df=df_summary,
+            column_stats=stats_dict,
+            by=by,
+            always_return_as_collection=True,
+            weight=weight,
+            quantile_interpolated=self.quantile_interpolated,
+            quantile_interpolated_interval=self.quantile_interpolated_interval,
+            allow_slow_pandas=allow_slow_pandas,
+        )
+
+        (stats_headers, suffixes) = self._stats_headers_and_suffixes()
+
+        return self._reshape_summary_tables(
+            summary_tables=summary_tables,
+            by=by,
+            cols_summary=cols_summary,
+            nw_type=nw_type,
+            summarize_vars=summarize_vars,
+            rounding=rounding,
+            stats_headers=stats_headers,
+            suffixes=suffixes,
+        )
+
+    def _normalize_by(
+        self, by: dict[str, list[str]] | list | None
+    ) -> dict[str, list[str]]:
         if by is None:
             by = {"All": []}
 
         if type(by) is list:
             by = {f"{i}": itemi for i, itemi in enumerate(by)}
 
+        return by
+
+    def _resolve_summary_df(
+        self,
+        df: IntoFrameT,
+        nw_type: NarwhalsType,
+        weight: str,
+        summarize_vars: list,
+    ) -> tuple[IntoFrameT, list[str]]:
         if self.formula != "":
             #   It's a formula, process accordingly
             df_summary = nw.from_native(
-                Formula(self.formula).get_model_matrix(df)
+                get_model_frame(self.formula, df)
             ).lazy_backend(nw_type)
             cols_summary = df_summary.collect_schema().names()
         else:
@@ -117,6 +163,36 @@ class Statistics:
                 how="horizontal",
             )
 
+        return (df_summary, cols_summary)
+
+    def _build_column_stats(
+        self, df_summary: IntoFrameT, cols_summary: list[str]
+    ) -> dict[str, list[str]]:
+        #   Process the stats
+        stats_dict = {}
+        for stati in self.stats:
+            stat_mod = stati.split("|")
+
+            stati_raw = stat_mod[0]
+
+            modifier = ""
+            if len(stat_mod) == 2:
+                modifier = stat_mod[1]
+
+            if modifier != "":
+                cols_include = [f"{coli}|{modifier}" for coli in cols_summary]
+            else:
+                cols_include = cols_summary.copy()
+            stats_dict = column_stats_builder(
+                column_stats=stats_dict,
+                cols_include=cols_include,
+                df=df_summary,
+                stat=[stati_raw],
+            )
+
+        return stats_dict
+
+    def _stats_headers_and_suffixes(self) -> tuple[dict[str, str], dict[str, str]]:
         #   Rename the stats for more useful table headers
         stats_rename = {
             "count": "n, weighted",
@@ -133,9 +209,7 @@ class Statistics:
             "missing": " (missing)",
         }
 
-        #   Process the stats
         stats_headers = {}
-        stats_dict = {}
         for stati in self.stats:
             stat_mod = stati.split("|")
 
@@ -155,28 +229,6 @@ class Statistics:
                 stat_headeri = stati_raw
             stats_headers[stati] = f"{stat_headeri}{mod_header}"
 
-            if modifier != "":
-                cols_include = [f"{coli}|{modifier}" for coli in cols_summary]
-            else:
-                cols_include = cols_summary.copy()
-            stats_dict = column_stats_builder(
-                column_stats=stats_dict,
-                cols_include=cols_include,
-                df=df_summary,
-                stat=[stati_raw],
-            )
-
-        summary_tables = calculate_by(
-            df=df_summary,
-            column_stats=stats_dict,
-            by=by,
-            always_return_as_collection=True,
-            weight=weight,
-            quantile_interpolated=self.quantile_interpolated,
-            quantile_interpolated_interval=self.quantile_interpolated_interval,
-            allow_slow_pandas=allow_slow_pandas,
-        )
-
         suffixes = {}
 
         for stati in self.stats:
@@ -189,6 +241,19 @@ class Statistics:
 
             suffixes[stati] = self.stat_suffix(stat_onlyi, modifier)
 
+        return (stats_headers, suffixes)
+
+    def _reshape_summary_tables(
+        self,
+        summary_tables: dict,
+        by: dict[str, list[str]],
+        cols_summary: list[str],
+        nw_type: NarwhalsType,
+        summarize_vars: list,
+        rounding: Rounding,
+        stats_headers: dict[str, str],
+        suffixes: dict[str, str],
+    ):
         stat_cols_final = None
         default_index = "___index___"
 
@@ -276,7 +341,7 @@ class Statistics:
         cols_dedupped = list(set(stat_cols_final))
         if len(cols_dedupped) != len(stat_cols_final):
             stat_cols_final = _columns_original_order(
-                cols_unordered=cols_dedupped, cols_ordered=stat_cols_final
+                columns_unordered=cols_dedupped, columns_ordered=stat_cols_final
             )
         keep_order = ["Variable"] + cols_by + stat_cols_final
         output_table = concat_wrapper(

@@ -2,9 +2,8 @@ from __future__ import annotations
 
 import narwhals as nw
 from narwhals.typing import IntoFrameT
-import formulaic
 from ..utilities.inputs import list_input
-from ..utilities.formula_builder import FormulaBuilder
+from ..utilities.formula_builder import FormulaBuilder, get_model_frame
 from ..utilities.dataframe import (
     concat_wrapper,
     fill_missing,
@@ -121,7 +120,7 @@ class Moment(Serializable):
 
     Notes
     -----
-    - Formulas use the formulaic library syntax, with C() for categorical variables.
+    - Formulas use R/polars_formula-style syntax, with C() for categorical variables.
     - When using 'by' parameter, submoments are automatically created for each group.
     - The rescale option divides model matrix values by targets, which can improve
     convergence but changes the interpretation of calibration parameters.
@@ -275,11 +274,12 @@ class Moment(Serializable):
             f_by.remove_constant()
             self.by = f_by.formula
             df_by = nw.from_native(
-                formulaic.Formula(f_by.formula).get_model_matrix(
+                get_model_frame(
+                    f_by.formula,
                     nw.from_native(self.df)
                     .lazy_backend(self.nw_type)
                     .collect()
-                    .to_native()
+                    .to_native(),
                 )
             )
 
@@ -357,8 +357,9 @@ class Moment(Serializable):
         fb.remove_constant()
 
         model_matrix = nw.from_native(
-            formulaic.Formula(fb.formula).get_model_matrix(
-                nw.from_native(self.df).lazy_backend(self.nw_type).collect().to_native()
+            get_model_frame(
+                fb.formula,
+                nw.from_native(self.df).lazy_backend(self.nw_type).collect().to_native(),
             )
         )
 

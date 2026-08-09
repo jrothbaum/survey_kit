@@ -21,6 +21,13 @@ from ..utilities.dataframe import (
 )
 from ..utilities.rounding import drb_round_table
 from ..serializable import Serializable
+from .basic_calculations import (
+    _split_batchable_column_stats,
+    _batched_simple_stats,
+    _batched_gini,
+    _batched_quantiles,
+    _batched_quantiles_interpolated,
+)
 from .. import logger
 
 
@@ -157,7 +164,21 @@ class Replicates(Serializable):
         df: IntoFrameT | None = None,
         n_replicates: int | None = None,
         bootstrap: bool = False,
+        batch_size: int | None = None,
     ):
+        """
+        Parameters
+        ----------
+        batch_size : int | None, optional
+            Number of replicate weights to batch together per group_by/agg
+            pass in StatCalculator's fast batched replicate-SE path (only
+            used when the request is eligible for that path - see
+            StatCalculator._calculate_replicates). None (default) auto-sizes
+            batches to target roughly 300 total expressions per pass, a
+            sweet spot found empirically to balance speed against peak
+            memory. Pass an explicit value to override for benchmarking or
+            tuning. Has no effect on the fallback sequential path.
+        """
         if n_replicates is None and df is None:
             message = "You must pass either df or n_replicates to Replicates"
             logger.error(message)
@@ -172,6 +193,7 @@ class Replicates(Serializable):
         self.weight_stub = weight_stub
         self.n_replicates = n_replicates
         self.bootstrap = bootstrap
+        self.batch_size = batch_size
 
         self.rep_list = [f"{weight_stub}{repi}" for repi in range(0, n_replicates + 1)]
 
@@ -649,6 +671,143 @@ def _replicates_ses_from_function_sequential(
     print("")
 
     return df_replicates
+
+
+def _default_batch_size(column_stats: dict[str, list[str]], n_weights: int) -> int:
+    """
+    Auto-size replicate batches to target ~300 total (replicate x column x
+    stat) expressions per group_by/agg pass - comfortably inside the
+    100-600 sweet spot found empirically across several stress-test
+    configurations, balancing speed against peak memory. Self-adjusting to
+    however many variables/statistics a given request actually asks for,
+    rather than a fixed replicate count that would need re-tuning per call.
+    """
+    n_exprs_per_replicate = sum(len(v) for v in column_stats.values())
+    if n_exprs_per_replicate <= 0:
+        return max(1, n_weights)
+    return max(1, 300 // n_exprs_per_replicate)
+
+
+def _replicates_ses_batched(
+    df: IntoFrameT,
+    column_stats: dict[str, list[str]],
+    by_cols: list[str],
+    weight_list: list[str],
+    batch_size: int | None = None,
+    quantile_interpolated: bool = False,
+    quantile_interpolated_interval: int = 2500,
+) -> tuple[dict[int, IntoFrameT] | None, bool]:
+    """
+    Fast batched alternative to _replicates_ses_from_function_sequential,
+    specifically for StatCalculator's own calculate_by-driven replicate-SE
+    computation (see StatCalculator._calculate_replicates for the
+    eligibility check gating when this is used).
+
+    Splits column_stats by stat type (_split_batchable_column_stats) and
+    dispatches each to its batched builder (_batched_simple_stats,
+    _batched_gini, _batched_quantiles or, when quantile_interpolated=True,
+    _batched_quantiles_interpolated), then joins each replicate's slice
+    across builders into one combined per-replicate table - the same shape
+    calculate_by would produce for that single weight.
+
+    Returns ({replicate_index: combined per-replicate table}, True) when
+    every requested stat is batchable, or (None, False) if column_stats
+    contains anything _is_batchable_stat doesn't recognize - callers must
+    fall back to the existing sequential path entirely in that case, not
+    partially apply this.
+    """
+    (simple_stats, quantile_stats, gini_stats, has_unbatchable) = (
+        _split_batchable_column_stats(column_stats)
+    )
+    if has_unbatchable:
+        return (None, False)
+
+    if batch_size is None:
+        batch_size = _default_batch_size(column_stats, len(weight_list))
+
+    simple_results = (
+        _batched_simple_stats(
+            df=df,
+            column_stats=simple_stats,
+            by_cols=by_cols,
+            weight_list=weight_list,
+            batch_size=batch_size,
+        )
+        if len(simple_stats)
+        else {}
+    )
+    gini_results = (
+        _batched_gini(
+            df=df,
+            column_stats=gini_stats,
+            by_cols=by_cols,
+            weight_list=weight_list,
+            batch_size=batch_size,
+        )
+        if len(gini_stats)
+        else {}
+    )
+    if quantile_interpolated:
+        quantile_results = (
+            _batched_quantiles_interpolated(
+                df=df,
+                column_stats=quantile_stats,
+                by_cols=by_cols,
+                weight_list=weight_list,
+                batch_size=batch_size,
+                interpolated_interval=quantile_interpolated_interval,
+            )
+            if len(quantile_stats)
+            else {}
+        )
+    else:
+        quantile_results = (
+            _batched_quantiles(
+                df=df,
+                column_stats=quantile_stats,
+                by_cols=by_cols,
+                weight_list=weight_list,
+                batch_size=batch_size,
+            )
+            if len(quantile_stats)
+            else {}
+        )
+
+    #   calculate_by always has a complete by-group anchor to full-join
+    #   everything onto - its own simple-stats group_by runs on the
+    #   unfiltered table (per-stat null/filter conditions only affect the
+    #   stat VALUE, never which by-groups appear as rows), even when zero
+    #   simple stats are requested (group_by(by).agg([]) still returns
+    #   every group). _batched_quantiles/_batched_quantiles_interpolated/
+    #   _batched_gini all filter out a by-group entirely if the target
+    #   column is null/missing for every row in it (e.g. a subgroup with
+    #   no valid responses) - without this anchor, a quantile-only or
+    #   gini-only request would silently drop that by-group's row instead
+    #   of producing it with null values, unlike calculate_by.
+    by_anchor = (
+        nw.from_native(df).lazy().select(by_cols).unique().collect().to_native()
+        if len(by_cols)
+        else None
+    )
+
+    per_replicate_tables = {}
+    for r in range(len(weight_list)):
+        parts = [
+            d[r]
+            for d in (simple_results, gini_results, quantile_results)
+            if r in d
+        ]
+        if len(by_cols):
+            combined = by_anchor
+            for part in parts:
+                combined = join_wrapper(combined, part, on=by_cols, how="full")
+        else:
+            combined = parts[0]
+            for part in parts[1:]:
+                combined = concat_wrapper([combined, part], how="horizontal")
+        per_replicate_tables[r] = combined
+
+    return (per_replicate_tables, True)
 
 
 def _replicates_ses_from_function_one_replicate(

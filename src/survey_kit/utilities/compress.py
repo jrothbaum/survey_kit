@@ -12,7 +12,7 @@ def compress_df(
     cols: list[str] | str | None = None,
     check_string: bool = False,
     check_string_only: bool = False,
-    cast_all_null_to_boolean: bool = True,
+    cast_all_null_to_int8: bool = True,
     check_date_time: bool = True,
     no_boolean: bool = False,
 ) -> IntoFrameT:
@@ -34,8 +34,10 @@ def compress_df(
         Attempt to convert string columns to numeric
     check_string_only : bool
         Only check string conversions
-    cast_all_null_to_boolean : bool
-        Cast all-null columns to boolean
+    cast_all_null_to_int8 : bool
+        Cast all-null columns to Int8 (rather than leaving them at a wider
+        default type). Int8 rather than Boolean since polars doesn't
+        auto-promote Boolean to numeric on relaxed appends/concats.
     check_date_time : bool
         Optimize datetime columns
     no_boolean : bool
@@ -145,23 +147,23 @@ def compress_df(
             dfCastCheck = df_col.filter(pl.col(columni).is_not_null())
 
             if dfCastCheck.height == 0 and df_col.height != 0:
-                #   All missing, cast to bool (for later combinations to ignore)?
-                if cast_all_null_to_boolean:
+                #   All missing, cast to Int8 (for later combinations to ignore)?
+                if cast_all_null_to_int8:
                     try:
                         #   Try casting on the non-null values
                         dfCastCheck = dfCastCheck.select(
-                            pl.col(columni).cast(pl.Boolean, strict=True)
+                            pl.col(columni).cast(pl.Int8, strict=True)
                         )
                         dfCastCheck = None
                         #   Worked - then we're good to do on all of them
                         dfcast = df_col.select(
-                            pl.col(columni).cast(pl.Boolean, strict=True)
+                            pl.col(columni).cast(pl.Int8, strict=True)
                         )
                         # logger.info("     Cast " + columni + " as " + str(inti))
                         cast_complete = True
                     except:
                         pass
-                        #   logger.warning("     Cannot cast " + columni + " as " + str(pl.Boolean))
+                        #   logger.warning("     Cannot cast " + columni + " as " + str(pl.Int8))
             else:
                 #   All integers?
                 if plType == pl.Float32 or plType == pl.Float64:

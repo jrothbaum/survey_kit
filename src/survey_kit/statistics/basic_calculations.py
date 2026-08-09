@@ -739,6 +739,88 @@ def _quantiles_actual(
     return df_out.lazy_backend(nw_type)
 
 
+def _quantile_interpolated_bin_keys(
+    df_binned,
+    sorted_coli: list,
+    by: list,
+    coli: str,
+    drb_safe_n_bin: int,
+):
+    """
+    Replicate-independent step of interpolated-quantile binning: given one
+    row per (by + [coli]) bin with its row count, adds the zero-weight
+    lower-boundary anchor row and merges small bins (row count <
+    drb_safe_n_bin) forward into the next bin within the same by-group, for
+    disclosure safety. Weight never enters this decision (only row counts
+    do), and dropping a row from a table that already carries a cumulative
+    value doesn't change that value at the surviving rows - so the surviving
+    bin keys computed here can be joined against ANY replicate's cumulative
+    share afterward instead of being recomputed per replicate.
+    """
+    var_n_in_bin = "___n_in_bin"
+    var_n_cum_sum = "___n_to_bin"
+
+    df_coli = df_binned
+
+    if len(by):
+        df_first = df_coli.group_by(by).agg(nw.all().first())
+    else:
+        df_first = df_coli.head(1)
+    df_first = df_first.with_columns(
+        [
+            nw.col(coli) - 1,
+            nw.lit(drb_safe_n_bin).cast(nw.UInt32).alias(var_n_in_bin),
+        ]
+    )
+
+    if drb_safe_n_bin:
+        smallest_bin = df_coli.select(nw.min(var_n_in_bin))[0, 0]
+
+        while smallest_bin < drb_safe_n_bin:
+            c_too_small = nw.col(var_n_in_bin) < drb_safe_n_bin
+            if len(by):
+                c_prior_too_small = (
+                    nw.col(var_n_in_bin)
+                    .shift(n=1)
+                    .over(by, order_by=sorted_coli)
+                    .fill_null(nw.lit(drb_safe_n_bin + 1))
+                    < drb_safe_n_bin
+                )
+                cum_sum_expr = (
+                    nw.col(var_n_in_bin).cum_sum().over(by, order_by=sorted_coli)
+                )
+                prior_cum_sum_expr = (
+                    nw.col(var_n_cum_sum)
+                    .shift(n=1)
+                    .over(by, order_by=sorted_coli)
+                    .fill_null(nw.lit(0))
+                )
+            else:
+                c_prior_too_small = (
+                    nw.col(var_n_in_bin)
+                    .shift(n=1)
+                    .fill_null(nw.lit(drb_safe_n_bin + 1))
+                    < drb_safe_n_bin
+                )
+                cum_sum_expr = nw.col(var_n_in_bin).cum_sum().over(order_by=sorted_coli)
+                prior_cum_sum_expr = (
+                    nw.col(var_n_cum_sum).shift(n=1).fill_null(nw.lit(0))
+                )
+
+            df_coli = (
+                df_coli.with_columns([cum_sum_expr.alias(var_n_cum_sum)])
+                .filter(~(c_too_small & ~c_prior_too_small))
+                .with_columns(
+                    [(nw.col(var_n_cum_sum) - prior_cum_sum_expr).alias(var_n_in_bin)]
+                )
+                .drop(var_n_cum_sum)
+            )
+            smallest_bin = df_coli.select(nw.min(var_n_in_bin))[0, 0]
+
+    df_coli = concat_wrapper([df_first, df_coli], how="diagonal")
+    return df_coli.select(sorted_coli)
+
+
 def _quantiles_interpolated(
     df: nw.LazyFrame,
     column_stats: dict[str, list[str]],
@@ -788,17 +870,12 @@ def _quantiles_interpolated(
         else:
             with_intervals.append(with_floor.alias(col_name))
 
-        with_intervals.append(nw.col(col_name).alias(f"__{coli}_original_value"))
-
     df = df.select(keep_list).with_columns(with_intervals)
 
     df_out = None
     df_by = None
 
     for coli, qlisti in column_stats.items():
-        col_original_value = f"__{coli}_original_value"
-        col_min = f"__{coli}_original_value_min"
-        col_max = f"__{coli}_original_value_max"
         (coli_nameonly, modifier, coli_original) = _check_special_modifiers(coli)
 
         sorted_coli = by + [coli]
@@ -821,8 +898,7 @@ def _quantiles_interpolated(
             ).alias(weight)
 
         var_n_in_bin = "___n_in_bin"
-        var_n_cum_sum = "___n_to_bin"
-        df_coli = (
+        df_grouped = (
             df.filter(keep_condition)
             .with_columns(by_over)
             .with_columns(cs.by_dtype(nw.Int8).cast(nw.Int32))
@@ -831,8 +907,6 @@ def _quantiles_interpolated(
                 [
                     nw.col(weight).sum(),
                     nw.len().alias(var_n_in_bin),
-                    nw.col(col_original_value).min().alias(col_min),
-                    nw.col(col_original_value).max().alias(col_max),
                 ]
             )
             .sort(sorted_coli)
@@ -840,60 +914,24 @@ def _quantiles_interpolated(
             .collect()
         )
 
-        #   Check if need to insert a "fake" bottom category as the current bottom has more mass than the min quantile
-        df_first = df_coli.head(1)
-        if (df_first[col_min].item() == df_first[col_max].item()) and (
-            df_first[var_n_in_bin].item() > drb_safe_n_bin
-        ):
-            df_first = df_first.with_columns(nw.lit(0).alias(weight))
-        else:
-            #   Create a "first" bin that is at the lower bound of the real first bin
-            df_first = df_first.with_columns(
-                [
-                    nw.col(coli) - 1,
-                    nw.lit(drb_safe_n_bin).cast(nw.UInt32).alias(var_n_in_bin),
-                    nw.lit(0.0).alias(weight),
-                ]
-            )
-        if drb_safe_n_bin:
-            #   logger.info(f"Checking n in bin >= {drb_safe_n_bin}")
+        #   The merge decision (which small bins get folded forward into
+        #   the next bin, for disclosure safety) depends only on row
+        #   counts, never on weight - so it's delegated to a shared helper
+        #   that the batched replicate path also calls, rather than being
+        #   recomputed per replicate. The synthetic anchor row it returns
+        #   has no weight of its own (nothing merges below the lowest real
+        #   bin), so it gets a cumulative share of 0 after the join below.
+        survivor_keys = _quantile_interpolated_bin_keys(
+            df_binned=df_grouped.select(sorted_coli + [var_n_in_bin]),
+            sorted_coli=sorted_coli,
+            by=by,
+            coli=coli,
+            drb_safe_n_bin=drb_safe_n_bin,
+        )
+        df_coli = survivor_keys.join(
+            df_grouped.select(sorted_coli + [weight]), on=sorted_coli, how="left"
+        ).with_columns(nw.col(weight).fill_null(nw.lit(0.0)))
 
-            smallest_bin = df_coli.select(nw.min(var_n_in_bin))[0, 0]
-            #   logger.info(df_coli.height)
-
-            while smallest_bin < drb_safe_n_bin:
-                c_too_small = nw.col(var_n_in_bin) < drb_safe_n_bin
-                c_prior_too_small = (
-                    nw.col(var_n_in_bin)
-                    .shift(n=1)
-                    .fill_null(nw.lit(drb_safe_n_bin + 1))
-                    < drb_safe_n_bin
-                )
-
-                df_coli = (
-                    df_coli.with_columns(
-                        [
-                            nw.col(var_n_in_bin)
-                            .cum_sum()
-                            .over(order_by=sorted_coli)
-                            .alias(var_n_cum_sum)
-                        ]
-                    )
-                    .filter(~(c_too_small & ~c_prior_too_small))
-                    .with_columns(
-                        [
-                            (
-                                nw.col(var_n_cum_sum)
-                                - nw.col(var_n_cum_sum).shift(n=1).fill_null(nw.lit(0))
-                            ).alias(var_n_in_bin),
-                        ]
-                    )
-                    .drop(var_n_cum_sum)
-                )
-
-                smallest_bin = df_coli.select(nw.min(var_n_in_bin))[0, 0]
-
-        df_coli = concat_wrapper([df_first, df_coli], how="diagonal")
         if df_by is None:
             if len(by):
                 df_by = df_coli.select(by).unique()
@@ -925,23 +963,34 @@ def _quantiles_interpolated(
         with_shift = []
         c_w = nw.col(weight)
         c_var = nw.col(coli)
+
+        #   This runs on the table sorted by by + [weight] - the shifts
+        #   below must stay within each by-group (partitioned via .over),
+        #   otherwise the lowest quantile of one group could interpolate
+        #   using a bin belonging to a neighboring group that happens to
+        #   sort adjacently by cumulative share.
+        def _shift_over(expr, n):
+            if len(by):
+                return expr.shift(n).over(by, order_by=weight)
+            return expr.shift(n)
+
         for shifti in range(1, len(qlisti) + 1):
             with_shift.extend(
                 [
                     (
-                        nw.when(c_var.shift(shifti).is_not_missing())
-                        .then(c_w.shift(shifti))
+                        nw.when(_shift_over(c_var, shifti).is_not_missing())
+                        .then(_shift_over(c_w, shifti))
                         .otherwise(nw.lit(None))
                         .alias(f"__w_below___{shifti}")
                     ),
                     (
-                        nw.when(c_var.shift(-shifti).is_not_missing())
-                        .then(c_w.shift(-shifti))
+                        nw.when(_shift_over(c_var, -shifti).is_not_missing())
+                        .then(_shift_over(c_w, -shifti))
                         .otherwise(nw.lit(None))
                         .alias(f"__w_above___{shifti}")
                     ),
-                    c_var.shift(shifti).alias(f"__y_below___{shifti}"),
-                    c_var.shift(-shifti).alias(f"__y_above___{shifti}"),
+                    _shift_over(c_var, shifti).alias(f"__y_below___{shifti}"),
+                    _shift_over(c_var, -shifti).alias(f"__y_above___{shifti}"),
                 ]
             )
 
@@ -1180,7 +1229,7 @@ def _custom_stat_by(
             df_out = df_outi
         else:
             if len(by):
-                df_out = join_wrapper(df_out, df_outi, how="full", by=by)
+                df_out = join_wrapper(df_out, df_outi, how="full", on=by)
             else:
                 df_out = concat_wrapper([df_out, df_outi], how="horizontal")
 
@@ -1252,5 +1301,645 @@ def _gini(
     # df_out = nw.DataFrame({"gini":[gini]})
 
     return df_out
+
+
+##########################################################
+##########################################################
+#   Batched replicate-weight computation - START
+##########################################################
+##########################################################
+#   Fast path for StatCalculator's replicate/bootstrap SE computation:
+#   instead of one calculate_by() pass per replicate weight (repeating
+#   group-membership computation R+1 times even though it only depends on
+#   `by`, never on the weight column), build every replicate's expressions
+#   up front and run them in a handful of batched group_by/agg passes.
+#   Only covers the stats _is_batchable_stat classifies as batchable -
+#   anything else (custom delegates, |share's global denominator, multiple
+#   Statistics objects, multi-key by) falls back to the existing
+#   per-replicate loop in replicates.py, unchanged.
+
+
+def _is_batchable_stat(stati: str) -> str | None:
+    """
+    Classify a raw Statistics.stats-style stat string ("mean", "n|not0",
+    "median", "q25", "gini", ...) for the batched replicate-SE path.
+
+    Returns "simple", "quantile", "gini", or None (not batchable). The
+    |not0/|is0/|missing/|notmissing filter modifiers are just extra filter
+    expressions baked into the same stat_expr _summary_by_column_stat
+    already builds, so they're batchable for every stat kind. |share (the
+    global, cross-group share-of-total denominator) is only batched for
+    "simple" stats - _batched_simple_stats computes the extra ungrouped
+    denominator reduction calculate_by's own share_stats/d_shares mechanism
+    computes for a single weight. Quantile/gini don't build their
+    denominator through _summary_by_column_stat at all, so |share on those
+    stays unbatched (falls back) rather than being silently ignored.
+    """
+    stat_mod = stati.split("|")
+    stati_raw = stat_mod[0]
+    modifier = stat_mod[1] if len(stat_mod) == 2 else ""
+
+    #   Aliases mirrored from _summary_by_column_stat
+    resolved = stati_raw
+    if resolved == "median":
+        resolved = "q50"
+    elif resolved == "n":
+        resolved = "rawcount"
+    elif resolved == "weight":
+        resolved = "count"
+
+    if resolved == "gini":
+        return None if modifier == "share" else "gini"
+
+    if resolved.startswith("q") or resolved.startswith("p"):
+        try:
+            float(resolved.replace("q", "").replace("p", ""))
+            return None if modifier == "share" else "quantile"
+        except ValueError:
+            return None
+
+    if resolved in {
+        "mean",
+        "sum",
+        "count",
+        "rawcount",
+        "var",
+        "std",
+        "max",
+        "min",
+        "first",
+        "share",
+        "rawshare",
+    }:
+        return "simple"
+
+    return None
+
+
+def _split_batchable_column_stats(
+    column_stats: dict[str, list[str]],
+) -> tuple[dict[str, list[str]], dict[str, list[str]], dict[str, list[str]], bool]:
+    """
+    Split a calculate_by-style column_stats dict into (simple, quantile,
+    gini) sub-dicts by stat classification. The 4th return value is False
+    if every stat was classified (fully batchable), True if anything is
+    unrecognized - the caller should fall back entirely in that case.
+    """
+    simple: dict[str, list[str]] = {}
+    quantile: dict[str, list[str]] = {}
+    gini: dict[str, list[str]] = {}
+
+    for coli, stats_list in column_stats.items():
+        for stati in stats_list:
+            kind = _is_batchable_stat(stati)
+            if kind == "simple":
+                simple.setdefault(coli, []).append(stati)
+            elif kind == "quantile":
+                quantile.setdefault(coli, []).append(stati)
+            elif kind == "gini":
+                gini.setdefault(coli, []).append(stati)
+            else:
+                return (simple, quantile, gini, True)
+
+    return (simple, quantile, gini, False)
+
+
+def _batched_simple_stats(
+    df,
+    column_stats: dict[str, list[str]],
+    by_cols: list[str],
+    weight_list: list[str],
+    batch_size: int,
+):
+    """
+    Batched replacement for calculate_by's plain-reduction stats loop.
+    column_stats here must only contain stats _is_batchable_stat classifies
+    as "simple" - reuses _summary_by_column_stat directly for every
+    (column, stat, replicate weight) combination, so naming/aliasing/filter
+    behavior is guaranteed identical to the existing single-weight path.
+
+    A |share-modified stat (e.g. "mean|share") additionally needs the same
+    stat_expr evaluated once over the WHOLE table (not grouped by by_cols)
+    as its denominator - mirroring calculate_by's own
+    share_stats/d_shares mechanism, just batched across every replicate in
+    the batch as one extra ungrouped reduction pass instead of one pass per
+    replicate.
+
+    Returns {replicate_index: single-replicate output table}, each shaped
+    like a single weight's calculate_by output (by_cols + "{col}_{suffix}"
+    columns).
+    """
+    if not len(column_stats):
+        return {}
+
+    nw_type = NarwhalsType(df)
+    df_polars = nw_type.to_polars()
+
+    cast_cols = set()
+    for coli, stats_list in column_stats.items():
+        (_, _, coli_original) = _check_special_modifiers(coli)
+        for stati in stats_list:
+            info = _summary_by_column_stat(column=coli, statistic=stati, weight="")
+            if info.need_sum_cast:
+                cast_cols.add(coli_original)
+    if len(cast_cols):
+        df_polars = safe_sum_cast(df=df_polars, columns=list(cast_cols))
+
+    ndf = nw.from_native(df_polars).lazy()
+    results = {}
+
+    for batch_start in range(0, len(weight_list), batch_size):
+        batch_weights = weight_list[batch_start : batch_start + batch_size]
+
+        exprs = []
+        share_exprs = []
+        share_pairs = []
+        for offset, weight_col in enumerate(batch_weights):
+            r = batch_start + offset
+            for coli, stats_list in column_stats.items():
+                for stati in stats_list:
+                    info = _summary_by_column_stat(
+                        column=coli, statistic=stati, weight=weight_col
+                    )
+                    if info.stat_expr is not None:
+                        out_col = f"{info.output_name}___rep{r}"
+                        exprs.append(info.stat_expr.alias(out_col))
+                        if info.modifier == "share":
+                            denom_col = f"__share_denom__{out_col}"
+                            share_exprs.append(info.stat_expr.alias(denom_col))
+                            share_pairs.append((out_col, denom_col))
+
+        if len(by_cols):
+            wide = ndf.group_by(by_cols).agg(exprs).collect()
+        else:
+            wide = ndf.select(exprs).collect()
+
+        if len(share_exprs):
+            denoms = ndf.select(share_exprs).collect()
+            wide = wide.with_columns(
+                [
+                    (nw.col(out_col) / nw.lit(denoms[0, denom_col])).alias(out_col)
+                    for out_col, denom_col in share_pairs
+                ]
+            )
+
+        #   calculate_by's own output goes through fill_missing(..., value=
+        #   None), which (since value=None skips fill_null but still runs
+        #   fill_nan) turns 0/0-style NaN artifacts (e.g. mean|missing on a
+        #   column with no missing values) into proper nulls - _reshape_
+        #   summary_tables doesn't repeat that cleanup, so without doing it
+        #   here the batched path would leave raw NaN where the sequential
+        #   path produces null, which can silently poison the downstream
+        #   replicate-variance sum.
+        wide = wide.with_columns(cs.numeric().fill_nan(None))
+
+        for offset, weight_col in enumerate(batch_weights):
+            r = batch_start + offset
+            suffix = f"___rep{r}"
+            rep_cols = [c for c in wide.columns if c.endswith(suffix)]
+            rename = {c: c[: -len(suffix)] for c in rep_cols}
+            results[r] = (
+                wide.select(by_cols + rep_cols).rename(rename).to_native()
+            )
+
+    return results
+
+
+def _batched_gini(
+    df,
+    column_stats: dict[str, list[str]],
+    by_cols: list[str],
+    weight_list: list[str],
+    batch_size: int,
+    censor_at_zero: bool = True,
+):
+    """
+    Batched replacement for calculate_by's gini path (_custom_stat_by +
+    _gini). Today's per-column/per-by-group/per-replicate implementation
+    stacks two Python loops (one over every unique by-group value, one over
+    replicates); this vectorizes both away via one shared
+    .over(by, order_by=variable) pass per batch, matching the pattern
+    _quantiles_actual already uses for its own cumulative-weight step.
+
+    column_stats here must only contain "gini". Returns
+    {replicate_index: single-replicate output table} shaped like
+    _custom_stat_by's output (by_cols + "{col}_gini" columns).
+    """
+    gini_columns = list(column_stats.keys())
+    if not len(gini_columns):
+        return {}
+
+    nw_type = NarwhalsType(df)
+    df_polars = nw_type.to_polars()
+    ndf_base = nw.from_native(df_polars).lazy()
+
+    results = {}
+
+    for coli in gini_columns:
+        (_, modifier, coli_original) = _check_special_modifiers(coli)
+
+        c_keep_condition = nw.col(coli_original).is_not_missing()
+        if modifier == "not0":
+            c_keep_condition = c_keep_condition & nw.col(coli_original).ne(0)
+
+        if censor_at_zero:
+            c_income = nw.col(coli_original) * nw.col(coli_original).gt(0).cast(
+                nw.Float64
+            )
+        else:
+            c_income = nw.col(coli_original)
+
+        for batch_start in range(0, len(weight_list), batch_size):
+            batch_weights = weight_list[batch_start : batch_start + batch_size]
+
+            ndf = ndf_base.filter(c_keep_condition)
+
+            with_cols = []
+            for offset, weight_col in enumerate(batch_weights):
+                r = batch_start + offset
+                c_weight = nw.col(weight_col)
+                if len(by_cols):
+                    normalized = (c_weight / c_weight.sum().over(by_cols)).alias(
+                        f"___cw{r}"
+                    )
+                else:
+                    normalized = (c_weight / c_weight.sum()).alias(f"___cw{r}")
+                with_cols.append(normalized)
+            ndf = ndf.with_columns(with_cols)
+
+            swt_cols = []
+            for offset, weight_col in enumerate(batch_weights):
+                r = batch_start + offset
+                cw = nw.col(f"___cw{r}")
+                if len(by_cols):
+                    swt = cw.cum_sum().over(by_cols, order_by=coli_original).alias(
+                        f"___swt{r}"
+                    )
+                else:
+                    swt = cw.cum_sum().over(order_by=coli_original).alias(f"___swt{r}")
+                swt_cols.append(swt)
+            ndf = ndf.with_columns(swt_cols)
+
+            agg_exprs = []
+            for offset, weight_col in enumerate(batch_weights):
+                r = batch_start + offset
+                cw = nw.col(f"___cw{r}")
+                swt = nw.col(f"___swt{r}")
+                agg_exprs.append((cw * c_income).sum().alias(f"swtey___rep{r}"))
+                agg_exprs.append((cw.pow(2) * c_income).sum().alias(f"swt2ey___rep{r}"))
+                agg_exprs.append((swt * cw * c_income).sum().alias(f"swteycw___rep{r}"))
+                agg_exprs.append(swt.max().alias(f"swt___rep{r}"))
+
+            if len(by_cols):
+                wide = ndf.group_by(by_cols).agg(agg_exprs).collect()
+            else:
+                wide = ndf.select(agg_exprs).collect()
+
+            for offset, weight_col in enumerate(batch_weights):
+                r = batch_start + offset
+                gini_expr = (
+                    (
+                        2 * nw.col(f"swteycw___rep{r}")
+                        - nw.col(f"swt2ey___rep{r}")
+                    )
+                    / (nw.col(f"swt___rep{r}") * nw.col(f"swtey___rep{r}"))
+                    - 1
+                ).alias(f"{coli_original}_gini")
+
+                #   Matches calculate_by's fill_missing(..., value=None)
+                #   cleanup - a degenerate all-zero (post-censoring) income
+                #   by-group divides by zero and would otherwise leave raw
+                #   NaN instead of null, which can poison the downstream
+                #   replicate-variance sum.
+                out = (
+                    wide.select(by_cols + [gini_expr])
+                    .with_columns(cs.numeric().fill_nan(None))
+                    .to_native()
+                )
+                if r not in results:
+                    results[r] = out
+                else:
+                    results[r] = join_wrapper(
+                        results[r], out, on=by_cols, how="full"
+                    ) if len(by_cols) else concat_wrapper(
+                        [results[r], out], how="horizontal"
+                    )
+
+    return results
+
+
+def _batched_quantiles(
+    df,
+    column_stats: dict[str, list[str]],
+    by_cols: list[str],
+    weight_list: list[str],
+    batch_size: int,
+):
+    """
+    Batched replacement for calculate_by's quantile path (_quantiles /
+    _quantiles_actual). The original sorts by cumulative share (which is
+    replicate-dependent) to interleave target-quantile "query rows" via a
+    shift-based lookup. That second sort/shift/pivot isn't needed: the
+    table is already sorted by the value column within each by-group, and
+    cumulative share is monotonic non-decreasing in that same order for any
+    non-negative weight, so the smallest value at or above a target share q
+    is just `value.filter(share_r >= q).first()` (expressed here as a
+    min-of-masked-value to satisfy narwhals' order-dependence rules) -
+    verified as an exact numeric match against _quantiles_actual.
+
+    column_stats here must only contain quantile/median stats. Returns
+    {replicate_index: single-replicate output table} shaped like
+    _quantiles_actual's output (by_cols + "{col}_{suffix}" columns).
+    """
+    nw_type = NarwhalsType(df)
+    df_polars = nw_type.to_polars()
+    ndf_base = nw.from_native(df_polars).lazy()
+
+    results = {}
+
+    for coli, stats_list in column_stats.items():
+        (_, modifier, coli_original) = _check_special_modifiers(coli)
+
+        quantiles = []
+        for stati in stats_list:
+            resolved = stati
+            if resolved == "median":
+                resolved = "q50"
+            q = float(resolved.replace("q", "").replace("p", "")) / 100
+            quantiles.append((stati, q))
+
+        c_keep_condition = nw.col(coli_original).is_not_missing()
+        if modifier == "not0":
+            c_keep_condition = c_keep_condition & nw.col(coli_original).ne(0)
+
+        sort_cols = by_cols + [coli_original]
+
+        for batch_start in range(0, len(weight_list), batch_size):
+            batch_weights = weight_list[batch_start : batch_start + batch_size]
+
+            sum_exprs = [
+                nw.col(weight_col).sum().alias(f"__wsum{offset}")
+                for offset, weight_col in enumerate(batch_weights)
+            ]
+            grouped = (
+                ndf_base.filter(c_keep_condition)
+                .group_by(sort_cols)
+                .agg(sum_exprs)
+                .sort(sort_cols)
+            )
+
+            share_exprs = []
+            for offset in range(len(batch_weights)):
+                s = nw.col(f"__wsum{offset}")
+                if len(by_cols):
+                    share = (
+                        s.cum_sum().over(by_cols, order_by=coli_original)
+                        / s.sum().over(by_cols)
+                    ).alias(f"__share{offset}")
+                else:
+                    share = (
+                        s.cum_sum().over(order_by=coli_original) / s.sum()
+                    ).alias(f"__share{offset}")
+                share_exprs.append(share)
+            grouped = grouped.with_columns(share_exprs)
+
+            agg_exprs = []
+            for offset, weight_col in enumerate(batch_weights):
+                r = batch_start + offset
+                share_col = nw.col(f"__share{offset}")
+                for stati, q in quantiles:
+                    suffix = stat_suffix(
+                        statistic=("median" if stati == "median" else stati),
+                        modifier=modifier,
+                    )
+                    masked = (
+                        nw.when(share_col >= q)
+                        .then(nw.col(coli_original))
+                        .otherwise(None)
+                        .min()
+                    )
+                    agg_exprs.append(
+                        masked.alias(f"{coli_original}_{suffix}___rep{r}")
+                    )
+
+            if len(by_cols):
+                wide = grouped.group_by(by_cols).agg(agg_exprs).collect()
+            else:
+                wide = grouped.select(agg_exprs).collect()
+
+            for offset, weight_col in enumerate(batch_weights):
+                r = batch_start + offset
+                suffix_tag = f"___rep{r}"
+                rep_cols = [c for c in wide.columns if c.endswith(suffix_tag)]
+                rename = {c: c[: -len(suffix_tag)] for c in rep_cols}
+                out = wide.select(by_cols + rep_cols).rename(rename).to_native()
+
+                if r not in results:
+                    results[r] = out
+                else:
+                    results[r] = join_wrapper(
+                        results[r], out, on=by_cols, how="full"
+                    ) if len(by_cols) else concat_wrapper(
+                        [results[r], out], how="horizontal"
+                    )
+
+    return results
+
+
+def _batched_quantiles_interpolated(
+    df,
+    column_stats: dict[str, list[str]],
+    by_cols: list[str],
+    weight_list: list[str],
+    batch_size: int,
+    interpolated_interval: int = 2500,
+    drb_safe_n_bin: int = 10,
+):
+    """
+    Batched replacement for calculate_by's Census-style interpolated
+    quantile path (_quantiles / _quantiles_interpolated,
+    quantile_interpolated=True).
+
+    The bin-merge decision (which small bins get folded forward for
+    disclosure safety) depends only on row counts, never on weight, so it's
+    computed once via _quantile_interpolated_bin_keys and shared across
+    every replicate in every batch - each batch only needs to (re)compute
+    per-bin weight sums for its own replicates, then roll those up to the
+    shared surviving bins via a join against the small bin-keys table
+    (never against the full microdata a second time). From there the
+    cumulative share and interpolation follow the same filter+min/max
+    pattern already validated for _batched_quantiles, generalized to the
+    two bracketing bins/shares the linear-interpolation formula needs.
+
+    column_stats here must only contain quantile/median stats. Returns
+    {replicate_index: single-replicate output table} shaped like
+    _quantiles_interpolated's output (by_cols + "{col}_{suffix}" columns).
+    """
+    if not len(column_stats):
+        return {}
+
+    nw_type = NarwhalsType(df)
+    df_polars = nw_type.to_polars()
+    ndf_base = nw.from_native(df_polars).lazy()
+
+    results = {}
+
+    for coli, stats_list in column_stats.items():
+        (_, modifier, coli_original) = _check_special_modifiers(coli)
+
+        quantiles = []
+        for stati in stats_list:
+            resolved = stati
+            if resolved == "median":
+                resolved = "q50"
+            q = float(resolved.replace("q", "").replace("p", "")) / 100
+            quantiles.append((stati, q))
+
+        bin_col = f"__{coli}_bin"
+        c_col = nw.col(coli_original)
+        with_floor = 1 + c_col.floordiv(interpolated_interval)
+        if modifier == "not0":
+            binned_expr = nw.when(c_col != 0).then(with_floor).otherwise(nw.lit(None))
+        else:
+            binned_expr = with_floor
+
+        sorted_bin = by_cols + [bin_col]
+        df_binned_full = ndf_base.with_columns(binned_expr.alias(bin_col)).filter(
+            nw.col(bin_col).is_not_missing()
+        )
+
+        #   Replicate-independent: row counts per original bin determine
+        #   the surviving (merged) bin keys, shared across every batch.
+        df_counts = (
+            df_binned_full.group_by(sorted_bin)
+            .agg(nw.len().alias("___n_in_bin"))
+            .sort(sorted_bin)
+            .collect()
+        )
+        survivor_keys = _quantile_interpolated_bin_keys(
+            df_binned=df_counts,
+            sorted_coli=sorted_bin,
+            by=by_cols,
+            coli=bin_col,
+            drb_safe_n_bin=drb_safe_n_bin,
+        )
+
+        for batch_start in range(0, len(weight_list), batch_size):
+            batch_weights = weight_list[batch_start : batch_start + batch_size]
+
+            sum_exprs = [
+                nw.col(weight_col).sum().alias(f"__wsum{offset}")
+                for offset, weight_col in enumerate(batch_weights)
+            ]
+            df_grouped = df_binned_full.group_by(sorted_bin).agg(sum_exprs).sort(
+                sorted_bin
+            )
+
+            #   Cumulative share must be computed on the FULL per-original-
+            #   bin table before rolling up to the merged survivor bins -
+            #   a bin that gets merged away still contributed its weight to
+            #   every cumulative value at or after it, and (as with the row
+            #   counts in _quantile_interpolated_bin_keys) dropping it
+            #   afterward doesn't change the cumulative value already
+            #   recorded at surviving rows. Summing per bin and joining to
+            #   survivor keys FIRST, then cumsum-ing only the survivors,
+            #   would silently discard every merged-away bin's weight.
+            share_exprs = []
+            for offset in range(len(batch_weights)):
+                s = nw.col(f"__wsum{offset}")
+                if len(by_cols):
+                    share = (
+                        s.cum_sum().over(by_cols, order_by=bin_col)
+                        / s.sum().over(by_cols)
+                    ).alias(f"__share{offset}")
+                else:
+                    share = (
+                        s.cum_sum().over(order_by=bin_col) / s.sum()
+                    ).alias(f"__share{offset}")
+                share_exprs.append(share)
+            df_grouped = df_grouped.with_columns(share_exprs).collect()
+
+            #   Roll the already-cumulative shares up to the shared
+            #   surviving bins - a join against the small bin-keys table,
+            #   never against the full microdata.
+            share_cols = [f"__share{offset}" for offset in range(len(batch_weights))]
+            df_coli_batch = survivor_keys.join(
+                df_grouped.select(sorted_bin + share_cols),
+                on=sorted_bin,
+                how="left",
+            ).with_columns(
+                [nw.col(c).fill_null(nw.lit(0.0)) for c in share_cols]
+            )
+            ndf_batch = nw.from_native(df_coli_batch).lazy()
+
+            agg_exprs = []
+            for offset, weight_col in enumerate(batch_weights):
+                r = batch_start + offset
+                share_col = nw.col(f"__share{offset}")
+                bin_col_expr = nw.col(bin_col)
+                for stati, q in quantiles:
+                    suffix = stat_suffix(
+                        statistic=("median" if stati == "median" else stati),
+                        modifier=modifier,
+                    )
+                    w_above = (
+                        nw.when(share_col >= q).then(share_col).otherwise(None).min()
+                    )
+                    y_above = (
+                        nw.when(share_col >= q)
+                        .then(bin_col_expr)
+                        .otherwise(None)
+                        .min()
+                    )
+                    w_below = (
+                        nw.when(share_col < q).then(share_col).otherwise(None).max()
+                    )
+                    y_below = (
+                        nw.when(share_col < q)
+                        .then(bin_col_expr)
+                        .otherwise(None)
+                        .max()
+                    )
+
+                    w_gap = nw.lit(q) - w_below
+                    y_interval = y_above - y_below
+                    w_interval = w_above - w_below
+                    val = (
+                        y_below + (w_gap / w_interval) * y_interval
+                    ) * interpolated_interval
+
+                    agg_exprs.append(
+                        val.alias(f"{coli_original}_{suffix}___rep{r}")
+                    )
+
+            if len(by_cols):
+                wide = ndf_batch.group_by(by_cols).agg(agg_exprs).collect()
+            else:
+                wide = ndf_batch.select(agg_exprs).collect()
+
+            for offset, weight_col in enumerate(batch_weights):
+                r = batch_start + offset
+                suffix_tag = f"___rep{r}"
+                rep_cols = [c for c in wide.columns if c.endswith(suffix_tag)]
+                rename = {c: c[: -len(suffix_tag)] for c in rep_cols}
+                out = wide.select(by_cols + rep_cols).rename(rename).to_native()
+
+                if r not in results:
+                    results[r] = out
+                else:
+                    results[r] = join_wrapper(
+                        results[r], out, on=by_cols, how="full"
+                    ) if len(by_cols) else concat_wrapper(
+                        [results[r], out], how="horizontal"
+                    )
+
+    return results
+
+
+##########################################################
+##########################################################
+#   Batched replicate-weight computation - END
+##########################################################
+##########################################################
 
 

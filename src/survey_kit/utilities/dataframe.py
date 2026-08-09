@@ -26,7 +26,7 @@ def fill_missing(
         c_missing = nw.all()
         c_numeric = cs.numeric()
     else:
-        c_missing = nw.col(columns_from_list(columns))
+        c_missing = nw.col(columns_from_list(df=df, columns=columns))
         c_numeric = None
 
     if value is not None:

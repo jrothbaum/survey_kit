@@ -8,7 +8,6 @@ import narwhals.selectors as cs
 from narwhals.typing import IntoFrameT
 from enum import Enum
 import lightgbm as lgb
-import formulaic
 
 from sklearn.linear_model import LassoCV
 from sklearn.linear_model import Lasso as sk_lasso
@@ -23,7 +22,7 @@ from ...utilities.dataframe import (
     concat_wrapper,
     NarwhalsType,
 )
-from ...utilities.formula_builder import FormulaBuilder
+from ...utilities.formula_builder import FormulaBuilder, get_model_frame
 from ...statistics.basic_calculations import _mean, _std
 
 
@@ -112,21 +111,13 @@ class Lasso:
         b_need_mm = fb.formula.find("(") > 0 or fb.formula.find(":") > 0
 
         if b_need_mm:
-            #       Get analysis dataset from formulaic (the model matrix)
+            #       Get analysis dataset (the model matrix)
             fb.remove_constant()
             nw_type = NarwhalsType(self.df)
 
-            df_mm = formulaic.Formula(fb.formula).get_model_matrix(
-                nw.from_native(self.df).lazy().collect()
+            df_mm = get_model_frame(
+                fb.formula, nw.from_native(self.df).lazy().collect().to_native()
             )
-
-            if hasattr(df_mm, "rhs"):
-                df_mm = df_mm.rhs
-            # df_mm = (
-            #     formulaic.Formula(fb.formula)
-            #     .get_model_matrix(nw.from_native(self.df).lazy().collect())
-            #     .rhs
-            # )
 
             self.x = nw.from_native(df_mm).lazy().collect_schema().names()
 

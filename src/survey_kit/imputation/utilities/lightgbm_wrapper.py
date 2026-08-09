@@ -13,7 +13,6 @@ import polars.selectors as pl_cs
 from enum import Enum
 import lightgbm as lgb
 import optuna
-import formulaic
 import pickle
 import random
 import gc
@@ -25,7 +24,7 @@ from sklearn.model_selection import train_test_split
 from copy import deepcopy
 
 
-from ...utilities.formula_builder import FormulaBuilder
+from ...utilities.formula_builder import FormulaBuilder, get_model_frame
 from ...utilities.inputs import create_folders_if_needed
 from ...utilities.dataframe import columns_from_list, concat_wrapper, NarwhalsType
 from ...utilities.random import set_seed, generate_seed
@@ -204,10 +203,10 @@ class Survey_kit_Lightgbm:
         b_need_mm = fb.formula.find("(") > 0 or fb.formula.find(":") > 0
 
         if b_need_mm:
-            #       Get analysis dataset from formulaic (the model matrix)
+            #       Get analysis dataset (the model matrix)
             fb.remove_constant()
-            df_mm = formulaic.Formula(fb.formula).get_model_matrix(
-                nw.from_native(self.df).lazy().collect()
+            df_mm = get_model_frame(
+                fb.formula, nw.from_native(self.df).lazy().collect().to_native()
             )
 
             self.x = nw.from_native(df_mm).lazy().collect_schema().names()

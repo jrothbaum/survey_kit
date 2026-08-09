@@ -4,13 +4,45 @@ from typing import Callable
 import narwhals as nw
 from narwhals.typing import IntoFrameT
 import re
-from formulaic import Formula
-from formulaic.parser import DefaultFormulaParser
+from polars_formula import ModelSpec
+from polars_formula.parser import parse_formula
+from polars_formula.terms.classify import referenced_columns
 
 from .inputs import list_input
-from .dataframe import columns_from_list, _columns_original_order
+from .dataframe import (
+    columns_from_list,
+    _columns_original_order,
+    NarwhalsType,
+    safe_height,
+)
 
 from .. import logger
+
+
+def _parse_normalized(formula: str):
+    """
+    Parse a formula with polars_formula's parse_formula(), which requires a
+    "~" - callers throughout FormulaBuilder routinely pass rhs-only
+    fragments (formulaic tolerated this), so prepend "~" when missing.
+    """
+    if "~" not in formula:
+        formula = f"~{formula}"
+    return parse_formula(formula)
+
+
+def get_model_frame(formula: str, df: IntoFrameT) -> IntoFrameT:
+    """
+    Build a named model/design matrix from a formula against df - the
+    practical `model.matrix(formula, data)` equivalent (R's model.matrix()
+    always carries column names, same as this). polars_formula's ModelSpec
+    is polars-only, so df is converted to polars around the call and the
+    result converted back to df's original backend.
+    """
+    nw_type = NarwhalsType(df)
+    df_polars = nw_type.to_polars()
+    return nw_type.from_polars(
+        ModelSpec.from_formula(formula, df_polars).get_model_frame(df_polars)
+    )
 
 
 class FormulaBuilder:
@@ -21,8 +53,9 @@ class FormulaBuilder:
     using R/Patsy-style syntax. It supports formula manipulation, variable expansion,
     interactions, transformations, and pattern matching against dataframes.
 
-    The class works with Formulaic to parse and expand formulas, and integrates
-    with the dataframe utilities to resolve wildcards and column patterns.
+    The class works with polars_formula to parse and expand formulas, and
+    integrates with the dataframe utilities to resolve wildcards and column
+    patterns.
 
     Parameters
     ----------
@@ -80,7 +113,7 @@ class FormulaBuilder:
     >>> fb = FormulaBuilder(df=df, lhs="income")
     >>> fb.simple_interaction(columns=["age", "education"], order=2)
     >>> print(fb.formula)
-    'income~1+(age+education)**2'
+    'income~1+(age+education)^2'
 
     Standardization:
 
@@ -106,7 +139,7 @@ class FormulaBuilder:
     - `+` adds terms
     - `:` creates interactions
     - `*` creates main effects and interactions: `a*b` = `a+b+a:b`
-    - `**n` creates all n-way interactions
+    - `^n` creates all n-way interactions
     - `I()` for arithmetic operations
     - `C()` for categorical variables
     - Functions like `scale()`, `center()`, `poly()` for transformations
@@ -121,7 +154,7 @@ class FormulaBuilder:
 
     See Also
     --------
-    formulaic.Formula : Underlying formula parser
+    polars_formula.parser.parse_formula : Underlying formula parser
     """
 
     def __init__(
@@ -615,11 +648,11 @@ class FormulaBuilder:
         --------
         >>> fb.simple_interaction(columns=["age", "education"], order=2)
         >>> print(fb.formula)
-        'y~1+(age+education)**2'
+        'y~1+(age+education)^2'
 
         >>> fb.simple_interaction(columns=["a", "b", "c"], order=2, no_base=True)
         >>> print(fb.formula)
-        'y~1+(a+b+c)**2-(a+b+c)'  # Interactions only
+        'y~1+(a+b+c)^2-(a+b+c)'  # Interactions only
         """
         if self is not None:
             if df is None:
@@ -639,7 +672,9 @@ class FormulaBuilder:
         subformula = subformula[1 : len(subformula)]
 
         if len(columns) > 1:
-            output = f"({subformula})**{order}"
+            #   R's actual "all interactions up to order N" operator is "^",
+            #   not the "**" formulaic tolerated as an alias.
+            output = f"({subformula})^{order}"
         else:
             output = subformula
 
@@ -734,26 +769,89 @@ class FormulaBuilder:
 
         >>> fb.factor(columns="education", reference="high_school")
         >>> print(fb.formula)
-        "y~1+C(education, contr.treatment('high_school'))"
+        'y~1+C(education, contr.treatment, base=2)'
         """
         if self is None:
             caller = FormulaBuilder
         else:
             caller = self
+            if df is None:
+                df = self.df
 
-        prefix = "C("
-        if reference is not None:
-            if type(reference) is str:
-                suffix = f", contr.treatment('{reference}'))"
-            else:
-                suffix = f", contr.treatment({reference}))"
+        if reference is None:
+            return caller.any_wrapper(
+                df=df,
+                columns=columns,
+                clause=clause,
+                case_insensitive=case_insensitive,
+                prefix="C(",
+                suffix=")",
+            )
 
-        else:
-            suffix = ")"  #  f", contr.treatment)"
+        if type(reference) is not str:
+            #   Already a 1-indexed level position, matching R's actual
+            #   C(x, contr, ...) convention: the contrast function as a bare
+            #   2nd positional arg, "base" forwarded as a separate keyword -
+            #   not C(x, contr.treatment(base=N)), which isn't valid R either.
+            return caller.any_wrapper(
+                df=df,
+                columns=columns,
+                clause=clause,
+                case_insensitive=case_insensitive,
+                prefix="C(",
+                suffix=f", contr.treatment, base={reference})",
+            )
 
-        return caller.any_wrapper(
-            df=df, columns=columns, clause=clause, prefix=prefix, suffix=suffix
+        #   String reference - R's contr.treatment "base" is a 1-indexed
+        #   integer position, not a label, so resolve it per-column against
+        #   that column's own sorted non-null unique levels (the same
+        #   ordering polars_formula's ModelSpec uses to assign levels).
+        #   self.df only ever keeps a 0-row schema reference (see __init__),
+        #   which has no values to resolve a label against - a real df with
+        #   actual rows must be passed explicitly here.
+        if df is None or safe_height(df) == 0:
+            raise ValueError(
+                "factor() needs a dataframe with actual rows (not just "
+                "schema) to resolve a string reference level to its "
+                "1-indexed position - pass df=<full dataframe> explicitly"
+            )
+
+        resolved_columns = columns_from_list(
+            df=df, columns=list_input(columns), case_insensitive=case_insensitive
         )
+
+        nw_df = nw.from_native(df).lazy()
+        schema = nw_df.collect_schema()
+
+        clauses = []
+        for coli in resolved_columns:
+            if schema[coli] == nw.Boolean:
+                levels = ["False", "True"]
+            else:
+                levels = (
+                    nw_df.select(nw.col(coli).cast(nw.String))
+                    .collect()[coli]
+                    .drop_nulls()
+                    .unique()
+                    .sort()
+                    .to_list()
+                )
+
+            if reference not in levels:
+                raise ValueError(
+                    f"reference level {reference!r} not found in column "
+                    f"{coli!r} (levels: {levels!r})"
+                )
+            base = levels.index(reference) + 1
+            clauses.append(f"C({coli}, contr.treatment, base={base})")
+
+        output = "+" + "+".join(clauses)
+
+        if self is None:
+            return output
+        else:
+            self.formula += output
+            return self
 
     @property
     def columns(self):
@@ -780,7 +878,26 @@ class FormulaBuilder:
 
         if self is not None and formula == "":
             formula = self.formula
-        return list(Formula(formula).required_variables)
+
+        parsed = _parse_normalized(formula)
+
+        seen = set()
+        out = []
+
+        def _add_var(vari):
+            for coli in referenced_columns(vari):
+                if coli not in seen:
+                    seen.add(coli)
+                    out.append(coli)
+
+        if parsed.lhs is not None:
+            _add_var(parsed.lhs)
+
+        for termi in parsed.rhs:
+            for vari in termi.vars:
+                _add_var(vari)
+
+        return out
 
     def lhs(self=None, formula: str = "") -> str:
         """
@@ -952,9 +1069,14 @@ class FormulaBuilder:
         lhs = self.lhs()
         rhs = self.rhs()
 
-        parser = DefaultFormulaParser()
-        parsed = parser.get_terms(rhs)
-        reconstructed_formula = "+".join([str(i) for i in parsed])
+        parsed = _parse_normalized(rhs)
+        #   polars_formula pulls the intercept out into its own field rather
+        #   than keeping it as a literal "1"/"0" term - re-add it explicitly
+        #   so the reconstructed formula matches formulaic's prior shape.
+        intercept_term = "1" if parsed.intercept else "0"
+        reconstructed_formula = "+".join(
+            [intercept_term] + [str(termi) for termi in parsed.rhs]
+        )
 
         if lhs != "":
             reconstructed_formula = f"{lhs}~{reconstructed_formula}"
@@ -1105,6 +1227,130 @@ class FormulaBuilder:
             output = f"{lhs}~{rhs}"
         else:
             output = rhs
+
+        if self is None:
+            return output
+        else:
+            self.formula = output
+            return self
+
+    def match_formula_to_columns(
+        self=None,
+        columns: list[str] | str | None = None,
+        formula: str = "",
+    ) -> str | FormulaBuilder:
+        """
+        Restrict a formula's RHS to only the terms that produced at least
+        one of the given (expanded) model-matrix column names - the
+        inverse of formula expansion. Used after variable selection (e.g.
+        LASSO/RFECV) has already chosen a subset of model-matrix columns
+        to keep, to turn that back into a formula.
+
+        Column names are matched against a term's own deparsed text as a
+        per-":"-part prefix (e.g. term "C(region):age" matches column
+        "C(region)b:age"), matching how polars_formula/R build model matrix
+        column names: variable prefix (deparsed call or var name) plus a
+        per-variable suffix (factor level, poly index, ...), joined by ":"
+        for interactions.
+
+        Parameters
+        ----------
+        columns : list[str] | str | None, optional
+            Expanded model-matrix column names to keep. Default is None.
+        formula : str, optional
+            Formula string. If empty, uses self.formula. Default is "".
+
+        Returns
+        -------
+        str | FormulaBuilder
+            Modified formula string or self for chaining.
+        """
+        columns = list_input(columns)
+
+        if self is not None:
+            if formula == "":
+                formula = self.formula
+        else:
+            self = FormulaBuilder(formula=formula)
+
+        lhs = self.lhs(formula=formula)
+        parsed = _parse_normalized(self.rhs(formula=formula))
+        intercept_term = "1" if parsed.intercept else "0"
+
+        kept_terms = [intercept_term]
+        for termi in parsed.rhs:
+            term_prefixes = str(termi).split(":")
+
+            matched = False
+            for coli in columns:
+                col_parts = coli.split(":")
+                if len(col_parts) != len(term_prefixes):
+                    continue
+                if all(
+                    colp.startswith(prefixp)
+                    for colp, prefixp in zip(col_parts, term_prefixes)
+                ):
+                    matched = True
+                    break
+
+            if matched:
+                kept_terms.append(str(termi))
+
+        output = "+".join(kept_terms)
+        if lhs != "":
+            output = f"{lhs}~{output}"
+
+        if self is None:
+            return output
+        else:
+            self.formula = output
+            return self
+
+    def add_base_from_interactions(
+        self=None, formula: str = ""
+    ) -> str | FormulaBuilder:
+        """
+        Ensure every interaction term's main-effect (single-variable)
+        components are also present in the formula, adding any that are
+        missing. Enforces the usual marginality/hierarchy convention after
+        selection (e.g. match_formula_to_columns) may have kept an
+        interaction without its base terms.
+
+        Parameters
+        ----------
+        formula : str, optional
+            Formula string. If empty, uses self.formula. Default is "".
+
+        Returns
+        -------
+        str | FormulaBuilder
+            Modified formula string or self for chaining.
+        """
+        if self is not None:
+            if formula == "":
+                formula = self.formula
+        else:
+            self = FormulaBuilder(formula=formula)
+
+        lhs = self.lhs(formula=formula)
+        parsed = _parse_normalized(self.rhs(formula=formula))
+        intercept_term = "1" if parsed.intercept else "0"
+
+        existing_terms = [str(termi) for termi in parsed.rhs]
+        existing_set = set(existing_terms)
+
+        added_terms = []
+        for termi in parsed.rhs:
+            if termi.order > 1:
+                for vari in termi.vars:
+                    var_str = str(vari)
+                    if var_str not in existing_set:
+                        existing_set.add(var_str)
+                        added_terms.append(var_str)
+
+        output = "+".join([intercept_term] + existing_terms + added_terms)
+        if lhs != "":
+            output = f"{lhs}~{output}"
 
         if self is None:
             return output

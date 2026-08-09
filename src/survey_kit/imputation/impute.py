@@ -10,7 +10,7 @@ from narwhals.typing import IntoFrameT
 import polars as pl
 import numpy as np
 from copy import deepcopy
-import formulaic
+from polars_formula import ModelSpec
 
 #   Nearest neighbor search using sklearn
 from sklearn.neighbors import KDTree
@@ -1435,7 +1435,7 @@ class Impute:
                 b_have_for_recipients = (
                     safe_height(
                         nw.from_native(df_impute_mean)
-                        .filter(pl.col("___yhat").is_missing())
+                        .filter(nw.col("___yhat").is_missing())
                         .to_native()
                     )
                     == 0
@@ -1654,22 +1654,31 @@ class Impute:
         else:
             f = FormulaBuilder(formula=formula)
             f.remove_constant()
-            formula_obj = formulaic.Formula(f.rhs())
-            df_model_mm = formula_obj.get_model_matrix(df_model, na_action="ignore")
-            df_impute_mm = df_model_mm.model_spec.get_model_matrix(
-                df_impute, na_action="ignore"
+            rhs_vars = FormulaBuilder.columns_from_formula(formula=f.rhs())
+
+            #   Fit the spec against the union of every frame it'll be
+            #   reapplied to (with null_dummy=True) so a companion
+            #   null-indicator column gets allocated for any predictor
+            #   that's null in df_impute/df_pmm_leave_out even if it has
+            #   no nulls in df_model - otherwise a null showing up only at
+            #   reapply time raises (no companion column was allocated for
+            #   it when the spec's structure was fixed at fit time).
+            frames_to_fit = [df_model.select(rhs_vars), df_impute.select(rhs_vars)]
+            if df_pmm_leave_out is not None:
+                frames_to_fit.append(df_pmm_leave_out.select(rhs_vars))
+            df_fit_union = pl.concat(frames_to_fit, how="diagonal")
+
+            #   ModelSpec.from_formula() parses with polars_formula's own
+            #   parse_formula(), which (unlike FormulaBuilder's parsing)
+            #   requires a "~" - f.rhs() is a bare rhs-only fragment.
+            model_spec = ModelSpec.from_formula(
+                f"~{f.rhs()}", df_fit_union, null_dummy=True
             )
+            df_model_mm = model_spec.get_model_frame(df_model)
+            df_impute_mm = model_spec.get_model_frame(df_impute)
 
             if df_pmm_leave_out is not None:
-                df_pmm_leave_out_mm = df_model_mm.model_spec.get_model_matrix(
-                    df_pmm_leave_out, na_action="ignore"
-                )
-                df_pmm_leave_out_mm = pl.DataFrame(
-                    df_pmm_leave_out_mm.to_arrow()
-                ).fill_nan(None)
-
-            df_model_mm = pl.DataFrame(df_model_mm.to_arrow()).fill_nan(None)
-            df_impute_mm = pl.DataFrame(df_impute_mm.to_arrow()).fill_nan(None)
+                df_pmm_leave_out_mm = model_spec.get_model_frame(df_pmm_leave_out)
 
         if min_n_x_var:
             self.logging.info(
@@ -2168,14 +2177,18 @@ class Impute:
             )
 
             nw_type = NarwhalsType(df_model)
-            df_model_partitioned = nw_type.to_polars().partition_by(col_leave_out)
+            df_model_bool = nw_type.to_polars()
 
-            if df_model_partitioned[0].select(col_leave_out)[0, 0]:
-                df_model = df_model_partitioned[1].drop(col_leave_out)
-                df_pmm_leave_out = df_model_partitioned[0].drop(col_leave_out)
-            else:
-                df_model = df_model_partitioned[0].drop(col_leave_out)
-                df_pmm_leave_out = df_model_partitioned[1].drop(col_leave_out)
+            #   Filter directly on the boolean column rather than partition_by,
+            #   which only returns the groups that actually occur - a lopsided
+            #   random draw (all True or all False) would otherwise leave only
+            #   one partition and an out-of-range index below.
+            df_pmm_leave_out = df_model_bool.filter(pl.col(col_leave_out)).drop(
+                col_leave_out
+            )
+            df_model = df_model_bool.filter(~pl.col(col_leave_out)).drop(
+                col_leave_out
+            )
 
             return (
                 nw_type.from_polars(df_model),
@@ -2343,7 +2356,7 @@ class Impute:
             .item()
         )
         min_impute = (
-            df_model.select(match_on)
+            df_impute.select(match_on)
             .filter(c_match.ne(0))
             .select(pl.col(match_on).abs().min())
             .lazy()

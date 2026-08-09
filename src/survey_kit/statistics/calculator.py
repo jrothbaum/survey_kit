@@ -18,7 +18,10 @@ from .replicates import (
     ReplicateStats,
     print_se_table,
     replicates_ses_from_function,
+    ses_from_replicates,
+    _replicates_ses_batched,
 )
+from .basic_calculations import _is_batchable_stat
 
 from .comparisons import ComparisonItem, statistical_comparison_item, compare, process_compare_lists
 
@@ -30,8 +33,10 @@ from ..utilities.dataframe import (
     safe_sum_cast,
     safe_columns,
     safe_upcast_list,
+    upcast_uint_to_int,
     drop_if_exists
 )
+from ..utilities.inputs import list_input
 from ..utilities.rounding import drb_round_table
 from ..serializable import Serializable
 from .. import logger
@@ -410,23 +415,139 @@ class StatCalculator(Serializable):
 
         """
 
-        replicate_se_return = replicates_ses_from_function(
-            delegate=self._calculate,
-            arguments={"display": False},
-            join_on=self.variable_ids + self.summarize_vars,
-            weights=self.replicates.rep_list,
-            bootstrap=self.replicates.bootstrap,
-        )
+        batched = self._try_calculate_replicates_batched()
 
-        self.df_estimates = replicate_se_return.df_estimates
-        self.df_ses = replicate_se_return.df_ses
-        self.df_replicates = replicate_se_return.df_replicates
+        if batched is not None:
+            (self.df_estimates, self.df_ses, self.df_replicates) = batched
+        else:
+            replicate_se_return = replicates_ses_from_function(
+                delegate=self._calculate,
+                arguments={"display": False},
+                join_on=self.variable_ids + self.summarize_vars,
+                weights=self.replicates.rep_list,
+                bootstrap=self.replicates.bootstrap,
+            )
+
+            self.df_estimates = replicate_se_return.df_estimates
+            self.df_ses = replicate_se_return.df_ses
+            self.df_replicates = replicate_se_return.df_replicates
 
         if self.rounding.round_output:
             self.df_ses = self.round_results(df=self.df_ses)
 
         if self.display:
             self.print()
+
+    def _try_calculate_replicates_batched(self):
+        """
+        Fast path for replicate-weight SE computation: batches every
+        replicate's calculate_by-equivalent computation into a handful of
+        group_by/agg passes instead of one full pass per replicate weight.
+
+        Only applies when this is a single, column/formula-based Statistics
+        object (not multiple Statistics objects, whose join/coalesce merge
+        logic across results isn't part of this), a single by-grouping (or
+        none), and every requested stat is one _is_batchable_stat recognizes
+        (simple reductions, quantile/median, gini - not the |share
+        modifier's global cross-group denominator, and not any other
+        unrecognized stat). Returns None when any of that doesn't hold, so
+        the caller falls back to the existing, fully general per-replicate
+        loop unchanged - no partial batching, no behavior change outside
+        this validated scope.
+
+        Returns
+        -------
+        tuple[IntoFrameT, IntoFrameT, IntoFrameT] | None
+            (df_estimates, df_ses, df_replicates) if eligible, else None.
+        """
+        if len(self.statistics) != 1:
+            return None
+        stats_obj = self.statistics[0]
+
+        normalized_by = stats_obj._normalize_by(self.by)
+        if len(normalized_by) > 1:
+            return None
+
+        for stati in stats_obj.stats:
+            if _is_batchable_stat(stati) is None:
+                return None
+
+        nw_type = NarwhalsType(self.df)
+
+        #   _resolve_summary_df/_build_column_stats/_reshape_summary_tables
+        #   are normally only reached via calculate()'s @nw.narwhalify
+        #   decorator, which wraps df into a narwhals-native object before
+        #   the method body runs - called directly here, so wrap it first.
+        (df_summary, cols_summary) = stats_obj._resolve_summary_df(
+            df=nw.from_native(self.df),
+            nw_type=nw_type,
+            weight="",
+            summarize_vars=self.summarize_vars,
+        )
+        #   weight="" above only affects whether a (single) weight column
+        #   gets retained - irrelevant here since every replicate weight is
+        #   attached explicitly next, once, shared across all replicates.
+        df_summary = drop_if_exists(df_summary, self.replicates.rep_list)
+        df_summary = concat_wrapper(
+            [df_summary, nw.from_native(self.df).select(self.replicates.rep_list)],
+            how="horizontal",
+        )
+
+        stats_dict = stats_obj._build_column_stats(
+            df_summary=df_summary, cols_summary=cols_summary
+        )
+
+        if len(normalized_by):
+            by_name = next(iter(normalized_by.keys()))
+            by_cols = list_input(normalized_by[by_name])
+        else:
+            by_name = "All"
+            by_cols = []
+
+        (per_replicate_tables, ok) = _replicates_ses_batched(
+            df=df_summary,
+            column_stats=stats_dict,
+            by_cols=by_cols,
+            weight_list=self.replicates.rep_list,
+            batch_size=self.replicates.batch_size,
+            quantile_interpolated=stats_obj.quantile_interpolated,
+            quantile_interpolated_interval=stats_obj.quantile_interpolated_interval,
+        )
+        if not ok:
+            return None
+
+        (stats_headers, suffixes) = stats_obj._stats_headers_and_suffixes()
+        join_on = self.variable_ids + self.summarize_vars
+
+        replicate_tables = []
+        for r, table_r in per_replicate_tables.items():
+            reshaped = stats_obj._reshape_summary_tables(
+                summary_tables={by_name: table_r},
+                by=normalized_by,
+                cols_summary=cols_summary,
+                nw_type=nw_type,
+                summarize_vars=[],
+                rounding=Rounding(round_output=False),
+                stats_headers=stats_headers,
+                suffixes=suffixes,
+            )
+            reshaped = (
+                nw.from_native(reshaped)
+                .with_columns(nw.lit(r).alias("___replicate___"))
+                .to_native()
+            )
+            replicate_tables.append(reshaped)
+
+        df_replicates = concat_wrapper(replicate_tables, how="vertical")
+
+        (df_estimates, df_ses) = ses_from_replicates(
+            df_replicates=df_replicates,
+            join_on=join_on,
+            n_replicates=len(self.replicates.rep_list) - 1,
+            bootstrap=self.replicates.bootstrap,
+        )
+
+        return (df_estimates, df_ses, df_replicates)
 
     def round_results(
         self,
@@ -828,7 +949,7 @@ class StatCalculator(Serializable):
                 nw.from_native(df_out)
                 .with_columns(with_clear)
                 .to_native(),
-                columns=["__row_index_*"]
+                columns=row_indices
             )
         )
         return df_out
@@ -999,17 +1120,32 @@ class StatCalculator(Serializable):
             #   Upcast any columns that need to be
             [df1, df2] = safe_upcast_list(
                 [
-                    df1.with_columns(pl.col(pl.Boolean).cast(pl.Int8)),
-                    df2.with_columns(pl.col(pl.Boolean).cast(pl.Int8))
+                    upcast_uint_to_int(df1).with_columns(pl.col(pl.Boolean).cast(pl.Int8)),
+                    upcast_uint_to_int(df2).with_columns(pl.col(pl.Boolean).cast(pl.Int8))
                 ]
             )
 
             df1 = df1.lazy().collect()
             df2 = df2.lazy().collect()
-            df_difference = df2.select(cols_nonindex) - df1.select(
-                cols_nonindex
+
+            #   Align rows by the by-group/index columns before comparing -
+            #   df1 and df2 are not guaranteed to have matching row order
+            #   (or even the same set of groups), so a positional subtraction
+            #   would silently pair the wrong rows.
+            df_joined = df1.join(
+                df2.select(cols_index + cols_nonindex),
+                on=cols_index,
+                how="inner",
+                suffix="_2",
             )
-            df_ratio = (df_difference) / df1.select(cols_nonindex)
+
+            df_difference = df_joined.select(
+                [
+                    (pl.col(f"{coli}_2") - pl.col(coli)).alias(coli)
+                    for coli in cols_nonindex
+                ]
+            )
+            df_ratio = (df_difference) / df_joined.select(cols_nonindex)
 
             if difference:
                 sm_diff = sm_compare
@@ -1019,7 +1155,7 @@ class StatCalculator(Serializable):
 
                 sm_diff.df_estimates = nw_type1.from_polars(
                     pl.concat(
-                        [df1.select(cols_index), df_difference], how="horizontal"
+                        [df_joined.select(cols_index), df_difference], how="horizontal"
                     )
                 )
 
@@ -1035,7 +1171,7 @@ class StatCalculator(Serializable):
 
                 sm_ratio.df_estimates = nw_type1.from_polars(
                     pl.concat(
-                        [df1.select(cols_index), df_ratio], how="horizontal"
+                        [df_joined.select(cols_index), df_ratio], how="horizontal"
                     )
                 )
 

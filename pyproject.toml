@@ -3,7 +3,7 @@ name = "survey-kit"
 version = "0.1.2"
 description = "Tools for working with survey and other data"
 readme = "README.md"
-requires-python = ">=3.9"
+requires-python = ">=3.13"
 
 license = {text = "CC0 1.0 Universal"}
 authors = [
@@ -14,17 +14,14 @@ classifiers = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Science/Research",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.9",
-    "Programming Language :: Python :: 3.10",
-    "Programming Language :: Python :: 3.11",
-    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
 ]
 
 dependencies = [
     "dill>=0.4.0",
     "psutil",
     "igraph",
-    "formulaic>=1.2.0",
+    "polars-formula",
     "narwhals>=2.7.0",
     "numexpr>=2.10.2",
     "polars>=1.25.2",
@@ -37,6 +34,7 @@ dependencies = [
     "lightgbm",
     "optuna",
     "numba",
+    "pandas",
 ]
 
 
@@ -59,7 +57,8 @@ build-backend = "hatchling.build"
 
 
 [tool.ruff]
-target-version = "py39"
+target-version = "py313"
 
 [tool.uv.sources]
 survey-kit-data = { git = "https://github.com/jrothbaum/survey_kit_data" }
+polars-formula = { path = "../polars_formula", editable = true }

@@ -7,12 +7,11 @@ from narwhals.typing import IntoFrameT
 from copy import deepcopy
 from enum import Enum
 
-import formulaic
 from sklearn.feature_selection import RFECV
 from sklearn.linear_model import LinearRegression
 
 
-from ..utilities.formula_builder import FormulaBuilder
+from ..utilities.formula_builder import FormulaBuilder, get_model_frame
 
 from ..orchestration.config import Config
 from .utilities.lasso import Lasso as rep_lasso
@@ -467,7 +466,7 @@ class Selection(Serializable):
             min_features_to_select=min_features_to_select,
         )
 
-        df_x = formulaic.Formula(formula).get_model_matrix(df)
+        df_x = get_model_frame(formula, df)
 
         df_y = nw.from_native(df).select(y).to_native()
         # if winsorize is not None:

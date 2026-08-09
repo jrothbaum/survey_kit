@@ -1,7 +1,7 @@
 import logging
 import os
 
-ncpus = str(int(os.getenv("NCPUS", str(os.cpu_count()))) - 2)
+ncpus = str(max(1, int(os.getenv("NCPUS", str(os.cpu_count()))) - 2))
 os.environ.setdefault("POLARS_MAX_THREADS", ncpus)
 os.environ.setdefault("OMP_NUM_THREADS", ncpus)
 os.environ.setdefault("NUMEXPR_NUM_THREADS", ncpus)

@@ -198,14 +198,19 @@ class Parameters:
         sort_by = None
         arguments = deepcopy(locals())
 
-        if sequential_drop:
-            #   Create a list of models that sequentially drops the last item
-            seq_list = []
-            for endi in range(len(model_list), 0, -1):
-                if len(model_list[0:endi]) > 0:
-                    seq_list.append(model_list[0:endi])
+        if model_list is not None and len(model_list) > 0 and isinstance(model_list[0], str):
+            #   model_list is a single model (list of variable names) - impute.py's
+            #   statmatch()/hotdeck() always expect a list of models (list of lists)
+            if sequential_drop:
+                #   Create a list of models that sequentially drops the last item
+                seq_list = []
+                for endi in range(len(model_list), 0, -1):
+                    if len(model_list[0:endi]) > 0:
+                        seq_list.append(model_list[0:endi])
 
-            arguments["model_list"] = seq_list
+                arguments["model_list"] = seq_list
+            else:
+                arguments["model_list"] = [model_list]
 
         return arguments
 

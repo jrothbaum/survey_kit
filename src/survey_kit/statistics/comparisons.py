@@ -12,6 +12,7 @@ from ..utilities.dataframe import (
     safe_height,
     NarwhalsType,
     safe_columns,
+    upcast_uint_to_int,
 )
 from .. import logger
 
@@ -454,8 +455,10 @@ def replicate_comparison(
     nw_type1 = NarwhalsType(df_replicates1)
     nw_type2 = NarwhalsType(df_replicates2)
 
-    df_replicates1 = nw_type1.safe_to_narwhals().lazy_backend(nw_type1)
-    df_replicates2 = nw_type2.safe_to_narwhals().lazy_backend(nw_type2)
+    #   Upcast UInt columns to signed Int - otherwise the difference/ratio
+    #   computations below can silently wrap around instead of going negative.
+    df_replicates1 = upcast_uint_to_int(nw_type1.safe_to_narwhals().lazy_backend(nw_type1))
+    df_replicates2 = upcast_uint_to_int(nw_type2.safe_to_narwhals().lazy_backend(nw_type2))
 
     join_on1 = list_input(join_on1)
 
