@@ -36,11 +36,12 @@ def set_logging(
 
     if name != "":
         log_out = logging.getLogger(name)
-        for handi in handlers:
-            log_out.addHandler(handi)
-
-        log_out.setLevel(level)
-        log_out.propagate = False
+        if not log_out.handlers:
+            for handi in handlers:
+                log_out.addHandler(handi)
+    
+            log_out.setLevel(level)
+            log_out.propagate = False
 
         return log_out
     else:
