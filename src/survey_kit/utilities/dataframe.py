@@ -873,7 +873,7 @@ def summary(
     df: IntoFrameT,
     columns: list[str] | str | None = None,
     weight: str = "",
-    print: bool = True,
+    display: bool = True,
     stats: list[str] | str | None = None,
     detailed: bool = False,
     additional_stats: list[str] | str | None = None,
@@ -898,7 +898,7 @@ def summary(
     weight : str, optional
         Column name for weights. If provided, calculates weighted statistics.
         Default is "" (unweighted).
-    print : bool, optional
+    display : bool, optional
         Print the summary table. Default is True.
     stats : list[str] | str | None, optional
         Statistics to calculate. If None, uses default set.
@@ -956,7 +956,7 @@ def summary(
 
     Get results without printing:
 
-    >>> df_stats = summary(df, weight="survey_weight", print=False)
+    >>> df_stats = summary(df, weight="survey_weight", display=False)
     >>> print(df_stats.collect())
 
     Notes
@@ -1022,7 +1022,7 @@ def summary(
     sc = StatCalculator(
         df=df,
         statistics=stats,
-        display=print,
+        display=display,
         round_output=drb_round,
         weight=weight,
         by=by,
