@@ -216,7 +216,7 @@ class StatCalculator(Serializable):
             display_all_vars=self.display_all_vars,
             display_max_vars=self.display_max_vars,
             round_output=False,
-            allow_slow_pandas=allow_slow_pandas,
+            allow_slow_pandas=self.allow_slow_pandas,
             calculate=False,
         )
 
