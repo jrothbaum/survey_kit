@@ -2,54 +2,71 @@ from __future__ import annotations
 
 import re
 import logging
-import narwhals as nw
-import narwhals.selectors as cs
-from narwhals.typing import IntoFrameT
-from narwhals import (
-    Implementation,
-)
-from narwhals._utils import is_eager_allowed, is_lazy_allowed
 import polars as pl
+import polars.selectors as cs
 from .inputs import list_input
-
-from ..serializable import Serializable
 
 from .. import logger
 
 
-@nw.narwhalify
+def match_shape(
+    df: pl.LazyFrame | pl.DataFrame, like: pl.LazyFrame | pl.DataFrame
+) -> pl.LazyFrame | pl.DataFrame:
+    """Return `df` eager/lazy to match whichever shape `like` is."""
+    if isinstance(like, pl.DataFrame):
+        return df.lazy().collect() if isinstance(df, pl.LazyFrame) else df
+    return df.lazy() if isinstance(df, pl.DataFrame) else df
+
+
+def match_shape_all(
+    df: pl.LazyFrame | pl.DataFrame, likes: list[pl.LazyFrame | pl.DataFrame]
+) -> pl.LazyFrame | pl.DataFrame:
+    """Return `df` lazy only if every frame in `likes` was lazy, else eager -
+    matches the old NarwhalsType.return_df() "return lazy iff all inputs were
+    lazy" rule for functions (join/concat) that combine multiple frames."""
+    if all(isinstance(dfi, pl.LazyFrame) for dfi in likes):
+        return df.lazy() if isinstance(df, pl.DataFrame) else df
+    return df.lazy().collect() if isinstance(df, pl.LazyFrame) else df
+
+
 def fill_missing(
-    df: IntoFrameT, columns: list[str] | str | None = None, value=0
-) -> IntoFrameT:
-    nw_type = NarwhalsType(df)
+    df: pl.LazyFrame | pl.DataFrame,
+    columns: list[str] | str | None = None,
+    value=0,
+) -> pl.LazyFrame | pl.DataFrame:
+    df_lazy = df.lazy()
     if columns is None:
-        c_missing = nw.all()
+        c_missing = pl.all()
         c_numeric = cs.numeric()
     else:
-        c_missing = nw.col(columns_from_list(df=df, columns=columns))
+        c_missing = pl.col(columns_from_list(df=df_lazy, columns=columns))
         c_numeric = None
 
     if value is not None:
-        try:
-            df = df.with_columns(c_missing.fill_null(value))
-        except:
-            df = df.with_columns(c_numeric.fill_null(value))
+        if c_numeric is not None:
+            try:
+                df_lazy = df_lazy.with_columns(c_missing.fill_null(value))
+            except Exception:
+                df_lazy = df_lazy.with_columns(c_numeric.fill_null(value))
+        else:
+            df_lazy = df_lazy.with_columns(c_missing.fill_null(value))
     if c_numeric is not None:
-        df = df.with_columns(c_numeric.fill_nan(value))
+        df_lazy = df_lazy.with_columns(c_numeric.fill_nan(value))
 
-    return df.lazy_backend(nw_type)
+    return match_shape(df_lazy, df)
 
 
-@nw.narwhalify
-def safe_sum_cast(df: IntoFrameT, columns: list[str] | str | None = None) -> IntoFrameT:
+def safe_sum_cast(
+    df: pl.LazyFrame | pl.DataFrame, columns: list[str] | str | None = None
+) -> pl.LazyFrame | pl.DataFrame:
     columns = list_input(columns)
 
     schema = df.lazy().collect_schema()
 
     castlist = []
     for coli in columns:
-        if schema[coli] == nw.Int32:
-            castlist.append(nw.col(coli).cast(nw.Int64).alias(coli))
+        if schema[coli] == pl.Int32:
+            castlist.append(pl.col(coli).cast(pl.Int64).alias(coli))
 
     if len(castlist) > 0:
         df = df.with_columns(castlist)
@@ -65,14 +82,12 @@ def columns_if_present(columns: list[str], colums_to_check: list[str]) -> list[s
     )
 
 
-@nw.narwhalify
-def safe_columns(df: IntoFrameT) -> list[str]:
+def safe_columns(df: pl.LazyFrame | pl.DataFrame) -> list[str]:
     return df.lazy().collect_schema().names()
 
 
-@nw.narwhalify
 def columns_from_list(
-    df: IntoFrameT,
+    df: pl.LazyFrame | pl.DataFrame | None,
     columns: list[str] | str,
     exclude: list[str] | str | None = None,
     case_insensitive: bool = False,
@@ -123,9 +138,8 @@ def _columns_original_order(
         return columns_unordered
 
 
-@nw.narwhalify
 def _by_name_asterisk(
-    df: IntoFrameT, pattern: str = "", case_insensitive: bool = False
+    df: pl.LazyFrame | pl.DataFrame, pattern: str = "", case_insensitive: bool = False
 ) -> list[str]:
     if case_insensitive:
         casei_regex = "(?i)"
@@ -139,13 +153,12 @@ def _by_name_asterisk(
 
 
 def join_list(
-    df_list: list[IntoFrameT | nw.LazyFrame | nw.DataFrame],
+    df_list: list[pl.LazyFrame | pl.DataFrame],
     on: list[list[str]] | list[str] | str,
     how: str,
     suffixes: list[str] | None = None,
     prefixes: list[str] | None = None,
-) -> IntoFrameT | nw.LazyFrame | nw.DataFrame:
-    nw_list = [NarwhalsType(dfi) for dfi in df_list]
+) -> pl.LazyFrame | pl.DataFrame:
     on = list_input(on)
 
     on_left_right = all((type(oni) is list) for oni in on) and len(on) == len(df_list)
@@ -155,7 +168,7 @@ def join_list(
     if len(prefixes) or len(suffixes):
         columns_to_rename_list = []
         for dfi in df_list:
-            columnsi = nw.from_native(dfi).lazy().collect_schema().names()
+            columnsi = dfi.lazy().collect_schema().names()
             columns_to_rename_list.append(list(set(columnsi).difference(on)))
 
         for i in range(len(df_list)):
@@ -173,7 +186,7 @@ def join_list(
             }
 
             if len(renamei):
-                df_list[i] = nw.from_native(df_list[i]).rename(renamei)
+                df_list[i] = df_list[i].rename(renamei)
 
     df_out = df_list[0]
     df_others = df_list[1:]
@@ -191,20 +204,18 @@ def join_list(
             df=df_out, df_to=dfi, on=oni, how=how, left_on=left_on, right_on=right_on
         )
 
-    return NarwhalsType.return_df(df=df_out, nw_types=nw_list)
+    return match_shape_all(df_out, df_list)
 
 
 def join_wrapper(
-    df: IntoFrameT | nw.LazyFrame | nw.DataFrame,
-    df_to: IntoFrameT | nw.LazyFrame | nw.DataFrame,
-    on: list[str] | str,
-    how: str,
+    df: pl.LazyFrame | pl.DataFrame,
+    df_to: pl.LazyFrame | pl.DataFrame,
+    on: list[str] | str | None = None,
+    how: str = "inner",
     left_on: list[str] | None = None,
     right_on: list[str] | None = None,
-) -> IntoFrameT | nw.LazyFrame | nw.DataFrame:
+) -> pl.LazyFrame | pl.DataFrame:
     (df, df_to) = safe_upcast_list([df, df_to])
-    nw_type_df = NarwhalsType(df)
-    nw_type_df_to = NarwhalsType(df_to)
 
     if left_on is not None and right_on is not None:
         on = None
@@ -212,38 +223,27 @@ def join_wrapper(
         left_on = None
         right_on = None
 
-    if nw_type_df.backend != nw_type_df_to.backend:
-        df_to = convert_to_backend(df_to, nw_type_df)
-        nw_type_df_to = NarwhalsType(df_to)
-
-    df_out = (
-        nw_type_df.safe_to_narwhals()
-        .lazy()
-        .join(
-            nw_type_df_to.safe_to_narwhals().lazy(),
-            how=how,
-            on=on,
-            left_on=left_on,
-            right_on=right_on,
-        )
+    df_out = df.lazy().join(
+        df_to.lazy(),
+        how=how,
+        on=on,
+        left_on=left_on,
+        right_on=right_on,
     )
 
-    cols_final = df_out.lazy().collect_schema().names()
+    cols_final = df_out.collect_schema().names()
     c_coalesce = []
     c_drop = []
 
     if on is None:
-        for i in range(len(left_on)):
-            left_oni = left_on[i]
-            right_oni = right_on[i]
-
+        for left_oni, right_oni in zip(left_on, right_on):
             if left_oni == right_oni:
                 coli = left_oni
                 coli_right = f"{coli}_right"
 
                 if coli_right in cols_final:
                     c_coalesce.append(
-                        nw.coalesce(nw.col(coli), nw.col(coli_right)).alias(coli)
+                        pl.coalesce(pl.col(coli), pl.col(coli_right)).alias(coli)
                     )
                     c_drop.append(coli_right)
     else:
@@ -252,204 +252,63 @@ def join_wrapper(
 
             if coli_right in cols_final:
                 c_coalesce.append(
-                    nw.coalesce(nw.col(coli), nw.col(coli_right)).alias(coli)
+                    pl.coalesce(pl.col(coli), pl.col(coli_right)).alias(coli)
                 )
                 c_drop.append(coli_right)
     if len(c_coalesce):
         df_out = df_out.with_columns(c_coalesce).drop(c_drop)
 
-    return NarwhalsType.return_df(df_out, nw_types=[nw_type_df, nw_type_df_to])
-
-
-def convert_to_backend(df: IntoFrameT | None, nw_type: NarwhalsType) -> IntoFrameT:
-    try:
-        if NarwhalsType(df).backend != nw_type.backend:
-            return nw.from_native(
-                nw.from_native(df).lazy().collect().to_arrow()
-            ).lazy_backend(nw_type)
-    except:
-        pass
-    return df
+    return match_shape_all(df_out, [df, df_to])
 
 
 def concat_wrapper(
-    df_list: list[IntoFrameT | nw.LazyFrame | nw.DataFrame],
+    df_list: list[pl.LazyFrame | pl.DataFrame],
     how: str,
     upcast: bool = True,
-) -> IntoFrameT | nw.LazyFrame | nw.DataFrame:
+) -> pl.LazyFrame | pl.DataFrame:
     df_list = [dfi for dfi in df_list if dfi is not None]
     if upcast:
         df_list = safe_upcast_list(df_list)
 
-    nw_type_list = [NarwhalsType(dfi) for dfi in df_list]
-
-    for i in range(len(df_list)):
-        if i == 0:
-            nw_type_0 = nw_type_list[0]
-        if i > 0:
-            nw_typei = nw_type_list[i]
-            if nw_typei.backend != nw_type_0.backend:
-                df_list[i] = convert_to_backend(df_list[i], nw_type_0)
-                nw_type_list[i] = NarwhalsType(df_list[i])
-
     if how == "horizontal":
-        return NarwhalsType.return_df(
-            nw.concat(
-                [
-                    nw.maybe_reset_index(nw_typei.safe_to_narwhals()).collect()
-                    for nw_typei in nw_type_list
-                ],
-                how=how,
-            ),
-            nw_types=nw_type_list,
-        )
+        df_out = pl.concat([dfi.lazy().collect() for dfi in df_list], how=how)
     else:
-        return NarwhalsType.return_df(
-            nw.concat(
-                [nw_typei.safe_to_narwhals() for nw_typei in nw_type_list], how=how
-            ),
-            nw_types=nw_type_list,
-        )
+        df_out = pl.concat([dfi.lazy() for dfi in df_list], how=how)
+
+    return match_shape_all(df_out, df_list)
 
 
-class NarwhalsType(Serializable):
-    _save_suffix = "nw_type"
-    _save_exclude_items = ["df"]
-
-    def __init__(
-        self,
-        df: IntoFrameT | nw.LazyFrame | nw.DataFrame | None = None,
-        is_narwhals: bool | None = None,
-        is_lazy: bool | None = None,
-        backend: str | None = None,
-    ):
-        if df is not None:
-            self.is_narwhals = isinstance(df, (nw.LazyFrame, nw.DataFrame))
-            self.is_lazy = type(df) is nw.LazyFrame
-            if self.is_narwhals:
-                df = df.to_native()
-            self.df = df
-            self.backend = nw.get_native_namespace(df).__name__
-        else:
-            self.is_narwhals = is_narwhals
-            self.is_lazy = is_lazy
-            self.backend = backend
-            self.df = None
-
-    def safe_to_narwhals(self) -> nw.LazyFrame:
-        if isinstance(self.df, (nw.LazyFrame, nw.DataFrame)):
-            return self.df.lazy()
-        else:
-            return nw.from_native(self.df).lazy()
-
-    def is_polars(self) -> bool:
-        return nw.from_native(self.df).implementation.is_polars()
-
-    def to_polars(self) -> pl.LazyFrame | pl.DataFrame:
-        if not self.is_polars():
-            return nw.from_native(self.df).lazy().collect().to_polars()
-        else:
-            return self.df
-
-    def from_polars(self, df: pl.LazyFrame | pl.DataFrame) -> IntoFrameT:
-        if not self.is_polars():
-            return nw.from_native(df.lazy().collect().to_arrow()).lazy_backend(
-                NarwhalsType(backend=self.backend)
-            )
-        else:
-            return df
-
-    @staticmethod
-    def _return_as_narwhals(nw_types: list[NarwhalsType]) -> bool:
-        return all([nw_typei.is_narwhals for nw_typei in nw_types])
-
-    @staticmethod
-    def _return_as_lazy(nw_types: list[NarwhalsType]) -> bool:
-        return all([nw_typei.is_lazy for nw_typei in nw_types])
-
-    @staticmethod
-    def return_df(
-        df: nw.LazyFrame | nw.DataFrame, nw_types: list[NarwhalsType]
-    ) -> nw.LazyFrame | nw.DataFrame | IntoFrameT:
-        nw_types = list_input(nw_types)
-        if NarwhalsType._return_as_narwhals(nw_types):
-            if NarwhalsType._return_as_lazy(nw_types):
-                if type(df) is nw.LazyFrame:
-                    return df
-                else:
-                    return nw.from_native(df).lazy_backend(
-                        NarwhalsType(backend=nw_types[0].backend)
-                    )
-            else:
-                return df.lazy().collect()
-        else:
-            return nw.from_native(df).to_native()
-
-    @staticmethod
-    def lazy(
-        df: IntoFrameT | nw.LazyFrame | nw.DataFrame, nw_type: NarwhalsType | None
-    ) -> nw.LazyFrame:
-        if not isinstance(df, (nw.LazyFrame, nw.DataFrame)):
-            df = nw.from_native(df)
-
-        if isinstance(df, nw.LazyFrame):
-            try:
-                return df.lazy(nw_type.backend)
-            except:
-                return df
-        elif isinstance(df, nw.DataFrame):
-            if nw_type is not None:
-                if not is_lazy_allowed(Implementation(nw_type.backend)):
-                    return (
-                        nw.from_native(df.to_arrow())
-                        .lazy()
-                        .collect(backend=nw_type.backend)
-                        .lazy()
-                    )
-                else:
-                    try:
-                        return df.lazy(backend=nw_type.backend)
-                    except:
-                        return df.lazy()
-            else:
-                return df.lazy()
-        else:
-            return df
-
-
-def upcast_uint_to_int(df:IntoFrameT) -> IntoFrameT:
-    schema = (
-        nw.from_native(df)
-        .lazy()
-        .collect_schema()
-    )
+def upcast_uint_to_int(
+    df: pl.LazyFrame | pl.DataFrame,
+) -> pl.LazyFrame | pl.DataFrame:
+    schema = df.lazy().collect_schema()
 
     new_schema = {}
     for vari, typei in schema.items():
-        if typei == nw.UInt8:
+        if typei == pl.UInt8:
             new_schema[vari] = pl.Int16
-        elif typei == nw.UInt16:
+        elif typei == pl.UInt16:
             new_schema[vari] = pl.Int32
-        elif typei == nw.UInt32:
+        elif typei == pl.UInt32:
             new_schema[vari] = pl.Int64
-        elif typei == nw.UInt64:
+        elif typei == pl.UInt64:
             new_schema[vari] = pl.Int128
-        elif typei == nw.UInt128:
+        elif typei == pl.UInt128:
             new_schema[vari] = pl.Int128
 
-    
     if len(new_schema) == 0:
         return df
     else:
         df_comp = pl.DataFrame(schema=new_schema)
-        return safe_upcast_list([df,df_comp])[0]
+        return safe_upcast_list([df, df_comp])[0]
+
 
 def safe_upcast_list(
-    dfs: list[IntoFrameT | nw.LazyFrame | nw.DataFrame],
-) -> list[IntoFrameT | nw.LazyFrame | nw.DataFrame]:
+    dfs: list[pl.LazyFrame | pl.DataFrame],
+) -> list[pl.LazyFrame | pl.DataFrame]:
     d_castordering = _cast_ordering(False)
 
-    schemas = [nw.from_native(dfi).lazy().collect_schema() for dfi in dfs]
+    schemas = [dfi.lazy().collect_schema() for dfi in dfs]
 
     schema_superset = {}
     for i, schemai in enumerate(schemas):
@@ -476,18 +335,20 @@ def safe_upcast_list(
         }
 
         if len(schemai_to):
-            dfs[i] = NarwhalsType.return_df(
-                nw.from_native(dfs[i]).with_columns(
-                    [nw.col(coli).cast(typei) for coli, typei in schemai_to.items()]
-                ),
-                nw_types=[NarwhalsType(dfs[i])],
+            df_cast = dfs[i].lazy().with_columns(
+                [pl.col(coli).cast(typei) for coli, typei in schemai_to.items()]
             )
+            dfs[i] = match_shape(df_cast, dfs[i])
 
     return dfs
 
 
 class _CastOrderingItem:
-    def __init__(self, type1: nw.dtypes.DType | None, type2: nw.dtypes.DType | None):
+    def __init__(
+        self,
+        type1: type[pl.DataType] | pl.DataType | None,
+        type2: type[pl.DataType] | pl.DataType | None,
+    ):
         self.type1 = type1
         self.type2 = type2
 
@@ -519,146 +380,146 @@ def _cast_ordering(
         - Float32 can upcast to Float64
         - No downcasting rules to prevent data loss
     """
-    thisItem = nw.Boolean
+    thisItem = pl.Boolean
     ordering = [
-        (thisItem, nw.Boolean, None, None),
-        (thisItem, nw.Int8, nw.Int8, None),
-        (thisItem, nw.Int16, nw.Int16, None),
-        (thisItem, nw.Int32, nw.Int32, None),
-        (thisItem, nw.Int64, nw.Int64, None),
-        (thisItem, nw.UInt8, nw.UInt8, None),
-        (thisItem, nw.UInt16, nw.UInt16, None),
-        (thisItem, nw.UInt32, nw.UInt32, None),
-        (thisItem, nw.UInt64, nw.UInt64, None),
-        (thisItem, nw.Float32, nw.Float32, None),
-        (thisItem, nw.Float64, nw.Float64, None),
+        (thisItem, pl.Boolean, None, None),
+        (thisItem, pl.Int8, pl.Int8, None),
+        (thisItem, pl.Int16, pl.Int16, None),
+        (thisItem, pl.Int32, pl.Int32, None),
+        (thisItem, pl.Int64, pl.Int64, None),
+        (thisItem, pl.UInt8, pl.UInt8, None),
+        (thisItem, pl.UInt16, pl.UInt16, None),
+        (thisItem, pl.UInt32, pl.UInt32, None),
+        (thisItem, pl.UInt64, pl.UInt64, None),
+        (thisItem, pl.Float32, pl.Float32, None),
+        (thisItem, pl.Float64, pl.Float64, None),
     ]
 
-    thisItem = nw.Int8
+    thisItem = pl.Int8
     ordering.extend(
         [
-            (thisItem, nw.Int8, None, None),
-            (thisItem, nw.Int16, nw.Int16, None),
-            (thisItem, nw.Int32, nw.Int32, None),
-            (thisItem, nw.Int64, nw.Int64, None),
-            (thisItem, nw.UInt8, nw.Int16, nw.Int16),
-            (thisItem, nw.UInt16, nw.Int32, nw.Int32),
-            (thisItem, nw.UInt32, nw.Int64, nw.Int64),
-            (thisItem, nw.UInt64, nw.Float64, nw.Float64),
-            (thisItem, nw.Float32, nw.Float32, None),
-            (thisItem, nw.Float64, nw.Float64, None),
+            (thisItem, pl.Int8, None, None),
+            (thisItem, pl.Int16, pl.Int16, None),
+            (thisItem, pl.Int32, pl.Int32, None),
+            (thisItem, pl.Int64, pl.Int64, None),
+            (thisItem, pl.UInt8, pl.Int16, pl.Int16),
+            (thisItem, pl.UInt16, pl.Int32, pl.Int32),
+            (thisItem, pl.UInt32, pl.Int64, pl.Int64),
+            (thisItem, pl.UInt64, pl.Float64, pl.Float64),
+            (thisItem, pl.Float32, pl.Float32, None),
+            (thisItem, pl.Float64, pl.Float64, None),
         ]
     )
 
-    thisItem = nw.Int16
+    thisItem = pl.Int16
     ordering.extend(
         [
-            (thisItem, nw.Int16, None, None),
-            (thisItem, nw.Int32, nw.Int32, None),
-            (thisItem, nw.Int64, nw.Int64, None),
-            (thisItem, nw.UInt8, None, nw.Int16),
-            (thisItem, nw.UInt16, nw.Int32, nw.Int32),
-            (thisItem, nw.UInt32, nw.Int64, nw.Int64),
-            (thisItem, nw.UInt64, nw.Float64, nw.Float64),
-            (thisItem, nw.Float32, nw.Float32, None),
-            (thisItem, nw.Float64, nw.Float64, None),
+            (thisItem, pl.Int16, None, None),
+            (thisItem, pl.Int32, pl.Int32, None),
+            (thisItem, pl.Int64, pl.Int64, None),
+            (thisItem, pl.UInt8, None, pl.Int16),
+            (thisItem, pl.UInt16, pl.Int32, pl.Int32),
+            (thisItem, pl.UInt32, pl.Int64, pl.Int64),
+            (thisItem, pl.UInt64, pl.Float64, pl.Float64),
+            (thisItem, pl.Float32, pl.Float32, None),
+            (thisItem, pl.Float64, pl.Float64, None),
         ]
     )
 
-    thisItem = nw.Int32
+    thisItem = pl.Int32
     ordering.extend(
         [
-            (thisItem, nw.Int32, None, None),
-            (thisItem, nw.Int64, nw.Int64, None),
-            (thisItem, nw.UInt8, None, nw.Int32),
-            (thisItem, nw.UInt16, None, nw.Int32),
-            (thisItem, nw.UInt32, nw.Int64, nw.Int64),
-            (thisItem, nw.UInt64, nw.Float64, nw.Float64),
-            (thisItem, nw.Float32, nw.Float64, nw.Float64),
-            (thisItem, nw.Float64, nw.Float64, None),
+            (thisItem, pl.Int32, None, None),
+            (thisItem, pl.Int64, pl.Int64, None),
+            (thisItem, pl.UInt8, None, pl.Int32),
+            (thisItem, pl.UInt16, None, pl.Int32),
+            (thisItem, pl.UInt32, pl.Int64, pl.Int64),
+            (thisItem, pl.UInt64, pl.Float64, pl.Float64),
+            (thisItem, pl.Float32, pl.Float64, pl.Float64),
+            (thisItem, pl.Float64, pl.Float64, None),
         ]
     )
 
-    thisItem = nw.Int64
+    thisItem = pl.Int64
     ordering.extend(
         [
-            (thisItem, nw.Int64, None, None),
-            (thisItem, nw.UInt8, None, nw.Int64),
-            (thisItem, nw.UInt16, None, nw.Int64),
-            (thisItem, nw.UInt32, None, nw.Int64),
-            (thisItem, nw.UInt64, nw.Float64, nw.Float64),
-            (thisItem, nw.Float32, nw.Float64, nw.Float64),
-            (thisItem, nw.Float64, nw.Float64, None),
+            (thisItem, pl.Int64, None, None),
+            (thisItem, pl.UInt8, None, pl.Int64),
+            (thisItem, pl.UInt16, None, pl.Int64),
+            (thisItem, pl.UInt32, None, pl.Int64),
+            (thisItem, pl.UInt64, pl.Float64, pl.Float64),
+            (thisItem, pl.Float32, pl.Float64, pl.Float64),
+            (thisItem, pl.Float64, pl.Float64, None),
         ]
     )
 
-    thisItem = nw.UInt8
+    thisItem = pl.UInt8
     ordering.extend(
         [
-            (thisItem, nw.UInt8, None, None),
-            (thisItem, nw.UInt16, nw.UInt16, None),
-            (thisItem, nw.UInt32, nw.UInt32, None),
-            (thisItem, nw.UInt64, nw.UInt64, None),
-            (thisItem, nw.Float32, nw.Float32, None),
-            (thisItem, nw.Float64, nw.Float64, None),
+            (thisItem, pl.UInt8, None, None),
+            (thisItem, pl.UInt16, pl.UInt16, None),
+            (thisItem, pl.UInt32, pl.UInt32, None),
+            (thisItem, pl.UInt64, pl.UInt64, None),
+            (thisItem, pl.Float32, pl.Float32, None),
+            (thisItem, pl.Float64, pl.Float64, None),
         ]
     )
 
-    thisItem = nw.UInt16
+    thisItem = pl.UInt16
     ordering.extend(
         [
-            (thisItem, nw.UInt16, None, None),
-            (thisItem, nw.UInt32, nw.UInt32, None),
-            (thisItem, nw.UInt64, nw.UInt64, None),
-            (thisItem, nw.Float32, nw.Float32, None),
-            (thisItem, nw.Float64, nw.Float64, None),
+            (thisItem, pl.UInt16, None, None),
+            (thisItem, pl.UInt32, pl.UInt32, None),
+            (thisItem, pl.UInt64, pl.UInt64, None),
+            (thisItem, pl.Float32, pl.Float32, None),
+            (thisItem, pl.Float64, pl.Float64, None),
         ]
     )
 
-    thisItem = nw.UInt32
+    thisItem = pl.UInt32
     ordering.extend(
         [
-            (thisItem, nw.UInt32, None, None),
-            (thisItem, nw.UInt64, nw.UInt64, None),
-            (thisItem, nw.Float32, nw.Float32, None),
-            (thisItem, nw.Float64, nw.Float64, None),
+            (thisItem, pl.UInt32, None, None),
+            (thisItem, pl.UInt64, pl.UInt64, None),
+            (thisItem, pl.Float32, pl.Float32, None),
+            (thisItem, pl.Float64, pl.Float64, None),
         ]
     )
 
-    thisItem = nw.UInt64
+    thisItem = pl.UInt64
     ordering.extend(
         [
-            (thisItem, nw.UInt64, None, None),
-            (thisItem, nw.Float32, nw.Float64, nw.Float64),
-            (thisItem, nw.Float64, nw.Float64, None),
+            (thisItem, pl.UInt64, None, None),
+            (thisItem, pl.Float32, pl.Float64, pl.Float64),
+            (thisItem, pl.Float64, pl.Float64, None),
         ]
     )
 
-    thisItem = nw.Float32
+    thisItem = pl.Float32
     ordering.extend(
         [
-            (thisItem, nw.Float32, None, None),
-            (thisItem, nw.Float64, nw.Float64, None),
+            (thisItem, pl.Float32, None, None),
+            (thisItem, pl.Float64, pl.Float64, None),
         ]
     )
 
     if binary_to_string:
-        thisItem = nw.Binary
+        thisItem = pl.Binary
         ordering.extend(
             [
-                (thisItem, nw.Boolean, nw.String, nw.String),
-                (thisItem, nw.Int8, nw.String, nw.String),
-                (thisItem, nw.Int16, nw.String, nw.String),
-                (thisItem, nw.Int32, nw.String, nw.String),
-                (thisItem, nw.Int64, nw.String, nw.String),
-                (thisItem, nw.UInt8, nw.String, nw.String),
-                (thisItem, nw.UInt16, nw.String, nw.String),
-                (thisItem, nw.UInt32, nw.String, nw.String),
-                (thisItem, nw.UInt64, nw.String, nw.String),
-                (thisItem, nw.Float32, nw.String, nw.String),
-                (thisItem, nw.Float64, nw.String, nw.String),
-                (thisItem, nw.String, nw.String, None),
-                (thisItem, nw.Binary, nw.Binary, nw.String),
+                (thisItem, pl.Boolean, pl.String, pl.String),
+                (thisItem, pl.Int8, pl.String, pl.String),
+                (thisItem, pl.Int16, pl.String, pl.String),
+                (thisItem, pl.Int32, pl.String, pl.String),
+                (thisItem, pl.Int64, pl.String, pl.String),
+                (thisItem, pl.UInt8, pl.String, pl.String),
+                (thisItem, pl.UInt16, pl.String, pl.String),
+                (thisItem, pl.UInt32, pl.String, pl.String),
+                (thisItem, pl.UInt64, pl.String, pl.String),
+                (thisItem, pl.Float32, pl.String, pl.String),
+                (thisItem, pl.Float64, pl.String, pl.String),
+                (thisItem, pl.String, pl.String, None),
+                (thisItem, pl.Binary, pl.Binary, pl.String),
             ]
         )
 
@@ -669,35 +530,16 @@ def _cast_ordering(
     return d_ordering
 
 
-def safe_height(df: IntoFrameT) -> int:
-    return nw.from_native(df).lazy().select(nw.len()).collect().item(0, 0)
+def safe_height(df: pl.LazyFrame | pl.DataFrame) -> int:
+    return df.lazy().select(pl.len()).collect().item(0, 0)
 
 
-#   Monkey patch lazy
-def lazy_backend(
-    self: nw.LazyFrame | nw.DataFrame, nw_type: NarwhalsType
-) -> nw.LazyFrame:
-    return NarwhalsType.lazy(self, nw_type)
-
-
-nw.LazyFrame.lazy_backend = lazy_backend
-nw.DataFrame.lazy_backend = lazy_backend
-
-
-def backend_eager(backend: str):
-    if not is_eager_allowed(Implementation(backend)):
-        return "pyarrow"
-    else:
-        return backend
-
-
-@nw.narwhalify
 def rename_with_prefix_suffix(
-    df: IntoFrameT,
+    df: pl.LazyFrame | pl.DataFrame,
     prefix: str = "",
     suffix: str = "",
     exclude_list: list[str] | str | None = None,
-) -> IntoFrameT:
+) -> pl.LazyFrame | pl.DataFrame:
     """
     Add prefix and/or suffix to column names with optional exclusions.
 
@@ -705,7 +547,7 @@ def rename_with_prefix_suffix(
     avoiding name conflicts when joining datasets.
 
     Args:
-        df (IntoFrameT):
+        df (pl.LazyFrame | pl.DataFrame):
             Input data
         prefix (str):
             Text to add before column names
@@ -715,7 +557,7 @@ def rename_with_prefix_suffix(
             Column names to exclude from renaming
 
     Returns:
-        IntoFrameT: Data with renamed columns
+        pl.LazyFrame | pl.DataFrame: Data with renamed columns
 
     Examples:
         Add prefix to all columns:
@@ -754,11 +596,10 @@ def rename_with_prefix_suffix(
     return df
 
 
-@nw.narwhalify
 def drop_if_exists(
-    df: IntoFrameT,
+    df: pl.LazyFrame | pl.DataFrame,
     columns: list[str] | str | None = None,
-) -> IntoFrameT:
+) -> pl.LazyFrame | pl.DataFrame:
     columns = list_input(columns)
     columns_exist = df.lazy().collect_schema().names()
     drop_list = set(columns).intersection(columns_exist)
@@ -808,7 +649,10 @@ def asterisk_matched_substring(
 
 
 def print_longer_table(
-    df: IntoFrameT, max_rows: int = 100, drb_round: bool = True, logging: logging = None
+    df: pl.LazyFrame | pl.DataFrame,
+    max_rows: int = 100,
+    drb_round: bool = True,
+    logging: logging = None,
 ) -> None:
     """
     Print DataFrame with more rows than default Polars displays.
@@ -844,8 +688,7 @@ def print_longer_table(
     if logging is None:
         logging = logger
 
-    nw_type = NarwhalsType(df)
-    df = nw_type.to_polars().with_columns(pl.col(pl.Boolean).cast(pl.Int8))
+    df = df.lazy().collect().with_columns(pl.col(pl.Boolean).cast(pl.Int8))
     if drb_round:
         df = drb_round_table(df)
 
@@ -868,9 +711,8 @@ def print_longer_table(
         logging.info(df.lazy().collect())
 
 
-@nw.narwhalify
 def summary(
-    df: IntoFrameT,
+    df: pl.LazyFrame | pl.DataFrame,
     columns: list[str] | str | None = None,
     weight: str = "",
     display: bool = True,
@@ -880,17 +722,16 @@ def summary(
     by: list[str] | str | None = None,
     quantile_interpolated: bool = False,
     drb_round: bool = False,
-) -> IntoFrameT:
+) -> pl.LazyFrame | pl.DataFrame:
     """
     Generate summary statistics for a dataframe.
 
     A convenience function for quickly exploring data. Calculates common summary
     statistics (mean, std, min, max, etc.) with optional weighting and grouping.
-    Works with any dataframe backend (Polars, Pandas, Arrow, DuckDB) via Narwhals.
 
     Parameters
     ----------
-    df : IntoFrameT
+    df : pl.LazyFrame | pl.DataFrame
         Input dataframe to summarize.
     columns : list[str] | str | None, optional
         Columns to summarize. Supports wildcards (e.g., "income_*").
@@ -919,8 +760,8 @@ def summary(
 
     Returns
     -------
-    IntoFrameT
-        Dataframe of summary statistics (same type as input df).
+    pl.LazyFrame | pl.DataFrame
+        Dataframe of summary statistics.
 
     Examples
     --------
@@ -1015,13 +856,13 @@ def summary(
 
     if weight != "" and weight in columns:
         columns.remove(weight)
-    stats = Statistics(
+    statistics = Statistics(
         stats=stats, columns=columns, quantile_interpolated=quantile_interpolated
     )
 
     sc = StatCalculator(
         df=df,
-        statistics=stats,
+        statistics=statistics,
         display=display,
         round_output=drb_round,
         weight=weight,
@@ -1032,17 +873,17 @@ def summary(
 
 
 def winsorize_by_percentiles(
-    df: IntoFrameT,
+    df: pl.LazyFrame | pl.DataFrame,
     percentiles: tuple[float, float],
     columns: list | str,
     weight: str = "",
-) -> IntoFrameT:
+) -> pl.LazyFrame | pl.DataFrame:
     """
     Winsorize (truncate) column values to a specific percentile
 
     Parameters
     ----------
-    df : pl.IntoFrameT
+    df : pl.LazyFrame | pl.DataFrame
         Data
     percentiles : tuple[float,float]
         Lower and upper bound
@@ -1053,7 +894,7 @@ def winsorize_by_percentiles(
 
     Returns
     -------
-    df : IntoFrameT
+    df : pl.LazyFrame | pl.DataFrame
 
     """
 
@@ -1064,30 +905,28 @@ def winsorize_by_percentiles(
 
     multiply_ptiles = not any([pi >= 1 for pi in percentiles])
     if multiply_ptiles:
-        percentiles = [pi * 100 for pi in percentiles]
+        percentiles_pct = [pi * 100 for pi in percentiles]
+    else:
+        percentiles_pct = list(percentiles)
 
     column_stats = {}
     for coli in columns:
-        column_stats[coli] = [f"q{pi}" for pi in percentiles]
+        column_stats[coli] = [f"q{pi}" for pi in percentiles_pct]
 
     df_winsor = calculate_by(df=df, column_stats=column_stats, weight=weight)
 
-    quantile_low = f"{percentiles[0] / 100}".replace(".", "_")
-    quantile_high = f"{percentiles[1] / 100}".replace(".", "_")
+    quantile_low = f"{percentiles_pct[0] / 100}".replace(".", "_")
+    quantile_high = f"{percentiles_pct[1] / 100}".replace(".", "_")
     clip_list = []
     for coli in columns:
         clip_low = (
-            nw.from_native(df_winsor)
-            .select(nw.col(f"{coli}_q{quantile_low}"))
-            .item(0, 0)
+            df_winsor.lazy().select(pl.col(f"{coli}_q{quantile_low}")).collect().item(0, 0)
         )
         clip_high = (
-            nw.from_native(df_winsor)
-            .select(nw.col(f"{coli}_q{quantile_high}"))
-            .item(0, 0)
+            df_winsor.lazy().select(pl.col(f"{coli}_q{quantile_high}")).collect().item(0, 0)
         )
 
-        clip_list.append(nw.col(coli).clip(lower_bound=clip_low, upper_bound=clip_high))
+        clip_list.append(pl.col(coli).clip(lower_bound=clip_low, upper_bound=clip_high))
 
-    df = nw.from_native(df).with_columns(clip_list).to_native()
+    df = df.with_columns(clip_list)
     return df

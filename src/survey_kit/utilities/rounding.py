@@ -1,20 +1,15 @@
-import narwhals as nw
 import polars as pl
 import polars.selectors as cs
 import math
-from narwhals.typing import IntoFrameT
 
 
-from .dataframe import (
-    columns_from_list,
-    NarwhalsType,
-)
+from .dataframe import columns_from_list
 from .compress import compress_df
 from .inputs import list_input
 
 
 def drb_round_table(
-    df: IntoFrameT | nw.LazyFrame | nw.DataFrame,
+    df: pl.LazyFrame | pl.DataFrame,
     columns: list | str | None = None,
     columns_n: list | str | None = None,
     columns_exclude: list | str | None = None,
@@ -22,7 +17,7 @@ def drb_round_table(
     digits: int = 4,
     compress: bool = False,
     display_only: bool = False,
-) -> IntoFrameT | nw.LazyFrame | nw.DataFrame:
+) -> pl.LazyFrame | pl.DataFrame:
     """
 
     Round a table according to Census DRB disclosure rules
@@ -52,9 +47,6 @@ def drb_round_table(
     df : pl.LazyFrame | pl.DataFrame
 
     """
-
-    nw_type = NarwhalsType(df)
-    df = nw_type.to_polars()
 
     columns = list_input(columns)
     columns_n = list_input(columns_n)
@@ -138,9 +130,7 @@ def drb_round_table(
     if compress and not display_only:
         df = compress_df(df)
 
-    df = nw_type.from_polars(df)
-
-    return NarwhalsType.return_df(df, nw_type)
+    return df
 
 
 def _drb_round_table_n(column: str):

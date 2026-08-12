@@ -2,11 +2,8 @@ from __future__ import annotations
 from typing import Optional, Callable
 
 import os
-import narwhals as nw
-import narwhals.selectors as cs
-from narwhals.typing import IntoFrameT
 import polars as pl
-import polars.selectors as pl_cs
+import polars.selectors as cs
 from pathlib import Path
 import scipy
 from copy import deepcopy, copy
@@ -21,7 +18,6 @@ from ..utilities.dataframe import (
     concat_wrapper,
     join_list,
     join_wrapper,
-    NarwhalsType,
     fill_missing,
     columns_from_list,
     _columns_original_order,
@@ -73,17 +69,17 @@ class MultipleImputation(Serializable):
     join_on : list | None, optional
         Column names that identify unique estimates across implicates.
         Used for combining estimates. Default is None (empty list).
-    df_estimates : IntoFrameT | None, optional
+    df_estimates : pl.LazyFrame | pl.DataFrame | None, optional
         Combined estimates dataframe (calculated automatically). Default is None.
-    df_ses : IntoFrameT | None, optional
+    df_ses : pl.LazyFrame | pl.DataFrame | None, optional
         MI standard errors dataframe (calculated automatically). Default is None.
-    df_df : IntoFrameT | None, optional
+    df_df : pl.LazyFrame | pl.DataFrame | None, optional
         Degrees of freedom for each estimate (calculated automatically). Default is None.
-    df_t : IntoFrameT | None, optional
+    df_t : pl.LazyFrame | pl.DataFrame | None, optional
         T-statistics dataframe (calculated automatically). Default is None.
-    df_p : IntoFrameT | None, optional
+    df_p : pl.LazyFrame | pl.DataFrame | None, optional
         P-values dataframe (calculated automatically). Default is None.
-    df_rate_of_missing_information : IntoFrameT | None, optional
+    df_rate_of_missing_information : pl.LazyFrame | pl.DataFrame | None, optional
         Rate of missing information for each estimate. Default is None.
     rounding : Rounding | None, optional
         Rounding configuration for display and output. Default is None.
@@ -164,12 +160,12 @@ class MultipleImputation(Serializable):
         self,
         implicate_stats: list[ReplicateStats] | None = None,
         join_on: list | None = None,
-        df_estimates: IntoFrameT | None = None,
-        df_ses: IntoFrameT | None = None,
-        df_df: IntoFrameT | None = None,
-        df_t: IntoFrameT | None = None,
-        df_p: IntoFrameT | None = None,
-        df_rate_of_missing_information: IntoFrameT | None = None,
+        df_estimates: pl.LazyFrame | pl.DataFrame | None = None,
+        df_ses: pl.LazyFrame | pl.DataFrame | None = None,
+        df_df: pl.LazyFrame | pl.DataFrame | None = None,
+        df_t: pl.LazyFrame | pl.DataFrame | None = None,
+        df_p: pl.LazyFrame | pl.DataFrame | None = None,
+        df_rate_of_missing_information: pl.LazyFrame | pl.DataFrame | None = None,
         rounding: Rounding | None = None,
     ):
         self.implicate_stats = implicate_stats
@@ -230,34 +226,28 @@ class MultipleImputation(Serializable):
         for indexi, imp_statsi in enumerate(self.implicate_stats):
             if indexi == 0:
                 df_sort = (
-                    nw.from_native(imp_statsi.df_estimates)
-                    .select(self.join_on)
+                    imp_statsi.df_estimates.select(self.join_on)
                     .lazy()
                     .collect()
                     .with_row_index(col_sort)
                     .lazy()
-                    .to_native()
                 )
             df_estimates_stacked.append(imp_statsi.df_estimates)
             df_ses_stacked.append(imp_statsi.df_ses)
 
         df_estimates_stacked = (
-            nw.from_native(
-                fill_missing(
-                    concat_wrapper(df_estimates_stacked, how="diagonal"),
-                    value=float("nan"),
-                )
+            fill_missing(
+                concat_wrapper(df_estimates_stacked, how="diagonal"),
+                value=float("nan"),
             )
             .lazy()
             .collect()
-            .to_native()
         )
         df_ses_stacked = (
-            nw.from_native(concat_wrapper(df_ses_stacked, how="diagonal"))
-            .with_columns(cs.boolean().cast(nw.Int8))
+            concat_wrapper(df_ses_stacked, how="diagonal")
+            .with_columns(cs.boolean().cast(pl.Int8))
             .lazy()
             .collect()
-            .to_native()
         )
 
         cols_non_stats = self.join_on + [implicate_name, col_sort]
@@ -269,89 +259,66 @@ class MultipleImputation(Serializable):
 
         #   Notation from Joe Schaffer MI FAQ page (you can download from the Wayback Machine)
         df_estimates = (
-            nw.from_native(df_estimates_stacked)
-            .group_by(self.join_on)
-            .agg(nw.all().mean())
+            df_estimates_stacked.group_by(self.join_on)
+            .agg(pl.all().mean())
             .sort(self.join_on)
         )
 
-        c_stats = nw.col(cols_stats)
+        c_stats = pl.col(cols_stats)
         with_between = []
         for coli in cols_stats:
-            c_col = nw.col(coli)
-            c_bar = nw.col(f"{coli}_bar")
+            c_col = pl.col(coli)
+            c_bar = pl.col(f"{coli}_bar")
             with_between.append(
                 (1 / (self.n_implicates - 1) * (c_col - c_bar) ** 2).alias(coli)
             )
 
         df_B = (
-            nw.from_native(
-                join_list(
-                    [
-                        df_estimates_stacked,
-                        (
-                            nw.from_native(df_estimates)
-                            .rename({coli: f"{coli}_bar" for coli in cols_stats})
-                            .to_native()
-                        ),
-                    ],
-                    on=self.join_on,
-                    how="left",
-                )
+            join_list(
+                [
+                    df_estimates_stacked,
+                    df_estimates.rename(
+                        {coli: f"{coli}_bar" for coli in cols_stats}
+                    ),
+                ],
+                on=self.join_on,
+                how="left",
             )
             .with_columns(with_between)
             .group_by(self.join_on)
             .agg(c_stats.sum())
-            .to_native()
         )
 
         df_U = (
-            nw.from_native(df_ses_stacked)
-            .with_columns(c_stats**2)
+            df_ses_stacked.with_columns(c_stats**2)
             .group_by(self.join_on)
-            .agg(nw.all().mean())
-            .to_native()
+            .agg(pl.all().mean())
         )
 
         df_variance = (
-            nw.from_native(
-                concat_wrapper(
-                    [
-                        nw.from_native(df_B)
-                        .with_columns(c_stats * (1 + 1 / self.n_implicates))
-                        .to_native(),
-                        df_U,
-                    ],
-                    how="diagonal",
-                )
+            concat_wrapper(
+                [
+                    df_B.with_columns(c_stats * (1 + 1 / self.n_implicates)),
+                    df_U,
+                ],
+                how="diagonal",
             )
             .group_by(self.join_on)
-            .agg(nw.all().sum())
-            .to_native()
+            .agg(pl.all().sum())
         )
 
-        self.df_ses = nw.from_native(df_variance).with_columns(c_stats**0.5).to_native()
+        self.df_ses = df_variance.with_columns(c_stats**0.5)
 
         self.df_estimates = (
-            nw.from_native(df_estimates_stacked)
-            .group_by(self.join_on)
-            .agg(nw.all().mean())
+            df_estimates_stacked.group_by(self.join_on)
+            .agg(pl.all().mean())
             .sort(self.join_on)
-            .to_native()
         )
 
         df_B_U = join_list(
             [
-                (
-                    nw.from_native(df_B)
-                    .rename({coli: f"{coli}_B" for coli in cols_stats})
-                    .to_native()
-                ),
-                (
-                    nw.from_native(df_U)
-                    .rename({coli: f"{coli}_U" for coli in cols_stats})
-                    .to_native()
-                ),
+                df_B.rename({coli: f"{coli}_B" for coli in cols_stats}),
+                df_U.rename({coli: f"{coli}_U" for coli in cols_stats}),
             ],
             on=self.join_on,
             how="left",
@@ -360,84 +327,59 @@ class MultipleImputation(Serializable):
         m = self.n_implicates
         with_df = []
         for coli in cols_stats:
-            c_U = nw.col(f"{coli}_U")
-            c_B = nw.col(f"{coli}_B")
+            c_U = pl.col(f"{coli}_U")
+            c_B = pl.col(f"{coli}_B")
 
             with_df.append(
                 ((m - 1) * (1 + (m * c_U) / ((m + 1) * c_B)) ** 2).alias(coli)
             )
 
-        self.df_df = nw.from_native(df_B_U).select(self.join_on + with_df).to_native()
+        self.df_df = df_B_U.select(self.join_on + with_df)
 
         with_r = []
         with_gamma = []
         for coli in cols_stats:
-            c_U = nw.col(f"{coli}_U")
-            c_B = nw.col(f"{coli}_B")
-            c_r = nw.col(f"{coli}_r")
-            c_df = nw.col(f"{coli}_df")
+            c_U = pl.col(f"{coli}_U")
+            c_B = pl.col(f"{coli}_B")
+            c_r = pl.col(f"{coli}_r")
+            c_df = pl.col(f"{coli}_df")
             with_r.append(((1 + 1 / m) * c_B / c_U).alias(f"{coli}_r"))
 
             with_gamma.append(((c_r + (2 / (c_df + 3))) / (c_r + 1)).alias(coli))
 
         self.df_rate_of_missing_information = (
-            nw.from_native(
-                join_list(
-                    [
-                        df_B_U,
-                        (
-                            nw.from_native(self.df_df)
-                            .rename({coli: f"{coli}_df" for coli in cols_stats})
-                            .to_native()
-                        ),
-                    ],
-                    how="left",
-                    on=self.join_on,
-                )
+            join_list(
+                [
+                    df_B_U,
+                    self.df_df.rename({coli: f"{coli}_df" for coli in cols_stats}),
+                ],
+                how="left",
+                on=self.join_on,
             )
             .with_columns(with_r)
             .select(self.join_on + with_gamma)
-            .to_native()
         )
 
         with_t = []
         for coli in cols_stats:
-            c_est = nw.col(coli)
-            c_se = nw.col(f"{coli}_se")
+            c_est = pl.col(coli)
+            c_se = pl.col(f"{coli}_se")
 
             with_t.append((c_est / c_se).abs().alias(coli))
 
-        self.df_t = (
-            nw.from_native(
-                join_list(
-                    [
-                        self.df_estimates,
-                        (
-                            nw.from_native(self.df_ses)
-                            .rename({coli: f"{coli}_se" for coli in cols_stats})
-                            .to_native()
-                        ),
-                    ],
-                    on=self.join_on,
-                    how="left",
-                )
-            )
-            .select(self.join_on + with_t)
-            .to_native()
-        )
+        self.df_t = join_list(
+            [
+                self.df_estimates,
+                self.df_ses.rename({coli: f"{coli}_se" for coli in cols_stats}),
+            ],
+            on=self.join_on,
+            how="left",
+        ).select(self.join_on + with_t)
 
         df_p = join_list(
             [
-                (
-                    nw.from_native(self.df_df)
-                    .rename({coli: f"{coli}_df" for coli in cols_stats})
-                    .to_native()
-                ),
-                (
-                    nw.from_native(self.df_t)
-                    .rename({coli: f"{coli}_t" for coli in cols_stats})
-                    .to_native()
-                ),
+                self.df_df.rename({coli: f"{coli}_df" for coli in cols_stats}),
+                self.df_t.rename({coli: f"{coli}_t" for coli in cols_stats}),
             ],
             how="left",
             on=self.join_on,
@@ -457,8 +399,7 @@ class MultipleImputation(Serializable):
             except:
                 return None
 
-        nw_type = NarwhalsType(df_p)
-        df_p = nw_type.to_polars().lazy().collect()
+        df_p = df_p.lazy().collect()
         for coli in cols_stats:
             index_t = df_p.columns.index(f"{coli}_t")
             index_df = df_p.columns.index(f"{coli}_df")
@@ -470,14 +411,11 @@ class MultipleImputation(Serializable):
                 )
             ).rename({"map": coli})
 
-        self.df_p = nw_type.from_polars(df_p.select(self.join_on + cols_stats))
+        self.df_p = df_p.select(self.join_on + cols_stats)
 
-        def _sort_and_fill_null(df: IntoFrameT) -> IntoFrameT:
-            nw_type = NarwhalsType(
+        def _sort_and_fill_null(df: pl.LazyFrame | pl.DataFrame) -> pl.LazyFrame | pl.DataFrame:
+            return (
                 join_list([df, df_sort], how="left", on=self.join_on)
-            )
-            return nw_type.from_polars(
-                nw_type.to_polars()
                 .sort([col_sort], maintain_order=True)
                 .drop(col_sort)
                 .fill_nan(None)
@@ -576,16 +514,16 @@ class MultipleImputation(Serializable):
 
     def round_results(
         self,
-        df: IntoFrameT = None,
+        df: pl.LazyFrame | pl.DataFrame = None,
         rounding: Rounding | None = None,
         display_only: bool = False,
-    ) -> IntoFrameT:
+    ) -> pl.LazyFrame | pl.DataFrame:
         """
         Apply rounding rules to MI estimates.
 
         Parameters
         ----------
-        df : IntoFrameT, optional
+        df : pl.LazyFrame | pl.DataFrame, optional
             Table of estimates to round. Default is df_estimates.
         rounding : Rounding|None, optional
             Rounding configuration (True for DRB rules, int for significant digits).
@@ -595,7 +533,7 @@ class MultipleImputation(Serializable):
 
         Returns
         -------
-        IntoFrameT
+        pl.LazyFrame | pl.DataFrame
             The dataframe with rounding applied.
         """
 
@@ -674,7 +612,7 @@ class MultipleImputation(Serializable):
         variable_prefix: str = "",
         estimate_type_variable_name: str = "Statistic",
         ci_level: float = 0.95,
-    ) -> IntoFrameT:
+    ) -> pl.LazyFrame | pl.DataFrame:
         """
         Create a formatted table combining different types of estimates.
 
@@ -703,7 +641,7 @@ class MultipleImputation(Serializable):
 
         Returns
         -------
-        IntoFrameT
+        pl.LazyFrame | pl.DataFrame
             Formatted table with estimates arranged by statistic type.
 
         Examples
@@ -721,117 +659,97 @@ class MultipleImputation(Serializable):
         for index, esti in enumerate(estimates_to_show):
             if esti.lower() == "estimate":
                 df_ordered.append(
-                    nw.from_native(self.df_estimates)
-                    .with_columns(
+                    self.df_estimates.with_columns(
                         [
-                            nw.lit(index).alias(col_sort),
-                            nw.lit(esti.lower()).alias(estimate_type_variable_name),
+                            pl.lit(index).alias(col_sort),
+                            pl.lit(esti.lower()).alias(estimate_type_variable_name),
                         ]
                     )
-                    .to_native()
                 )
             elif esti.lower() == "se":
                 df_ordered.append(
-                    nw.from_native(self.df_ses)
-                    .with_columns(
+                    self.df_ses.with_columns(
                         [
-                            nw.lit(index).alias(col_sort),
-                            nw.lit(esti.lower()).alias(estimate_type_variable_name),
+                            pl.lit(index).alias(col_sort),
+                            pl.lit(esti.lower()).alias(estimate_type_variable_name),
                         ]
                     )
-                    .to_native()
                 )
             elif esti.lower() == "t":
                 df_ordered.append(
-                    nw.from_native(self.df_t)
-                    .with_columns(
+                    self.df_t.with_columns(
                         [
-                            nw.lit(index).alias(col_sort),
-                            nw.lit(esti.lower()).alias(estimate_type_variable_name),
+                            pl.lit(index).alias(col_sort),
+                            pl.lit(esti.lower()).alias(estimate_type_variable_name),
                         ]
                     )
-                    .to_native()
                 )
             elif esti.lower() == "p":
                 cols_to_keep = safe_columns(
-                    nw.from_native(self.df_estimates)
-                    .lazy()
-                    .with_columns(
+                    self.df_estimates.lazy().with_columns(
                         [
-                            nw.lit(index).alias(col_sort),
-                            nw.lit(esti.lower()).alias(estimate_type_variable_name),
+                            pl.lit(index).alias(col_sort),
+                            pl.lit(esti.lower()).alias(estimate_type_variable_name),
                         ]
                     )
-                    .to_native()
                 )
 
-                df_p = (
-                    nw.from_native(self.df_p)
-                    .with_columns(
-                        [
-                            nw.lit(index).alias(col_sort),
-                            nw.lit(esti.lower()).alias(estimate_type_variable_name),
-                        ]
-                    )
-                    .select(cols_to_keep)
-                    .to_native()
-                )
+                df_p = self.df_p.with_columns(
+                    [
+                        pl.lit(index).alias(col_sort),
+                        pl.lit(esti.lower()).alias(estimate_type_variable_name),
+                    ]
+                ).select(cols_to_keep)
 
                 when_then_censor_absurd_values = []
                 absurd_value_threshold = 1e-10
                 #   I don't want to see p-values below a ridiculously low number
                 for coli in self.df_estimates.columns:
                     if coli not in self.join_on:
-                        ci = nw.col(coli)
+                        ci = pl.col(coli)
                         when_then_censor_absurd_values.append(
                             (
                                 (
-                                    nw.when(ci.lt(absurd_value_threshold))
-                                    .then(nw.lit(0.0))
+                                    pl.when(ci.lt(absurd_value_threshold))
+                                    .then(pl.lit(0.0))
                                     .otherwise(ci)
                                 ).alias(coli)
                             )
                         )
 
                 df_ordered.append(
-                    nw.from_native(df_p)
-                    .with_columns(when_then_censor_absurd_values)
-                    .to_native()
+                    df_p.with_columns(when_then_censor_absurd_values)
                 )
 
             elif esti.lower() == "ci":
                 df_ordered.append(
-                    nw.from_native(self._df_ci(ci_level=ci_level))
-                    .with_columns(
+                    self._df_ci(ci_level=ci_level).with_columns(
                         [
-                            nw.lit(index).alias(col_sort),
-                            nw.lit(esti.lower()).alias(estimate_type_variable_name),
+                            pl.lit(index).alias(col_sort),
+                            pl.lit(esti.lower()).alias(estimate_type_variable_name),
                         ]
                     )
-                    .to_native()
                 )
             elif esti.lower() == "df":
                 with_infinites = []
                 for coli in self.summarize_vars:
-                    c_coli = nw.col(coli)
+                    c_coli = pl.col(coli)
 
                     upper_limit = 10**7
                     with_infinites.append(
                         (
-                            nw.when(c_coli.gt(upper_limit))
-                            .then(nw.lit(upper_limit))
+                            pl.when(c_coli.gt(upper_limit))
+                            .then(pl.lit(upper_limit))
                             .otherwise(c_coli)
                             .alias(coli)
                         )
                     )
 
                 df_ordered.append(
-                    nw.from_native(self.df_df)
-                    .with_columns(with_infinites)
-                    .with_columns(
+                    self.df_df.with_columns(with_infinites).with_columns(
                         [
-                            nw.lit(index).alias(col_sort),
-                            nw.lit(esti.lower()).alias(estimate_type_variable_name),
+                            pl.lit(index).alias(col_sort),
+                            pl.lit(esti.lower()).alias(estimate_type_variable_name),
                         ]
                     )
                 )
@@ -841,14 +759,10 @@ class MultipleImputation(Serializable):
                 raise Exception(message)
 
         col_row_index = "___estimate_row_count___"
-        df_ordered[0] = (
-            nw.from_native(df_ordered[0]).with_row_index(col_row_index).to_native()
-        )
+        df_ordered[0] = df_ordered[0].with_row_index(col_row_index)
 
         df_display = concat_wrapper(df_ordered, how="diagonal")
-
-        nw_type = NarwhalsType(df_display)
-        df_display = nw_type.to_polars()
+        df_display = df_display.lazy().collect()
 
         sort_vars = self.join_on
         df_display = df_display.sort(sort_vars + [col_sort]).with_columns(
@@ -902,27 +816,24 @@ class MultipleImputation(Serializable):
 
         if len(rename):
             df_display = df_display.rename(rename)
-        return nw_type.from_polars(df_display)
+        return df_display
 
     def _df_ci(self, ci_level: float = 0.95):
         #   Use scipy to get the t-stat ci multiple
         def to_ci_multiple(value) -> float:
             return scipy_stats.t.ppf(1 - (1 - ci_level) / 2, value)
 
-        nw_type = NarwhalsType(self.df_df)
         dof = (
-            nw_type.to_polars.lazy()
+            self.df_df.lazy()
             .collect()
             .with_columns(
-                pl_cs.numeric().map_elements(to_ci_multiple, return_dtype=pl.Float64)
+                cs.numeric().map_elements(to_ci_multiple, return_dtype=pl.Float64)
             )
         )
 
         #   Use numpy to multiply the se by the t-stat ci multiple
-        se_np = (
-            nw.from_native(self.df_ses).select(cs.numeric()).lazy().collect().to_numpy()
-        )
-        dof_np = nw.from_native(dof).select(cs.numeric()).lazy().collect().to_numpy()
+        se_np = self.df_ses.select(cs.numeric()).lazy().collect().to_numpy()
+        dof_np = dof.select(cs.numeric()).lazy().collect().to_numpy()
 
         #   return the data
         dof = pl.concat(
@@ -939,9 +850,9 @@ class MultipleImputation(Serializable):
             how="horizontal",
         )
 
-        return nw_type.from_polars(dof)
+        return dof
 
-    def filter(self, filter_expr: nw.Expr) -> MultipleImputation:
+    def filter(self, filter_expr: pl.Expr) -> MultipleImputation:
         #   Don't edit the underlying object
         self = self.copy()
 
@@ -956,7 +867,7 @@ class MultipleImputation(Serializable):
         return self
 
     def select(
-        self, select_expr: nw.Expr | str | list[str] | list[nw.Expr]
+        self, select_expr: pl.Expr | str | list[str] | list[pl.Expr]
     ) -> MultipleImputation:
         self = self.copy()
         select_expr = list_input(select_expr)
@@ -990,7 +901,7 @@ class MultipleImputation(Serializable):
                 self.implicate_stats[repi].select(cols_keep)
         return self
 
-    def with_columns(self, with_expr: nw.Expr | list[nw.Expr]) -> MultipleImputation:
+    def with_columns(self, with_expr: pl.Expr | list[pl.Expr]) -> MultipleImputation:
         self = self.copy()
 
         for dfi in self._df_attributes:
@@ -1024,7 +935,7 @@ class MultipleImputation(Serializable):
                 set(safe_columns(self.df_estimates)).difference(self.join_on)
             )
 
-        return self.with_columns(with_expr=nw.col(columns) * factor)
+        return self.with_columns(with_expr=pl.col(columns) * factor)
 
     def pipe(self, function: Callable, *args, **kwargs) -> MultipleImputation:
         """
@@ -1050,11 +961,7 @@ class MultipleImputation(Serializable):
         for dfi_name in self._df_attributes:
             dfi = getattr(self, dfi_name)
             if dfi is not None:
-                setattr(
-                    self,
-                    dfi_name,
-                    nw.to_native(function(nw.from_native(dfi), *args, **kwargs)),
-                )
+                setattr(self, dfi_name, function(dfi, *args, **kwargs))
 
         for repi in range(0, len(self.implicate_stats)):
             self.implicate_stats[repi].pipe(function, *args, **kwargs)
@@ -1084,7 +991,7 @@ class MultipleImputation(Serializable):
 
         self = self.copy()
 
-        def _concat_df(df: IntoFrameT, df_join: IntoFrameT) -> IntoFrameT:
+        def _concat_df(df: pl.LazyFrame | pl.DataFrame, df_join: pl.LazyFrame | pl.DataFrame) -> pl.LazyFrame | pl.DataFrame:
             if how == "horizontal":
                 return join_wrapper(
                     df=df,
@@ -1113,7 +1020,7 @@ class MultipleImputation(Serializable):
         return self
 
     def sort(
-        self, sort_expr: nw.Expr | list[nw.Expr] | str | list[str]
+        self, sort_expr: pl.Expr | list[pl.Expr] | str | list[str]
     ) -> MultipleImputation:
         self = self.copy()
         for dfi in self._df_attributes:
@@ -1127,7 +1034,7 @@ class MultipleImputation(Serializable):
         return self
 
     def drop(
-        self, drop_expr: nw.Expr | list[nw.Expr] | str | list[str]
+        self, drop_expr: pl.Expr | list[pl.Expr] | str | list[str]
     ) -> MultipleImputation:
         self = self.copy()
         for dfi in self._df_attributes:
@@ -1148,8 +1055,8 @@ class MultipleImputation(Serializable):
     #     if copy:
     #         self = self.copy()
 
-    #     def _reshape(df:IntoFrameT,
-    #                  join_on:list[str]) -> IntoFrameT:
+    #     def _reshape(df:pl.LazyFrame | pl.DataFrame,
+    #                  join_on:list[str]) -> pl.LazyFrame | pl.DataFrame:
     #         if "___replicate___" in df.columns:
     #             join_on = join_on + ["___replicate___"]
 
@@ -1273,9 +1180,9 @@ def mi_ses_from_function(
     delegate: Callable,
     join_on: list,
     path_srmi: str = "",
-    df_implicates: list[IntoFrameT] | DataFrameList | None = None,
+    df_implicates: list[pl.LazyFrame | pl.DataFrame] | DataFrameList | None = None,
     index: list | None = None,
-    df_noimputes: IntoFrameT | None = None,
+    df_noimputes: pl.LazyFrame | pl.DataFrame | None = None,
     arguments: dict | None = None,
     df_argument_name: str = "df",
     implicate_name: str = "___implicate___",
@@ -1302,7 +1209,7 @@ def mi_ses_from_function(
         The path to a saved SRMI serialized object
         The default is "".
         Must pass either path_srmi or df_implicates
-    df_implicates : list[IntoFrameT] | DataFrameList, optional
+    df_implicates : list[pl.LazyFrame | pl.DataFrame] | DataFrameList, optional
         List of imputed datasets to analyze.
         The default is None
         Must pass either path_srmi or df_implicates
@@ -1312,7 +1219,7 @@ def mi_ses_from_function(
     index : list|None, optional
         Index columns for merging df_noimputes with implicates.
         If None, assumes row-wise concatenation (dangerous...). Default is None.
-    df_noimputes : IntoFrameT | None, optional
+    df_noimputes : pl.LazyFrame | pl.DataFrame | None, optional
         Non-imputed data (e.g., weights, design variables) to merge with
         each implicate. Default is None.
     arguments : dict|None, optional
@@ -1471,9 +1378,9 @@ def _mi_ses_from_function_sequential(
     delegate,
     join_on: list,
     path_srmi: str = "",
-    df_implicates: list[IntoFrameT] | DataFrameList | None = None,
+    df_implicates: list[pl.LazyFrame | pl.DataFrame] | DataFrameList | None = None,
     index: list | None = None,
-    df_noimputes: IntoFrameT | None = None,
+    df_noimputes: pl.LazyFrame | pl.DataFrame | None = None,
     arguments: dict | None = None,
     df_argument_name: str = "df",
     implicate_name: str = "___implicate___",
@@ -1504,10 +1411,10 @@ def _mi_ses_from_function_sequential(
 def _mi_ses_from_function_parallel(
     delegate,
     join_on: list,
-    df_implicates: list[IntoFrameT] | DataFrameList | None = None,
+    df_implicates: list[pl.LazyFrame | pl.DataFrame] | DataFrameList | None = None,
     path_srmi: str = "",
     index: list | None = None,
-    df_noimputes: IntoFrameT | None = None,
+    df_noimputes: pl.LazyFrame | pl.DataFrame | None = None,
     arguments: dict | None = None,
     df_argument_name: str = "df",
     implicate_name: str = "___implicate___",
@@ -1593,10 +1500,10 @@ def _mi_ses_from_function_one_implicate(
     implicate_number: int,
     delegate,
     join_on: list,
-    df_implicates: list[IntoFrameT] | DataFrameList | None = None,
+    df_implicates: list[pl.LazyFrame | pl.DataFrame] | DataFrameList | None = None,
     path_srmi: str = "",
     index: list | None = None,
-    df_noimputes: IntoFrameT | None = None,
+    df_noimputes: pl.LazyFrame | pl.DataFrame | None = None,
     arguments: dict | None = None,
     df_argument_name: str = "df",
     implicate_name: str = "___implicate___",

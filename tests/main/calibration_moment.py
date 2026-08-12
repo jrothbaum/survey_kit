@@ -1,8 +1,3 @@
-import os
-import sys
-import narwhals as nw
-from pathlib import Path
-
 from survey_kit.utilities.random import RandomData
 from survey_kit.utilities.formula_builder import FormulaBuilder
 from survey_kit.calibration.moment import Moment
@@ -28,8 +23,6 @@ df = (
     .lazy()
 )
 
-# print(df.describe())
-
 f = FormulaBuilder(df=df, constant=False)
 f.continuous(columns=["v_1", "v_f_continuous_*", "v_f_p2_*"])
 f.simple_interaction(columns=["v_1", "v_f_continuous_0"])
@@ -44,51 +37,24 @@ m = Moment(
     index="index",
     by=["year"],
     rescale=False,
-    #    by=f_by.formula
 )
 
-
-m_pandas = Moment(
-    df=df.collect().to_pandas(),
-    formula=f.formula,
-    weight="weight_0",
-    index="index",
-    by=["year"],
-    rescale=False,
-    #    by=f_by.formula
-)
-
-m_arrow = Moment(
-    df=df.collect().to_arrow(),
+m_equalize = Moment(
+    df=df,
     formula=f.formula,
     weight="weight_0",
     index="index",
     by=["year"],
     rescale=False,
     equalize_by=["year"],
-    #    by=f_by.formula
 )
-
-# print(m.df.lazy().collect())
-# print(m_pandas.df)
-
-# print(m.model_matrix.lazy().collect())
-# print(m_pandas.model_matrix)
-
 
 m.save(f"{path_scratch}/moment")
 
-m_new = Moment.load(
-    f"{path_scratch}/moment",
-    delete=False,
-    # session=DuckDBSession(),
-    backend="duckdb",
-)
+m_new = Moment.load(f"{path_scratch}/moment", delete=False)
 
 for i in range(len(m.sub_moments)):
-    print(nw.from_native(m_new.sub_moments[i].targets).lazy().collect().to_native())
-    print(m_pandas.sub_moments[i].targets)
+    print(m_new.sub_moments[i].targets.lazy().collect())
 
     if m.sub_moments[i].scale is not None:
-        print(nw.from_native(m_new.sub_moments[i]).scale.lazy().collect().to_native())
-        print(m_pandas.sub_moments[i].scale)
+        print(m_new.sub_moments[i].scale.lazy().collect())

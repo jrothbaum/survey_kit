@@ -1,10 +1,8 @@
 from __future__ import annotations
 
 
-import os
-import narwhals as nw
-import narwhals.selectors as cs
-from narwhals.typing import IntoFrameT
+import polars as pl
+import polars.selectors as cs
 
 from ..utilities.dataframe import (
     join_wrapper,
@@ -28,12 +26,12 @@ class DataFrameList(Serializable):
     A light wrapper around Lazy/DataFrames
     that can be used like a list, mostly, (append, extend, +)
     and also can be used like the underlying LazyFrame or DataFrame
-    where a narwhals operation is applied to all items in the list.
+    where a polars operation is applied to all items in the list.
 
     Examples
     --------
     >>> df_list = DataFrameList([df1, df2])
-    >>> df_list = df_list.filter(nw.col("a") == 1)
+    >>> df_list = df_list.filter(pl.col("a") == 1)
 
     This would apply the filter to df1 and df2 and return a DataFrameList with
     the filtered data.
@@ -42,7 +40,7 @@ class DataFrameList(Serializable):
 
     _save_suffix = "df_list"
 
-    def __init__(self, df_list: list[IntoFrameT]):
+    def __init__(self, df_list: list[pl.LazyFrame | pl.DataFrame]):
         self._df_list = df_list
 
     def __getitem__(self, index):
@@ -54,16 +52,16 @@ class DataFrameList(Serializable):
     def __len__(self):
         return len(self._df_list)
 
-    def append(self, df: IntoFrameT):
+    def append(self, df: pl.LazyFrame | pl.DataFrame):
         self._df_list.append(df)
 
-    def extend(self, iterable: DataFrameList | list[IntoFrameT]):
+    def extend(self, iterable: DataFrameList | list[pl.LazyFrame | pl.DataFrame]):
         if type(iterable) is DataFrameList:
             self._df_list.extend(iterable._df_list)
         else:
             self._df_list.extend(iterable)
 
-    def __add__(self, other: DataFrameList | list[IntoFrameT]):
+    def __add__(self, other: DataFrameList | list[pl.LazyFrame | pl.DataFrame]):
         if type(other) is DataFrameList:
             self._df_list = self._df_list + other._df_list
             return self
@@ -85,36 +83,35 @@ class DataFrameList(Serializable):
 
         """
 
-        if hasattr(nw.from_native(self._df_list[0]), attr):
-            this_attr = getattr(nw.from_native(self._df_list[0]), attr)
+        if hasattr(self._df_list[0], attr):
+            this_attr = getattr(self._df_list[0], attr)
             if callable(this_attr):
 
                 def wrapper(*args, **kwargs):
                     output = [
-                        getattr(nw.from_native(dfi), attr)(*args, **kwargs)
-                        for dfi in self._df_list
+                        getattr(dfi, attr)(*args, **kwargs) for dfi in self._df_list
                     ]
-                    if isinstance(output[0], (nw.LazyFrame, nw.DataFrame)):
-                        return DataFrameList([dfi.to_native() for dfi in output])
+                    if isinstance(output[0], (pl.LazyFrame, pl.DataFrame)):
+                        return DataFrameList([dfi for dfi in output])
                     else:
                         return DataFrameList([itemi for itemi in output])
 
                 return wrapper
             else:
-                output = [getattr(nw.from_native(dfi), attr) for dfi in self._df_list]
-                if isinstance(output[0], (nw.LazyFrame, nw.DataFrame)):
-                    return DataFrameList([dfi.to_native() for dfi in output])
+                output = [getattr(dfi, attr) for dfi in self._df_list]
+                if isinstance(output[0], (pl.LazyFrame, pl.DataFrame)):
+                    return DataFrameList([dfi for dfi in output])
                 else:
                     return DataFrameList([itemi for itemi in output])
 
         else:
             raise AttributeError(
-                f"{type(nw.from_native(self._df_list[0]))} has no attribute '{attr}'"
+                f"{type(self._df_list[0])} has no attribute '{attr}'"
             )
 
     def join_to_list(
         self,
-        df_join: list[IntoFrameT],
+        df_join: list[pl.LazyFrame | pl.DataFrame],
         on: list[str],
         how: str,
         suffixes: list[str] | None = None,
@@ -138,7 +135,7 @@ class DataFrameList(Serializable):
             )
         return self
 
-    def append_list(self, df_append: list[IntoFrameT]) -> DataFrameList:
+    def append_list(self, df_append: list[pl.LazyFrame | pl.DataFrame]) -> DataFrameList:
         for i in range(0, len(self._df_list)):
             self._df_list[i] = concat_wrapper(
                 df_list=[self._df_list[i]] + df_append, how="diagonal"
@@ -157,7 +154,7 @@ class DataFrameList(Serializable):
         display_max_vars: int = 20,
         round_output: bool | int = True,
     ) -> DataFrameList:
-        def stats_for_one(df: IntoFrameT):
+        def stats_for_one(df: pl.LazyFrame | pl.DataFrame):
             sc = StatCalculator(
                 df=df,
                 statistics=statistics,
@@ -215,17 +212,20 @@ class DataFrameList(Serializable):
 
         return sc
 
-    def average(self, order_by: list[str] | str | None = None) -> IntoFrameT:
+    def average(self, order_by: list[str] | str | None = None) -> pl.LazyFrame | pl.DataFrame:
         index = "__df_average_row_index__"
         order_by = list_input(order_by)
         if len(order_by) == 0:
             df_list = [
-                nw.from_native(dfi).lazy().collect().with_row_index(name=index)
+                dfi.lazy().collect().with_row_index(name=index)
                 for dfi in self._df_list
             ]
         else:
             df_list = [
-                nw.from_native(dfi).lazy().with_row_index(name=index, order_by=order_by)
+                dfi.lazy().select(
+                    pl.int_range(start=0, end=pl.len()).sort_by(order_by).alias(index),
+                    pl.all(),
+                )
                 for dfi in self._df_list
             ]
         df = concat_wrapper(df_list, how="diagonal")
@@ -245,8 +245,8 @@ class DataFrameList(Serializable):
 
         with_agg = []
         if len(cols_first):
-            with_agg.append(nw.col(cols_first).first())
-        with_agg.append(nw.col(cols_numeric).mean())
-        df_out = nw.from_native(df).lazy().group_by(order_by_full).agg(with_agg)
+            with_agg.append(pl.col(cols_first).first())
+        with_agg.append(pl.col(cols_numeric).mean())
+        df_out = df.lazy().group_by(order_by_full).agg(with_agg)
 
-        return df_out.select(all_cols).sort(order_by_full).drop(index).to_native()
+        return df_out.select(all_cols).sort(order_by_full).drop(index)

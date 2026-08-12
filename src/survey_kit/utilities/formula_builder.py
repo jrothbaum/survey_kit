@@ -1,18 +1,16 @@
 from __future__ import annotations
 from typing import Callable
 
-import narwhals as nw
-from narwhals.typing import IntoFrameT
+import polars as pl
 import re
-from polars_formula import ModelSpec
-from polars_formula.parser import parse_formula
-from polars_formula.terms.classify import referenced_columns
+from survey_kit_formula import ModelSpec
+from survey_kit_formula.parser import parse_formula
+from survey_kit_formula.terms.classify import classify_var, referenced_columns
 
 from .inputs import list_input
 from .dataframe import (
     columns_from_list,
     _columns_original_order,
-    NarwhalsType,
     safe_height,
 )
 
@@ -21,7 +19,7 @@ from .. import logger
 
 def _parse_normalized(formula: str):
     """
-    Parse a formula with polars_formula's parse_formula(), which requires a
+    Parse a formula with survey_kit_formula's parse_formula(), which requires a
     "~" - callers throughout FormulaBuilder routinely pass rhs-only
     fragments (formulaic tolerated this), so prepend "~" when missing.
     """
@@ -30,19 +28,15 @@ def _parse_normalized(formula: str):
     return parse_formula(formula)
 
 
-def get_model_frame(formula: str, df: IntoFrameT) -> IntoFrameT:
+def get_model_frame(
+    formula: str, df: pl.LazyFrame | pl.DataFrame
+) -> pl.LazyFrame | pl.DataFrame:
     """
     Build a named model/design matrix from a formula against df - the
     practical `model.matrix(formula, data)` equivalent (R's model.matrix()
-    always carries column names, same as this). polars_formula's ModelSpec
-    is polars-only, so df is converted to polars around the call and the
-    result converted back to df's original backend.
+    always carries column names, same as this).
     """
-    nw_type = NarwhalsType(df)
-    df_polars = nw_type.to_polars()
-    return nw_type.from_polars(
-        ModelSpec.from_formula(formula, df_polars).get_model_frame(df_polars)
-    )
+    return ModelSpec.from_formula(formula, df).get_model_frame(df)
 
 
 class FormulaBuilder:
@@ -53,13 +47,13 @@ class FormulaBuilder:
     using R/Patsy-style syntax. It supports formula manipulation, variable expansion,
     interactions, transformations, and pattern matching against dataframes.
 
-    The class works with polars_formula to parse and expand formulas, and
+    The class works with survey_kit_formula to parse and expand formulas, and
     integrates with the dataframe utilities to resolve wildcards and column
     patterns.
 
     Parameters
     ----------
-    df : IntoFrameT | None, optional
+    df : pl.LazyFrame | pl.DataFrame | None, optional
         Reference dataframe for resolving column names and wildcards.
         Default is None.
     formula : str, optional
@@ -74,7 +68,7 @@ class FormulaBuilder:
     ----------
     formula : str
         Current formula string.
-    df : IntoFrameT | None
+    df : pl.LazyFrame | pl.DataFrame | None
         Reference dataframe.
     columns : list[str]
         All variables required by the formula.
@@ -154,12 +148,12 @@ class FormulaBuilder:
 
     See Also
     --------
-    polars_formula.parser.parse_formula : Underlying formula parser
+    survey_kit_formula.parser.parse_formula : Underlying formula parser
     """
 
     def __init__(
         self,
-        df: IntoFrameT | None = None,
+        df: pl.LazyFrame | pl.DataFrame | None = None,
         formula: str = "",
         lhs: str = "",
         constant: bool = True,
@@ -170,7 +164,7 @@ class FormulaBuilder:
             self.formula = formula
 
         if df is not None:
-            self.df = nw.from_native(df).head(0).to_native()
+            self.df = df.head(0)
         else:
             self.df = None
 
@@ -216,7 +210,7 @@ class FormulaBuilder:
 
     def any_wrapper(
         self=None,
-        df: IntoFrameT | None = None,
+        df: pl.LazyFrame | pl.DataFrame | None = None,
         columns: str | list | None = None,
         clause: str = "",
         case_insensitive: bool = False,
@@ -230,7 +224,7 @@ class FormulaBuilder:
 
         Parameters
         ----------
-        df : IntoFrameT | None, optional
+        df : pl.LazyFrame | pl.DataFrame | None, optional
             Dataframe for resolving column patterns. Default is None.
         columns : str | list | None, optional
             Column names or patterns. Default is None.
@@ -273,7 +267,7 @@ class FormulaBuilder:
 
     def continuous(
         self=None,
-        df: IntoFrameT | None = None,
+        df: pl.LazyFrame | pl.DataFrame | None = None,
         columns: str | list | None = None,
         clause: str = "",
         case_insensitive: bool = False,
@@ -283,7 +277,7 @@ class FormulaBuilder:
 
         Parameters
         ----------
-        df : IntoFrameT | None, optional
+        df : pl.LazyFrame | pl.DataFrame | None, optional
             Dataframe for column lookup. Default is None.
         columns : str | list | None, optional
             Column names or patterns (e.g., "income_*"). Default is None.
@@ -315,7 +309,7 @@ class FormulaBuilder:
 
     def function(
         self=None,
-        df: IntoFrameT | None = None,
+        df: pl.LazyFrame | pl.DataFrame | None = None,
         columns: str | list | None = None,
         clause: str = "",
         operator_before: str = "",
@@ -329,7 +323,7 @@ class FormulaBuilder:
 
         Parameters
         ----------
-        df : IntoFrameT | None, optional
+        df : pl.LazyFrame | pl.DataFrame | None, optional
             Dataframe for column lookup. Default is None.
         columns : str | list | None, optional
             Column names or patterns. Default is None.
@@ -389,7 +383,7 @@ class FormulaBuilder:
 
     def scale(
         self=None,
-        df: IntoFrameT | None = None,
+        df: pl.LazyFrame | pl.DataFrame | None = None,
         columns: str | list | None = None,
         clause: str = "",
         standardize: bool = True,
@@ -400,7 +394,7 @@ class FormulaBuilder:
 
         Parameters
         ----------
-        df : IntoFrameT | None, optional
+        df : pl.LazyFrame | pl.DataFrame | None, optional
             Dataframe for column lookup. Default is None.
         columns : str | list | None, optional
             Column names or patterns. Default is None.
@@ -443,7 +437,7 @@ class FormulaBuilder:
 
     def center(
         self=None,
-        df: IntoFrameT | None = None,
+        df: pl.LazyFrame | pl.DataFrame | None = None,
         columns: str | list | None = None,
         clause: str = "",
         case_insensitive: bool = False,
@@ -455,7 +449,7 @@ class FormulaBuilder:
 
         Parameters
         ----------
-        df : IntoFrameT | None, optional
+        df : pl.LazyFrame | pl.DataFrame | None, optional
             Dataframe for column lookup. Default is None.
         columns : str | list | None, optional
             Column names or patterns. Default is None.
@@ -484,7 +478,7 @@ class FormulaBuilder:
 
     def standardize(
         self=None,
-        df: IntoFrameT | None = None,
+        df: pl.LazyFrame | pl.DataFrame | None = None,
         columns: str | list | None = None,
         clause: str = "",
         case_insensitive: bool = False,
@@ -496,7 +490,7 @@ class FormulaBuilder:
 
         Parameters
         ----------
-        df : IntoFrameT | None, optional
+        df : pl.LazyFrame | pl.DataFrame | None, optional
             Dataframe for column lookup. Default is None.
         columns : str | list | None, optional
             Column names or patterns. Default is None.
@@ -525,7 +519,7 @@ class FormulaBuilder:
 
     def polynomial(
         self=None,
-        df: IntoFrameT | None = None,
+        df: pl.LazyFrame | pl.DataFrame | None = None,
         columns: str | list | None = None,
         clause: str = "",
         degree: int = 0,
@@ -537,7 +531,7 @@ class FormulaBuilder:
 
         Parameters
         ----------
-        df : IntoFrameT | None, optional
+        df : pl.LazyFrame | pl.DataFrame | None, optional
             Dataframe for column lookup. Default is None.
         columns : str | list | None, optional
             Column names or patterns. Default is None.
@@ -614,7 +608,7 @@ class FormulaBuilder:
 
     def simple_interaction(
         self=None,
-        df: IntoFrameT | None = None,
+        df: pl.LazyFrame | pl.DataFrame | None = None,
         columns: str | list | None = None,
         order: int = 2,
         case_insensitive: bool = False,
@@ -626,7 +620,7 @@ class FormulaBuilder:
 
         Parameters
         ----------
-        df : IntoFrameT | None, optional
+        df : pl.LazyFrame | pl.DataFrame | None, optional
             Dataframe for column lookup. Default is None.
         columns : str | list | None, optional
             Column names or patterns. Default is None.
@@ -732,9 +726,41 @@ class FormulaBuilder:
             self.add_to_formula(output)
             return self
 
+    @staticmethod
+    def _is_factor(term: str, df: pl.LazyFrame | pl.DataFrame) -> bool:
+        """
+        Whether a single RHS term (e.g. "region", "C(region, base=2)",
+        "factor(region)", "ordered(region)") resolves to a categorical/
+        factor variable, per survey_kit_formula's classification rules:
+        dtype-based for a bare column (String/Categorical/Enum/Boolean),
+        or forced regardless of dtype by a C()/factor()/ordered() wrapper.
+
+        Parameters
+        ----------
+        term : str
+            A single formula term - not a full formula (no "~") and not
+            a model-frame output column name (those carry a level suffix,
+            e.g. "C(region)b", which isn't itself parseable as a term).
+        df : pl.LazyFrame | pl.DataFrame
+            Dataframe (or schema-only frame) used to resolve a bare
+            column's dtype.
+
+        Examples
+        --------
+        >>> FormulaBuilder._is_factor("region", df)
+        True
+        >>> FormulaBuilder._is_factor("C(income)", df)
+        True
+        >>> FormulaBuilder._is_factor("income", df)
+        False
+        """
+        schema = df.lazy().collect_schema()
+        var = next(iter(parse_formula(f"~{term}").rhs)).vars[0]
+        return classify_var(var, schema).is_factor
+
     def factor(
         self=None,
-        df: IntoFrameT | None = None,
+        df: pl.LazyFrame | pl.DataFrame | None = None,
         columns: str | list | None = None,
         clause: str = "",
         reference=None,
@@ -745,7 +771,7 @@ class FormulaBuilder:
 
         Parameters
         ----------
-        df : IntoFrameT | None, optional
+        df : pl.LazyFrame | pl.DataFrame | None, optional
             Dataframe for column lookup. Default is None.
         columns : str | list | None, optional
             Column names or patterns. Default is None.
@@ -805,7 +831,7 @@ class FormulaBuilder:
         #   String reference - R's contr.treatment "base" is a 1-indexed
         #   integer position, not a label, so resolve it per-column against
         #   that column's own sorted non-null unique levels (the same
-        #   ordering polars_formula's ModelSpec uses to assign levels).
+        #   ordering survey_kit_formula's ModelSpec uses to assign levels).
         #   self.df only ever keeps a 0-row schema reference (see __init__),
         #   which has no values to resolve a label against - a real df with
         #   actual rows must be passed explicitly here.
@@ -820,16 +846,16 @@ class FormulaBuilder:
             df=df, columns=list_input(columns), case_insensitive=case_insensitive
         )
 
-        nw_df = nw.from_native(df).lazy()
-        schema = nw_df.collect_schema()
+        df_lazy = df.lazy()
+        schema = df_lazy.collect_schema()
 
         clauses = []
         for coli in resolved_columns:
-            if schema[coli] == nw.Boolean:
+            if schema[coli] == pl.Boolean:
                 levels = ["False", "True"]
             else:
                 levels = (
-                    nw_df.select(nw.col(coli).cast(nw.String))
+                    df_lazy.select(pl.col(coli).cast(pl.String))
                     .collect()[coli]
                     .drop_nulls()
                     .unique()
@@ -972,7 +998,7 @@ class FormulaBuilder:
         if self.df is not None:
             return _columns_original_order(
                 columns_unordered=columns,
-                columns_ordered=nw.from_native(self.df).lazy().collect_schema().names(),
+                columns_ordered=self.df.lazy().collect_schema().names(),
             )
         else:
             return columns
@@ -991,10 +1017,7 @@ class FormulaBuilder:
             if self.df is not None:
                 return _columns_original_order(
                     columns_unordered=columns,
-                    columns_ordered=nw.from_native(self.df)
-                    .lazy()
-                    .collect_schema()
-                    .names(),
+                    columns_ordered=self.df.lazy().collect_schema().names(),
                 )
             else:
                 return columns
@@ -1070,7 +1093,7 @@ class FormulaBuilder:
         rhs = self.rhs()
 
         parsed = _parse_normalized(rhs)
-        #   polars_formula pulls the intercept out into its own field rather
+        #   survey_kit_formula pulls the intercept out into its own field rather
         #   than keeping it as a literal "1"/"0" term - re-add it explicitly
         #   so the reconstructed formula matches formulaic's prior shape.
         intercept_term = "1" if parsed.intercept else "0"
@@ -1090,7 +1113,7 @@ class FormulaBuilder:
         self=None,
         formula: str = "",
         b_exclude_powers: bool = True,
-        df: IntoFrameT | None = None,
+        df: pl.LazyFrame | pl.DataFrame | None = None,
     ) -> tuple[str, bool]:
         """
         Remove interaction terms from formula.
@@ -1101,7 +1124,7 @@ class FormulaBuilder:
             Formula string. If empty, uses self.formula. Default is "".
         b_exclude_powers : bool, optional
             Also exclude polynomial terms. Default is True.
-        df : IntoFrameT | None, optional
+        df : pl.LazyFrame | pl.DataFrame | None, optional
             Reference dataframe. Default is None.
 
         Returns
@@ -1160,7 +1183,7 @@ class FormulaBuilder:
         self=None,
         exclude_list: list = None,
         formula: str = "",
-        df: IntoFrameT | None = None,
+        df: pl.LazyFrame | pl.DataFrame | None = None,
         case_insensitive: bool = False,
     ):
         """
@@ -1172,7 +1195,7 @@ class FormulaBuilder:
             Variables to exclude. Default is None.
         formula : str, optional
             Formula string. If empty, uses self.formula. Default is "".
-        df : IntoFrameT | None, optional
+        df : pl.LazyFrame | pl.DataFrame | None, optional
             Reference dataframe. Default is None.
         case_insensitive : bool, optional
             Case-insensitive matching. Default is False.
@@ -1248,7 +1271,7 @@ class FormulaBuilder:
 
         Column names are matched against a term's own deparsed text as a
         per-":"-part prefix (e.g. term "C(region):age" matches column
-        "C(region)b:age"), matching how polars_formula/R build model matrix
+        "C(region)b:age"), matching how survey_kit_formula/R build model matrix
         column names: variable prefix (deparsed call or var name) plus a
         per-variable suffix (factor level, poly index, ...), joined by ":"
         for interactions.

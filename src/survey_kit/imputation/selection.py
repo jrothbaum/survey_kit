@@ -2,8 +2,7 @@ from __future__ import annotations
 from typing import Optional
 import os
 import logging
-import narwhals as nw
-from narwhals.typing import IntoFrameT
+import polars as pl
 from copy import deepcopy
 from enum import Enum
 
@@ -199,7 +198,7 @@ class Selection(Serializable):
         function: function handle, optional
             Custom selection function - if you want to use your own variable selection approach
                 Function arguments need to be:
-                df:IntoFrameT,
+                df:pl.LazyFrame | pl.DataFrame,
                 variable:Variable,
                 parameters:dict,
                 preselection:bool
@@ -229,7 +228,7 @@ class Selection(Serializable):
 
     def run(
         self,
-        df: IntoFrameT,
+        df: pl.LazyFrame | pl.DataFrame,
         y: str,
         formula: str,
         weight: str = "",
@@ -258,7 +257,7 @@ class Selection(Serializable):
     #   Selection methods - must have this signature/arguments
     def lasso(
         self,
-        df: IntoFrameT,
+        df: pl.LazyFrame | pl.DataFrame,
         y: str,
         formula: str,
         weight: str = "",
@@ -285,7 +284,7 @@ class Selection(Serializable):
 
         include_base_with_interaction = self.parameters["include_base_with_interaction"]
 
-        df = nw.from_native(df).filter(nw.col(y).is_not_missing()).to_native()
+        df = df.filter(pl.col(y).is_not_null())
 
         if missing_dummies:
             [df, formula, missing_dummies] = Selection._add_missing_dummy(
@@ -418,12 +417,12 @@ class Selection(Serializable):
         sub_log.info(f"         Selected model: ~{fb.rhs()}")
         return f"~{fb.rhs()}"
 
-    def lightgbm(self, df: IntoFrameT, y: str, formula: str, weight: str = ""):
+    def lightgbm(self, df: pl.LazyFrame | pl.DataFrame, y: str, formula: str, weight: str = ""):
         pass
 
     def stepwise(
         self,
-        df: IntoFrameT,
+        df: pl.LazyFrame | pl.DataFrame,
         y: str,
         formula: str,
         weight: str = "",
@@ -451,7 +450,7 @@ class Selection(Serializable):
         missing_dummies = self.parameters["missing_dummies"]
         include_base_with_interaction = self.parameters["include_base_with_interaction"]
 
-        df = nw.from_native(df).filter(nw.col(y).is_not_missing()).to_native()
+        df = df.filter(pl.col(y).is_not_null())
         if missing_dummies:
             [df, formula, missing_dummies] = Selection._add_missing_dummy(
                 df=df, y=y, formula=formula
@@ -468,17 +467,15 @@ class Selection(Serializable):
 
         df_x = get_model_frame(formula, df)
 
-        df_y = nw.from_native(df).select(y).to_native()
+        df_y = df.select(y)
         # if winsorize is not None:
         #     df_y = winsorize_by_percentiles(df=df_y,
         #                                     percentiles=winsorize,
         #                                     columns=y)
-        selector = selector.fit(
-            nw.from_native(df_x).to_numpy(), nw.from_native(df_y).to_numpy()
-        )
+        selector = selector.fit(df_x.to_numpy(), df_y.to_numpy())
 
         vars_kept = []
-        columns = nw.from_native(df_x).lazy().collect_schema().names()
+        columns = df_x.lazy().collect_schema().names()
         for i in range(0, len(columns)):
             if selector.support_[i]:
                 vars_kept.append(columns[i])
@@ -504,8 +501,8 @@ class Selection(Serializable):
         return f"~{fb.rhs()}"
 
     def _add_missing_dummy(
-        df: IntoFrameT, y: str, formula: str
-    ) -> tuple[IntoFrameT, str, bool]:
+        df: pl.LazyFrame | pl.DataFrame, y: str, formula: str
+    ) -> tuple[pl.LazyFrame | pl.DataFrame, str, bool]:
         missing_dummies = []
         missing_recodes = []
 
@@ -514,32 +511,25 @@ class Selection(Serializable):
         for coli in fb.columns:
             if coli != y:
                 n_missing = safe_height(
-                    nw.from_native(df)
-                    .select(coli)
-                    .filter(nw.col(coli).is_missing())
-                    .to_native()
+                    df.select(coli).filter(pl.col(coli).is_null())
                 )
 
                 if n_missing > 0:
                     missing_dummies.append(
-                        nw.when(nw.col(coli).is_missing())
-                        .then(nw.lit(True))
-                        .otherwise(nw.lit(False))
+                        pl.when(pl.col(coli).is_null())
+                        .then(pl.lit(True))
+                        .otherwise(pl.lit(False))
                         .alias(f"___missing___dummy___{coli}")
                     )
                     missing_recodes.append(
-                        nw.when(nw.col(coli).is_missing())
-                        .then(nw.lit(0))
-                        .otherwise(nw.col(coli))
+                        pl.when(pl.col(coli).is_null())
+                        .then(pl.lit(0))
+                        .otherwise(pl.col(coli))
                         .alias(coli)
                     )
 
         if len(missing_dummies) > 0:
-            df = (
-                nw.from_native(df)
-                .with_columns(missing_dummies + missing_recodes)
-                .to_native()
-            )
+            df = df.with_columns(missing_dummies + missing_recodes)
 
             #   Add these variables to the formula
             #       Update the formula to the new dataframe so it can find the variables

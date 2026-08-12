@@ -1,8 +1,6 @@
 from __future__ import annotations
 from typing import Optional
 
-import narwhals as nw
-from narwhals.typing import IntoFrameT
 import multiprocessing
 import multiprocessing.shared_memory
 from multiprocessing.managers import SharedMemoryManager
@@ -49,20 +47,14 @@ class SharedMemoryUtility:
             return d_out
 
     def df_to_arrow_shm(
-        df: IntoFrameT | str,
+        df: pl.LazyFrame | pl.DataFrame | str,
         smm: SharedMemoryManager,
         name: str = "",
-        backend: str = "",
     ):
         if type(df) is str:
-            if backend != "":
-                df = nw.scan_parquet(df, backend=backend)
-            else:
-                df = nw.scan_parquet(df)
-
-            df_a = df.collect()
+            df_a = pl.scan_parquet(df).collect().to_arrow()
         else:
-            df_a = nw.from_native(df).lazy().collect().to_arrow()
+            df_a = df.lazy().collect().to_arrow()
 
         #   From github.com/wjones127/arrow-ipc-bench
         #       Get size

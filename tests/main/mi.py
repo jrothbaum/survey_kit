@@ -1,7 +1,6 @@
 import sys
 import os
 from pathlib import Path
-import narwhals as nw
 import polars as pl
 
 from survey_kit.utilities.dataframe import summary
@@ -25,9 +24,6 @@ path_model = f"{config.path_temp_files}/py_srmi_test_gbm"
 srmi = SRMI.load(path_model)
 df_implicates = srmi.df_implicates
 
-# df_implicates._df_list = [dfi.collect().to_pandas() for dfi in df_implicates._df_list]
-# df_implicates._df_list = [nw.from_native(dfi.collect().to_arrow()).lazy(backend="duckdb").to_native() for dfi in df_implicates._df_list]
-
 set_seed(8345)
 n_rows = safe_height(df_implicates[0])
 n_replicates = 10
@@ -42,7 +38,6 @@ df_weights = bayes_bootstrap(
 _ = df_implicates.pipe(summary)
 _ = summary(df_weights)
 
-df_weights = df_weights.to_pandas()
 stats = Statistics(
     stats=["mean"],
     columns="var_*",
