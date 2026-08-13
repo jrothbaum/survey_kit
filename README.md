@@ -22,7 +22,7 @@ Works with Polars, Pandas, Arrow, and DuckDB. Optimized for large datasets (100K
 Full documentation: [https://jrothbaum.github.io/survey_kit/](https://jrothbaum.github.io/survey_kit/)
 
 - [Calibration Guide](https://jrothbaum.github.io/survey_kit/user-guide/calibration/)
-- [Imputation Guide](https://jrothbaum.github.io/survey_kit/user-guide/imputation/)
+- [Imputation Guide](https://jrothbaum.github.io/survey_kit/user-guide/srmi/)
 - [Statistics Guide](https://jrothbaum.github.io/survey_kit/user-guide/statistics/)
 
 ## Support

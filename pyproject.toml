@@ -37,9 +37,6 @@ dependencies = [
     "numpy>=2.0.2",
 ]
 
-[project.optional-dependencies]
-pandas = ["pandas"]
-
 [dependency-groups]
 dev = [
     "duckdb>=1.4.1",

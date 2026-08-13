@@ -2319,11 +2319,6 @@ dependencies = [
     { name = "survey-kit-formula" },
 ]
 
-[package.optional-dependencies]
-pandas = [
-    { name = "pandas" },
-]
-
 [package.dev-dependencies]
 dev = [
     { name = "duckdb" },
@@ -2348,7 +2343,6 @@ requires-dist = [
     { name = "numexpr", specifier = ">=2.10.2" },
     { name = "numpy", specifier = ">=2.0.2" },
     { name = "optuna" },
-    { name = "pandas", marker = "extra == 'pandas'" },
     { name = "polars", specifier = ">=1.25.2" },
     { name = "psutil" },
     { name = "pyarrow", specifier = ">=19.0.0" },
@@ -2358,7 +2352,6 @@ requires-dist = [
     { name = "sparse-dot-mkl", specifier = ">=0.9.9" },
     { name = "survey-kit-formula", editable = "../survey_kit_formula" },
 ]
-provides-extras = ["pandas"]
 
 [package.metadata.requires-dev]
 dev = [
