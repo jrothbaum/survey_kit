@@ -1,6 +1,8 @@
+import narwhals as nw
+
 from survey_kit.utilities.random import RandomData
 from survey_kit.utilities.compress import compress_df
-from survey_kit.utilities.dataframe import safe_height
+from survey_kit.utilities.dataframe import safe_height, NarwhalsType
 
 n_rows = 100
 df = (
@@ -13,11 +15,17 @@ df = (
     .integer("n_small", 0, 100)
     .to_df(compress=False)
 )
+nw_type = NarwhalsType(df)
 print(df.lazy().collect_schema())
 df_compressed = compress_df(df).lazy()
 print(df_compressed.collect_schema())
 
+
+df_rounded = compress_df(df.lazy().collect().to_pandas())
+print(nw.from_native(df_rounded).lazy().collect_schema())
+
 print(safe_height(df))
 print(safe_height(df.lazy()))
+print(safe_height(df.to_pandas()))
 
 print(df)

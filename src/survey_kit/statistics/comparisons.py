@@ -1,7 +1,8 @@
 from copy import deepcopy
 
-import polars as pl
-import polars.selectors as cs
+import narwhals as nw
+import narwhals.selectors as cs
+from narwhals.typing import IntoFrameT
 
 from ..utilities.inputs import list_input
 from .replicates import ReplicateStats, ses_from_replicates
@@ -9,6 +10,7 @@ from ..utilities.dataframe import (
     concat_wrapper,
     join_list,
     safe_height,
+    NarwhalsType,
     safe_columns,
     upcast_uint_to_int,
 )
@@ -295,10 +297,11 @@ def _compare_one_implicate(
     replicate_name: str = "___replicate___",
     compare_list_variables: list[ComparisonItem.Variable] | None = None,
     compare_list_columns: list[ComparisonItem.Column] | None = None,
-) -> dict[str, pl.LazyFrame | pl.DataFrame]:
+) -> dict[str, IntoFrameT]:
     df1 = replicate1.df_replicates
     df2 = replicate2.df_replicates
 
+    nw_type = NarwhalsType(df1)
     if hasattr(replicate1, "bootstrap"):
         bootstrap1 = replicate1.bootstrap
     elif hasattr(replicate1, "replicates"):
@@ -309,10 +312,18 @@ def _compare_one_implicate(
         bootstrap2 = replicate2.replicates.bootstrap
 
     n_replicates1 = (
-        df1.lazy().select(pl.col(replicate_name).max()).collect().item(0, 0)
+        nw.from_native(df1)
+        .select(nw.col(replicate_name).max())
+        .lazy_backend(nw_type)
+        .collect()
+        .item(0, 0)
     )
     n_replicates2 = (
-        df2.lazy().select(pl.col(replicate_name).max()).collect().item(0, 0)
+        nw.from_native(df2)
+        .select(nw.col(replicate_name).max())
+        .lazy_backend(nw_type)
+        .collect()
+        .item(0, 0)
     )
 
     if bootstrap1 != bootstrap2:
@@ -349,15 +360,18 @@ def _compare_one_implicate(
 
 
 def process_compare_lists(
-    df1: pl.LazyFrame | pl.DataFrame,
-    df2: pl.LazyFrame | pl.DataFrame,
+    df1: IntoFrameT,
+    df2: IntoFrameT,
     join_on: list[str],
     replicate_name: str = "",
     compare_list_variables: list[ComparisonItem.Variable] | None = None,
     compare_list_columns: list[ComparisonItem.Column] | None = None,
-) -> tuple[pl.LazyFrame | pl.DataFrame, pl.LazyFrame | pl.DataFrame]:
-    df1 = df1.lazy()
-    df2 = df2.lazy()
+) -> tuple[IntoFrameT, IntoFrameT]:
+    nw_type1 = NarwhalsType(df1)
+    nw_type2 = NarwhalsType(df2)
+
+    df1 = nw_type1.safe_to_narwhals()
+    df2 = nw_type2.safe_to_narwhals()
 
     compare_list_variables = list_input(compare_list_variables)
     compare_list_columns = list_input(compare_list_columns)
@@ -372,18 +386,18 @@ def process_compare_lists(
             comparei_2 = comparei.value2
             rename_to = comparei.name
 
-            c_v = pl.col(comparei_col)
+            c_v = nw.col(comparei_col)
 
             df1i = df1.filter(c_v == comparei_1).with_columns(
-                pl.when(c_v == comparei_1)
-                .then(pl.lit(rename_to))
+                nw.when(c_v == comparei_1)
+                .then(nw.lit(rename_to))
                 .otherwise(c_v)
                 .alias(comparei_col)
             )
 
             df2i = df2.filter(c_v == comparei_2).with_columns(
-                pl.when(c_v == comparei_2)
-                .then(pl.lit(rename_to))
+                nw.when(c_v == comparei_2)
+                .then(nw.lit(rename_to))
                 .otherwise(c_v)
                 .alias(comparei_col)
             )
@@ -414,19 +428,19 @@ def process_compare_lists(
                     comp_col = comparei_1
             else:
                 comp_col = comparei.name
-            df1 = df1.with_columns(pl.col(comparei_1).alias(comp_col))
-            df2 = df2.with_columns(pl.col(comparei_2).alias(comp_col))
+            df1 = df1.with_columns(nw.col(comparei_1).alias(comp_col))
+            df2 = df2.with_columns(nw.col(comparei_2).alias(comp_col))
             cols_keep.append(comp_col)
 
         df1 = df1.select(cols_keep)
         df2 = df2.select(cols_keep)
 
-    return df1, df2
+    return NarwhalsType.return_df(df1, nw_type1), NarwhalsType.return_df(df2, nw_type2)
 
 
 def replicate_comparison(
-    df_replicates1: pl.LazyFrame | pl.DataFrame,
-    df_replicates2: pl.LazyFrame | pl.DataFrame,
+    df_replicates1: IntoFrameT,
+    df_replicates2: IntoFrameT,
     n_replicates: int,
     join_on1: list | None = None,
     join_on2: list | None = None,
@@ -438,10 +452,13 @@ def replicate_comparison(
     replicate_name1: str = "___replicate___",
     replicate_name2: str = "___replicate___",
 ) -> dict:
+    nw_type1 = NarwhalsType(df_replicates1)
+    nw_type2 = NarwhalsType(df_replicates2)
+
     #   Upcast UInt columns to signed Int - otherwise the difference/ratio
     #   computations below can silently wrap around instead of going negative.
-    df_replicates1 = upcast_uint_to_int(df_replicates1.lazy())
-    df_replicates2 = upcast_uint_to_int(df_replicates2.lazy())
+    df_replicates1 = upcast_uint_to_int(nw_type1.safe_to_narwhals().lazy_backend(nw_type1))
+    df_replicates2 = upcast_uint_to_int(nw_type2.safe_to_narwhals().lazy_backend(nw_type2))
 
     join_on1 = list_input(join_on1)
 
@@ -469,10 +486,12 @@ def replicate_comparison(
     if len(rename2):
         df_replicates2 = df_replicates2.rename(rename2)
 
-    df_combined = join_list(
-        [df_replicates1, df_replicates2],
-        how="inner",
-        on=[join_on1 + [replicate_name1], join_on2 + [replicate_name2]],
+    df_combined = nw.from_native(
+        join_list(
+            [df_replicates1, df_replicates2],
+            how="inner",
+            on=[join_on1 + [replicate_name1], join_on2 + [replicate_name2]],
+        )
     )
 
     outputs = {}
@@ -482,12 +501,12 @@ def replicate_comparison(
         for i in range(0, len(compare_vars1)):
             col1 = compare_vars1[i]
             col2 = compare_vars2[i]
-            c_1 = pl.col(col1)
-            c_2 = pl.col(col2)
+            c_1 = nw.col(col1)
+            c_2 = nw.col(col2)
             with_differences.append((c_2 - c_1).alias(col1))
             drops.append(col2)
         df_difference_replicates = (
-            df_combined.with_columns(cs.boolean().cast(pl.Int8))
+            df_combined.with_columns(cs.boolean().cast(nw.Int8))
             .with_columns(with_differences)
             .drop(drops)
         )
@@ -500,9 +519,27 @@ def replicate_comparison(
             replicate_name=replicate_name1,
         )
 
-        outputs["difference_replicates"] = df_difference_replicates.lazy().collect().lazy()
-        outputs["difference_estimates"] = df_difference_estimates.lazy().collect().lazy()
-        outputs["difference_ses"] = df_difference_ses.lazy().collect().lazy()
+        outputs["difference_replicates"] = (
+            nw.from_native(df_difference_replicates)
+            .lazy_backend(nw_type1)
+            .collect()
+            .lazy_backend(nw_type1)
+            .to_native()
+        )
+        outputs["difference_estimates"] = (
+            nw.from_native(df_difference_estimates)
+            .lazy_backend(nw_type1)
+            .collect()
+            .lazy_backend(nw_type1)
+            .to_native()
+        )
+        outputs["difference_ses"] = (
+            nw.from_native(df_difference_ses)
+            .lazy_backend(nw_type1)
+            .collect()
+            .lazy_backend(nw_type1)
+            .to_native()
+        )
 
     if ratio:
         with_ratios = []
@@ -510,8 +547,8 @@ def replicate_comparison(
         for i in range(0, len(compare_vars1)):
             col1 = compare_vars1[i]
             col2 = compare_vars2[i]
-            c_1 = pl.col(col1)
-            c_2 = pl.col(col2)
+            c_1 = nw.col(col1)
+            c_2 = nw.col(col2)
             if ratio_minus_1:
                 with_ratios.append(((c_2 / c_1) - 1).alias(col1))
             else:
@@ -527,9 +564,27 @@ def replicate_comparison(
             replicate_name=replicate_name1,
         )
 
-        outputs["ratio_replicates"] = df_ratio_replicates.lazy().collect().lazy()
-        outputs["ratio_estimates"] = df_ratio_estimates.lazy().collect().lazy()
-        outputs["ratio_ses"] = df_ratio_ses.lazy().collect().lazy()
+        outputs["ratio_replicates"] = (
+            nw.from_native(df_ratio_replicates)
+            .lazy_backend(nw_type1)
+            .collect()
+            .lazy_backend(nw_type1)
+            .to_native()
+        )
+        outputs["ratio_estimates"] = (
+            nw.from_native(df_ratio_estimates)
+            .lazy_backend(nw_type1)
+            .collect()
+            .lazy_backend(nw_type1)
+            .to_native()
+        )
+        outputs["ratio_ses"] = (
+            nw.from_native(df_ratio_ses)
+            .lazy_backend(nw_type1)
+            .collect()
+            .lazy_backend(nw_type1)
+            .to_native()
+        )
 
     outputs["bootstrap"] = bootstrap
     return outputs
@@ -574,10 +629,10 @@ def _append_to_mi(
         stat_item.calculate()
     if vertical:
         if vertical_drop_var_name:
-            rename = pl.lit(name).alias(variable_ids[0])
+            rename = nw.lit(name).alias(variable_ids[0])
         else:
-            rename = pl.concat_str(
-                pl.lit(name), pl.col(variable_ids[0]), separator=separator
+            rename = nw.concat_str(
+                nw.lit(name), nw.col(variable_ids[0]), separator=separator
             ).alias(variable_ids[0])
     else:
         rename = {}
@@ -600,29 +655,48 @@ def _append_to_mi(
 
     for df_name in df_add_names:
         if vertical:
-            dfs_to_add[df_name] = getattr(stat_item, df_name).with_columns(rename)
+            dfs_to_add[df_name] = (
+                nw.from_native(getattr(stat_item, df_name))
+                .with_columns(rename)
+                .to_native()
+            )
         else:
             if df_name == "df_p":
                 dfs_to_add[df_name] = (
-                    getattr(stat_item, df_name).rename(rename).rename(rename_df_p)
+                    nw.from_native(getattr(stat_item, df_name))
+                    .rename(rename)
+                    .rename(rename_df_p)
+                    .to_native()
                 )
             else:
-                dfs_to_add[df_name] = getattr(stat_item, df_name).rename(rename)
+                dfs_to_add[df_name] = (
+                    nw.from_native(getattr(stat_item, df_name))
+                    .rename(rename)
+                    .to_native()
+                )
 
     implicate_stats = []
     for impi in stat_item.implicate_stats:
         if vertical:
             repi = ReplicateStats(
-                df_estimates=impi.df_estimates.with_columns(rename),
-                df_ses=impi.df_ses.with_columns(rename),
-                df_replicates=impi.df_replicates.with_columns(rename),
+                df_estimates=(
+                    nw.from_native(impi.df_estimates).with_columns(rename).to_native()
+                ),
+                df_ses=(nw.from_native(impi.df_ses).with_columns(rename).to_native()),
+                df_replicates=(
+                    nw.from_native(impi.df_replicates).with_columns(rename).to_native()
+                ),
                 bootstrap=impi.bootstrap,
             )
         else:
             repi = ReplicateStats(
-                df_estimates=impi.df_estimates.rename(rename),
-                df_ses=impi.df_ses.rename(rename),
-                df_replicates=impi.df_replicates.rename(rename),
+                df_estimates=(
+                    nw.from_native(impi.df_estimates).rename(rename).to_native()
+                ),
+                df_ses=(nw.from_native(impi.df_ses).rename(rename).to_native()),
+                df_replicates=(
+                    nw.from_native(impi.df_replicates).rename(rename).to_native()
+                ),
                 bootstrap=impi.bootstrap,
             )
 
@@ -671,10 +745,10 @@ def _append_to_sc(
 
     if vertical:
         if vertical_drop_var_name:
-            rename = pl.lit(name).alias(variable_ids[0])
+            rename = nw.lit(name).alias(variable_ids[0])
         else:
-            rename = pl.concat_str(
-                pl.lit(name), pl.col(variable_ids[0]), separator=separator
+            rename = nw.concat_str(
+                nw.lit(name), nw.col(variable_ids[0]), separator=separator
             ).alias(variable_ids[0])
 
     else:
@@ -689,10 +763,18 @@ def _append_to_sc(
     for df_name in df_add_names:
         if vertical:
             if getattr(stat_item, df_name) is not None:
-                dfs_to_add[df_name] = getattr(stat_item, df_name).with_columns(rename)
+                dfs_to_add[df_name] = (
+                    nw.from_native(getattr(stat_item, df_name))
+                    .with_columns(rename)
+                    .to_native()
+                )
         else:
             if getattr(stat_item, df_name) is not None:
-                dfs_to_add[df_name] = getattr(stat_item, df_name).rename(rename)
+                dfs_to_add[df_name] = (
+                    nw.from_native(getattr(stat_item, df_name))
+                    .rename(rename)
+                    .to_native()
+                )
 
     stats = _add_to_df_list(stats, dfs_to_add, vertical, variable_ids)
 

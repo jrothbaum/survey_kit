@@ -3,8 +3,9 @@ from typing import Optional
 
 import os
 import numpy as np
-import polars as pl
-import polars.selectors as cs
+import narwhals as nw
+import narwhals.selectors as cs
+from narwhals.typing import IntoFrameT
 from enum import Enum
 import lightgbm as lgb
 
@@ -19,6 +20,7 @@ from ...utilities.dataframe import (
     safe_sum_cast,
     columns_from_list,
     concat_wrapper,
+    NarwhalsType,
 )
 from ...utilities.formula_builder import FormulaBuilder, get_model_frame
 from ...statistics.basic_calculations import _mean, _std
@@ -27,7 +29,7 @@ from ...statistics.basic_calculations import _mean, _std
 class Lasso:
     def __init__(
         self,
-        df: pl.LazyFrame | pl.DataFrame,
+        df: IntoFrameT,
         y: str = "",
         x: list | str | None = None,
         weight: str = "",
@@ -43,7 +45,7 @@ class Lasso:
         if type(x) is str:
             x = [x]
 
-        self.df = df.filter(pl.col(y).is_not_null())
+        self.df = nw.from_native(df).filter(nw.col(y).is_not_missing()).to_native()
 
         self.y = y
         self.x = x
@@ -72,7 +74,7 @@ class Lasso:
         if self.weight != "":
             self.df = safe_sum_cast(df=self.df, columns=[self.weight])
         for vari in self.x:
-            c_vari = pl.col(vari)
+            c_vari = nw.col(vari)
 
             with_standardize.append(
                 (
@@ -81,11 +83,19 @@ class Lasso:
                 ).alias(vari)
             )
 
-        self.df = self.df.with_columns(with_standardize).lazy().collect()
+        self.df = (
+            nw.from_native(self.df)
+            .with_columns(with_standardize)
+            .lazy()
+            .collect()
+            .to_native()
+        )
 
         #   Drop variables with all missing values
         all_missing = (
-            self.df.select([pl.col(coli).is_null().all() for coli in self.x])
+            nw.from_native(self.df)
+            .select([nw.col(coli).is_missing().all() for coli in self.x])
+            .to_polars()
             .to_dicts()[0]
         )
 
@@ -103,10 +113,13 @@ class Lasso:
         if b_need_mm:
             #       Get analysis dataset (the model matrix)
             fb.remove_constant()
+            nw_type = NarwhalsType(self.df)
 
-            df_mm = get_model_frame(fb.formula, self.df.lazy().collect())
+            df_mm = get_model_frame(
+                fb.formula, nw.from_native(self.df).lazy().collect().to_native()
+            )
 
-            self.x = df_mm.lazy().collect_schema().names()
+            self.x = nw.from_native(df_mm).lazy().collect_schema().names()
 
             if self.y == "":
                 self.y = fb.lhs()
@@ -122,8 +135,14 @@ class Lasso:
             #   Replace the dataframe with the model matrix
             self.df = concat_wrapper(
                 [
-                    self.df.select(y_weight).lazy().collect(),
-                    df_mm.lazy().collect(),
+                    (
+                        nw.from_native(self.df)
+                        .select(y_weight)
+                        .lazy()
+                        .collect()
+                        .to_native()
+                    ),
+                    (nw.from_native(df_mm).lazy().collect().to_native()),
                 ],
                 how="horizontal",
             )
@@ -135,7 +154,7 @@ class Lasso:
         self.x = columns_from_list(df=self.df, columns=self.formula)
 
     def find_optimal_lambda(self):
-        self.df = self.df.lazy().collect()
+        self.df = nw.from_native(self.df).lazy().collect().to_native()
         set_seed(self.seed)
         random_state = generate_seed()
 
@@ -150,14 +169,14 @@ class Lasso:
         )
 
         lasso_cv.fit(
-            self.df.select(self.x).to_numpy(),
-            self.df.select(self.y).to_numpy().ravel(),
+            nw.from_native(self.df).select(self.x).to_numpy(),
+            nw.from_native(self.df).select(self.y).to_numpy().ravel(),
         )
 
         self.optimal_lambda = lasso_cv.alpha_
 
     def run(self) -> list[str]:
-        self.df = self.df.lazy().collect()
+        self.df = nw.from_native(self.df).lazy().collect().to_native()
         if self.optimal_lambda is None:
             self.find_optimal_lambda()
 
@@ -171,8 +190,8 @@ class Lasso:
         )
 
         lasso.fit(
-            self.df.select(self.x).to_numpy(),
-            self.df.select(self.y).to_numpy().ravel(),
+            nw.from_native(self.df).select(self.x).to_numpy(),
+            nw.from_native(self.df).select(self.y).to_numpy().ravel(),
         )
 
         coef = lasso.coef_

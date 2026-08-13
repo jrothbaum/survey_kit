@@ -1,13 +1,14 @@
 from __future__ import annotations
 
 import os
-import polars as pl
-import polars.selectors as cs
+import narwhals as nw
+import narwhals.selectors as cs
+from narwhals.typing import IntoFrameT
 from enum import Enum
 from copy import deepcopy
 
 from ..utilities.formula_builder import FormulaBuilder
-from ..utilities.dataframe import columns_from_list, safe_height
+from ..utilities.dataframe import columns_from_list, NarwhalsType, safe_height
 from ..utilities.compress import compress_df
 
 #   SRMI modules
@@ -30,13 +31,13 @@ class Variable(Serializable):
     ----------
     impute_var : str
         Name of the variable to be imputed
-    Where : pl.Expr | None, optional
+    Where : nw.Expr | None, optional
         General condition to restrict sample for imputation, by default None
             This restricts the sample before anything happens
-    Where_impute : pl.Expr | None, optional
+    Where_impute : nw.Expr | None, optional
         Condition defining observations to be imputed, by default None
             Whose values are getting imputed
-    Where_predict : pl.Expr | None, optional
+    Where_predict : nw.Expr | None, optional
         Condition defining observations for prediction, by default None
             Whose values are used for the prediction (i.e. in a regression)
     Where_predict_only_when_not_imputed : bool, optional
@@ -45,11 +46,11 @@ class Variable(Serializable):
             iteration 1 in the prediction model?
     bimpute_if_missing : bool, optional
         Include missingness as imputation condition, by default True
-    preFunctions : list | Variable.PrePost.Function | Variable.PrePost.PolarsExpression | pl.Expr | None, optional
+    preFunctions : list | Variable.PrePost.Function | Variable.PrePost.NarwhalsExpression | nw.Expr | None, optional
         Operations to run before imputation, by default None
-    postFunctions : list | Variable.PrePost.Function | Variable.PrePost.PolarsExpression | pl.Expr | None, optional
+    postFunctions : list | Variable.PrePost.Function | Variable.PrePost.NarwhalsExpression | nw.Expr | None, optional
         Operations to run after imputation, by default None
-    preFunctions_initialize_implicate : list | Variable.PrePost.Function | Variable.PrePost.PolarsExpression | pl.Expr | None, optional
+    preFunctions_initialize_implicate : list | Variable.PrePost.Function | Variable.PrePost.NarwhalsExpression | nw.Expr | None, optional
         Operations to run once before first iteration, by default None
             This can be useful if different data needs to be merged to each implicate
     predictors_exclude : list, optional
@@ -114,21 +115,21 @@ class Variable(Serializable):
             imputation operations.
 
         Currently that can be:
-            1) a polars Expr (PolarsExpression)
-                which is anything you can put in df.with_columns()
+            1) a Narwhals Expr (NarwhalsExpression)
+                which is anything you can put in nw.from_native(df).with_columns()
             2) a python function handle and parameters
                 which allows you to call an arbitrary function
         """
 
-        class PolarsExpression(Serializable):
-            def __init__(self, expression: list[pl.Expr] | pl.Expr):
+        class NarwhalsExpression(Serializable):
+            def __init__(self, expression: list[nw.Expr] | nw.Expr):
                 """
                 Pass the call information to call before or after an imputation step
 
                 Parameters
                 ----------
-                expression:list[pl.Expr] | pl.Expr
-                    A with_columns expression or list of expressions
+                expression:list[nw.Expr] | nw.Expr
+                    A narwhals with_columns expression or list of expressions
                 df_variable : str, optional
                     parameters[df_variable] to pass into the function.
                     The assumption is that anything that needs to happen pre/post
@@ -142,21 +143,21 @@ class Variable(Serializable):
 
                 self.expression = expression
 
-            def call(self, df: pl.LazyFrame | pl.DataFrame) -> pl.LazyFrame | pl.DataFrame:
+            def call(self, df: IntoFrameT) -> IntoFrameT:
                 # """
                 # Call the specific pre-post function.
 
                 # Parameters
                 # ----------
-                # df : pl.LazyFrame | pl.DataFrame
+                # df : IntoFrameT
                 #     The current implicate data.
 
                 # Returns
                 # -------
-                # pl.LazyFrame | pl.DataFrame (data) to return as updated implicate data
+                # IntoFrameT (data) to return as updated implicate data
 
                 # """
-                return df.with_columns(self.expression)
+                return nw.from_native(df).with_columns(self.expression).to_native()
 
         class Function:
             def __init__(
@@ -199,13 +200,13 @@ class Variable(Serializable):
                 self.parameters = parameters
                 self.df_variable = df_variable
 
-            def call(self, df: pl.LazyFrame | pl.DataFrame) -> pl.LazyFrame | pl.DataFrame:
+            def call(self, df: IntoFrameT) -> IntoFrameT:
                 # """
                 # Call the specific pre-post function.
 
                 # Parameters
                 # ----------
-                # df : pl.LazyFrame | pl.DataFrame
+                # df : IntoFrameT
                 #     The current implicate data.
 
                 # Returns
@@ -225,31 +226,31 @@ class Variable(Serializable):
     def __init__(
         self,
         impute_var: str = "",
-        Where: pl.Expr | None = None,
-        Where_impute: pl.Expr | None = None,
-        Where_predict: pl.Expr | None = None,
+        Where: nw.Expr | None = None,
+        Where_impute: nw.Expr | None = None,
+        Where_predict: nw.Expr | None = None,
         Where_predict_only_when_not_imputed: bool = False,
         bimpute_if_missing: bool = True,
         preFunctions: list[
-            Variable.PrePost.Function | Variable.PrePost.PolarsExpression | pl.Expr
+            Variable.PrePost.Function | Variable.PrePost.NarwhalsExpression | nw.Expr
         ]
         | Variable.PrePost.Function
-        | Variable.PrePost.PolarsExpression
-        | pl.Expr
+        | Variable.PrePost.NarwhalsExpression
+        | nw.Expr
         | None = None,
         postFunctions: list[
-            Variable.PrePost.Function | Variable.PrePost.PolarsExpression | pl.Expr
+            Variable.PrePost.Function | Variable.PrePost.NarwhalsExpression | nw.Expr
         ]
         | Variable.PrePost.Function
-        | Variable.PrePost.PolarsExpression
-        | pl.Expr
+        | Variable.PrePost.NarwhalsExpression
+        | nw.Expr
         | None = None,
         preFunctions_initialize_implicate: list[
-            Variable.PrePost.Function | Variable.PrePost.PolarsExpression | pl.Expr
+            Variable.PrePost.Function | Variable.PrePost.NarwhalsExpression | nw.Expr
         ]
         | Variable.PrePost.Function
-        | Variable.PrePost.PolarsExpression
-        | pl.Expr
+        | Variable.PrePost.NarwhalsExpression
+        | nw.Expr
         | None = None,
         predictors_exclude: list = None,
         predictors_exclude_first_iteration: list = None,
@@ -272,12 +273,12 @@ class Variable(Serializable):
         ----------
         impute_var : str
             Variable to be imputed
-        Where : pl.Expr, optional
+        Where : nw.Expr, optional
             Condition to restrict sample for this imputation. The default is "".
-        Where_impute : pl.Expr, optional
+        Where_impute : nw.Expr, optional
             Define the set of observations to be imputed, in addition
             to bimpute_if_missing | Where. The default is "".
-        Where_predict : pl.Expr, optional
+        Where_predict : nw.Expr, optional
             Define the set of observations for the prediction | Where. The default is "".
         Where_predict_only_when_not_imputed : bool, optional
             Predict only if not imputed.  The default is False
@@ -320,7 +321,7 @@ class Variable(Serializable):
         modelfunction : function delegate, optional
             Override modeltype completely and just run a custom imputation function, optional
             The function arguments are
-                df:pl.LazyFrame | pl.DataFrame - a dataframe with the full srmi data
+                df:IntoFrameT - a dataframe with the full srmi data
                 variable:Variable - an SRMI.Variable object ,
                 index:list - the merge key of the data,
                 weight:str - weight variable?
@@ -344,7 +345,7 @@ class Variable(Serializable):
         #       or narwhals expressions (for .filter) - deprecated as only using expressions
         wheres = [Where, Where_impute, Where_predict]
         #   self.b_where_strings = all(type(wherei) is str or wherei is None for wherei in wheres)
-        #   b_where_expressions = all(type(wherei) is pl.Expr or wherei is None for wherei in wheres)
+        #   b_where_expressions = all(type(wherei) is nw.Expr or wherei is None for wherei in wheres)
 
         # if not (self.b_where_strings or b_where_expressions):
         #     where_types = {
@@ -418,15 +419,15 @@ class Variable(Serializable):
         self,
         functions: list[
             Variable.PrePost.Function
-            | Variable.PrePost.PolarsExpression
-            | pl.Expr
-            | list[pl.Expr]
+            | Variable.PrePost.NarwhalsExpression
+            | nw.Expr
+            | list[nw.Expr]
         ]
         | Variable.PrePost.Function
-        | Variable.PrePost.PolarsExpression
-        | pl.Expr
+        | Variable.PrePost.NarwhalsExpression
+        | nw.Expr
         | None = None,
-    ) -> list[Variable.PrePost.Function | Variable.PrePost.PolarsExpression]:
+    ) -> list[Variable.PrePost.Function | Variable.PrePost.NarwhalsExpression]:
         if functions is None:
             functions = []
         if type(functions) is not list:
@@ -434,14 +435,14 @@ class Variable(Serializable):
 
         final_functions = []
         for fi in functions:
-            if type(fi) == pl.Expr or type(fi) == list:
-                final_functions.append(Variable.PrePost.PolarsExpression(fi))
+            if type(fi) == nw.Expr or type(fi) == list:
+                final_functions.append(Variable.PrePost.NarwhalsExpression(fi))
             else:
                 final_functions.append(fi)
         return final_functions
 
     def exclude_variables_from_models(
-        self, df: pl.LazyFrame | pl.DataFrame, additional_exclude: list = None
+        self, df: IntoFrameT, additional_exclude: list = None
     ):
         if additional_exclude is None:
             additional_exclude = []
@@ -495,7 +496,7 @@ class Variable(Serializable):
             ]
 
     def process_model(
-        self, df: pl.LazyFrame | pl.DataFrame, NoConstant: bool = False
+        self, df: IntoFrameT, NoConstant: bool = False
     ) -> tuple[FormulaBuilder, FormulaBuilder, list[str]]:
         if type(self.model) is list:
             model_vars = self.model + [self.impute_var]
@@ -525,14 +526,14 @@ class Variable(Serializable):
             model_vars = fb.columns
         return (fb, fb_rhs, model_vars)
 
-    def validate_inputs(self, df: pl.LazyFrame | pl.DataFrame):
+    def validate_inputs(self, df: IntoFrameT):
         # """
         # Try to catch some variable specification errors upfront rather than
         #     finding out later that things don't work'
 
         # Parameters
         # ----------
-        # df : pl.LazyFrame | pl.DataFrame
+        # df : IntoFrameT
         #     Input imputation data.
 
         # Returns
@@ -589,7 +590,7 @@ class Variable(Serializable):
             logger.error(message)
             raise Exception(message)
 
-    def _validate_lightgbm_boolean_quantile(self, df: pl.LazyFrame | pl.DataFrame):
+    def _validate_lightgbm_boolean_quantile(self, df: IntoFrameT):
         """
         If impute_var is a dummy variable, can't run quantile gbm
 
@@ -605,7 +606,7 @@ class Variable(Serializable):
         """
 
         impute_type = (
-            compress_df(df=df.select(self.impute_var))
+            compress_df(df=nw.from_native(df).select(self.impute_var).to_native())
             .lazy()
             .collect_schema()[self.impute_var]
         )
@@ -615,7 +616,7 @@ class Variable(Serializable):
 
         if type(params_lgbm) is dict:
             if "objective" in params_lgbm.keys():
-                if impute_type == pl.Boolean and params_lgbm["objective"] == "quantile":
+                if impute_type == nw.Boolean and params_lgbm["objective"] == "quantile":
                     message = f"{self.impute_var} is boolean.  Cannot run quantile regression (objective=quantile) in LightGBM with a boolean dependent variable."
                     logger.error(message)
                     raise Exception(message)
@@ -661,14 +662,14 @@ class Variable(Serializable):
             ]
             self.parameters["model_list"] = models_post_deduped
 
-    def _validate_hot_deck_problematic_donate_missing(self, df: pl.LazyFrame | pl.DataFrame):
+    def _validate_hot_deck_problematic_donate_missing(self, df: IntoFrameT):
         """
         If donate_vars don't have the same missingness pattern
             You'll be left with missing values at the end
 
         Parameters
         ----------
-        df : pl.LazyFrame | pl.DataFrame
+        df : IntoFrameT
             Impute dataframe.
 
         Raises
@@ -693,15 +694,15 @@ class Variable(Serializable):
             if len(additional_donates):
                 with_bad_donates = [
                     (
-                        pl.col(donatei).is_null()
-                        & pl.col(self.impute_var).is_not_null()
+                        nw.col(donatei).is_missing()
+                        & nw.col(self.impute_var).is_not_missing()
                     ).alias(f"bad_{donatei}")
                     for donatei in additional_donates
                 ]
 
-                df_bad = df.select(with_bad_donates)
+                df_bad = nw.from_native(df).select(with_bad_donates).to_native()
                 if safe_height(
-                    df_bad.filter(pl.any_horizontal(df_bad.columns))
+                    nw.from_native(df_bad).filter(nw.any_horizontal(df_bad.columns))
                 ):
                     message = f"Cannot have missing values in donate_vars ({additional_donates} with non-missing value in '{self.impute_var}').  It will result in missings at the end of the imputation"
                     logger.error(message)
@@ -721,16 +722,16 @@ class Variable(Serializable):
         #         self.Where_impute = f"({flag} == 1)"
         # else:
         if self.Where_impute is None:
-            self.Where_impute = pl.col(flag)
+            self.Where_impute = nw.col(flag)
         else:
-            self.Where_impute = (self.Where_impute) & pl.col(flag)
+            self.Where_impute = (self.Where_impute) & nw.col(flag)
 
-    def df_where(self, df: pl.LazyFrame | pl.DataFrame) -> pl.LazyFrame | pl.DataFrame:
+    def df_where(self, df: IntoFrameT) -> IntoFrameT:
         return self._df_where_list(df, [self.Where])
 
     def df_predict_where(
-        self, df: pl.LazyFrame | pl.DataFrame, drop_imputed: bool = False
-    ) -> pl.LazyFrame | pl.DataFrame:
+        self, df: IntoFrameT, drop_imputed: bool = False
+    ) -> IntoFrameT:
         if drop_imputed:
             where_list = [self.Where, self.Where_predict, self.Where_impute]
             negate_list = [False, False, True]
@@ -741,21 +742,21 @@ class Variable(Serializable):
         df = self._df_where_list(df=df, where_list=where_list, negate_list=negate_list)
 
         if self.Where_predict_only_when_not_imputed and self.imputation_flag != "":
-            df = df.filter(~pl.col(self.imputation_flag))
+            df = nw.from_native(df).filter(~nw.col(self.imputation_flag)).to_native()
         return df
 
-    def df_impute_where(self, df: pl.LazyFrame | pl.DataFrame) -> pl.LazyFrame | pl.DataFrame:
+    def df_impute_where(self, df: IntoFrameT) -> IntoFrameT:
         return self._df_where_list(df, [self.Where, self.Where_impute])
 
-    def df_impute_original_where(self, df: pl.LazyFrame | pl.DataFrame) -> pl.LazyFrame | pl.DataFrame:
+    def df_impute_original_where(self, df: IntoFrameT) -> IntoFrameT:
         return self._df_where_list(df, [self.Where, self.Where_impute_original])
 
     def _df_where_list(
         self,
-        df: pl.LazyFrame | pl.DataFrame,
-        where_list: list[str | None | pl.Expr],
+        df: IntoFrameT,
+        where_list: list[str | None | nw.Expr],
         negate_list: list[bool] | None = None,
-    ) -> pl.LazyFrame | pl.DataFrame:
+    ) -> IntoFrameT:
         # if self.b_where_strings:
         #     #   Each where is a string (or None)
         #     Where = ""
@@ -782,9 +783,9 @@ class Variable(Serializable):
         #         df = SafeCollect(SqlWhereFilter(df=df,
         #                                         Where=Where))
         # else:
-        #   Each where is a polars expression (or None)
-        is_lazy = isinstance(df, pl.LazyFrame)
-        df = df.lazy()
+        #   Each where is a narwhals expressions (or None)
+        nw_type = NarwhalsType(df)
+        df = nw.from_native(df).lazy().to_native()
 
         where_index = 0
         for wherei in where_list:
@@ -794,14 +795,13 @@ class Variable(Serializable):
                     negate = negate_list[where_index]
 
                 if negate:
-                    df = df.filter(~wherei)
+                    df = nw.from_native(df).filter(~wherei).to_native()
                 else:
-                    df = df.filter(wherei)
+                    df = nw.from_native(df).filter(wherei).to_native()
 
             where_index += 1
 
-        df = df.collect()
-        return df.lazy() if is_lazy else df
+        return nw.from_native(df).lazy().collect().lazy_backend(nw_type).to_native()
 
     def split_when_missing(
         variable: Variable, exclude_for_missing: list[str]
@@ -842,17 +842,17 @@ class Variable(Serializable):
                 variable_not_missing.Where_impute = f"({variable_not_missing.Where_impute}) and ({variable.impute_var} is not null)"
         else:
             if variable.Where_impute is None:
-                variable.Where_impute = pl.col(variable.impute_var).is_null()
-                variable_not_missing.Where_impute = pl.col(
+                variable.Where_impute = nw.col(variable.impute_var).is_missing()
+                variable_not_missing.Where_impute = nw.col(
                     variable.impute_var
-                ).is_not_null()
+                ).is_not_missing()
             else:
                 variable.Where_impute = (
-                    variable.Where_impute & pl.col(variable.impute_var).is_null()
+                    variable.Where_impute & nw.col(variable.impute_var).is_missing()
                 )
                 variable_not_missing.Where_impute = (
                     variable_not_missing.Where_impute
-                    & pl.col(variable.impute_var).is_not_null()
+                    & nw.col(variable.impute_var).is_not_missing()
                 )
 
         variable.header += " with missing values"

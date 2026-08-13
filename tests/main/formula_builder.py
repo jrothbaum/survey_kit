@@ -1,7 +1,7 @@
 from survey_kit.utilities.random import RandomData
 from survey_kit.utilities.formula_builder import FormulaBuilder
 
-from survey_kit_formula import ModelSpec
+from formulaic import Formula
 
 from survey_kit.utilities.dataframe import summary
 
@@ -69,18 +69,19 @@ f.interact_clauses(
 
 # f.function(df=df, columns=["v_bs"], function_item="bs", degree=5)
 
-model_spec = ModelSpec.from_formula(f.__str__(), df)
+f_out = Formula(f.__str__())
 
 print(f"original: {f}")
+print(f"formulaic: {f_out}")
 
 columns_in_formula = FormulaBuilder.columns_from_formula(formula=f.__str__())
 print(columns_in_formula)
 
 
-df_mm = model_spec.get_model_frame(df)
+df_mm = f_out.get_model_matrix(df)
 print(df_mm.schema)
 summary(df_mm)
 
-print(FormulaBuilder._is_factor("C(v_factor)", df))
+print(FormulaBuilder._is_factor("C(v_factor)[T.5]"))
 
 print(f.expand())

@@ -51,6 +51,8 @@ def gen_random_table(n_rows: int, n_replicates: int, seed: int):
 
 df = gen_random_table(n_rows, n_replicates, seed=1230)
 df_compare = gen_random_table(n_rows, n_replicates, seed=9324)
+# print(df.schema)
+# print(df.describe())
 
 replicates = Replicates(
     weight_stub="weight_", n_replicates=n_replicates, bootstrap=True
@@ -65,6 +67,19 @@ sc = StatCalculator(
     ),
     weight="weight_0",
     replicates=replicates,
+    by=dict(year=["year"]),
+)
+
+
+print("Pandas")
+sc = StatCalculator(
+    df.lazy().collect().to_pandas(),
+    statistics=Statistics(
+        stats=["mean", "median|not0", "median"], columns=["v_1", "income"]
+    ),
+    weight="weight_0",
+    replicates=replicates,
+    #   allow_slow_pandas=True,
     by=dict(year=["year"]),
 )
 
@@ -87,4 +102,25 @@ sc_2 = StatCalculator(
 
 d_compare = sc_1.compare(sc_2)
 
+
+sc_1 = StatCalculator(
+    df.lazy().collect().to_pandas(),
+    statistics=Statistics(stats=["mean"], columns=["v_1", "income"]),
+    weight="weight_0",
+    replicates=replicates,
+    by=dict(year=["year"]),
+)
+
+sc_2 = StatCalculator(
+    df_compare.lazy().collect().to_pandas(),
+    statistics=Statistics(stats=["mean"], columns=["v_1", "income"]),
+    weight="weight_0",
+    replicates=replicates,
+    by=dict(year=["year"]),
+)
+
+d_compare_pandas = sc_1.compare(sc_2)
+
+
 d_compare["difference"].print()
+d_compare_pandas["difference"].print()

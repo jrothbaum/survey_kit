@@ -2,6 +2,7 @@ import sys
 import os
 from pathlib import Path
 
+import narwhals as nw
 import polars as pl
 import polars.selectors as cs
 
@@ -286,15 +287,23 @@ parameters_lgbm = Parameters.LightGBM(
 #       3) Effectively, you have to assume it'll be called
 #           in an environment with no imports before it
 def square_var(df, var_to_square: str, name: str):
-    import polars as pl
+    import narwhals as nw
 
-    return df.with_columns((pl.col(var_to_square) ** 2).alias(name))
+    return (
+        nw.from_native(df)
+        .with_columns((nw.col(var_to_square) ** 2).alias(name))
+        .to_native()
+    )
 
 
 def recalculate_interaction(df, var1: str, var2: str, name: str):
-    import polars as pl
+    import narwhals as nw
 
-    return df.with_columns((pl.col(var1) * pl.col(var2)).alias(name))
+    return (
+        nw.from_native(df)
+        .with_columns((nw.col(var1) * nw.col(var2)).alias(name))
+        .to_native()
+    )
 
 
 v_lgbm1 = Variable(
@@ -340,7 +349,7 @@ parameters_lgbm2 = Parameters.LightGBM(
 #       This gets run in each iteration (in each implicate) before this
 #       variable is imputed
 preFunctions = [
-    Variable.PrePost.PolarsExpression((pl.col("var_reg1") ** 2).alias("var_reg1_sq")),
+    Variable.PrePost.NarwhalsExpression((nw.col("var_reg1") ** 2).alias("var_reg1_sq")),
     Variable.PrePost.Function(
         recalculate_interaction,
         parameters={"var1": "var_reg1", "var2": "var_reg2", "name": "var_reg12"},
@@ -385,7 +394,7 @@ srmi.run()
 
 if True:
     impute_vars = [vari.impute_var for vari in srmi.variables]
-    df_original = df_original.select(impute_vars)
+    df_original = nw.from_native(df_original).select(impute_vars).to_native()
     stable_vars = columns_from_list(df_original, columns="var*", exclude=impute_vars)
 
     summary(df_original)
@@ -402,7 +411,7 @@ if True:
 
         if not srmi.parallel:
             logger.info("Assert imputed variables are equal across run/loaded")
-            assert dfs[i].lazy().collect().equals(dfs_loaded[i].lazy().collect())
+            assert dfs[i].collect().equals(dfs_loaded[i].collect())
 
         if i > 0:
             logger.info(
@@ -413,10 +422,7 @@ if True:
                 assert (
                     dfs[i]
                     .select(stable_vars)
-                    .lazy()
                     .collect()
-                    .equals(
-                        dfs_loaded[i - 1].select(stable_vars).lazy().collect()
-                    )
+                    .equals(dfs_loaded[i - 1].select(stable_vars).collect())
                 )
         logger.info("\n\n")

@@ -6,11 +6,14 @@ This version automatically uses:
 """
 
 import polars as pl
+import narwhals as nw
+from narwhals.typing import IntoFrameT
 import numpy as np
 from typing import Tuple
 from scipy.optimize import minimize
 from numba import jit, prange
 
+from ...utilities.dataframe import NarwhalsType
 from ...utilities.random import set_seed, RandomNumberGenerator
 from ... import logger
 
@@ -568,7 +571,7 @@ class DrawFromQuantileVectors:
 
     Parameters
     ----------
-    quantiles : pl.LazyFrame | pl.DataFrame
+    quantiles : IntoFrameT
         Dataframe of quantile values, shape (n_obs, n_quantiles)
     alphas : np.ndarray or list[float]
         Probability levels (must be sorted, in (0,1))
@@ -600,17 +603,23 @@ class DrawFromQuantileVectors:
 
     def __init__(
         self,
-        df_quantiles: pl.LazyFrame | pl.DataFrame,
+        df_quantiles: IntoFrameT,
         alphas: np.ndarray | list[float],
         tails: str | tuple[str, str] = "gaussian",
         seed: int = 0,
     ) -> None:
-        columns = df_quantiles.lazy().collect_schema().names()
-        df_quantiles = df_quantiles.select(
-            pl.concat_list(pl.all()).list.sort().list.to_struct(fields=columns)
-        ).unnest(columns[0])
+        self.nw_type = NarwhalsType(df_quantiles)
 
-        self.quantiles = np.atleast_2d(df_quantiles.to_numpy()).astype(np.float64)
+        columns = nw.from_native(df_quantiles).lazy().collect_schema().names()
+        df_quantiles = (
+            self.nw_type.to_polars()
+            .select(pl.concat_list(pl.all()).list.sort().list.to_struct(fields=columns))
+            .unnest(columns[0])
+        )
+
+        self.quantiles = np.atleast_2d(nw.from_native(df_quantiles).to_numpy()).astype(
+            np.float64
+        )
         self.alphas = np.asarray(alphas, dtype=np.float64)
 
         if type(tails) is str:
@@ -656,7 +665,7 @@ class DrawFromQuantileVectors:
             self.quantiles, self.alphas, self.tail_lower, self.tail_upper
         )
 
-    def draw_random_values(self, n_draws: int = 1) -> pl.LazyFrame | pl.DataFrame:
+    def draw_random_values(self, n_draws: int = 1) -> IntoFrameT:
         """
         Generate random samples from the quantile-defined distribution(s).
 
@@ -671,7 +680,7 @@ class DrawFromQuantileVectors:
 
         Returns
         -------
-        pl.LazyFrame | pl.DataFrame with columns ["p", "values"]
+        IntoFrameT with columns ["p", "values"]
             - p: Uniform random values in [0, 1] used for sampling
             - values: The quantile values corresponding to those probabilities
 
@@ -727,7 +736,13 @@ class DrawFromQuantileVectors:
         df_p = pl.DataFrame(p).rename(rename_p)
         df_values = pl.DataFrame(samples).rename(rename_values)
 
-        return pl.concat([df_p, df_values], how="horizontal")
+        return (
+            nw.from_native(
+                self.nw_type.from_polars(pl.concat([df_p, df_values], how="horizontal"))
+            )
+            .lazy_backend(self.nw_type)
+            .to_native()
+        )
 
     def __repr__(self):
         tail_names = {v: k for k, v in TAIL_TYPES.items()}

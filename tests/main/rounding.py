@@ -1,3 +1,5 @@
+import narwhals as nw
+
 from survey_kit.utilities.random import RandomData
 from survey_kit.utilities.rounding import drb_round_table
 
@@ -24,3 +26,25 @@ print(df_rounded.lazy().collect())
 
 df_rounded = drb_round_table(df.lazy(), columns_n=["n", "n_small"])
 print(df_rounded.lazy().collect())
+
+
+df_rounded = drb_round_table(df.to_pandas())
+print(df_rounded)
+
+
+df_rounded = drb_round_table(df.to_pandas(), columns_n=["n", "n_small"])
+print(df_rounded)
+print(type(df_rounded))
+
+
+df_rounded = drb_round_table(df.to_arrow(), columns_n=["n", "n_small"])
+print(df_rounded)
+print(type(df_rounded))
+
+
+df_rounded = drb_round_table(
+    nw.from_native(df.to_arrow()).lazy(backend="duckdb").to_native(),
+    columns_n=["n", "n_small"],
+)
+print(df_rounded)
+print(type(df_rounded))

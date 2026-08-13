@@ -6,6 +6,8 @@ import logging
 from copy import deepcopy, copy
 import math
 import scipy
+import narwhals as nw
+from narwhals.typing import IntoFrameT
 
 import polars as pl
 
@@ -27,6 +29,7 @@ from ..utilities.dataframe import (
     join_wrapper,
     join_list,
     concat_wrapper,
+    NarwhalsType,
     safe_sum_cast,
     safe_columns,
     safe_upcast_list,
@@ -58,8 +61,8 @@ class StatCalculator(Serializable):
 
     Parameters
     ----------
-    df : pl.LazyFrame | pl.DataFrame
-        Input data
+    df : IntoFrameT
+        A narwhals-compliant dataframe
     statistics : list[Statistics]|Statistics|None, optional
         Statistics object(s) defining what columns and statistics to calculate.
         Each Statistics object specifies variables and statistical measures.
@@ -92,11 +95,11 @@ class StatCalculator(Serializable):
 
     Attributes
     ----------
-    df_estimates : pl.LazyFrame | pl.DataFrame
+    df_estimates : IntoFrameT, narwhals compliant dataframe
         Main estimates dataframe with calculated statistics.
-    df_ses : pl.LazyFrame | pl.DataFrame
+    df_ses : IntoFrameT, narwhals compliant dataframe
         Standard errors dataframe (populated when replicates are used).
-    df_replicates : pl.LazyFrame | pl.DataFrame
+    df_replicates : IntoFrameT, narwhals compliant dataframe
         Full replicate estimates for additional analysis.
     variable_ids : list[str]
         Column names that identify unique estimates/variables.
@@ -142,7 +145,7 @@ class StatCalculator(Serializable):
 
     def __init__(
         self,
-        df: pl.LazyFrame | pl.DataFrame | None = None,
+        df: IntoFrameT | None = None,
         statistics: list[Statistics] | Statistics | None = None,
         weight: str = "",
         scale_wgts_to: float = 0.0,
@@ -152,6 +155,7 @@ class StatCalculator(Serializable):
         display_all_vars: bool = True,
         display_max_vars: int = 20,
         round_output: bool | int = False,
+        allow_slow_pandas: bool = False,
         calculate: bool = True,
     ):
         if statistics is None:
@@ -184,6 +188,8 @@ class StatCalculator(Serializable):
         self.replicates = replicates
         self.scale_wgts_to = scale_wgts_to
 
+        self.allow_slow_pandas = allow_slow_pandas
+
         self.replicate_stats = ReplicateStats()
         if replicates is not None:
             self.replicate_stats.bootstrap = replicates.bootstrap
@@ -210,6 +216,7 @@ class StatCalculator(Serializable):
             display_all_vars=self.display_all_vars,
             display_max_vars=self.display_max_vars,
             round_output=False,
+            allow_slow_pandas=self.allow_slow_pandas,
             calculate=False,
         )
 
@@ -223,7 +230,7 @@ class StatCalculator(Serializable):
     @property
     def df_estimates(self):
         """
-        pl.LazyFrame | pl.DataFrame : Main estimates dataframe containing calculated statistics.
+        IntoFrameT : Main estimates dataframe containing calculated statistics.
 
         This property provides access to the primary results table with all
         calculated statistics. Includes variable identifiers, grouping variables,
@@ -238,7 +245,7 @@ class StatCalculator(Serializable):
     @property
     def df_ses(self):
         """
-        pl.LazyFrame | pl.DataFrame : Standard errors dataframe (when replicate weights are used).
+        IntoFrameT : Standard errors dataframe (when replicate weights are used).
 
         Contains standard error estimates for all statistics calculated using
         replicate weight methods. Has the same structure as df_estimates but
@@ -254,7 +261,7 @@ class StatCalculator(Serializable):
     @property
     def df_replicates(self):
         """
-        pl.LazyFrame | pl.DataFrame : Full replicate estimates dataframe.
+        IntoFrameT : Full replicate estimates dataframe.
 
         Contains individual estimates for each replicate weight, allowing for
         custom variance calculations or additional analysis. Includes all
@@ -330,6 +337,7 @@ class StatCalculator(Serializable):
                 by=self.by,
                 summarize_vars=self.summarize_vars,
                 rounding=self.rounding,
+                allow_slow_pandas=self.allow_slow_pandas,
             )
 
             if df_collected is None:
@@ -341,7 +349,7 @@ class StatCalculator(Serializable):
                 cols_now = dfi.drop(self.variable_ids + self.summarize_vars).columns
                 cols_match = list(set(cols_prior).intersection(cols_now))
 
-                n_rows = df_collected.select(pl.len()).collect().item()
+                n_rows = df_collected.select(nw.len()).collect().item()
                 df_collected = (
                     join_wrapper(
                         df=df_collected.with_row_index("__summary_index__"),
@@ -362,8 +370,8 @@ class StatCalculator(Serializable):
                     #                         quietly=True
                     #                     )
                     .with_columns(
-                        pl.coalesce(
-                            pl.col(["__summary_index__", "__summary_index2__"]).alias(
+                        nw.coalesce(
+                            nw.col(["__summary_index__", "__summary_index2__"]).alias(
                                 "__summary_index__"
                             )
                         )
@@ -376,7 +384,7 @@ class StatCalculator(Serializable):
                     cols_new = list(set(cols_now).difference(cols_prior))
                     cols_select = cols_prior + cols_new
                     with_coalesce = [
-                        pl.coalesce(pl.col(coli, f"{coli}_right"))
+                        nw.coalesce(nw.col(coli, f"{coli}_right"))
                         for coli in cols_match
                     ]
 
@@ -449,7 +457,7 @@ class StatCalculator(Serializable):
 
         Returns
         -------
-        tuple[pl.LazyFrame | pl.DataFrame, pl.LazyFrame | pl.DataFrame, pl.LazyFrame | pl.DataFrame] | None
+        tuple[IntoFrameT, IntoFrameT, IntoFrameT] | None
             (df_estimates, df_ses, df_replicates) if eligible, else None.
         """
         if len(self.statistics) != 1:
@@ -464,8 +472,15 @@ class StatCalculator(Serializable):
             if _is_batchable_stat(stati) is None:
                 return None
 
+        nw_type = NarwhalsType(self.df)
+
+        #   _resolve_summary_df/_build_column_stats/_reshape_summary_tables
+        #   are normally only reached via calculate()'s @nw.narwhalify
+        #   decorator, which wraps df into a narwhals-native object before
+        #   the method body runs - called directly here, so wrap it first.
         (df_summary, cols_summary) = stats_obj._resolve_summary_df(
-            df=self.df,
+            df=nw.from_native(self.df),
+            nw_type=nw_type,
             weight="",
             summarize_vars=self.summarize_vars,
         )
@@ -474,7 +489,7 @@ class StatCalculator(Serializable):
         #   attached explicitly next, once, shared across all replicates.
         df_summary = drop_if_exists(df_summary, self.replicates.rep_list)
         df_summary = concat_wrapper(
-            [df_summary, self.df.select(self.replicates.rep_list)],
+            [df_summary, nw.from_native(self.df).select(self.replicates.rep_list)],
             how="horizontal",
         )
 
@@ -510,12 +525,17 @@ class StatCalculator(Serializable):
                 summary_tables={by_name: table_r},
                 by=normalized_by,
                 cols_summary=cols_summary,
+                nw_type=nw_type,
                 summarize_vars=[],
                 rounding=Rounding(round_output=False),
                 stats_headers=stats_headers,
                 suffixes=suffixes,
             )
-            reshaped = reshaped.with_columns(pl.lit(r).alias("___replicate___"))
+            reshaped = (
+                nw.from_native(reshaped)
+                .with_columns(nw.lit(r).alias("___replicate___"))
+                .to_native()
+            )
             replicate_tables.append(reshaped)
 
         df_replicates = concat_wrapper(replicate_tables, how="vertical")
@@ -531,14 +551,14 @@ class StatCalculator(Serializable):
 
     def round_results(
         self,
-        df: pl.LazyFrame | pl.DataFrame | None = None,
+        df: IntoFrameT | None = None,
         rounding: Rounding | None = None,
         display_only: bool = False,
-    ) -> pl.LazyFrame | pl.DataFrame:
+    ) -> IntoFrameT:
         """
         Parameters
         ----------
-        df : pl.LazyFrame | pl.DataFrame, optional
+        df : IntoFrameT, optional
             Table of estimates. The default is the estimates in df_estimates
         rounding : Rounding|None, optional
             Rounding (True for DRB rules) and an integer for specific number of significant digits. The default is self's rounding.
@@ -547,7 +567,7 @@ class StatCalculator(Serializable):
 
         Returns
         -------
-        df : pl.LazyFrame | pl.DataFrame
+        df : IntoFrameT
             The rounded estimates.
 
         """
@@ -579,21 +599,21 @@ class StatCalculator(Serializable):
             if self.weight != "":
                 self.df = self.df.with_columns(
                     (
-                        pl.col(self.weight) / pl.sum(self.weight) * self.scale_wgts_to
+                        nw.col(self.weight) / nw.sum(self.weight) * self.scale_wgts_to
                     ).alias(self.weight)
                 )
 
             if self.replicates is not None:
                 for weighti in self.replicates.rep_list:
                     self.df = self.df.with_columns(
-                        (pl.col(weighti) / pl.sum(weighti) * self.scale_wgts_to).alias(
+                        (nw.col(weighti) / nw.sum(weighti) * self.scale_wgts_to).alias(
                             weighti
                         )
                     )
 
     def print(
         self,
-        df: pl.LazyFrame | pl.DataFrame | None = None,
+        df: IntoFrameT | None = None,
         round_output: bool | int | None = None,
         estimates_per_page: int = 0,
         sub_log: logging = None,
@@ -603,7 +623,7 @@ class StatCalculator(Serializable):
 
         Parameters
         ----------
-        df : pl.LazyFrame | pl.DataFrame, optional
+        df : IntoFrameT, optional
             The estimates to display. Default is the estimates in self.
         round_output : bool|int|None, optional
             Rounding rule (True for DRB, integer for number of significant digits).
@@ -633,7 +653,7 @@ class StatCalculator(Serializable):
 
     def _print_estimates(
         self,
-        df: pl.LazyFrame | pl.DataFrame | None = None,
+        df: IntoFrameT | None = None,
         round_output: bool | int | None = None,
         estimates_per_page: int = 0,
         sub_log: logging = None,
@@ -643,7 +663,7 @@ class StatCalculator(Serializable):
 
         Parameters
         ----------
-        df : pl.LazyFrame | pl.DataFrame, optional
+        df : IntoFrameT, optional
             The estimates to show The default is the estimates in self.
         round_output : bool|int|None, optional
             Rounding rule (True for DRB, integer for number of significant digits). The default is self's rounding rule.
@@ -660,7 +680,8 @@ class StatCalculator(Serializable):
         if df is None:
             df = self.df_estimates
 
-        df = df.lazy().collect()
+        nw_type = NarwhalsType(df)
+        df = nw_type.to_polars().lazy().collect()
         if sub_log is None:
             sub_log = logger
 
@@ -760,7 +781,7 @@ class StatCalculator(Serializable):
         variable_prefix: str = "",
         estimate_type_variable_name: str = "Statistic",
         ci_level: float = 0.95,
-    ) -> pl.LazyFrame | pl.DataFrame:
+    ) -> IntoFrameT:
         """
         Create a formatted table of estimates with option of statistics to report.
 
@@ -780,13 +801,14 @@ class StatCalculator(Serializable):
 
         Returns
         -------
-        pl.LazyFrame | pl.DataFrame
+        IntoFrameT
             Formatted table with estimates arranged by statistic type.
         """
         if estimates_to_show is None:
             estimates_to_show = ["estimate", "se"]
 
         df_ordered = []
+        nw_ordered = []
         col_sort = "__order_output_table__"
         for index, esti in enumerate(estimates_to_show):
             dfi = None
@@ -807,6 +829,9 @@ class StatCalculator(Serializable):
                 raise Exception(message)
 
             if dfi is not None:
+                nwi = NarwhalsType(dfi)
+                nw_ordered.append(nwi)
+                dfi = nwi.to_polars()
                 df_ordered.append(
                     dfi.with_columns(
                         [
@@ -840,7 +865,7 @@ class StatCalculator(Serializable):
         select_order = sort_vars + [estimate_type_variable_name]
         remaining = []
         rename = {}
-        for coli in df_display.collect_schema().names():
+        for coli in df_display.lazy.collect_schema().names():
             if coli not in select_order and coli != col_sort:
                 if variable_prefix != "":
                     rename[coli] = f"{variable_prefix}{coli}"
@@ -869,28 +894,28 @@ class StatCalculator(Serializable):
 
         if len(rename):
             df_display = df_display.rename(rename)
-        return df_display
+        return nw_ordered[0].lazy().from_polars(df_display)
 
     def join_tables_of_estimates(
-        self, df_list: list[pl.LazyFrame | pl.DataFrame], estimate_type_variable_name: str = "Statistic"
-    ) -> pl.LazyFrame | pl.DataFrame:
+        self, df_list: list[IntoFrameT], estimate_type_variable_name: str = "Statistic"
+    ) -> IntoFrameT:
+        df_list = [nw.from_native(dfi) for dfi in df_list]
         sort_vars = (
             self.variable_ids + self.summarize_vars + [estimate_type_variable_name]
         )
 
         variable_filled = []
-        schema0 = df_list[0].lazy().collect_schema()
         for coli in self.variable_ids:
-            if schema0[coli] == pl.String:
-                c_missing = pl.col(coli).is_null() | (pl.col(coli) == "")
+            if df_list[0].schema[coli] == nw.String:
+                c_missing = nw.col(coli).is_null() | (pl.col(coli) == "")
             else:
-                c_missing = pl.col(coli).is_null()
+                c_missing = nw.col(coli).is_missing()
 
             variable_filled.append(
                 (
-                    pl.when(c_missing)
-                    .then(pl.lit(None))
-                    .otherwise(pl.col(coli))
+                    nw.when(c_missing)
+                    .then(nw.lit(None))
+                    .otherwise(nw.col(coli))
                     .alias(coli)
                     .fill_null(strategy="forward")
                 )
@@ -908,33 +933,42 @@ class StatCalculator(Serializable):
         df_out = join_list(df_list, on=sort_vars, how="full").sort(row_indices)
 
         with_clear = []
-        c_index = pl.col("__row_index_0")
+        c_index = nw.col("__row_index_0")
         for coli in self.variable_ids:
-            c_col = pl.col(coli)
+            c_col = nw.col(coli)
 
             with_clear.append(
-                pl.when(c_index == pl.min("__row_index_0").over(self.variable_ids))
+                nw.when(c_index == nw.min("__row_index_0").over(self.variable_ids))
                 .then(c_col)
-                .otherwise(pl.lit(""))
+                .otherwise(nw.lit(""))
                 .alias(coli)
             )
 
-        df_out = drop_if_exists(
-            df_out.with_columns(with_clear),
-            columns=row_indices,
+        df_out = (
+            drop_if_exists(
+                nw.from_native(df_out)
+                .with_columns(with_clear)
+                .to_native(),
+                columns=row_indices
+            )
         )
         return df_out
 
-    def _df_t(self) -> pl.LazyFrame | pl.DataFrame:
+    def _df_t(self) -> IntoFrameT:
         join_on = self.variable_ids + self.summarize_vars
+        nw_type = NarwhalsType(self.df_estimates)
         cols_stats = (
-            self.df_estimates.lazy().drop(join_on).collect_schema().names()
+            nw.from_native(self.df_estimates)
+            .lazy()
+            .drop(join_on)
+            .collect_schema()
+            .names()
         )
 
         with_t = []
         for coli in cols_stats:
-            c_est = pl.col(coli)
-            c_se = pl.col(f"{coli}_se")
+            c_est = nw.col(coli)
+            c_se = nw.col(f"{coli}_se")
 
             with_t.append((c_est / c_se).abs().alias(coli))
 
@@ -944,10 +978,11 @@ class StatCalculator(Serializable):
             on=join_on,
             suffixes=["", "_se"],
         ).select(join_on + with_t)
-        return df_out
+        return NarwhalsType.return_df(df_out, nw_type)
 
     def _df_p(self) -> pl.DataFrame | pl.LazyFrame:
-        df_p = self._df_t()
+        nw_p = NarwhalsType(self._df_t())
+        df_p = nw_p.to_polars()
 
         join_on = self.variable_ids + self.summarize_vars
         cols_stats = self.df_estimates.drop(join_on).columns
@@ -974,7 +1009,7 @@ class StatCalculator(Serializable):
                 .rename({"map": coli})
             )
 
-        return df_p.select(join_on + cols_stats)
+        return nw_p.from_polars(df_p.select(join_on + cols_stats))
 
     def _df_ci(self, ci_level: float = 0.95):
         return self.replicate_stats._df_ci(
@@ -1061,8 +1096,10 @@ class StatCalculator(Serializable):
             if not quietly:
                 logger.info("Comparing estimates")
 
-            df1 = self.df_estimates
-            df2 = compare_to.df_estimates
+            nw_type1 = NarwhalsType(self.df_estimates)
+            nw_type2 = NarwhalsType(compare_to.df_estimates)
+            df1 = nw_type1.to_polars()
+            df2 = nw_type2.to_polars()
 
             (df1, df2) = process_compare_lists(
                 df1=df1,
@@ -1116,8 +1153,10 @@ class StatCalculator(Serializable):
                 if ratio:
                     sm_compare = deepcopy(sm_diff)
 
-                sm_diff.df_estimates = pl.concat(
-                    [df_joined.select(cols_index), df_difference], how="horizontal"
+                sm_diff.df_estimates = nw_type1.from_polars(
+                    pl.concat(
+                        [df_joined.select(cols_index), df_difference], how="horizontal"
+                    )
                 )
 
                 outputs["difference"] = sm_diff
@@ -1130,8 +1169,10 @@ class StatCalculator(Serializable):
             if ratio:
                 sm_ratio = sm_compare
 
-                sm_ratio.df_estimates = pl.concat(
-                    [df_joined.select(cols_index), df_ratio], how="horizontal"
+                sm_ratio.df_estimates = nw_type1.from_polars(
+                    pl.concat(
+                        [df_joined.select(cols_index), df_ratio], how="horizontal"
+                    )
                 )
 
                 outputs["ratio"] = sm_ratio
@@ -1146,7 +1187,7 @@ class StatCalculator(Serializable):
     def from_function(
         delegate: Callable,
         estimate_ids: list | str,
-        df: pl.LazyFrame | pl.DataFrame | None = None,
+        df: IntoFrameT | None = None,
         df_argument: str = "df",
         arguments: dict | None = None,
         weight: str = "",
@@ -1223,12 +1264,12 @@ class StatCalculator(Serializable):
                     df = safe_sum_cast(df, weights_to_cast)
 
                     with_scale = [
-                        (pl.col(weighti) / pl.col(weighti).sum() * scale_wgts_to).alias(
-                            weighti
+                        (nw.col(weighti) / nw.col(weighti).sum() * scale_wgts_to).alias(
+                            nw.col(weighti)
                         )
                         for weighti in weights_to_cast
                     ]
-                    df = df.with_columns(with_scale)
+                    df = nw.from_native(df).with_columns(with_scale).to_native()
 
         if by is None:
             by = {"All": []}
@@ -1240,6 +1281,7 @@ class StatCalculator(Serializable):
         df_replicates = []
         by_vars = StatCalculator._by_vars(by=by)
 
+        nw_type = NarwhalsType(df)
         for keyi, valuei in by.items():
             if keyi == "All":
                 logger.info(f"Running {delegate.__name__}")
@@ -1250,10 +1292,15 @@ class StatCalculator(Serializable):
             if df is not None:
                 if len(valuei):
                     df_partitioned = (
-                        df.lazy()
+                        nw_type.to_polars()
+                        .lazy()
                         .collect()
                         .partition_by(by=valuei, maintain_order=True, include_key=True)
                     )
+
+                    df_partitioned = [
+                        nw_type.from_polars(dfi) for dfi in df_partitioned
+                    ]
 
                     df_list.extend(df_partitioned)
                 else:
@@ -1272,14 +1319,16 @@ class StatCalculator(Serializable):
                     if len(valuei):
                         append_values = dfi.select(valuei).unique().to_dicts()
                         append_by = [
-                            pl.lit(valuei).alias(keyi)
+                            nw.lit(valuei).alias(keyi)
                             for keyi, valuei in append_values[0].items()
                         ]
 
                 if replicates is None:
                     df_esti = delegate(**arguments)
                     if len(append_by):
-                        df_esti = df_esti.with_columns(append_by)
+                        df_esti = (
+                            nw.from_native(df_esti).with_columns(append_by).to_native()
+                        )
 
                     df_estimates.append(df_esti)
                 else:
@@ -1300,9 +1349,16 @@ class StatCalculator(Serializable):
                     df_repi = rep_return.df_replicates
 
                     if len(append_by):
-                        df_esti = df_esti.with_columns(append_by)
-                        df_sei = df_sei.with_columns(append_by)
-                        df_repi = df_repi.with_columns(append_by)
+                        df_esti = (
+                            nw.from_native(df_esti).with_columns(append_by).to_native()
+                        )
+                        df_sei = (
+                            nw.from_native(df_sei).with_columns(append_by).to_native()
+                        )
+
+                        df_repi = (
+                            nw.from_native(df_repi).with_columns(append_by).to_native()
+                        )
 
                     df_estimates.append(df_esti)
                     df_ses.append(df_sei)
@@ -1356,17 +1412,18 @@ class StatCalculator(Serializable):
 
         return ss_out
 
-    def filter(self, filter_expr: pl.Expr) -> StatCalculator:
+    def filter(self, filter_expr: nw.Expr) -> StatCalculator:
         self = self.copy()
         self.replicate_stats = self.replicate_stats.filter(filter_expr)
 
         return self
 
     def select(
-        self, select_expr: pl.Expr | str | list[str] | list[pl.Expr]
+        self, select_expr: nw.Expr | str | list[str] | list[nw.Expr]
     ) -> StatCalculator:
         cols_keep = (
-            self.df_estimates.lazy()
+            nw.from_native(self.df_estimates)
+            .lazy()
             .select(select_expr)
             .collect_schema()
             .names()
@@ -1379,14 +1436,14 @@ class StatCalculator(Serializable):
 
         return self
 
-    def with_columns(self, with_expr: pl.Expr | list[pl.Expr]) -> StatCalculator:
+    def with_columns(self, with_expr: nw.Expr | list[nw.Expr]) -> StatCalculator:
         self = self.copy()
         self.replicate_stats = self.replicate_stats.with_columns(with_expr)
 
         return self
 
     def sort(
-        self, sort_expr: pl.Expr | list[pl.Expr] | str | list[str]
+        self, sort_expr: nw.Expr | list[nw.Expr] | str | list[str]
     ) -> StatCalculator:
         self = self.copy()
         self.replicate_stats = self.replicate_stats.sort(sort_expr)
@@ -1394,7 +1451,7 @@ class StatCalculator(Serializable):
         return self
 
     def drop(
-        self, drop_expr: pl.Expr | list[pl.Expr] | str | list[str]
+        self, drop_expr: nw.Expr | list[nw.Expr] | str | list[str]
     ) -> ReplicateStats:
         self = self.copy()
         self.replicate_stats = self.replicate_stats.drop(drop_expr)
@@ -1412,10 +1469,15 @@ class StatCalculator(Serializable):
     ) -> StatCalculator:
         if columns is None:
             #   Any columns that aren't the join_on ones
-            columns = self.df_estimates.lazy().collect_schema().names()
+            columns = (
+                nw.from_native(self.df_estimates.columns)
+                .lazy()
+                .collect_schema()
+                .names()
+            )
             columns = list(set(columns).difference(self.join_on))
 
-        return self.with_columns(with_expr=pl.col(columns) * factor)
+        return self.with_columns(with_expr=nw.col(columns) * factor)
 
     def pipe(self, function: Callable, *args, **kwargs) -> StatCalculator:
         """

@@ -1,9 +1,13 @@
-import polars as pl
+import os
+import sys
+from pathlib import Path
 from time import perf_counter
 from survey_kit.utilities.random import RandomData
 from survey_kit.utilities.formula_builder import FormulaBuilder
 from survey_kit.calibration.moment import Moment
 from survey_kit.calibration.calibration import Calibration
+
+import narwhals as nw
 
 from survey_kit import logger, config
 
@@ -53,6 +57,8 @@ f_by = FormulaBuilder(df=df_m, constant=False)
 f_by.simple_interaction(columns=["year", "month"])
 print(f_by.formula)
 
+# df_c = nw.from_native(df_c).lazy().collect().lazy_backend(NarwhalsType(backend="pyarrow")).to_native()
+# df_m = nw.from_native(df_m).lazy().collect().lazy_backend(NarwhalsType(backend="pyarrow")).to_native()
 start_moment = perf_counter()
 m = Moment(
     df=df_m,
@@ -88,18 +94,19 @@ logger.info(f"Calibration (run):   {elapsed_calibration_run:0.4f}")
 
 logger.info("Validation that Estimates ~= Targets ")
 df_check = (
-    c.diagnostics_out["diagnostics"]
+    nw.from_native(c.diagnostics_out["diagnostics"])
     .select(
-        ((pl.col("Estimates") - pl.col("Targets")).abs() / pl.col("Targets") <= 0.00001)
+        ((nw.col("Estimates") - nw.col("Targets")).abs() / nw.col("Targets") <= 0.00001)
     )
     .lazy()
     .collect()
+    .to_native()
 )
 logger.info(df_check)
-assert df_check.select(pl.all().all()).item(0, 0)
+assert nw.from_native(df_check).select(nw.all().all()).item(0, 0)
 
 
-c = Calibration.load(f"{path_scratch}/calibration")
+c = Calibration.load(f"{path_scratch}/calibration", backend="duckdb")
 c.run()
 print(type(c.df))
 print(type(c.diagnostics_out["diagnostics"]))

@@ -4,11 +4,13 @@ from typing import TYPE_CHECKING
 import os
 import logging
 import gc
+import narwhals as nw
+import narwhals.selectors as cs
+from narwhals.typing import IntoFrameT
 import polars as pl
-import polars.selectors as cs
 import numpy as np
 from copy import deepcopy
-from survey_kit_formula import ModelSpec
+from polars_formula import ModelSpec
 
 #   Nearest neighbor search using sklearn
 from sklearn.neighbors import KDTree
@@ -24,6 +26,7 @@ from ..utilities.dataframe import (
     print_longer_table,
     join_list,
     concat_wrapper,
+    NarwhalsType,
     drop_if_exists,
     safe_upcast_list,
     columns_from_list,
@@ -36,6 +39,8 @@ from ..statistics.basic_calculations import calculate_by
 from ..statistics.statistics import Statistics
 from ..statistics.calculator import StatCalculator
 
+
+from ..utilities.dataframe import NarwhalsType, join_list, concat_wrapper
 
 from ..utilities.random import RandomNumberGenerator, generate_seed
 
@@ -62,7 +67,7 @@ class Impute:
 
     Parameters
     ----------
-    df : pl.LazyFrame | pl.DataFrame
+    df : IntoFrameT
         The data needed to run the imputation model
     parent : SRMI
         Reference to the parent SRMI instance
@@ -82,7 +87,7 @@ class Impute:
 
     def __init__(
         self,
-        df: pl.LazyFrame | pl.DataFrame,
+        df: IntoFrameT,
         parent: SRMI,
         variable: Variable,
         index: list,
@@ -126,7 +131,7 @@ class Impute:
         #   Remove circular reference to SRMI
         self.parent = None
 
-    def run(self) -> pl.LazyFrame | pl.DataFrame:
+    def run(self) -> IntoFrameT:
         """
         Execute the imputation for this variable.
 
@@ -135,7 +140,7 @@ class Impute:
 
         Returns
         -------
-        pl.LazyFrame | pl.DataFrame
+        IntoFrameT
             Updated dataframe with imputed values
         """
 
@@ -159,7 +164,8 @@ class Impute:
             for idf in range(len(df_by)):
                 if len(self.variable.By) > 0:
                     self.current_by = (
-                        df_by[idf]
+                        NarwhalsType(df_by[idf])
+                        .to_polars()
                         .select(self.variable.By)
                         .head(1)
                         .row(0, named=True)
@@ -191,7 +197,7 @@ class Impute:
 
         return df
 
-    def _run_selection(self, df: pl.LazyFrame | pl.DataFrame | None = None):
+    def _run_selection(self, df: IntoFrameT | None = None):
         if df is None:
             df = self.df
 
@@ -213,7 +219,7 @@ class Impute:
     #   Imputation functions - Start
     ##########################################################
     ##########################################################
-    def statmatch(self, df: pl.LazyFrame | pl.DataFrame | None = None) -> pl.LazyFrame | pl.DataFrame:
+    def statmatch(self, df: IntoFrameT | None = None) -> IntoFrameT:
         """
         Perform statistical matching imputation.
 
@@ -222,12 +228,12 @@ class Impute:
 
         Parameters
         ----------
-        df : pl.LazyFrame | pl.DataFrame | None, optional
+        df : IntoFrameT | None, optional
             Input dataframe, uses self.df if None
 
         Returns
         -------
-        pl.LazyFrame | pl.DataFrame
+        IntoFrameT
             Dataframe with statistically matched values
         """
         if df is None:
@@ -324,20 +330,26 @@ class Impute:
                     #   Most common matches
                     self.logging.info("     Most common matches: ")
                     index_renamed = [f"donor_{vari}" for vari in self.index]
-                    df_matchcount = calculate_by(
-                        df=df_matched.with_columns(pl.lit(1).alias("nDonors")),
-                        column_stats={"nDonors": ["count"]},
-                        by=index_renamed,
-                        no_suffix=True,
+                    df_matchcount = nw.from_native(
+                        calculate_by(
+                            df=(
+                                nw.from_native(df_matched).with_columns(
+                                    nw.lit(1).alias("nDonors")
+                                )
+                            ),
+                            column_stats={"nDonors": ["count"]},
+                            by=index_renamed,
+                            no_suffix=True,
+                        )
                     ).sort(["nDonors"], descending=True)
 
-                    self.logging.info(df_matchcount.head(5))
+                    self.logging.info(nw.from_native(df_matchcount).head(5).to_native())
                 self.logging.info("\n\n")
 
         #   Done - return the dataframe
         return df
 
-    def lightgbm(self, df: pl.LazyFrame | pl.DataFrame | None = None) -> pl.LazyFrame | pl.DataFrame:
+    def lightgbm(self, df: IntoFrameT | None = None) -> IntoFrameT:
         """
         Perform LightGBM-based imputation.
 
@@ -346,12 +358,12 @@ class Impute:
 
         Parameters
         ----------
-        df : pl.LazyFrame | pl.DataFrame | None, optional
+        df : IntoFrameT | None, optional
             Input dataframe, uses self.df if None
 
         Returns
         -------
-        pl.LazyFrame | pl.DataFrame
+        IntoFrameT
             Dataframe with LightGBM-imputed values
         """
         if df is None:
@@ -394,7 +406,7 @@ class Impute:
             )
         return df
 
-    def pmm(self, df: pl.LazyFrame | pl.DataFrame | None = None) -> pl.LazyFrame | pl.DataFrame:
+    def pmm(self, df: IntoFrameT | None = None) -> IntoFrameT:
         """
         Perform predictive mean matching imputation.
 
@@ -403,12 +415,12 @@ class Impute:
 
         Parameters
         ----------
-        df : pl.LazyFrame | pl.DataFrame | None, optional
+        df : IntoFrameT | None, optional
             Input dataframe, uses self.df if None
 
         Returns
         -------
-        pl.LazyFrame | pl.DataFrame
+        IntoFrameT
             Dataframe with PMM-imputed values
         """
         if df is None:
@@ -486,18 +498,18 @@ class Impute:
         )
         return df
 
-    def regression(self, df: pl.LazyFrame | pl.DataFrame | None = None) -> pl.LazyFrame | pl.DataFrame:
+    def regression(self, df: IntoFrameT | None = None) -> IntoFrameT:
         """
         Perform regression-based imputation.
 
         Parameters
         ----------
-        df : pl.LazyFrame | pl.DataFrame | None, optional
+        df : IntoFrameT | None, optional
             Input dataframe, uses self.df if None
 
         Returns
         -------
-        pl.LazyFrame | pl.DataFrame
+        IntoFrameT
             Dataframe with regression-based imputed values
         """
 
@@ -577,7 +589,7 @@ class Impute:
 
         return df
 
-    def hotdeck(self, df: pl.LazyFrame | pl.DataFrame | None = None) -> pl.LazyFrame | pl.DataFrame:
+    def hotdeck(self, df: IntoFrameT | None = None) -> IntoFrameT:
         """
         Perform hot deck imputation.
 
@@ -586,12 +598,12 @@ class Impute:
 
         Parameters
         ----------
-        df : pl.LazyFrame | pl.DataFrame | None, optional
+        df : IntoFrameT | None, optional
             Input dataframe, uses self.df if None
 
         Returns
         -------
-        pl.LazyFrame | pl.DataFrame
+        IntoFrameT
             Dataframe with hot deck imputed values
         """
         if df is None:
@@ -695,19 +707,35 @@ class Impute:
                     #   Most common matches
                     self.logging.info("     Most common matches: ")
                     index_renamed = [f"donor_{vari}" for vari in self.index]
-                    df_matchcount = calculate_by(
-                        df=df_matched.with_columns(pl.lit(1).alias("nDonors")),
-                        column_stats={"nDonors": ["count"]},
-                        by=index_renamed,
-                        no_suffix=True,
-                    ).sort(["nDonors"], descending=True)
-                    self.logging.info(df_matchcount.head(5).lazy().collect())
+                    df_matchcount = (
+                        nw.from_native(
+                            calculate_by(
+                                df=(
+                                    nw.from_native(df_matched)
+                                    .with_columns(nw.lit(1).alias("nDonors"))
+                                    .to_native()
+                                ),
+                                column_stats={"nDonors": ["count"]},
+                                by=index_renamed,
+                                no_suffix=True,
+                            )
+                        )
+                        .sort(["nDonors"], descending=True)
+                        .to_native()
+                    )
+                    self.logging.info(
+                        nw.from_native(df_matchcount)
+                        .head(5)
+                        .lazy()
+                        .collect()
+                        .to_native()
+                    )
                 self.logging.info("\n\n")
 
         #   Done - return the dataframe
         return df
 
-    def nearestneighbor(self, df: pl.LazyFrame | pl.DataFrame | None = None) -> pl.LazyFrame | pl.DataFrame:
+    def nearestneighbor(self, df: IntoFrameT | None = None) -> IntoFrameT:
         """
         Perform nearest neighbor imputation.
 
@@ -716,12 +744,12 @@ class Impute:
 
         Parameters
         ----------
-        df : pl.LazyFrame | pl.DataFrame | None, optional
+        df : IntoFrameT | None, optional
             Input dataframe, uses self.df if None
 
         Returns
         -------
-        pl.LazyFrame | pl.DataFrame
+        IntoFrameT
             Dataframe with nearest neighbor imputed values
         """
 
@@ -779,9 +807,9 @@ class Impute:
     def _lightgbm_simple(
         self,
         lgbm_model: kit_lightgbm,
-        df: pl.LazyFrame | pl.DataFrame,
-        df_model: pl.LazyFrame | pl.DataFrame,
-        df_impute: pl.LazyFrame | pl.DataFrame,
+        df: IntoFrameT,
+        df_model: IntoFrameT,
+        df_impute: IntoFrameT,
     ):
         donate_vars = [self.variable.impute_var]
         if "donate_list" in self.variable.parameters:
@@ -793,7 +821,9 @@ class Impute:
         lgbm_model.train(show_eval=False)
 
         df_importance = lgbm_model.importance()
-        cols_feature = df_importance.lazy().collect()["Feature"].to_list()
+        cols_feature = (
+            nw.from_native(df_importance).lazy().collect()["Feature"].to_list()
+        )
 
         statistics = Statistics(
             stats=[
@@ -826,8 +856,12 @@ class Impute:
             )
 
             stat_match_var = "___stat_match_var___"
-            df_model = df_model.with_columns(pl.lit(1).alias(stat_match_var))
-            df_impute = df_impute.with_columns(pl.lit(1).alias(stat_match_var))
+            df_model = nw.from_native(df_model).with_columns(
+                nw.lit(1).alias(stat_match_var)
+            )
+            df_impute = nw.from_native(df_impute).with_columns(
+                nw.lit(1).alias(stat_match_var)
+            )
 
             (df_impute, _) = self._statmatch_merge(
                 df_donors=df_model,
@@ -852,24 +886,35 @@ class Impute:
             df=df_impute, statistics=statistics, display=False, round_output=True
         )
         print_longer_table(
-            df=join_list(
-                [
-                    df_importance,
-                    stats_model.df_estimates.rename(
-                        {
-                            vari: f"Model\n{vari}"
-                            for vari in safe_columns(stats_model.df_estimates)
-                        }
-                    ).rename({"Model\nVariable": "Feature"}),
-                    stats_impute.df_estimates.rename(
-                        {
-                            vari: f"Impute\n{vari}"
-                            for vari in safe_columns(stats_model.df_estimates)
-                        }
-                    ).rename({"Impute\nVariable": "Feature"}),
-                ],
-                how="left",
-                on=["Feature"],
+            df=(
+                join_list(
+                    [
+                        df_importance,
+                        (
+                            nw.from_native(stats_model.df_estimates)
+                            .rename(
+                                {
+                                    vari: f"Model\n{vari}"
+                                    for vari in safe_columns(stats_model.df_estimates)
+                                }
+                            )
+                            .rename({"Model\nVariable": "Feature"})
+                            .to_native()
+                        ),
+                        (
+                            nw.from_native(stats_impute.df_estimates)
+                            .rename(
+                                {
+                                    vari: f"Impute\n{vari}"
+                                    for vari in safe_columns(stats_model.df_estimates)
+                                }
+                            )
+                            .rename({"Impute\nVariable": "Feature"})
+                        ),
+                    ],
+                    how="left",
+                    on=["Feature"],
+                )
             ),
             logging=self.logging,
         )
@@ -888,17 +933,19 @@ class Impute:
         df_impute = concat_wrapper([df_impute, predict_impute], how="horizontal")
 
         predict_model = (
-            self.variable.df_impute_original_where(df=df_model)
+            nw.from_native(self.variable.df_impute_original_where(df=df_model))
             .select([self.variable.impute_var, "___prediction"])
             .lazy()
             .collect()
+            .to_native()
         )
 
         predict_impute = (
-            self.variable.df_impute_original_where(df=df_impute)
+            nw.from_native(self.variable.df_impute_original_where(df=df_impute))
             .select([self.variable.impute_var, "___prediction"])
             .lazy()
             .collect()
+            .to_native()
         )
 
         if predict_model is not None:
@@ -907,7 +954,7 @@ class Impute:
 
         if predict_model is None:
             predict_model = (
-                self.variable.df_where(df=df_model)
+                nw.from_native(self.variable.df_where(df=df_model))
                 .select([self.variable.impute_var, "___prediction"])
                 .lazy()
                 .collect()
@@ -930,13 +977,17 @@ class Impute:
             pl.concat(
                 [
                     (
-                        predict_model.lazy()
+                        NarwhalsType(predict_model)
+                        .to_polars()
+                        .lazy()
                         .collect()
                         .rename({"___prediction": "Model (yhat)"})
                         .describe()
                     ),
                     (
-                        predict_impute.lazy()
+                        NarwhalsType(predict_impute)
+                        .to_polars()
+                        .lazy()
                         .collect()
                         .rename({"___prediction": "Imputed (yhat)"})
                         .describe()
@@ -949,8 +1000,12 @@ class Impute:
 
         #   Draw as if binary or continuous (does nothing if draw is pmm)
         if (
-            type(df_model.lazy().collect_schema()[self.variable.impute_var])
-            == pl.Boolean
+            type(
+                nw.from_native(df_model)
+                .lazy()
+                .collect_schema()[self.variable.impute_var]
+            )
+            == nw.Boolean
         ):
             regmodel = Parameters.RegressionModel.Logit
         else:
@@ -974,9 +1029,9 @@ class Impute:
     def _lightgbm_quantiles(
         self,
         lgbm_model: kit_lightgbm,
-        df: pl.LazyFrame | pl.DataFrame,
-        df_model: pl.LazyFrame | pl.DataFrame,
-        df_impute: pl.LazyFrame | pl.DataFrame,
+        df: IntoFrameT,
+        df_model: IntoFrameT,
+        df_impute: IntoFrameT,
     ):
         if lgbm_model.parameters["objective"] != "quantile":
             self.logging.warning("RESETTING LightGBM OBJECTIVE TO QUANTILE")
@@ -985,7 +1040,7 @@ class Impute:
         predict_impute = None
         predict_model = None
 
-        df_impute = df_impute.sort(self.index)
+        df_impute = nw.from_native(df_impute).sort(self.index).to_native()
         #   Run LightGBM for each quantile
         quantiles = self.variable.parameters["quantiles"]
         for qi in quantiles:
@@ -1003,13 +1058,18 @@ class Impute:
             #   if qi == 0.5:
             #   Basic correlation
             corr = (
-                concat_wrapper(
-                    [
-                        p_model,
-                        df_model.select(self.variable.impute_var),
-                    ],
-                    how="horizontal",
+                NarwhalsType(
+                    concat_wrapper(
+                        [
+                            p_model,
+                            nw.from_native(df_model)
+                            .select(self.variable.impute_var)
+                            .to_native(),
+                        ],
+                        how="horizontal",
+                    )
                 )
+                .to_polars()
                 .select(pl.corr(self.variable.impute_var, f"___p{qi}"))
                 .item(0, 0)
             )
@@ -1041,14 +1101,18 @@ class Impute:
 
         predict_both = concat_wrapper(
             [
-                predict_model.with_columns(
-                    [pl.lit("Model").alias("Sample"), pl.lit(0).alias("___sort___")]
+                (
+                    nw.from_native(predict_model).with_columns(
+                        [nw.lit("Model").alias("Sample"), nw.lit(0).alias("___sort___")]
+                    )
                 ),
-                predict_impute.with_columns(
-                    [
-                        pl.lit("Imputed").alias("Sample"),
-                        pl.lit(1).alias("___sort___"),
-                    ]
+                (
+                    nw.from_native(predict_impute).with_columns(
+                        [
+                            nw.lit("Imputed").alias("Sample"),
+                            nw.lit(1).alias("___sort___"),
+                        ]
+                    )
                 ),
             ],
             how="diagonal",
@@ -1063,17 +1127,17 @@ class Impute:
         )
 
         stats_both.df_estimates = (
-            stats_both.df_estimates.with_columns(
-                pl.col("Variable").str.replace("___", "")
-            )
+            nw.from_native(stats_both.df_estimates)
+            .with_columns(nw.col("Variable").str.replace("___", ""))
             .sort(["Variable", "___sort___"])
             .with_columns(
-                pl.when(pl.col("___sort___") == 0)
-                .then(pl.col("Variable"))
-                .otherwise(pl.lit(""))
+                nw.when(nw.col("___sort___") == 0)
+                .then(nw.col("Variable"))
+                .otherwise(nw.lit(""))
                 .alias("Variable")
             )
             .drop("___sort___")
+            .to_native()
         )
 
         stats_both.print(sub_log=self.logging)
@@ -1124,7 +1188,9 @@ class Impute:
             #                    logger=self.logging)
 
             df_importance = lgbm_model_pmm.importance()
-            cols_feature = df_importance.lazy().collect()["Feature"].to_list()
+            cols_feature = (
+                nw.from_native(df_importance).lazy().collect()["Feature"].to_list()
+            )
             statistics = Statistics(
                 stats=[
                     "share|missing",
@@ -1140,24 +1206,40 @@ class Impute:
             )
 
             print_longer_table(
-                df=join_list(
-                    [
-                        df_importance,
-                        stats_model.df_estimates.rename(
-                            {
-                                vari: f"Model\n{vari}"
-                                for vari in safe_columns(stats_model.df_estimates)
-                            }
-                        ).rename({"Model\nVariable": "Feature"}),
-                        stats_impute.df_estimates.rename(
-                            {
-                                vari: f"Impute\n{vari}"
-                                for vari in safe_columns(stats_model.df_estimates)
-                            }
-                        ).rename({"Impute\nVariable": "Feature"}),
-                    ],
-                    how="left",
-                    on=["Feature"],
+                df=(
+                    join_list(
+                        [
+                            df_importance,
+                            (
+                                nw.from_native(stats_model.df_estimates)
+                                .rename(
+                                    {
+                                        vari: f"Model\n{vari}"
+                                        for vari in safe_columns(
+                                            stats_model.df_estimates
+                                        )
+                                    }
+                                )
+                                .rename({"Model\nVariable": "Feature"})
+                                .to_native()
+                            ),
+                            (
+                                nw.from_native(stats_impute.df_estimates)
+                                .rename(
+                                    {
+                                        vari: f"Impute\n{vari}"
+                                        for vari in safe_columns(
+                                            stats_model.df_estimates
+                                        )
+                                    }
+                                )
+                                .rename({"Impute\nVariable": "Feature"})
+                                .to_native()
+                            ),
+                        ],
+                        how="left",
+                        on=["Feature"],
+                    )
                 ),
                 logging=self.logging,
             )
@@ -1189,11 +1271,15 @@ class Impute:
             self.logging.info(
                 pl.concat(
                     [
-                        p_model.lazy()
+                        NarwhalsType(p_model)
+                        .to_polars()
+                        .lazy()
                         .collect()
                         .rename({"___yhat": "Model (yhat)"})
                         .describe(),
-                        p_impute.lazy()
+                        NarwhalsType(p_impute)
+                        .to_polars()
+                        .lazy()
                         .collect()
                         .rename({"___yhat": "Imputed (yhat)"})
                         .describe()
@@ -1206,7 +1292,9 @@ class Impute:
 
             #   Basic correlation
             corr = (
-                df_model.lazy()
+                NarwhalsType(df_model)
+                .to_polars()
+                .lazy()
                 .collect()
                 .select(pl.corr(self.variable.impute_var, "___yhat"))
                 .item(0, 0)
@@ -1223,9 +1311,13 @@ class Impute:
                 df=predict_impute, percentiles=quantiles
             )
 
-            col_0 = predict_impute_values.lazy().collect_schema().names()[0]
-            predict_impute_values = predict_impute_values.rename(
-                {col_0: "___y_draw"}
+            col_0 = (
+                nw.from_native(predict_impute_values).lazy().collect_schema().names()[0]
+            )
+            predict_impute_values = (
+                nw.from_native(predict_impute_values)
+                .rename({col_0: "___y_draw"})
+                .to_native()
             )
 
             #   Append the quantile imputes to the df_impute file
@@ -1233,9 +1325,17 @@ class Impute:
                 [df_impute, predict_impute_values], how="horizontal"
             )
 
-            df_impute_missing = df_impute.filter(pl.col("___y_draw").is_null())
+            df_impute_missing = (
+                nw.from_native(df_impute)
+                .filter(nw.col("___y_draw").is_missing())
+                .to_native()
+            )
 
-            df_impute = df_impute.filter(pl.col("___y_draw").is_not_null())
+            df_impute = (
+                nw.from_native(df_impute)
+                .filter(nw.col("___y_draw").is_not_missing())
+                .to_native()
+            )
 
             #   Get the pmm imputes
             #       Which determine the marginal distribution and are the
@@ -1249,13 +1349,28 @@ class Impute:
                 donate_by=self.variable.parameters["donate_by"],
             )
 
-            df_impute = concat_wrapper(
-                [
-                    df_impute.drop(donate_vars).sort("___y_draw"),
-                    df_marginal.drop(self.index).sort(self.variable.impute_var),
-                ],
-                how="horizontal",
-            ).drop(["___yhat", "___y_draw"])
+            df_impute = (
+                nw.from_native(
+                    concat_wrapper(
+                        [
+                            (
+                                nw.from_native(df_impute)
+                                .drop(donate_vars)
+                                .sort("___y_draw")
+                                .to_native()
+                            ),
+                            (
+                                nw.from_native(df_marginal)
+                                .drop(self.index)
+                                .sort(self.variable.impute_var)
+                            ),
+                        ],
+                        how="horizontal",
+                    )
+                )
+                .drop(["___yhat", "___y_draw"])
+                .to_native()
+            )
 
             if safe_height(df_impute_missing) > 0:
                 df_impute = concat_wrapper(
@@ -1270,7 +1385,9 @@ class Impute:
                 df=predict_impute, percentiles=quantiles
             )
 
-            col_rename = predict_impute_values.lazy().collect_schema().names()[0]
+            col_rename = (
+                nw.from_native(predict_impute_values).lazy().collect_schema().names()[0]
+            )
             predict_impute_values = predict_impute_values.rename(
                 {col_rename: self.variable.impute_var}
             )
@@ -1279,7 +1396,7 @@ class Impute:
 
             df_impute = concat_wrapper(
                 [
-                    df_impute.drop(donate_vars),
+                    (nw.from_native(df_impute).drop(donate_vars).to_native()),
                     predict_impute_values,
                 ],
                 how="horizontal",
@@ -1288,12 +1405,16 @@ class Impute:
         #   Anyone fall through?
         #   df_impute= df_impute.with_columns(pl.when(pl.col('_row_index_') <= 20).then(pl.lit(None)).otherwise(pl.col("var1")).alias("var1"))
         n_missing = safe_height(
-            df_impute.filter(pl.col(self.variable.impute_var).is_null())
+            nw.from_native(df_impute)
+            .filter(nw.col(self.variable.impute_var).is_missing())
+            .to_native()
         )
 
         if n_missing > 0:
-            df_impute_mean = df_impute.filter(
-                pl.col(self.variable.impute_var).is_null()
+            df_impute_mean = (
+                nw.from_native(df_impute)
+                .filter(nw.col(self.variable.impute_var).is_missing())
+                .to_native()
             )
 
             #       If so, use pmm on the mean
@@ -1312,16 +1433,25 @@ class Impute:
             b_have_for_recipients = "___yhat" in safe_columns(df_impute_mean)
             if b_have_for_recipients:
                 b_have_for_recipients = (
-                    safe_height(df_impute_mean.filter(pl.col("___yhat").is_null()))
+                    safe_height(
+                        nw.from_native(df_impute_mean)
+                        .filter(nw.col("___yhat").is_missing())
+                        .to_native()
+                    )
                     == 0
                 )
 
             b_have_for_donors = (
-                "___yhat" in df_model.lazy().collect_schema().names()
+                "___yhat" in nw.from_native(df_model).lazy().collect_schema().names()
             )
             if b_have_for_donors:
                 b_have_for_donors = (
-                    safe_height(df_model.filter(pl.col("___yhat").is_null())) == 0
+                    safe_height(
+                        nw.from_native(df_model)
+                        .filter(pl.col("___yhat").is_missing())
+                        .to_native()
+                    )
+                    == 0
                 )
 
             if not b_have_for_recipients:
@@ -1346,10 +1476,12 @@ class Impute:
 
             df_impute = concat_wrapper(
                 [
-                    df_impute.filter(
-                        pl.col(self.variable.impute_var).is_not_null()
+                    (
+                        nw.from_native(df_impute)
+                        .filter(nw.col(self.variable.impute_var).is_not_missing())
+                        .to_native()
                     ),
-                    df_impute_mean.drop("___yhat"),
+                    (nw.from_native(df_impute_mean).drop("___yhat").to_native()),
                 ],
                 how="diagonal",
             )
@@ -1378,8 +1510,8 @@ class Impute:
     ##########################################################
     def _regression_draw_errors(
         self,
-        df_model: pl.LazyFrame | pl.DataFrame,
-        df_impute: pl.LazyFrame | pl.DataFrame,
+        df_model: IntoFrameT,
+        df_impute: IntoFrameT,
         regmodel: Parameters.RegressionModel,
         errordraw: Parameters.ErrorDraw | None = None,
     ):
@@ -1396,51 +1528,67 @@ class Impute:
             ):
                 #   Draw the values for df_impute from the uniform where 1 if <= prediction
 
-                df_impute = concat_wrapper(
-                    [
-                        df_impute,
-                        pl.from_numpy(
-                            rng.uniform(size=safe_height(df_impute)),
-                            schema={"___phat": pl.Float64},
-                        ),
-                    ],
-                    how="horizontal",
-                ).with_columns(
-                    (pl.col("___phat") <= pl.col("___prediction"))
-                    .cast(pl.Boolean)
-                    .alias(self.variable.impute_var)
+                nw_type = NarwhalsType(df_impute)
+                df_impute = nw.from_native(
+                    concat_wrapper(
+                        [
+                            df_impute,
+                            nw_type.from_polars(
+                                pl.from_numpy(
+                                    rng.uniform(size=safe_height(df_impute)),
+                                    schema={"___phat": pl.Float64},
+                                )
+                            ),
+                        ],
+                        how="horizontal",
+                    ).with_columns(
+                        (nw.col("___phat") <= nw.col("___prediction"))
+                        .cast(nw.Boolean)
+                        .alias(self.variable.impute_var)
+                    )
                 )
             elif regmodel == Parameters.RegressionModel.OLS:
                 #   Get the sd of the errors in the model data set
                 df_std = calculate_by(
-                    df=df_model.with_columns(
-                        (
-                            pl.col(self.variable.impute_var)
-                            - pl.col("___prediction")
-                        ).alias("___ehat")
+                    df=(
+                        nw.from_native(df_model)
+                        .with_columns(
+                            (
+                                nw.col(self.variable.impute_var)
+                                - nw.col("___prediction")
+                            ).alias("___ehat")
+                        )
+                        .to_native()
                     ),
                     column_stats={"___ehat": ["std"]},
                     weight=self.weight,
                 )
 
-                std = df_std.item(0, 0)
+                std = nw.from_native(df_std).item(0, 0)
 
                 #   Draw the values for df_impute
+                nw_type = NarwhalsType(df_impute)
                 df_impute = concat_wrapper(
                     [
                         df_impute,
-                        pl.from_numpy(
-                            rng.normal(scale=std, size=safe_height(df_impute)),
-                            schema={"___ehat": pl.Float64},
+                        nw_type.from_polars(
+                            pl.from_numpy(
+                                rng.normal(scale=std, size=safe_height(df_impute)),
+                                schema={"___ehat": pl.Float64},
+                            )
                         ),
                     ],
                     how="horizontal",
                 )
 
-                df_impute = df_impute.with_columns(
-                    (pl.col("___prediction") + pl.col("___ehat")).alias(
-                        self.variable.impute_var
+                df_impute = (
+                    nw.from_native(df_impute)
+                    .with_columns(
+                        (pl.col("___prediction") + nw.col("___ehat")).alias(
+                            self.variable.impute_var
+                        )
                     )
+                    .to_native()
                 )
 
         elif errordraw == Parameters.ErrorDraw.pmm:
@@ -1464,19 +1612,23 @@ class Impute:
 
     def _run_regression(
         self,
-        df_model: pl.LazyFrame | pl.DataFrame,
-        df_impute: pl.LazyFrame | pl.DataFrame,
+        df_model: IntoFrameT,
+        df_impute: IntoFrameT,
         model_vars: list,
         formula: str,
         regmodel: Parameters.RegressionModel | None = None,
-        df_pmm_leave_out: pl.LazyFrame | pl.DataFrame | None = None,
+        df_pmm_leave_out: IntoFrameT | None = None,
         min_n_x_var: int = 0,
-    ) -> tuple[pl.LazyFrame | pl.DataFrame, pl.LazyFrame | pl.DataFrame, pl.LazyFrame | pl.DataFrame | None]:
-        df_model = df_model.lazy().collect()
-        df_impute = df_impute.lazy().collect()
+    ) -> tuple[IntoFrameT, IntoFrameT, IntoFrameT | None]:
+        nw_model = NarwhalsType(df_model)
+        nw_impute = NarwhalsType(df_impute)
+
+        df_model = nw_model.to_polars().lazy().collect()
+        df_impute = nw_impute.to_polars().lazy().collect()
 
         if df_pmm_leave_out is not None:
-            df_pmm_leave_out = df_pmm_leave_out.lazy().collect()
+            nw_leave_out = NarwhalsType(df_pmm_leave_out)
+            df_pmm_leave_out = nw_leave_out.to_polars().lazy().collect()
 
         if regmodel is None:
             regmodel = self.variable.parameters["model"]
@@ -1516,7 +1668,7 @@ class Impute:
                 frames_to_fit.append(df_pmm_leave_out.select(rhs_vars))
             df_fit_union = pl.concat(frames_to_fit, how="diagonal")
 
-            #   ModelSpec.from_formula() parses with survey_kit_formula's own
+            #   ModelSpec.from_formula() parses with polars_formula's own
             #   parse_formula(), which (unlike FormulaBuilder's parsing)
             #   requires a "~" - f.rhs() is a bare rhs-only fragment.
             model_spec = ModelSpec.from_formula(
@@ -1612,6 +1764,12 @@ class Impute:
                 [df_pmm_leave_out, predict_leave_out], how="horizontal"
             )
 
+            df_pmm_leave_out = nw_leave_out.from_polars(df_pmm_leave_out)
+
+        df_model = nw_model.from_polars(df_model)
+        df_impute = nw_impute.from_polars(df_impute)
+        df_betas = nw_model.from_polars(df_betas)
+
         return (df_model, df_impute, df_betas, df_pmm_leave_out)
 
     ##########################################################
@@ -1627,13 +1785,15 @@ class Impute:
     ##########################################################
     def _hotdeck_random(
         self,
-        df_donors: pl.LazyFrame | pl.DataFrame,
-        df_recipients: pl.LazyFrame | pl.DataFrame,
+        df_donors: IntoFrameT,
+        df_recipients: IntoFrameT,
         donate_vars: list,
         model: list,
-    ) -> tuple[pl.LazyFrame | pl.DataFrame, pl.LazyFrame | pl.DataFrame]:
-        df_donors = df_donors.lazy().collect()
-        df_recipients = df_recipients.lazy().collect()
+    ) -> tuple[IntoFrameT, IntoFrameT]:
+        nw_donors = NarwhalsType(df_donors)
+        nw_recipients = NarwhalsType(df_recipients)
+        df_donors = nw_donors.to_polars().lazy().collect()
+        df_recipients = nw_recipients.to_polars().lazy().collect()
 
         rng = RandomNumberGenerator()
         sort_by = model.copy() + ["___random_sort"]
@@ -1840,23 +2000,23 @@ class Impute:
             .drop(drop_list_donor_arrays)
         )
 
-        return (df_matched, df_unmatched)
+        return (nw_donors.from_polars(df_matched), nw_donors.from_polars(df_unmatched))
 
     def _statmatch_merge(
         self,
-        df_donors: pl.LazyFrame | pl.DataFrame,
-        df_recipients: pl.LazyFrame | pl.DataFrame,
+        df_donors: IntoFrameT,
+        df_recipients: IntoFrameT,
         donate_vars: list[str],
         model: list[str],
-    ) -> tuple[pl.LazyFrame | pl.DataFrame, pl.LazyFrame | pl.DataFrame]:
+    ) -> tuple[IntoFrameT, IntoFrameT]:
         """
         Do the actual stat match for this model
 
         Parameters
         ----------
-        df_donors : pl.LazyFrame | pl.DataFrame
+        df_donors : IntoFrameT
             Potential donor observations.
-        df_recipients : pl.LazyFrame | pl.DataFrame
+        df_recipients : IntoFrameT
             Potential recipient observations.
         donate_vars : list[str]
             List of variables to donate.
@@ -1865,15 +2025,17 @@ class Impute:
 
         Returns
         -------
-        df_matched : pl.LazyFrame | pl.DataFrame
+        df_matched : IntoFrameT
             Matched recipients that found a donor (impute complete)
-        df_unmatched : pl.LazyFrame | pl.DataFrame
+        df_unmatched : IntoFrameT
             Unmatched recipients with no donor (impute pending)
 
         """
 
-        df_donors = df_donors.lazy().collect()
-        df_recipients = df_recipients.lazy().collect()
+        nw_donors = NarwhalsType(df_donors)
+        nw_recipients = NarwhalsType(df_recipients)
+        df_donors = nw_donors.to_polars().lazy().collect()
+        df_recipients = nw_recipients.to_polars().lazy().collect()
 
         rng = RandomNumberGenerator()
 
@@ -1971,7 +2133,7 @@ class Impute:
             .drop(["___donornumber", "___nInGroup"])
         )
 
-        return (df_matched, df_unmatched)
+        return (nw_donors.from_polars(df_matched), nw_donors.from_polars(df_unmatched))
 
     ##########################################################
     ##########################################################
@@ -1985,31 +2147,37 @@ class Impute:
     ##########################################################
     ##########################################################
 
-    def _pmm_leave_out(self, df_model: pl.LazyFrame | pl.DataFrame) -> (pl.LazyFrame | pl.DataFrame, pl.LazyFrame | pl.DataFrame):
+    def _pmm_leave_out(self, df_model: IntoFrameT) -> (IntoFrameT, IntoFrameT):
         if self.variable.parameters["share_leave_out"] > 0:
             share_leave_out = self.variable.parameters["share_leave_out"]
             col_leave_out = "___pmm_leave_out___"
             rng = RandomNumberGenerator()
 
+            nw_type = NarwhalsType(df_model)
             df_model = concat_wrapper(
                 [
                     df_model,
-                    pl.DataFrame(
-                        {
-                            col_leave_out: rng.uniform(
-                                low=0, high=1, size=safe_height(df_model)
-                            )
-                        }
+                    nw_type.from_polars(
+                        pl.DataFrame(
+                            {
+                                col_leave_out: rng.uniform(
+                                    low=0, high=1, size=safe_height(df_model)
+                                )
+                            }
+                        )
                     ),
                 ],
                 how="horizontal",
             )
 
-            df_model = df_model.with_columns(
-                pl.col(col_leave_out) <= share_leave_out
+            df_model = (
+                nw.from_native(df_model)
+                .with_columns(nw.col(col_leave_out) <= share_leave_out)
+                .to_native()
             )
 
-            df_model_bool = df_model
+            nw_type = NarwhalsType(df_model)
+            df_model_bool = nw_type.to_polars()
 
             #   Filter directly on the boolean column rather than partition_by,
             #   which only returns the groups that actually occur - a lopsided
@@ -2022,15 +2190,18 @@ class Impute:
                 col_leave_out
             )
 
-            return (df_model, df_pmm_leave_out)
+            return (
+                nw_type.from_polars(df_model),
+                nw_type.from_polars(df_pmm_leave_out),
+            )
         else:
             #   No subsetting, just return the data
             return (df_model, None)
 
     # def _pmm_adjust_leave_out(self,
-    #                           df_impute:pl.LazyFrame | pl.DataFrame,
-    #                           p_pmm_model:pl.LazyFrame | pl.DataFrame,
-    #                           p_pmm_leave_out:pl.LazyFrame | pl.DataFrame,
+    #                           df_impute:IntoFrameT,
+    #                           p_pmm_model:IntoFrameT,
+    #                           p_pmm_leave_out:IntoFrameT,
     #                           p_col:str):
     #     qlist = [f"q{qi*5}" for qi in range(1,20)]
     #     qs_pmm_model = StatCalculator(df=p_pmm_model,
@@ -2078,7 +2249,7 @@ class Impute:
     #                           .with_columns(pl.col(col_adjustment).interpolate("linear"))
     #                           .with_columns(pl.col(col_adjustment).fill_null(strategy="forward").fill_null(strategy="backward"))
     #                           .with_columns((pl.col(p_col)*pl.col("___pmm_adjustment___")).alias(p_col))
-    #                           .filter(pl.col(p_col).is_not_null())
+    #                           .filter(pl.col(p_col).is_not_missing())
     #                           .drop(cs.starts_with("___pmm_"))
     #                           .sort(self.index))
 
@@ -2096,8 +2267,8 @@ class Impute:
     ##########################################################
 
     def _draw_interpolated_percentiles(
-        self, df: pl.LazyFrame | pl.DataFrame, percentiles: list
-    ) -> tuple[pl.LazyFrame | pl.DataFrame, pl.LazyFrame | pl.DataFrame]:
+        self, df: IntoFrameT, percentiles: list
+    ) -> tuple[IntoFrameT, IntoFrameT]:
         tail = "gaussian"
 
         draw = DrawFromQuantileVectors(
@@ -2106,19 +2277,19 @@ class Impute:
         df_results = draw.draw_random_values()
 
         return (
-            df_results.select("p"),
-            df_results.select("values"),
+            (nw.from_native(df_results).select("p").to_native()),
+            (nw.from_native(df_results).select("values").to_native()),
         )
 
     def _find_nearest_neighbor_by(
         self,
-        df_model: pl.LazyFrame | pl.DataFrame,
-        df_impute: pl.LazyFrame | pl.DataFrame,
+        df_model: IntoFrameT,
+        df_impute: IntoFrameT,
         knearest: int,
         match_on: list[str],
         donate_vars: list[str],
         donate_by: list[str] | None = None,
-    ) -> pl.LazyFrame | pl.DataFrame:
+    ) -> IntoFrameT:
         if donate_by is None or len(donate_by) == 0:
             return self._find_nearest_neighbor(
                 df_model=df_model,
@@ -2128,12 +2299,18 @@ class Impute:
                 donate_vars=donate_vars,
             )
         else:
-            d_model = df_model.partition_by(
-                donate_by, as_dict=True, include_key=True
+            nw_model = NarwhalsType(df_model)
+            nw_impute = NarwhalsType(df_impute)
+            d_model = nw_model.from_polars(
+                nw_model.to_polars().partition_by(
+                    donate_by, as_dict=True, include_key=True
+                )
             )
 
-            d_impute = df_impute.partition_by(
-                donate_by, as_dict=True, include_key=True
+            d_impute = nw_impute.from_polars(
+                nw_impute.to_polars().partition_by(
+                    donate_by, as_dict=True, include_key=True
+                )
             )
 
             df_matched = []
@@ -2154,13 +2331,19 @@ class Impute:
 
     def _find_nearest_neighbor(
         self,
-        df_model: pl.LazyFrame | pl.DataFrame,
-        df_impute: pl.LazyFrame | pl.DataFrame,
+        df_model: IntoFrameT,
+        df_impute: IntoFrameT,
         knearest: int,
         match_on: list[str],
         donate_vars: list[str],
-    ) -> pl.LazyFrame | pl.DataFrame:
+    ) -> IntoFrameT:
         self.logging.info(f"     Finding {knearest} nearest neighbors on {match_on}")
+
+        nw_model = NarwhalsType(df_model)
+        nw_impute = NarwhalsType(df_impute)
+
+        df_model = nw_model.to_polars()
+        df_impute = nw_impute.to_polars()
 
         #   Add random jitter to the points to make matching random in ties
         c_match = pl.col(match_on)
@@ -2258,12 +2441,22 @@ class Impute:
 
         #   Most common matches
         self.logging.info("     Most common matches: ")
-        df_matchcount = calculate_by(
-            df=df_matched.with_columns(pl.lit(1).alias("nDonors")),
-            column_stats={"nDonors": ["count"]},
-            by=self.index,
-            no_suffix=True,
-        ).sort(["nDonors"], descending=True)
+        df_matchcount = (
+            nw.from_native(
+                calculate_by(
+                    df=(
+                        nw.from_native(df_matched)
+                        .with_columns(nw.lit(1).alias("nDonors"))
+                        .to_native()
+                    ),
+                    column_stats={"nDonors": ["count"]},
+                    by=self.index,
+                    no_suffix=True,
+                )
+            )
+            .sort(["nDonors"], descending=True)
+            .to_native()
+        )
 
         self.logging.info(df_matchcount.head(5).lazy().collect())
 
@@ -2273,20 +2466,20 @@ class Impute:
             how="horizontal",
         )
 
-        return df_matched
+        return nw_model.from_polars(df_matched)
 
     def _merge_imputes_to_df(
-        self, df_imputed: pl.LazyFrame | pl.DataFrame, df: pl.LazyFrame | pl.DataFrame, merge_list: list | str
-    ) -> pl.LazyFrame | pl.DataFrame:
+        self, df_imputed: IntoFrameT, df: IntoFrameT, merge_list: list | str
+    ) -> IntoFrameT:
         if type(merge_list) is str:
             merge_list = [merge_list]
         #   Merge results onto main file
         replace_list = []
         for vari in merge_list:
             replace_list.append(
-                pl.when(pl.col(f"{vari}_right").is_not_null())
-                .then(pl.col(f"{vari}_right"))
-                .otherwise(pl.col(vari))
+                nw.when(nw.col(f"{vari}_right").is_not_missing())
+                .then(nw.col(f"{vari}_right"))
+                .otherwise(nw.col(vari))
                 .alias(vari)
             )
 
@@ -2294,13 +2487,16 @@ class Impute:
         imputed_keep.extend(merge_list)
 
         df = (
-            join_list(
-                [df, df_imputed.select(imputed_keep)],
-                on=self.index,
-                how="left",
+            nw.from_native(
+                join_list(
+                    [df, (nw.from_native(df_imputed).select(imputed_keep).to_native())],
+                    on=self.index,
+                    how="left",
+                )
             )
             .with_columns(replace_list)
             .drop([f"{vari}_right" for vari in merge_list])
+            .to_native()
         )
 
         df = compress_df(df=df, cols=merge_list)
@@ -2325,8 +2521,8 @@ class Impute:
 
     def _post_impute_statistics(
         self,
-        df_model: pl.LazyFrame | pl.DataFrame,
-        df_impute: pl.LazyFrame | pl.DataFrame,
+        df_model: IntoFrameT,
+        df_impute: IntoFrameT,
         donate_vars: list = None,
         append: bool = True,
         show_by: bool = True,
@@ -2342,8 +2538,18 @@ class Impute:
 
         df_summary = concat_wrapper(
             [
-                df_model.select(keep_list).with_columns(pl.lit(0).alias("Imputed")),
-                df_impute.select(keep_list).with_columns(pl.lit(1).alias("Imputed")),
+                (
+                    nw.from_native(df_model)
+                    .select(keep_list)
+                    .with_columns(nw.lit(0).alias("Imputed"))
+                    .to_native()
+                ),
+                (
+                    nw.from_native(df_impute)
+                    .select(keep_list)
+                    .with_columns(nw.lit(1).alias("Imputed"))
+                    .to_native()
+                ),
             ],
             how="diagonal",
         )
@@ -2370,15 +2576,22 @@ class Impute:
         stats_post.print(round_output=True, sub_log=self.logging)
 
         if append and stats_post.df_estimates is not None:
-            cols_stats = stats_post.df_estimates.lazy().collect_schema().names()
-            df_empty = stats_post.df_estimates.head(0).with_columns(
-                [pl.lit(None).alias(coli) for coli in cols_stats]
+            cols_stats = (
+                nw.from_native(stats_post.df_estimates).lazy().collect_schema().names()
+            )
+            df_empty = (
+                nw.from_native(stats_post.df_estimates)
+                .head(0)
+                .with_columns([nw.lit(None).alias(coli) for coli in cols_stats])
+                .to_native()
             )
 
             df_post_impute = stats_post.df_estimates
             if len(self.variable.By) and show_by:
-                df_post_impute = df_post_impute.with_columns(
-                    pl.lit(str(self.current_by)).alias("By")
+                df_post_impute = (
+                    nw.from_native(df_post_impute)
+                    .with_columns(nw.lit(str(self.current_by)).alias("By"))
+                    .to_native()
                 )
 
             df_post_impute = concat_wrapper([df_post_impute, df_empty], how="diagonal")
@@ -2390,29 +2603,31 @@ class Impute:
                     [self.df_post_impute_statistics, df_post_impute], how="diagonal"
                 )
 
-    def df_impute(self, df: pl.LazyFrame | pl.DataFrame, keep_vars: list | None = None) -> pl.LazyFrame | pl.DataFrame:
+    def df_impute(self, df: IntoFrameT, keep_vars: list | None = None) -> IntoFrameT:
         if keep_vars is None:
             keep_vars = safe_columns(df)
 
         return (
-            self.variable.df_impute_where(df=df)
+            nw.from_native(self.variable.df_impute_where(df=df))
             .select(keep_vars)
             .lazy()
             .collect()
+            .to_native()
         )
 
     def df_model(
-        self, df: pl.LazyFrame | pl.DataFrame, keep_vars: list | None = None, drop_imputed: bool = False
-    ) -> pl.LazyFrame | pl.DataFrame:
+        self, df: IntoFrameT, keep_vars: list | None = None, drop_imputed: bool = False
+    ) -> IntoFrameT:
         if keep_vars is None:
-            keep_vars = df.lazy().collect_schema().names()
+            keep_vars = nw.from_native(df).lazy().collect_schema().names()
 
         df = (
-            self.variable.df_predict_where(df=df)
-            .filter(pl.col(self.variable.impute_var).is_not_null())
+            nw.from_native(self.variable.df_predict_where(df=df))
+            .filter(nw.col(self.variable.impute_var).is_not_missing())
             .select(keep_vars)
             .lazy()
             .collect()
+            .to_native()
         )
 
         return df

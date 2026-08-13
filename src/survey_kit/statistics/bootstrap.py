@@ -2,19 +2,23 @@
 
 from __future__ import annotations
 import polars as pl
+import narwhals as nw
+from narwhals.typing import IntoFrameT
 
 from ..utilities.random import RandomData
-from ..utilities.dataframe import safe_height, concat_wrapper
+from ..utilities.dataframe import safe_height, NarwhalsType, concat_wrapper
 
 
 def bayes_bootstrap_weights(
-    df: pl.LazyFrame | pl.DataFrame,
+    df: IntoFrameT,
     weight: str = "",
     prefix: str = "",
     sum_to: int | None = None,
     n_replicates: int = 100,
     seed: int = 0,
-) -> pl.LazyFrame | pl.DataFrame:
+) -> IntoFrameT:
+    nw_type = NarwhalsType(df)
+
     if prefix == "":
         if weight == "":
             prefix = "__bb_weight_"
@@ -23,20 +27,20 @@ def bayes_bootstrap_weights(
 
     n_rows = safe_height(df)
 
-    df_weights = bayes_bootstrap(
-        n_rows=n_rows, n_draws=n_replicates, seed=seed, prefix=prefix
+    df_weights = nw_type.from_polars(
+        bayes_bootstrap(n_rows=n_rows, n_draws=n_replicates, seed=seed, prefix=prefix)
     )
 
     df = concat_wrapper([df, df_weights], how="horizontal")
 
     if weight != "":
-        c_weight_original = pl.col(weight)
+        c_weight_original = nw.col(weight)
 
     with_columns = []
     for i_boot in range(n_replicates):
         coli = f"{prefix}{i_boot + 1}"
         b_add = False
-        c_weighti = pl.col(coli)
+        c_weighti = nw.col(coli)
 
         if weight != "":
             b_add = True
@@ -50,9 +54,9 @@ def bayes_bootstrap_weights(
             with_columns.append(c_weighti.alias(coli))
 
     if len(with_columns):
-        df = df.with_columns(with_columns)
+        df = nw.from_native(df).with_columns(with_columns).to_native()
 
-    return df
+    return nw.from_native(df).lazy_backend(nw_type).to_native()
 
 
 def bayes_bootstrap(

@@ -5,8 +5,10 @@
 from __future__ import annotations
 
 import os
-import polars as pl
-import polars.selectors as cs
+import narwhals as nw
+import narwhals.selectors as cs
+from narwhals.typing import IntoFrameT
+import polars.selectors as pl_cs
 
 from enum import Enum
 import lightgbm as lgb
@@ -24,7 +26,7 @@ from copy import deepcopy
 
 from ...utilities.formula_builder import FormulaBuilder, get_model_frame
 from ...utilities.inputs import create_folders_if_needed
-from ...utilities.dataframe import columns_from_list, concat_wrapper
+from ...utilities.dataframe import columns_from_list, concat_wrapper, NarwhalsType
 from ...utilities.random import set_seed, generate_seed
 
 from ... import logger
@@ -33,7 +35,7 @@ from ... import logger
 class Survey_kit_Lightgbm:
     def __init__(
         self,
-        df: pl.LazyFrame | pl.DataFrame,
+        df: IntoFrameT,
         y: str = "",
         x: list | str | None = None,
         weight: str = "",
@@ -55,6 +57,7 @@ class Survey_kit_Lightgbm:
             x = [x]
 
         self.df = df
+        self.nw_type = NarwhalsType(df)
         self.y = y
         self.x = x
         self.weight = weight
@@ -202,9 +205,11 @@ class Survey_kit_Lightgbm:
         if b_need_mm:
             #       Get analysis dataset (the model matrix)
             fb.remove_constant()
-            df_mm = get_model_frame(fb.formula, self.df.lazy().collect())
+            df_mm = get_model_frame(
+                fb.formula, nw.from_native(self.df).lazy().collect().to_native()
+            )
 
-            self.x = df_mm.lazy().collect_schema().names()
+            self.x = nw.from_native(df_mm).lazy().collect_schema().names()
 
             if self.y == "":
                 self.y = fb.lhs()
@@ -222,11 +227,21 @@ class Survey_kit_Lightgbm:
 
             #   Replace the dataframe with the model matrix
 
-            if len(set(y_weight).intersection(self.df.collect_schema().names())):
+            if len(
+                set(y_weight).intersection(
+                    nw.from_native(self.df).collect_schema().names()
+                )
+            ):
                 self.df = concat_wrapper(
                     [
-                        self.df.select(y_weight).lazy().collect(),
-                        df_mm.lazy().collect(),
+                        (
+                            nw.from_native(self.df)
+                            .select(y_weight)
+                            .lazy()
+                            .collect()
+                            .to_native()
+                        ),
+                        (nw.from_native(df_mm).lazy().collect().to_native()),
                     ],
                     how="horizontal",
                 )
@@ -281,7 +296,7 @@ class Survey_kit_Lightgbm:
         replace_set = {":": "_", "[": "(", "]": ")"}
 
         #   Just rename and return
-        for coli in self.df.lazy().collect_schema().names():
+        for coli in nw.from_native(self.df).lazy().collect_schema().names():
             rename_to = coli
 
             b_rename = False
@@ -293,7 +308,7 @@ class Survey_kit_Lightgbm:
                 rename[coli] = rename_to
 
         if len(rename) > 0:
-            self.df = self.df.rename(rename)
+            self.df = nw.from_native(self.df).rename(rename).to_native()
 
             categorical_feature = []
             if "categorical_feature" in self.parameters.keys():
@@ -376,8 +391,8 @@ class Survey_kit_Lightgbm:
         self._params_prepared = True
 
     def _prepare_test_train(self):
-        x_train = self.df.lazy().collect().select(self.x)
-        y_train = self.df.lazy().collect().select(self.y)
+        x_train = nw.from_native(self.df).lazy().collect().select(self.x)
+        y_train = nw.from_native(self.df).lazy().collect().select(self.y)
 
         data_params = {}
 
@@ -398,25 +413,21 @@ class Survey_kit_Lightgbm:
                 test_size=self.test_size,
                 random_state=int(generate_seed()),
             )
-            #   sklearn's split returns plain pyarrow Tables (it just
-            #   indexes whatever type it was given) - convert back to
-            #   polars explicitly.
-            x_train = pl.from_arrow(x_train)
-            x_test = pl.from_arrow(x_test)
-            y_train = pl.from_arrow(y_train)
-            y_test = pl.from_arrow(y_test)
-
             extra_test = {}
 
             if self.weight != "":
-                weight_test = x_test.select(self.weight)
-                x_test = x_test.drop(self.weight)
-                extra_test["weight"] = weight_test.to_numpy().ravel()
+                weight_test = nw.from_native(x_test).select(self.weight).to_native()
+                x_test = nw.from_native(x_test).drop(self.weight).to_native()
+                extra_test["weight"] = nw.from_native(weight_test).to_numpy().ravel()
 
             self.train_y = y_test
             self.test_data = lgb.Dataset(
-                x_test.with_columns(cs.boolean().cast(pl.Int8)).to_arrow(),
-                label=y_test.to_numpy().ravel(),
+                (
+                    nw.from_native(x_test)
+                    .with_columns(cs.boolean().cast(nw.Int8))
+                    .to_arrow()
+                ),
+                label=nw.from_native(y_test).to_numpy().ravel(),
                 **extra_test,
                 **extra_data,
                 free_raw_data=False,
@@ -427,15 +438,19 @@ class Survey_kit_Lightgbm:
 
         extra_train = {}
         if self.weight != "":
-            weight_train = x_train.select(self.weight)
-            x_train = x_train.drop(self.weight)
+            weight_train = nw.from_native(x_train).select(self.weight)
+            x_train = nw.from_native(x_train).drop(self.weight).to_native()
             extra_train["weight"] = weight_train.to_numpy().ravel()
 
         self.train_y = y_train
 
         self.train_data = lgb.Dataset(
-            x_train.with_columns(cs.boolean().cast(pl.Int8)).to_arrow(),
-            label=y_train.to_numpy().ravel(),
+            (
+                nw.from_native(x_train)
+                .with_columns(cs.boolean().cast(nw.Int8))
+                .to_arrow()
+            ),
+            label=(nw.from_native(y_train).to_numpy().ravel()),
             **extra_train,
             **extra_data,
             free_raw_data=False,
@@ -544,12 +559,14 @@ class Survey_kit_Lightgbm:
 
     def predict(
         self,
-        df_predict: pl.LazyFrame | pl.DataFrame | None = None,
+        df_predict: IntoFrameT | None = None,
         name: str = "___prediction",
         merged_to_input: bool = False,
-    ) -> pl.LazyFrame | pl.DataFrame:
+    ) -> IntoFrameT:
         if df_predict is not None:
             #   Predict on new data
+            nw_type = NarwhalsType(df_predict)
+
             temp_lgbm = Survey_kit_Lightgbm(
                 df=df_predict,
                 y=self.y,
@@ -564,48 +581,61 @@ class Survey_kit_Lightgbm:
 
             temp_lgbm.process_formula()
 
-            df_prediction = pl.Series(
-                name=name,
-                values=self.model.predict(
-                    data=(
-                        temp_lgbm.df.select(self.train_data.get_data().schema.names)
-                        .with_columns(cs.boolean().cast(pl.Int8))
-                        .lazy()
-                        .collect()
-                        .to_arrow()
+            df_prediction = (
+                nw.Series.from_numpy(
+                    name=name,
+                    values=self.model.predict(
+                        data=(
+                            nw.from_native(temp_lgbm.df)
+                            .select(self.train_data.get_data().schema.names)
+                            .with_columns(cs.boolean().cast(nw.Int8))
+                            .lazy()
+                            .collect()
+                            .to_arrow()
+                        ),
+                        # predict_disable_shape_check=True,
                     ),
-                    # predict_disable_shape_check=True,
-                ),
-            ).to_frame()
+                    backend="polars",
+                )
+                .to_frame()
+                .lazy_backend(nw_type)
+                .to_native()
+            )
 
             if merged_to_input:
                 df_prediction = concat_wrapper(
                     [df_predict, df_prediction], how="horizontal"
                 )
 
-            return df_prediction
+            return NarwhalsType.return_df(df_prediction, nw_type)
         else:
             #   Predict on model data
-            df_prediction = pl.Series(
-                name=name,
-                values=self.model.predict(
-                    data=(
-                        self.df.select(self.train_data.get_data().schema.names)
-                        .with_columns(cs.boolean().cast(pl.Int8))
-                        .lazy()
-                        .collect()
-                        .to_arrow()
-                    )
-                ),
-                #   schema={name:pl.Float64},
-            ).to_frame()
+            df_prediction = (
+                nw.Series.from_numpy(
+                    name=name,
+                    values=self.model.predict(
+                        data=(
+                            nw.from_native(self.df)
+                            .select(self.train_data.get_data().schema.names)
+                            .with_columns(cs.boolean().cast(nw.Int8))
+                            .lazy()
+                            .collect()
+                            .to_arrow()
+                        )
+                    ),
+                    #   schema={name:nw.Float64},
+                    backend="polars",
+                )
+                .to_frame()
+                .lazy_backend(self.nw_type)
+            )
 
             if merged_to_input:
                 df_prediction = concat_wrapper(
                     [self.df, df_prediction], how="horizontal"
                 )
 
-            return df_prediction
+            return NarwhalsType.return_df(df_prediction, self.nw_type)
 
     def load_tuned_parameters(
         self, path: str = "", error_on_missing: bool = True
@@ -633,38 +663,46 @@ class Survey_kit_Lightgbm:
         # interactions:bool=False,
         # use_r:bool=False,
         with_rank: bool = False,
-    ) -> pl.LazyFrame | pl.DataFrame:
-        df = self.df.select(self.x)
+    ) -> IntoFrameT:
+        df = nw.from_native(self.df).select(self.x)
 
         importance_gain = self.model.feature_importance(importance_type="gain")
         importance_split = self.model.feature_importance(importance_type="split")
 
         df_importance = concat_wrapper(
             [
-                pl.DataFrame({"Feature": df.lazy().collect_schema().names()}),
-                pl.Series(name="Gain", values=importance_gain).to_frame(),
-                pl.Series(name="Frequency", values=importance_split).to_frame(),
+                nw.from_dicts(
+                    {"Feature": df.lazy().collect_schema().names()}, backend="polars"
+                ),
+                nw.Series.from_numpy(
+                    name="Gain", values=importance_gain, backend="polars"
+                ).to_frame(),
+                nw.Series.from_numpy(
+                    name="Frequency", values=importance_split, backend="polars"
+                ).to_frame(),
             ],
             how="horizontal",
         )
 
         df_importance = (
-            df_importance.filter(pl.col("Frequency") > 0)
+            nw.from_native(df_importance)
+            .filter(nw.col("Frequency") > 0)
             .sort("Gain", descending=True)
             .with_columns(
                 [
-                    (pl.col("Gain") / pl.sum("Gain")).alias("Gain"),
-                    (pl.col("Frequency") / pl.sum("Frequency")).alias("Frequency"),
+                    (nw.col("Gain") / nw.sum("Gain")).alias("Gain"),
+                    (nw.col("Frequency") / nw.sum("Frequency")).alias("Frequency"),
                 ]
             )
+            .to_native()
         )
 
         if with_rank:
             df_importance = df_importance.with_columns(
-                (~cs.by_name("Feature")).rank(descending=True).name.prefix("rank_")
+                (~pl_cs.by_name("Feature")).rank(descending=True).name.prefix("rank_")
             )
 
-        return df_importance
+        return nw.from_native(df_importance).lazy_backend(self.nw_type).to_native()
 
     def _feature_characteristics(
         feature: str = "", tunable_only=False

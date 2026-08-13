@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import os
-import polars as pl
+import narwhals as nw
 
 from .. import logger
 
@@ -15,8 +15,10 @@ def list_input(l: list | object | None = None) -> list:
     return l
 
 
-def is_polars_frame(df: object) -> bool:
-    return isinstance(df, (pl.DataFrame, pl.LazyFrame))
+def is_narwhals_compatible(df: object) -> bool:
+    return isinstance(
+        nw.from_native(df, pass_through=True), (nw.DataFrame, nw.LazyFrame)
+    )
 
 
 def create_folders_if_needed(paths: list[str] | str, quietly: bool = True):

@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 
+import narwhals as nw
+from narwhals.typing import IntoFrameT
+import narwhals.selectors as cs
 import polars as pl
-import polars.selectors as cs
 
 from ..serializable import Serializable
 
@@ -16,10 +18,12 @@ from ..utilities.inputs import list_input
 from ..utilities.dataframe import (
     fill_missing,
     safe_height,
+    NarwhalsType,
     rename_with_prefix_suffix,
     join_wrapper,
     concat_wrapper,
     safe_sum_cast,
+    backend_eager,
 )
 
 from ..utilities.compress import compress_df
@@ -48,7 +52,7 @@ class Calibration(Serializable):
 
     Parameters
     ----------
-    df : pl.LazyFrame | pl.DataFrame
+    df : IntoFrameT
         Input dataframe containing the survey data to be calibrated.
     moments : list[Moment | str] | Moment | str | None, optional
         Moment objects or paths to saved moments defining calibration targets.
@@ -82,7 +86,7 @@ class Calibration(Serializable):
 
     Attributes
     ----------
-    df : pl.LazyFrame | pl.DataFrame
+    df : IntoFrameT
         Dataframe with calibrated weights in the final_weight column.
     moments : list[Moment]
         List of Moment objects used for calibration.
@@ -145,10 +149,11 @@ class Calibration(Serializable):
     """
 
     _save_suffix = "calibration"
+    _save_exclude_items = ["nw_type"]
 
     def __init__(
         self,
-        df: pl.LazyFrame | pl.DataFrame,
+        df: IntoFrameT,
         moments: list[Moment | str] | Moment | str | None = None,
         missing_to_zero: bool = True,
         index: list[str] | None = None,
@@ -160,6 +165,8 @@ class Calibration(Serializable):
         iterations_loop: int = 20,
         tolerance: float = 0.00001,
     ):
+        self.nw_type = NarwhalsType(df)
+
         moments = list_input(moments)
         index = list_input(index)
 
@@ -187,40 +194,45 @@ class Calibration(Serializable):
         if missing_to_zero and df is not None:
             df = fill_missing(df=df, value=0)
 
+        df = nw.from_native(df)
         #   Check that base weight is > 0
         if weight != "":
-            c_weight = pl.col(weight)
+            c_weight = nw.col(weight)
             c_invalid_weights = c_weight.le(0) | c_weight.is_null()
 
             n_invalid = safe_height(
-                df.lazy().select(weight).filter(c_invalid_weights)
+                nw.from_native(df).lazy().select(weight).filter(c_invalid_weights)
             )
             if n_invalid:
                 logger.info(
                     f"  Dropping {n_invalid} observation(s) with invalid base weights (<= 0 or missing)"
                 )
                 df = df.filter(~c_invalid_weights)
-        self.df = df.lazy()
+        self.df = df.lazy_backend(self.nw_type)
 
         # Add an index, if there isn't one
         #   We need one to be able to put the file back together again
 
         if len(index) == 0:
             self.index = ["___rownumber"]
-            self.df = self.df.collect().with_row_index(name=self.index[0]).lazy()
+            self.df = (
+                self.df.collect()
+                .with_row_index(name=self.index[0])
+                .lazy_backend(self.nw_type)
+            )
         else:
             self.index = index
 
         if weight == "":
             weight = "___ones"
-            self.df = self.df.with_columns(pl.lit(1).alias(weight))
+            self.df = self.df.with_columns(nw.lit(1).alias(weight))
         self.weight = weight
         self.initial_guess = initial_guess
 
         if final_weight == "":
             final_weight = "___final_weight"
         self.final_weight = final_weight
-        self.df = self.df.with_columns(pl.col(self.weight).alias(self.final_weight))
+        self.df = self.df.with_columns(nw.col(self.weight).alias(self.final_weight))
 
         self.aggregation = aggregation
         self.method = method
@@ -250,7 +262,7 @@ class Calibration(Serializable):
         self.diagnostics_out = None
 
     def process_single_moment(
-        self, m_input: Moment | str, df: pl.LazyFrame | pl.DataFrame | None = None
+        self, m_input: Moment | str, df: IntoFrameT | None = None
     ) -> Moment:
         # Clone the moment object - the processed one will be based on the data to calibrate,
         #                           the input one is based on the data passed originally
@@ -313,8 +325,12 @@ class Calibration(Serializable):
         """
 
         if m_target.targets is not None and m_weight.model_matrix is not None:
-            cols_target = m_target.targets.lazy().collect_schema().names()
-            cols_weight = m_weight.model_matrix.lazy().collect_schema().names()
+            cols_target = (
+                nw.from_native(m_target.targets).lazy().collect_schema().names()
+            )
+            cols_weight = (
+                nw.from_native(m_weight.model_matrix).lazy().collect_schema().names()
+            )
             m_weight.columns = list(set(cols_target).intersection(cols_weight))
 
     def censor_to_min_obs(self, min_obs: int = 0) -> None:
@@ -359,8 +375,9 @@ class Calibration(Serializable):
         """
 
         if m.non_zero_target is not None and len(m.columns) > 0:
+            nw_type = NarwhalsType(m.non_zero_target)
             nonzero_cols = (
-                m.non_zero_target.select(m.columns).transpose(include_header=True)
+                nw_type.to_polars().select(m.columns).transpose(include_header=True)
             )
 
             m.columns = nonzero_cols.filter(
@@ -368,8 +385,10 @@ class Calibration(Serializable):
             )[nonzero_cols.lazy().collect_schema().names()[0]].to_list()
 
         if m.non_zero is not None and len(m.columns) > 0:
+            nw_type = NarwhalsType(m.non_zero)
+
             nonzero_cols = (
-                m.non_zero.select(m.columns).transpose(include_header=True)
+                nw_type.to_polars().select(m.columns).transpose(include_header=True)
             )
 
             m.columns = nonzero_cols.filter(
@@ -525,7 +544,7 @@ class Calibration(Serializable):
 
         #   NonZero always should exist if this is actually a moment to be estimated
         #       so get the list of column names from it
-        columns_to_add = m_add.non_zero.lazy().collect_schema().names()
+        columns_to_add = nw.from_native(m_add.non_zero).lazy().collect_schema().names()
 
         #   Nothing to add?, if so, return m_out as we're doing nothing here
         if len(columns_to_add) == 0:
@@ -534,41 +553,59 @@ class Calibration(Serializable):
         # Add the dummy for being in this submoment
         if sub_moment_column_name != "":
             #   Non-zero count is the number of observations in group
-            m_add.non_zero = m_add.non_zero.with_columns(
-                pl.lit(m_add.n_observations).alias(sub_moment_column_name)
+            m_add.non_zero = (
+                nw.from_native(m_add.non_zero)
+                .with_columns(
+                    nw.lit(m_add.n_observations).alias(sub_moment_column_name)
+                )
+                .to_native()
             )
 
-            m_add.non_zero_target = m_add.non_zero_target.with_columns(
-                pl.lit(m_add.n_observations_target).alias(sub_moment_column_name)
+            m_add.non_zero_target = (
+                nw.from_native(m_add.non_zero_target)
+                .with_columns(
+                    nw.lit(m_add.n_observations_target).alias(sub_moment_column_name)
+                )
+                .to_native()
             )
 
             #   Target is share in this Moment (set to 1 as it should be ByShare, which it will be multiplied by )
             if m_add.rescale:
-                m_add.targets = m_add.targets.with_columns(
-                    pl.lit(1).alias(sub_moment_column_name)
+                m_add.targets = (
+                    nw.from_native(m_add.targets)
+                    .with_columns(nw.lit(1).alias(sub_moment_column_name))
+                    .to_native()
                 )
             else:
-                m_add.targets = m_add.targets.with_columns(
-                    pl.lit(m_add.by_share).alias(sub_moment_column_name)
+                m_add.targets = (
+                    nw.from_native(m_add.targets)
+                    .with_columns(nw.lit(m_add.by_share).alias(sub_moment_column_name))
+                    .to_native()
                 )
 
             #   No scaling needed
             if m_add.scale is not None:
-                m_add.scale = m_add.scale.with_columns(
-                    pl.lit(m_add.by_share).alias(sub_moment_column_name)
+                m_add.scale = nw.from_native(m_add.scale).with_columns(
+                    nw.lit(m_add.by_share).alias(sub_moment_column_name)
                 )
 
             #   Model matrix - add dummy (1) as this
             if m_add.model_matrix is not None:
                 if m_add.rescale:
-                    m_add.model_matrix = m_add.model_matrix.with_columns(
-                        pl.lit(1 / (m_add.by_share**2)).alias(
-                            sub_moment_column_name
+                    m_add.model_matrix = (
+                        nw.from_native(m_add.model_matrix)
+                        .with_columns(
+                            nw.lit(1 / (m_add.by_share**2)).alias(
+                                sub_moment_column_name
+                            )
                         )
+                        .to_native()
                     )
                 else:
-                    m_add.model_matrix = m_add.model_matrix.with_columns(
-                        pl.lit(1).alias(sub_moment_column_name)
+                    m_add.model_matrix = (
+                        nw.from_native(m_add.model_matrix)
+                        .with_columns(nw.lit(1).alias(sub_moment_column_name))
+                        .to_native()
                     )
 
             m_add.columns.append(sub_moment_column_name)
@@ -602,7 +639,7 @@ class Calibration(Serializable):
         #   If m_out is not None, we need to combined m_out and m_add
 
         #   Update the name of the added columns, if anything was changed above
-        columns_to_add = m_add.non_zero.lazy().collect_schema().names()
+        columns_to_add = nw.from_native(m_add.non_zero).lazy().collect_schema().names()
 
         #   Combine the "data" (df and ModelMatrix)
         if m_out.df is None:
@@ -610,16 +647,20 @@ class Calibration(Serializable):
             m_out.model_matrix = m_add.model_matrix
         else:
             df_add = (
-                join_wrapper(
-                    m_add.df,
-                    m_out.df.select(m_add.index).with_columns(
-                        pl.lit(1).alias("bExist")
-                    ),
-                    on=m_add.index,
-                    how="left",
+                nw.from_native(
+                    join_wrapper(
+                        m_add.df,
+                        nw.from_native(m_out.df)
+                        .select(m_add.index)
+                        .with_columns(nw.lit(1).alias("bExist"))
+                        .to_native(),
+                        on=m_add.index,
+                        how="left",
+                    )
                 )
-                .filter(pl.col("bExist").is_null())
+                .filter(nw.col("bExist").is_missing())
                 .drop("bExist")
+                .to_native()
             )
 
             m_out.df = concat_wrapper([m_out.df, df_add], how="diagonal")
@@ -808,8 +849,10 @@ class Calibration(Serializable):
 
                 #   Reset the "final weight" (current weight) to the original one passed
                 #       (ignores the failed run's output)
-                self.df = self.df.with_columns(
-                    pl.col(self.weight).alias(self.final_weight)
+                self.df = (
+                    nw.from_native(self.df)
+                    .with_columns(nw.col(self.weight).alias(self.final_weight))
+                    .to_native()
                 )
 
                 diagnostics = self.run(
@@ -824,7 +867,11 @@ class Calibration(Serializable):
                 diagnostics["converged"] = converged
 
             if "diagnostics" in diagnostics.keys():
-                diagnostics["diagnostics"] = diagnostics["diagnostics"].lazy()
+                diagnostics["diagnostics"] = (
+                    nw.from_native(diagnostics["diagnostics"])
+                    .lazy_backend(self.nw_type)
+                    .to_native()
+                )
             self.diagnostics_out = diagnostics
 
             if print_diagnostics:
@@ -874,8 +921,9 @@ class Calibration(Serializable):
         """
 
         if m.non_zero_target is not None and len(m.columns) > 0:
+            nw_type = NarwhalsType(m.non_zero_target)
             nonzero_cols = (
-                m.non_zero_target.select(m.columns).transpose(include_header=True)
+                nw_type.to_polars().select(m.columns).transpose(include_header=True)
             )
 
             m.columns = nonzero_cols.filter(
@@ -883,8 +931,9 @@ class Calibration(Serializable):
             )[nonzero_cols.lazy().collect_schema().names()[0]].to_list()
 
         if m.non_zero is not None and len(m.columns):
+            nw_type = NarwhalsType(m.non_zero)
             nonzero_cols = (
-                m.non_zero.select(m.columns).transpose(include_header=True)
+                nw_type.to_polars().select(m.columns).transpose(include_header=True)
             )
 
             m.columns = nonzero_cols.filter(
@@ -961,8 +1010,10 @@ class Calibration(Serializable):
                 cols_df.extend(self.index)
                 cols_df.append(self.final_weight)
                 self.c_combined.df = join_wrapper(
-                    self.c_combined.df.drop(self.final_weight),
-                    self.df.select(cols_df),
+                    nw.from_native(self.c_combined.df)
+                    .drop(self.final_weight)
+                    .to_native(),
+                    nw.from_native(self.df).select(cols_df).to_native(),
                     on=self.index,
                     how="left",
                 )
@@ -973,8 +1024,8 @@ class Calibration(Serializable):
 
                 # Update the weights back
                 self.df = join_wrapper(
-                    self.df.drop(self.final_weight),
-                    self.c_combined.df.select(cols_df),
+                    nw.from_native(self.df).drop(self.final_weight).to_native(),
+                    nw.from_native(self.c_combined.df).select(cols_df).to_native(),
                     on=self.index,
                     how="left",
                 )
@@ -1017,25 +1068,43 @@ class Calibration(Serializable):
             m=m, sequential=sequential
         )
 
+        nw_type = NarwhalsType(xi)
+
         #   Initial weights
         if base_weight is None:
-            base_weight = initial_guess.lazy().collect().to_numpy().ravel()
+            base_weight = (
+                nw.from_native(initial_guess).lazy().collect().to_numpy().ravel()
+            )
             initial_guess = None
 
             #   aebw_options["initial_ratio_guess"] = base_weight
         else:
-            base_weight = base_weight.lazy().collect().to_numpy().ravel()
-            initial_guess = initial_guess.lazy().collect().to_numpy().ravel()
+            base_weight = (
+                nw.from_native(base_weight).lazy().collect().to_numpy().ravel()
+            )
+            initial_guess = (
+                nw.from_native(initial_guess).lazy().collect().to_numpy().ravel()
+            )
 
             #   aebw_options["initial_ratio_guess"] = initial_guess
 
-        xi = xi.with_columns(
-            [cs.boolean().cast(pl.Float32), cs.numeric().cast(pl.Float64)]
+        xi = (
+            nw.from_native(xi)
+            .with_columns(
+                [cs.boolean().cast(nw.Float32), cs.numeric().cast(nw.Float64)]
+            )
+            .to_native()
         )
 
-        xi = xi.with_columns(pl.all().cast(pl.Float64)).lazy().collect().to_numpy()
+        xi = (
+            nw.from_native(xi)
+            .with_columns(nw.all().cast(nw.Float64))
+            .lazy()
+            .collect()
+            .to_numpy()
+        )
 
-        targetsi = targetsi.lazy().collect().to_numpy().ravel()
+        targetsi = nw.from_native(targetsi).lazy().collect().to_numpy().ravel()
 
         b_converged = False
 
@@ -1055,7 +1124,14 @@ class Calibration(Serializable):
 
             b_converged = results[1] == "success"
 
-            w_out = pl.from_numpy(results[0], schema={"column_0": pl.Float64})
+            w_out = nw.from_native(
+                nw.from_arrow(
+                    pl.from_numpy(
+                        results[0], schema={"column_0": pl.Float64}
+                    ).to_arrow(),
+                    backend=backend_eager(nw_type.backend),
+                )
+            )
 
         except Exception as e:
             logger.error(e)
@@ -1135,6 +1211,8 @@ class Calibration(Serializable):
             m=m, sequential=sequential
         )
 
+        nw_type = NarwhalsType(xi)
+
         n_weights = safe_height(initial_guess)
         aebw_options = dict(dense=dense, dual_only=dual_only)
 
@@ -1152,29 +1230,49 @@ class Calibration(Serializable):
 
         #   Initial weights
         if base_weight is None:
-            base_weight = initial_guess.lazy().collect().to_numpy().ravel()
+            base_weight = (
+                nw.from_native(initial_guess).lazy().collect().to_numpy().ravel()
+            )
             initial_guess = None
 
             #   aebw_options["initial_ratio_guess"] = base_weight
         else:
-            base_weight = base_weight.lazy().collect().to_numpy().ravel()
-            initial_guess = initial_guess.lazy().collect().to_numpy().ravel()
+            base_weight = (
+                nw.from_native(base_weight).lazy().collect().to_numpy().ravel()
+            )
+            initial_guess = (
+                nw.from_native(initial_guess).lazy().collect().to_numpy().ravel()
+            )
 
             #   aebw_options["initial_ratio_guess"] = initial_guess
 
-        xi = xi.with_columns(
-            [cs.boolean().cast(pl.Float32), cs.numeric().cast(pl.Float64)]
+        xi = (
+            nw.from_native(xi)
+            .with_columns(
+                [cs.boolean().cast(nw.Float32), cs.numeric().cast(nw.Float64)]
+            )
+            .to_native()
         )
 
         if dense:
-            xi = xi.with_columns(pl.all().cast(pl.Float64)).lazy().collect().to_numpy()
+            xi = (
+                nw.from_native(xi)
+                .with_columns(nw.all().cast(nw.Float64))
+                .lazy()
+                .collect()
+                .to_numpy()
+            )
 
         else:
             xi = sp.csc_array(
-                xi.with_columns(pl.all().cast(pl.Float64)).lazy().collect().to_numpy()
+                nw.from_native(xi)
+                .with_columns(nw.all().cast(nw.Float64))
+                .lazy()
+                .collect()
+                .to_numpy()
             )
 
-        targetsi = targetsi.lazy().collect().to_numpy().ravel()
+        targetsi = nw.from_native(targetsi).lazy().collect().to_numpy().ravel()
 
         if scale_weights_to_n:
             sum_weights = base_weight.sum()
@@ -1211,19 +1309,29 @@ class Calibration(Serializable):
         check_bounds = not only_bounds and (bounds is not None)
         rerun_with_bounds = False
         if b_converged:
-            w_out = pl.from_numpy(
-                results.new_weights, schema={"column_0": pl.Float64}
+            w_out = nw.from_native(
+                nw.from_arrow(
+                    pl.from_numpy(
+                        results.new_weights, schema={"column_0": pl.Float64}
+                    ).to_arrow(),
+                    backend=backend_eager(nw_type.backend),
+                )
             )
 
         ratio = None
         if check_bounds:
             #   It converged, but are we finished?
-            df_base_weight = pl.from_numpy(base_weight, schema={"base": pl.Float64})
+            df_base_weight = nw.from_arrow(
+                pl.from_numpy(base_weight, schema={"base": pl.Float64}).to_arrow(),
+                backend=backend_eager(nw_type.backend),
+            )
 
-            c_ratio = pl.col("new") / pl.col("base")
-            ratio = concat_wrapper(
-                [df_base_weight, w_out.rename({"column_0": "new"})],
-                how="horizontal",
+            c_ratio = nw.col("new") / nw.col("base")
+            ratio = nw.from_native(
+                concat_wrapper(
+                    [df_base_weight, w_out.rename({"column_0": "new"})],
+                    how="horizontal",
+                )
             ).select([c_ratio.min().alias("min"), c_ratio.max().alias("max")])
 
             min_ratio = ratio.select("min").item(0, 0)
@@ -1277,8 +1385,13 @@ class Calibration(Serializable):
             )
 
             b_converged = results.converged
-            w_out = pl.from_numpy(
-                results.new_weights, schema={"column_0": pl.Float64}
+            w_out = nw.from_native(
+                nw.from_arrow(
+                    pl.from_numpy(
+                        results.new_weights, schema={"column_0": pl.Float64}
+                    ).to_arrow(),
+                    backend=backend_eager(nw_type.backend),
+                )
             )
             # except Exception as e:
             #     logger.error(f"Failure of calibration with bounds: {bounds}")
@@ -1297,43 +1410,61 @@ class Calibration(Serializable):
         cols_df = self.index + cols_weights
 
         qi = (
-            join_wrapper(
-                m.model_matrix.select(m.index),
-                self.df.select(cols_df),
-                on=self.index,
-                how="left",
+            nw.from_native(
+                join_wrapper(
+                    nw.from_native(m.model_matrix).select(m.index).to_native(),
+                    nw.from_native(self.df).select(cols_df).to_native(),
+                    on=self.index,
+                    how="left",
+                )
             )
             .sort(m.index)
             .select(cols_weights)
+            .to_native()
         )
 
-        qi = safe_sum_cast(qi).with_columns(
-            [pl.col(coli) / pl.col(coli).sum() for coli in cols_weights]
+        qi = (
+            nw.from_native(safe_sum_cast(qi))
+            .with_columns([nw.col(coli) / nw.col(coli).sum() for coli in cols_weights])
+            .to_native()
         )
 
         if self.initial_guess != "":
             qi_base = qi.select(self.final_weight)
             qi = qi.select(self.initial_guess)
 
-            qi_base = safe_sum_cast(
-                df=qi_base, columns=[self.final_weight]
-            ).with_columns(
-                (pl.col(self.final_weight) / pl.col(self.final_weight).sum()).alias(
-                    self.final_weight
+            qi_base = (
+                nw.from_native(safe_sum_cast(df=qi_base, columns=[self.final_weight]))
+                .with_columns(
+                    (nw.col(self.final_weight) / nw.col(self.final_weight).sum()).alias(
+                        self.final_weight
+                    )
                 )
+                .to_native()
             )
         else:
             qi_base = None
-        col_qi = qi.lazy().collect_schema().names()[0]
-        qi = safe_sum_cast(df=qi, columns=col_qi).with_columns(
-            (pl.col(col_qi) / pl.col(col_qi).sum()).alias(col_qi)
+        col_qi = nw.from_native(qi).lazy().collect_schema().names()[0]
+        qi = nw.from_native(qi)
+        qi = (
+            nw.from_native(safe_sum_cast(df=qi, columns=col_qi))
+            .with_columns(
+                (nw.col(col_qi) / nw.col(col_qi).sum()).alias(
+                    qi.lazy().collect_schema().names()[0]
+                )
+            )
+            .to_native()
         )
 
         xi = m.rescaled_model_matrix(narrow=True)
 
         # Targets need to be adjusted for submoments
-        targetsi = m.targets.select(
-            pl.col(xi.lazy().collect_schema().names()) / m.by_share
+        targetsi = (
+            nw.from_native(m.targets)
+            .select(
+                nw.col(nw.from_native(xi).lazy().collect_schema().names()) / m.by_share
+            )
+            .to_native()
         )
 
         #   Adjust tolerance for subgroup byshare to match actual passed tolerance
@@ -1343,18 +1474,25 @@ class Calibration(Serializable):
             tol_adj = 1
 
         if add_intercept:
-            xi = xi.with_columns(pl.lit(1).alias("___weighting_intercept___"))
+            xi = (
+                nw.from_native(xi)
+                .with_columns(nw.lit(1).alias("___weighting_intercept___"))
+                .to_native()
+            )
 
-            targetsi = targetsi.with_columns(
-                pl.lit(1).alias("___weighting_intercept___")
+            targetsi = (
+                nw.from_native(targetsi)
+                .with_columns(nw.lit(1).alias("___weighting_intercept___"))
+                .to_native()
             )
 
         return [qi, qi_base, xi, targetsi, tol_adj]
 
     def _merge_on_weights(
-        self, m: Moment, weights: pl.LazyFrame | pl.DataFrame, sequential: bool = False
+        self, m: Moment, weights: IntoFrameT, sequential: bool = False
     ):
         temp_name = self.final_weight + "___temp___"
+        weights = nw.from_native(weights)
         weights = safe_sum_cast(
             weights.rename({weights.lazy().collect_schema().names()[0]: temp_name}),
             columns=temp_name,
@@ -1363,44 +1501,61 @@ class Calibration(Serializable):
         #   Adjust to share in this group (relative to total weight in this group vs. overall)
         #       relative to total weights that sum to the n in the sample
         n_obs = safe_height(weights)
-        weights = weights.with_columns(
-            (pl.col(temp_name) / pl.col(temp_name).sum() * n_obs).alias(temp_name)
+        weights = (
+            nw.from_native(weights)
+            .with_columns(
+                (nw.col(temp_name) / nw.col(temp_name).sum() * n_obs).alias(temp_name)
+            )
+            .to_native()
         )
         #   .rename({wOut.columns[0]:self.final_weight}
 
         if sequential:
-            weights = weights.with_columns(
-                pl.all() * m.by_share / n_obs / safe_height(self.df)
+            weights = nw.from_native(weights).with_columns(
+                nw.all() * m.by_share / n_obs / safe_height(self.df)
             )
 
             #   Merge by index
             weights = pl.concat(
                 [
-                    m.model_matrix.select(self.index).collect(),
+                    nw.from_native(m.model_matrix)
+                    .select(self.index)
+                    .collect()
+                    .to_native(),
                     weights,
                 ],
                 how="horizontal",
             )
             self.df = (
-                join_wrapper(self.df, weights, on=self.index, how="left")
+                nw.from_native(
+                    join_wrapper(self.df, weights, on=self.index, how="left")
+                )
                 .with_columns(
-                    pl.when(pl.col(temp_name).is_not_null())
-                    .then(pl.col(temp_name))
-                    .otherwise(pl.col(self.final_weight))
+                    nw.when(nw.col(temp_name).is_not_missing())
+                    .then(nw.col(temp_name))
+                    .otherwise(nw.col(self.final_weight))
                     .alias(self.final_weight)
                 )
                 .drop(temp_name)
-                .lazy()
+                .lazy_backend(self.nw_type)
+                .to_native()
             )
         else:
             #   Concatenate, it's faster (since the data's sorted and the same length)
-            self.df = concat_wrapper(
-                [
-                    self.df.drop(self.final_weight).lazy().collect(),
-                    weights.rename({temp_name: self.final_weight}),
-                ],
-                how="horizontal",
-            ).lazy()
+            self.df = (
+                concat_wrapper(
+                    [
+                        nw.from_native(self.df)
+                        .drop(self.final_weight)
+                        .lazy()
+                        .collect(),
+                        nw.from_native(weights).rename({temp_name: self.final_weight}),
+                    ],
+                    how="horizontal",
+                )
+                .lazy_backend(self.nw_type)
+                .to_native()
+            )
 
         # diagi = self._diagnostics_moment(m=m,
         #                                  with_by_prefix=False,
@@ -1441,18 +1596,21 @@ class Calibration(Serializable):
                     diag = concat_wrapper([diag, diagi], how="vertical")
 
         diag = (
-            diag.filter((pl.col("Estimates").is_not_null()))
-            .with_columns((pl.col("Estimates") - pl.col("Targets")).alias("diff"))
+            nw.from_native(diag)
+            .filter((nw.col("Estimates").is_not_missing()))
+            .with_columns((nw.col("Estimates") - nw.col("Targets")).alias("diff"))
             .with_columns(
-                (100 * (pl.col("Estimates") / pl.col("Targets") - 1)).alias("percent")
+                (100 * (nw.col("Estimates") / nw.col("Targets") - 1)).alias("percent")
             )
+            .to_native()
         )
 
         diag = compress_df(diag, no_boolean=True)
         max_diff = (
-            diag.filter(pl.col("Calibrated") == 1)
-            .with_columns((pl.col("percent").abs() / 100).alias("abs_diff"))
-            .select(pl.col("abs_diff").max())
+            nw.from_native(diag)
+            .filter(nw.col("Calibrated") == 1)
+            .with_columns((nw.col("percent").abs() / 100).alias("abs_diff"))
+            .select(nw.col("abs_diff").max())
             .lazy()
             .collect()
             .item(0, 0)
@@ -1488,7 +1646,7 @@ class Calibration(Serializable):
 
         cols_in_mm = [
             coli
-            for coli in m.model_matrix.lazy().collect_schema().names()
+            for coli in nw.from_native(m.model_matrix).lazy().collect_schema().names()
             if coli not in m.index
         ]
         column_stats = column_stats_builder(
@@ -1499,52 +1657,71 @@ class Calibration(Serializable):
         )
         #       Final weighted estimates
         df_estimates = (
-            calculate_by(
-                df=df_statsin,
-                column_stats=column_stats,
-                weight=self.final_weight,
-                no_suffix=True,
+            nw.from_native(
+                calculate_by(
+                    df=df_statsin,
+                    column_stats=column_stats,
+                    weight=self.final_weight,
+                    no_suffix=True,
+                )
             )
             .with_columns(cs.numeric() * m.by_share)
-            .with_columns(pl.lit("Estimates").alias("Column"))
+            .with_columns(nw.lit("Estimates").alias("Column"))
+            .to_native()
         )
+        df_estimates = df_estimates
 
         #       Initial values
         df_initial = (
-            calculate_by(
-                df=df_statsin,
-                column_stats=column_stats,
-                weight=self.weight,
-                no_suffix=True,
+            nw.from_native(
+                calculate_by(
+                    df=df_statsin,
+                    column_stats=column_stats,
+                    weight=self.weight,
+                    no_suffix=True,
+                )
             )
             .with_columns(cs.numeric() * m.by_share)
-            .with_columns(pl.lit("Initial").alias("Column"))
+            .with_columns(nw.lit("Initial").alias("Column"))
+            .to_native()
         )
 
         #   Return some basic info with the diagnostics
-        df_targets = m.targets.with_columns(pl.lit("Targets").alias("Column"))
+        df_targets = (
+            nw.from_native(m.targets)
+            .with_columns(nw.lit("Targets").alias("Column"))
+            .to_native()
+        )
 
         #   Non-zero counts in the weighted data
-        df_non_zero = m.non_zero.with_columns(pl.lit("NonZero").alias("Column"))
+        df_non_zero = (
+            nw.from_native(m.non_zero)
+            .with_columns(nw.lit("NonZero").alias("Column"))
+            .to_native()
+        )
 
         #   Non-zero counts in the target data
-        df_non_zero_target = m.non_zero_target.with_columns(
-            pl.lit("NonZero_Target").alias("Column")
+        df_non_zero_target = (
+            nw.from_native(m.non_zero_target)
+            .with_columns(nw.lit("NonZero_Target").alias("Column"))
+            .to_native()
         )
 
         #   What variables were actually used in the calibration?
         #       It seems easiest to use the one row NonZero vector as the basis
         cols_m_no_index = [ci for ci in m.columns if ci not in m.index]
-        c_ones = [pl.lit(1).alias(coli) for coli in cols_m_no_index]
+        c_ones = [nw.lit(1).alias(coli) for coli in cols_m_no_index]
         c_zeros = [
-            pl.lit(0).alias(coli) for coli in cols_in_mm if coli not in cols_m_no_index
+            nw.lit(0).alias(coli) for coli in cols_in_mm if coli not in cols_m_no_index
         ]
 
         df_calibrated = (
-            m.non_zero.select(cols_m_no_index)
+            nw.from_native(m.non_zero)
+            .select(cols_m_no_index)
             .with_columns(c_ones)
             .with_columns(c_zeros)
-            .with_columns(pl.lit("Calibrated").alias("Column"))
+            .with_columns(nw.lit("Calibrated").alias("Column"))
+            .to_native()
         )
 
         #   Stack the results
@@ -1569,13 +1746,20 @@ class Calibration(Serializable):
         )
         if prefix != "":
             df_diagnostics = rename_with_prefix_suffix(
-                df=df_diagnostics, prefix=prefix, exclude_list=["Column"]
+                df=df_diagnostics, prefix=prefix, ExcludeList=["Column"]
             )
 
         #   Reorder and transpose the diagnostics to be easier to read
-        colorder = df_diagnostics.drop("Column").lazy().collect_schema().names()
-        df_diagnostics = df_diagnostics.lazy().collect()
-        df_diagnostics = (
+        colorder = (
+            nw.from_native(df_diagnostics)
+            .drop("Column")
+            .lazy()
+            .collect_schema()
+            .names()
+        )
+        nw_type = NarwhalsType(df_diagnostics)
+        df_diagnostics = nw_type.to_polars().lazy().collect()
+        df_diagnostics = nw_type.from_polars(
             df_diagnostics.select(colorder)
             .transpose(
                 include_header=True, column_names=df_diagnostics["Column"].to_list()
@@ -1583,7 +1767,7 @@ class Calibration(Serializable):
             .rename({"column": "Variable"})
         )
 
-        return df_diagnostics.lazy()
+        return nw.from_native(df_diagnostics).lazy_backend(nw_type).to_native()
 
     def print_diagnostics(
         self,
@@ -1621,6 +1805,7 @@ class Calibration(Serializable):
         logger.info("Maximum Difference: " + str(diag["max_diff"]))
 
         diagnostics = diag["diagnostics"]
+        diagnostics = NarwhalsType(diagnostics).to_polars()
 
         if calibrated_only:
             diagnostics = diagnostics.filter(pl.col.Calibrated == 1)
@@ -1658,16 +1843,16 @@ class Calibration(Serializable):
 
     def get_final_weights(
         self,
-        df_merge_to: pl.LazyFrame | pl.DataFrame | None = None,
+        df_merge_to: IntoFrameT | None = None,
         truncate_low: float | None = None,
         truncate_high: float | None = None,
-    ) -> pl.LazyFrame | pl.DataFrame:
+    ) -> IntoFrameT:
         """
         Get the final calibrated weights, optionally merged to another dataframe.
 
         Parameters
         ----------
-        df_merge_to : pl.LazyFrame | pl.DataFrame | None, optional
+        df_merge_to : IntoFrameT | None, optional
             Dataframe to merge weights to. If None, returns weights with index only.
             Default is None.
         truncate_low : float | None, optional
@@ -1677,7 +1862,7 @@ class Calibration(Serializable):
 
         Returns
         -------
-        pl.LazyFrame | pl.DataFrame
+        IntoFrameT
             Dataframe with calibrated weights. If df_merge_to provided, returns that
             dataframe with weights merged on index. Otherwise returns index columns
             and final weight column only.
@@ -1686,22 +1871,26 @@ class Calibration(Serializable):
         col_weights = []
         col_weights.extend(self.index)
         col_weights.append(self.final_weight)
-        df_weights = self.df.select(col_weights)
+        df_weights = nw.from_native(self.df).select(col_weights).to_native()
 
-        c_final_weight = pl.col(self.final_weight)
+        c_final_weight = nw.col(self.final_weight)
         truncate = None
         if truncate_low is not None:
             #   N to truncate?
             expr_low = c_final_weight.lt(truncate_low)
-            n_truncate_low = safe_height(df_weights.filter(expr_low))
+            n_truncate_low = safe_height(
+                nw.from_native(df_weights).filter(expr_low).to_native()
+            )
             logger.info(f"     n truncated at {truncate_low} = {n_truncate_low}")
 
             if n_truncate_low:
-                truncate = pl.when(expr_low).then(pl.lit(truncate_low))
+                truncate = nw.when(expr_low).then(nw.lit(truncate_low))
         if truncate_high is not None:
             #   N to truncate?
             expr_high = c_final_weight.gt(truncate_high)
-            n_truncate_high = safe_height(df_weights.filter(expr_high))
+            n_truncate_high = safe_height(
+                nw.from_native(df_weights).filter(expr_high).to_native()
+            )
 
             logger.info(f"     n truncated at {truncate_high} = {n_truncate_high}")
 
@@ -1709,16 +1898,16 @@ class Calibration(Serializable):
                 if truncate is not None:
                     base = truncate
                 else:
-                    base = pl
+                    base = nw
 
-                truncate = base.when(expr_high).then(pl.lit(truncate_high))
+                truncate = base.when(expr_high).then(nw.lit(truncate_high))
 
         if truncate is not None:
-            truncate = truncate.otherwise(pl.col(self.final_weight)).alias(
+            truncate = truncate.otherwise(nw.col(self.final_weight)).alias(
                 self.final_weight
             )
 
-            df_weights = df_weights.with_columns(truncate)
+            df_weights = nw.from_native(df_weights).with_columns(truncate).to_native()
 
         if df_merge_to is not None:
             if self.index == ["___rownumber"]:
@@ -1726,7 +1915,12 @@ class Calibration(Serializable):
                 df_weights = concat_wrapper(
                     [
                         df_merge_to,
-                        df_weights.sort(self.index).select(self.final_weight),
+                        (
+                            nw.from_native(df_weights)
+                            .sort(self.index)
+                            .select(self.final_weight)
+                            .to_native()
+                        ),
                     ],
                     how="horizontal",
                 )

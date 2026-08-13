@@ -2,8 +2,9 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 import os
-import polars as pl
-import polars.selectors as cs
+import narwhals as nw
+import narwhals.selectors as cs
+from narwhals.typing import IntoFrameT
 import numpy as np
 from copy import deepcopy
 from glob import glob
@@ -364,13 +365,18 @@ class Implicate(Serializable):
                 in self.df_summary_stats[iterationi].lazy().collect_schema().names()
             ):
                 col_reorder = (
-                    self.df_summary_stats[iterationi].lazy().collect_schema().names()
+                    nw.from_native(self.df_summary_stats[iterationi])
+                    .lazy()
+                    .collect_schema()
+                    .names()
                 )
                 col_reorder.remove("By")
                 col_reorder.insert(2, "By")
-                self.df_summary_stats[iterationi] = self.df_summary_stats[
-                    iterationi
-                ].select(col_reorder)
+                self.df_summary_stats[iterationi] = (
+                    nw.from_native(self.df_summary_stats[iterationi])
+                    .select(col_reorder)
+                    .to_native()
+                )
 
             if self.status_variable == len(self.parent.variables):
                 self._iteration_summary_stats(iterationi)
@@ -452,43 +458,48 @@ class Implicate(Serializable):
 
         if df_post_impute_statistics is not None:
             cols_stats = (
-                df_post_impute_statistics.lazy().collect_schema().names()
+                nw.from_native(df_post_impute_statistics)
+                .lazy()
+                .collect_schema()
+                .names()
             )
 
             clear_name = []
             clear_name.append(
-                pl.when(pl.col("#") == 0)
-                .then(pl.col("Variable"))
-                .otherwise(pl.lit(None))
+                nw.when(nw.col("#") == 0)
+                .then(nw.col("Variable"))
+                .otherwise(nw.lit(None))
                 .alias("Variable")
             )
 
             if "By" in cols_stats:
                 clear_name.append(
-                    pl.when(pl.col("#").mod(4) == 0)
-                    .then(pl.col("By"))
-                    .otherwise(pl.lit(None))
+                    nw.when(nw.col("#").mod(4) == 0)
+                    .then(nw.col("By"))
+                    .otherwise(nw.lit(None))
                     .alias("By")
                 )
 
             with_ignore = [
-                pl.lit(variable.impute_var).alias("ignore_Variable"),
-                pl.lit(variable_index).alias("ignore_#"),
+                nw.lit(variable.impute_var).alias("ignore_Variable"),
+                nw.lit(variable_index).alias("ignore_#"),
             ]
             cols_stats = cols_stats + ["ignore_Variable", "ignore_#"]
             df_post_impute_statistics = (
-                df_post_impute_statistics.lazy()
+                nw.from_native(df_post_impute_statistics)
+                .lazy()
                 .collect()
                 .with_row_index(name="#")
                 .with_columns(with_ignore)
                 .with_columns(clear_name)
                 .with_columns(
-                    pl.when(pl.col("#") == 0)
-                    .then(pl.lit(variable_index))
-                    .otherwise(pl.lit(None))
+                    nw.when(nw.col("#") == 0)
+                    .then(nw.lit(variable_index))
+                    .otherwise(nw.lit(None))
                     .alias("#")
                 )
                 .select(["#"] + cols_stats)
+                .to_native()
             )
 
             if iteration not in self.df_summary_stats.keys():
@@ -500,14 +511,14 @@ class Implicate(Serializable):
                 )
 
         if self.parent.bayesian_bootstrap:
-            self.df = self.df.drop(weight)
+            self.df = nw.from_native(self.df).drop(weight).to_native()
 
         del impute
 
     def _call_pre_post_functions(
         self,
         function_list: list[
-            Variable.PrePost.Function | Variable.PrePost.PolarsExpression
+            Variable.PrePost.Function | Variable.PrePost.NarwhalsExpression
         ]
         | None = None,
         initialize: bool = False,
@@ -521,15 +532,15 @@ class Implicate(Serializable):
                         fi.call(self)
                     else:
                         self.df = fi.call(self.df)
-                elif type(fi) is Variable.PrePost.PolarsExpression:
+                elif type(fi) is Variable.PrePost.NarwhalsExpression:
                     logger.info(
-                        f"Updating data according to polars expression: {fi.expression}"
+                        f"Updating data according to narwhals expression: {fi.expression}"
                     )
                     self.df = fi.call(self.df)
 
     def df_full(
         self, drop_flags: bool = False, with_appended_cols: bool = False
-    ) -> pl.LazyFrame | pl.DataFrame:
+    ) -> IntoFrameT:
         """
         Combine imputed variables with the full dataset.
 
@@ -547,7 +558,7 @@ class Implicate(Serializable):
 
         Returns
         -------
-        pl.LazyFrame | pl.DataFrame
+        IntoFrameT
             Complete dataframe with imputed and non-imputed variables
         """
 
@@ -594,7 +605,7 @@ class Implicate(Serializable):
         )
 
     def save_appended_cols_to_implicate(
-        self, df: pl.LazyFrame | pl.DataFrame, columns: list[str], name: str
+        self, df: IntoFrameT, columns: list[str], name: str
     ):
         """
         Save additional columns to be merged with implicate results.
@@ -603,7 +614,7 @@ class Implicate(Serializable):
 
         Parameters
         ----------
-        df : pl.LazyFrame | pl.DataFrame
+        df : IntoFrameT
             Dataframe containing the columns to save
         columns : list[str]
             Column names to save
@@ -634,7 +645,7 @@ class Implicate(Serializable):
         create_folders_if_needed([self.path_appended_stat], quietly=True)
         save_path = f"{self.path_appended_stat}/{name}.parquet"
 
-        df.select(save_cols).lazy().sink_parquet(save_path)
+        (nw.from_native(df).select(save_cols).lazy().sink_parquet(save_path))
 
     def _subsequent_variables(self, variable_index: int = 0) -> list[str]:
         """
@@ -666,15 +677,15 @@ class Implicate(Serializable):
     def _iteration_summary_stats(self, iterationi: int):
         #   Get the final summary stats for each variable
         var_list = (
-            self.df_summary_stats[iterationi]
+            nw.from_native(self.df_summary_stats[iterationi])
             .lazy()
             .collect()
             .with_columns(
-                pl.col("ignore_#").min().over("ignore_Variable").alias("ignore_min_#")
+                nw.col("ignore_#").min().over("ignore_Variable").alias("ignore_min_#")
             )
             .filter(
-                pl.col("Variable").is_not_null()
-                & (pl.col("ignore_min_#") == pl.col("ignore_#"))
+                nw.col("Variable").is_not_null()
+                & (nw.col("ignore_min_#") == nw.col("ignore_#"))
             )
             .select("ignore_min_#", "Variable")
             .unique()
@@ -693,21 +704,22 @@ class Implicate(Serializable):
         )
 
         n_ignorej = (
-            self.df_summary_stats[iterationi]
-            .select(pl.col("ignore_#").max())
+            nw.from_native(self.df_summary_stats[iterationi])
+            .select(nw.col("ignore_#").max())
             .lazy()
             .collect()
             .item(0, 0)
         )
         df_stats_final = (
-            stats_final_iteration.df_estimates.lazy()
+            nw.from_native(stats_final_iteration.df_estimates)
+            .lazy()
             .collect()
             .with_row_index(name="ignore_#")
-            .with_columns(pl.col("ignore_#") + n_ignorej)
+            .with_columns(nw.col("ignore_#") + n_ignorej)
             .with_columns(
                 [
-                    pl.lit(True).alias("ignore_final"),
-                    pl.col("Variable").alias("ignore_Variable"),
+                    nw.lit(True).alias("ignore_final"),
+                    nw.col("Variable").alias("ignore_Variable"),
                 ]
             )
         )
@@ -721,15 +733,17 @@ class Implicate(Serializable):
 
         drop_cols = [
             coli
-            for coli in self.df_summary_stats[iterationi]
+            for coli in nw.from_native(self.df_summary_stats[iterationi])
             .lazy()
             .collect_schema()
             .names()
             if coli.startswith("ignore_")
         ]
         if len(drop_cols):
-            stats_calc.df_estimates = self.df_summary_stats[iterationi].drop(
-                drop_cols
+            stats_calc.df_estimates = (
+                nw.from_native(self.df_summary_stats[iterationi])
+                .drop(drop_cols)
+                .to_native()
             )
 
         self.logging.info(f"Imputation statistics after iteration #{iterationi}")
@@ -788,40 +802,49 @@ class Implicate(Serializable):
 
         for keyi, valuei in self.df_summary_stats.items():
             df_processed.append(
-                valuei.with_columns(cs.boolean().cast(pl.Int8))
-                .with_columns(pl.lit(keyi).alias("ignore_Iteration"))
-                .lazy()
-                .collect()
-                .with_row_index(name="row_number")
+                (
+                    nw.from_native(valuei)
+                    .with_columns(cs.boolean().cast(nw.Int8))
+                    .with_columns(nw.lit(keyi).alias("ignore_Iteration"))
+                    .lazy()
+                    .collect()
+                    .with_row_index(name="row_number")
+                    .to_native()
+                )
             )
 
         df_out = (
-            concat_wrapper(df_processed, how="diagonal")
+            nw.from_native(concat_wrapper(df_processed, how="diagonal"))
             .with_columns(
-                pl.col("ignore_#").min().over("ignore_Variable").alias("ignore_min_#")
+                nw.col("ignore_#").min().over("ignore_Variable").alias("ignore_min_#")
             )
             .sort(["ignore_min_#", "ignore_Iteration", "ignore_#", "row_number"])
             .filter(
-                pl.col("mean").is_not_null()
+                nw.col("mean").is_not_missing()
                 | (
-                    pl.col("row_number")
-                    == pl.col("row_number").max().over("ignore_Variable")
+                    nw.col("row_number")
+                    == nw.col("row_number").max().over("ignore_Variable")
                 )
             )
             .drop(["row_number"])
             .with_columns(
-                pl.when(pl.col("#").is_not_null() | (pl.col("ignore_final") == 1))
-                .then(pl.col("ignore_Iteration"))
-                .otherwise(pl.lit(None))
+                nw.when(nw.col("#").is_not_missing() | (nw.col("ignore_final") == 1))
+                .then(nw.col("ignore_Iteration"))
+                .otherwise(nw.lit(None))
                 .alias("Iteration")
             )
+            .to_native()
         )
 
-        df_out = df_out.lazy().collect()
+        df_out = nw.from_native(df_out).lazy().collect().to_native()
 
-        df_final = df_out.filter(pl.col("ignore_final") == 1)
+        df_final = (
+            nw.from_native(df_out).filter(nw.col("ignore_final") == 1).to_native()
+        )
 
-        df_out = df_out.filter(pl.col("ignore_final").is_null())
+        df_out = (
+            nw.from_native(df_out).filter(nw.col("ignore_final").is_null()).to_native()
+        )
 
         col_ordered = columns_from_list(df=df_out, columns="*", exclude=["ignore_*"])
         col_ordered.remove("Iteration")
@@ -834,9 +857,10 @@ class Implicate(Serializable):
 
             if print_by_variable:
                 variable_list = (
-                    df_out.filter(
-                        pl.col("Variable").is_not_null()
-                        & (pl.col("ignore_min_#") == pl.col("ignore_#"))
+                    nw.from_native(df_out)
+                    .filter(
+                        nw.col("Variable").is_not_null()
+                        & (nw.col("ignore_min_#") == nw.col("ignore_#"))
                     )
                     .select("ignore_min_#", "Variable")
                     .unique()
@@ -847,34 +871,49 @@ class Implicate(Serializable):
                 for vari in variable_list:
                     logger.info(f"\n\n{vari}")
                     stats_calc.df_estimates = (
-                        df_out.filter(pl.col("ignore_Variable") == vari)
+                        nw.from_native(df_out)
+                        .filter(nw.col("ignore_Variable") == vari)
                         .select(col_ordered)
                         .drop("Variable")
-                        .filter(pl.col("mean").is_not_null())
+                        .filter(nw.col("mean").is_not_missing())
+                        .to_native()
                     )
                     stats_calc.print(round_output=True, sub_log=self.logging)
             else:
-                stats_calc.df_estimates = df_out.select(col_ordered)
+                stats_calc.df_estimates = (
+                    nw.from_native(df_out).select(col_ordered).to_native()
+                )
                 stats_calc.print(round_output=True, sub_log=self.logging)
 
             logger.info("\n\nFinal Estimates by Iteration")
             drop_list = ["#", "Imputed", "n"]
             drop_list = list(
                 set(drop_list).intersection(
-                    df_final.lazy().collect_schema().names()
+                    nw.from_native(df_final).lazy().collect_schema().names()
                 )
             )
 
-            stats_calc.df_estimates = df_final.select(col_ordered)
+            stats_calc.df_estimates = (
+                nw.from_native(df_final).select(col_ordered).to_native()
+            )
             if len(drop_list):
-                stats_calc.df_estimates = stats_calc.df_estimates.drop(drop_list)
+                stats_calc.df_estimates = (
+                    nw.from_native(stats_calc.df_estimates).drop(drop_list).to_native()
+                )
             stats_calc.print(round_output=True, sub_log=self.logging)
 
-        df_out = df_out.select(col_ordered)
-        df_final = df_final.select(col_ordered)
+        df_out = nw.from_native(df_out).select(col_ordered).to_native()
+        df_final = nw.from_native(df_final).select(col_ordered).to_native()
 
-        drb_round_table(df_final.drop("Imputed")).lazy().collect().write_csv(
-            f"{self.parent.path_model}/{self.number}.final_summary_stats.csv"
+        (
+            nw.from_native(
+                drb_round_table(nw.from_native(df_final).drop("Imputed").to_native())
+            )
+            .lazy()
+            .collect()
+            .write_csv(
+                f"{self.parent.path_model}/{self.number}.final_summary_stats.csv"
+            )
         )
 
         df_out = concat_wrapper([df_out, df_final], how="diagonal")

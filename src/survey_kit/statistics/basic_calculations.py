@@ -2,8 +2,9 @@ from __future__ import annotations
 from typing import Callable
 
 
-import polars as pl
-import polars.selectors as cs
+import narwhals as nw
+import narwhals.selectors as cs
+from narwhals.typing import IntoFrameT
 
 from ..utilities.inputs import list_input
 
@@ -14,6 +15,8 @@ from ..utilities.dataframe import (
     concat_wrapper,
     fill_missing,
     columns_from_list,
+    NarwhalsType,
+    backend_eager,
 )
 
 from ..utilities.compress import compress_df
@@ -21,7 +24,7 @@ from .. import logger
 
 
 def calculate_by(
-    df: pl.LazyFrame | pl.DataFrame,
+    df: IntoFrameT,
     column_stats: dict[str, list[str]],
     by: dict[str, list[str] | str] | list[list[str] | str] | None = None,
     weight: str = "",
@@ -29,11 +32,22 @@ def calculate_by(
     quantile_interpolated: bool = False,
     quantile_interpolated_interval: int | float = 2_500,
     always_return_as_collection: bool = False,
-) -> dict[str, pl.LazyFrame | pl.DataFrame] | list[pl.LazyFrame | pl.DataFrame] | pl.LazyFrame | pl.DataFrame:
+    allow_slow_pandas: bool = False,
+) -> dict[str, IntoFrameT] | list[IntoFrameT] | IntoFrameT:
     if by is None:
         by = []
 
-    df = df.lazy()
+    nw_type = NarwhalsType(df)
+    nw_type_original = nw_type
+
+    #   Convert pandas->polars, run calculations, -> pandas
+    #       because the group-by aggregations are problematic for pandas
+    if nw_type.backend == "pandas" and not allow_slow_pandas:
+        #   logger.info("pandas->polars for calculation")
+        df = nw_type.to_polars()
+        nw_type = NarwhalsType(df)
+
+    df = nw.from_native(df).lazy_backend(nw_type)
 
     columns_to_keep = []
     for coli in column_stats.keys():
@@ -69,11 +83,13 @@ def calculate_by(
     )
 
     #   Summary stats on booleans don't really work in polars or R
-    df = df.select(columns_to_keep).with_columns(cs.boolean().cast(pl.Int8))
+    df = df.select(columns_to_keep).with_columns(cs.boolean().cast(nw.Int8))
 
     df_out = {}
     if weight != "":
-        df = safe_sum_cast(df=df, columns=weight).lazy()
+        df = nw.from_native(
+            safe_sum_cast(df=df.to_native(), columns=weight)
+        ).lazy_backend(nw_type)
 
     #   Construct the list of stats
     stats = []
@@ -92,9 +108,9 @@ def calculate_by(
                 share_stats.append(col_stat_info)
 
             if col_stat_info.need_sum_cast:
-                df = safe_sum_cast(
-                    df=df, columns=col_stat_info.column_name
-                ).lazy()
+                df = nw.from_native(
+                    safe_sum_cast(df=df.to_native(), columns=col_stat_info.column_name)
+                ).lazy_backend(nw_type)
 
             if col_stat_info.stat_expr is not None:
                 if col_stat_info.output_name not in names_already:
@@ -126,7 +142,7 @@ def calculate_by(
             for col_stat_infoi in share_stats:
                 namei = col_stat_infoi.output_name
                 with_share.append(
-                    (pl.col(namei) / pl.lit(d_shares[namei])).alias(namei)
+                    (nw.col(namei) / nw.lit(d_shares[namei])).alias(namei)
                 )
 
             df_byi = df_byi.with_columns(with_share)
@@ -169,12 +185,19 @@ def calculate_by(
                 df_byi = concat_wrapper(
                     [df_byi.collect()] + [dfi.collect() for dfi in df_join],
                     how="horizontal",
-                ).lazy()
+                ).lazy_backend(nw_type)
 
         df_out[bynamei] = compress_df(
-            fill_missing(df_byi, value=None).lazy().collect(),
+            nw.from_native(fill_missing(df_byi, value=None))
+            .lazy_backend(nw_type)
+            .collect()
+            .to_native(),
             no_boolean=True,
         )
+
+        if nw_type_original.backend == "pandas" and not allow_slow_pandas:
+            # logger.info("  return from polars->pandas")
+            df_out[bynamei] = nw_type_original.from_polars(df_out[bynamei])
 
     if no_suffix:
         for bynamei, byi in by_for_loop.items():
@@ -182,8 +205,10 @@ def calculate_by(
                 cols_thesevars = columns_from_list(df_out[bynamei], f"{coli}_*")
 
                 if len(cols_thesevars) == 1:
-                    df_out[bynamei] = df_out[bynamei].rename(
-                        {cols_thesevars[0]: coli}
+                    df_out[bynamei] = (
+                        nw.from_native(df_out[bynamei])
+                        .rename({cols_thesevars[0]: coli})
+                        .to_native()
                     )
     if len(df_out) == 1 and not always_return_as_collection:
         return next(iter(df_out.values()))
@@ -194,7 +219,7 @@ def calculate_by(
             return df_out
 
 
-def _check_special_modifiers(column: str) -> tuple[str, str, str]:
+def _check_special_modifiers(column: str) -> tuple[str, str]:
     #   Special modifiers - pipe separated
     special_modifiers = ["missing", "notmissing", "not0", "is0", "share"]
     modifier = ""
@@ -216,7 +241,7 @@ def _check_special_modifiers(column: str) -> tuple[str, str, str]:
 class _ColumnStatInformation:
     def __init__(
         self,
-        stat_expr: pl.Expr,
+        stat_expr: nw.Expr,
         need_sum_cast: bool,
         column_name: str,
         modifier: str,
@@ -288,7 +313,7 @@ def _summary_by_column_stat(
     elif statistic == "min":
         statout = _min(**arguments)
     elif statistic == "first":
-        statout = pl.col(column).first()
+        statout = nw.col(column).first()
 
     #   For anything else, do nothing
 
@@ -354,19 +379,19 @@ def stat_suffix(statistic: str = "", modifier: str = "") -> str:
 
 def _summary_by_modifier_filter(
     column: str, modifier: str, weight: str = ""
-) -> pl.Expr:
+) -> nw.Expr:
     c_filter = None
     if modifier == "not0":
-        c_filter = pl.col(column) != 0
+        c_filter = nw.col(column) != 0
     elif modifier == "notmissing":
-        c_filter = ~pl.col(column).is_null()
+        c_filter = ~nw.col(column).is_null()
     elif modifier == "missing":
-        c_filter = pl.col(column).is_null()
+        c_filter = nw.col(column).is_null()
     elif modifier == "is0":
-        c_filter = pl.col(column) == 0
+        c_filter = nw.col(column) == 0
 
     if weight != "":
-        c_weight = (pl.col(weight) != 0) & ~(pl.col(weight).is_null())
+        c_weight = (nw.col(weight) != 0) & ~(nw.col(weight).is_null())
 
         if c_filter is None:
             c_filter = c_weight
@@ -374,19 +399,19 @@ def _summary_by_modifier_filter(
             c_filter = c_filter & c_weight
 
     if c_filter is not None:
-        c_filter = c_filter.cast(pl.Int8)
+        c_filter = c_filter.cast(nw.Int8)
 
     return c_filter
 
 
 def _mean(
-    column: str, c_filter: pl.Expr | None, weight: str = "", suffix: str = ""
-) -> pl.Expr:
-    c_col = pl.col(column)
+    column: str, c_filter: nw.Expr | None, weight: str = "", suffix: str = ""
+) -> nw.Expr:
+    c_col = nw.col(column)
     if weight != "":
-        c_weight = pl.col(weight)
+        c_weight = nw.col(weight)
         statout = (c_filter * c_col * c_weight).sum() / (
-            c_filter * (~c_col.is_null()).cast(pl.Int8) * c_weight
+            c_filter * (~c_col.is_null()).cast(nw.Int8) * c_weight
         ).sum()
     else:
         if c_filter is not None:
@@ -398,11 +423,11 @@ def _mean(
 
 
 def _sum(
-    column: str, c_filter: pl.Expr | None, weight: str = "", suffix: str = ""
-) -> pl.Expr:
-    c_col = pl.col(column)
+    column: str, c_filter: nw.Expr | None, weight: str = "", suffix: str = ""
+) -> nw.Expr:
+    c_col = nw.col(column)
     if weight != "":
-        c_weight = pl.col(weight)
+        c_weight = nw.col(weight)
         statout = (c_filter * c_col * c_weight).sum()
     else:
         if c_filter is not None:
@@ -414,53 +439,53 @@ def _sum(
 
 
 def _count(
-    column: str, c_filter: pl.Expr | None, weight: str = "", suffix: str = ""
-) -> pl.Expr:
+    column: str, c_filter: nw.Expr | None, weight: str = "", suffix: str = ""
+) -> nw.Expr:
     if weight != "":
-        c_weight = pl.col(weight)
+        c_weight = nw.col(weight)
         statout = (c_filter * c_weight).sum()
     else:
         if c_filter is not None:
             statout = c_filter.sum()
         else:
-            statout = pl.len()
+            statout = nw.len()
 
     return statout
 
 
 def _rawcount(
-    column: str, c_filter: pl.Expr | None, weight: str = "", suffix: str = ""
-) -> pl.Expr:
+    column: str, c_filter: nw.Expr | None, weight: str = "", suffix: str = ""
+) -> nw.Expr:
     return _count(column=column, c_filter=c_filter, suffix=suffix)
 
 
 def _share(
-    column: str, c_filter: pl.Expr | None, weight: str = "", suffix: str = ""
-) -> pl.Expr:
+    column: str, c_filter: nw.Expr | None, weight: str = "", suffix: str = ""
+) -> nw.Expr:
     if weight != "":
-        c_weight = pl.col(weight)
+        c_weight = nw.col(weight)
         statout = (c_filter * c_weight).sum() / c_weight.sum()
     else:
         if c_filter is not None:
-            statout = c_filter.sum() / pl.len()
+            statout = c_filter.sum() / nw.len()
         else:
-            statout = pl.len()
+            statout = nw.len()
 
     return statout
 
 
 def _rawshare(
-    column: str, c_filter: pl.Expr | None, weight: str = "", suffix: str = ""
-) -> pl.Expr:
+    column: str, c_filter: nw.Expr | None, weight: str = "", suffix: str = ""
+) -> nw.Expr:
     return _share(column=column, c_filter=c_filter, suffix=suffix)
 
 
 def _var(
-    column: str, c_filter: pl.Expr | None, weight: str = "", suffix: str = ""
-) -> pl.Expr:
-    c_col = pl.col(column)
+    column: str, c_filter: nw.Expr | None, weight: str = "", suffix: str = ""
+) -> nw.Expr:
+    c_col = nw.col(column)
     if weight != "":
-        c_weight = pl.col(weight)
+        c_weight = nw.col(weight)
         c_mean = _mean(column=column, c_filter=c_filter, weight=weight, suffix=suffix)
         c_n = _rawcount(column=column, c_filter=c_filter, weight=weight, suffix=suffix)
         num = (c_weight * c_filter * ((c_col - c_mean) ** 2)).sum()
@@ -470,7 +495,7 @@ def _var(
     else:
         if c_filter is not None:
             statout = (
-                pl.when(c_filter.cast(pl.Boolean)).then(c_col).otherwise(pl.lit(None))
+                nw.when(c_filter.cast(nw.Boolean)).then(c_col).otherwise(nw.lit(None))
             ).var()
         else:
             statout = c_col.var()
@@ -479,8 +504,8 @@ def _var(
 
 
 def _std(
-    column: str, c_filter: pl.Expr | None, weight: str = "", suffix: str = ""
-) -> pl.Expr:
+    column: str, c_filter: nw.Expr | None, weight: str = "", suffix: str = ""
+) -> nw.Expr:
     statout = (
         _var(column=column, c_filter=c_filter, weight=weight, suffix=suffix) ** 0.5
     )
@@ -489,12 +514,12 @@ def _std(
 
 
 def _max(
-    column: str, c_filter: pl.Expr | None, weight: str = "", suffix: str = ""
-) -> pl.Expr:
-    c_col = pl.col(column)
+    column: str, c_filter: nw.Expr | None, weight: str = "", suffix: str = ""
+) -> nw.Expr:
+    c_col = nw.col(column)
     if c_filter is not None:
         statout = (
-            pl.when(c_filter.cast(pl.Boolean)).then(c_col).otherwise(pl.lit(None))
+            nw.when(c_filter.cast(nw.Boolean)).then(c_col).otherwise(nw.lit(None))
         ).max()
     else:
         statout = c_col.max()
@@ -503,12 +528,12 @@ def _max(
 
 
 def _min(
-    column: str, c_filter: pl.Expr | None, weight: str = "", suffix: str = ""
-) -> pl.Expr:
-    c_col = pl.col(column)
+    column: str, c_filter: nw.Expr | None, weight: str = "", suffix: str = ""
+) -> nw.Expr:
+    c_col = nw.col(column)
     if c_filter is not None:
         statout = (
-            pl.when(c_filter.cast(pl.Boolean)).then(c_col).otherwise(pl.lit(None))
+            nw.when(c_filter.cast(nw.Boolean)).then(c_col).otherwise(nw.lit(None))
         ).min()
     else:
         statout = c_col.min()
@@ -517,7 +542,7 @@ def _min(
 
 
 def _quantiles(
-    df: pl.LazyFrame,
+    df: nw.LazyFrame,
     column_stats: dict[str, list[str]],
     by: str | list | None = None,
     weight: str = "",
@@ -525,7 +550,7 @@ def _quantiles(
     interpolated_interval: int = 2500,
 ):
     if weight != "":
-        df = df.with_columns((pl.col(weight) / pl.col(weight).sum()).alias(weight))
+        df = df.with_columns((nw.col(weight) / nw.col(weight).sum()).alias(weight))
 
     #   Get all the quantile stats we're trying to generate
     column_stats_quantiles_only = {}
@@ -564,11 +589,12 @@ def _quantiles(
 
 
 def _quantiles_actual(
-    df: pl.LazyFrame,
+    df: nw.LazyFrame,
     column_stats: dict[str, list[str]],
     by: str | list | None = None,
     weight: str = "",
-) -> pl.LazyFrame:
+) -> nw.LazyFrame:
+    nw_type = NarwhalsType(df)
     if type(by) is str:
         by = [by]
     if by is None or not len(by):
@@ -576,9 +602,9 @@ def _quantiles_actual(
 
     columns = list(column_stats.keys())
     if weight == "":
-        n = df.select(pl.len()).collect().item(0, 0)
+        n = df.select(nw.len()).collect().item(0, 0)
         weight = "___weight___"
-        df = df.with_columns(pl.lit(1 / n).alias(weight))
+        df = df.with_columns(nw.lit(1 / n).alias(weight))
 
     columns_nameonly = []
     for coli in columns:
@@ -596,26 +622,26 @@ def _quantiles_actual(
         #   logger.info(f"{coli}: {qlisti}")
         sorted_coli = by + [coli]
 
-        keep_condition = ~pl.col(coli).is_null()
+        keep_condition = ~nw.col(coli).is_null()
         if modifier == "not0":
-            keep_condition = keep_condition & (pl.col(coli) != 0)
+            keep_condition = keep_condition & (nw.col(coli) != 0)
         else:
             modifier = ""
 
         if len(by):
             calc_over = (
-                pl.col(weight).cum_sum().over(by, order_by=coli)
-                / pl.col(weight).sum().over(by)
+                nw.col(weight).cum_sum().over(by, order_by=coli)
+                / nw.col(weight).sum().over(by)
             ).alias(weight)
         else:
             calc_over = (
-                pl.col(weight).cum_sum().over(order_by=[coli]) / pl.col(weight).sum()
+                nw.col(weight).cum_sum().over(order_by=[coli]) / nw.col(weight).sum()
             ).alias(weight)
 
         df_coli = (
             df.filter(keep_condition)
             .group_by(sorted_coli)
-            .agg(pl.col(weight).sum())
+            .agg(nw.col(weight).sum())
             .sort(sorted_coli)
             .with_columns(calc_over)
         )
@@ -626,13 +652,17 @@ def _quantiles_actual(
 
         #   Create rows with the quantiles we want to calculate
         if df_by is None:
-            df_byi = pl.DataFrame({weight: qlisti}).lazy()
+            df_byi = nw.from_dict(
+                {weight: qlisti}, backend=backend_eager(nw_type.backend)
+            ).lazy_backend(nw_type)
         else:
-            df_q = pl.DataFrame({weight: qlisti}).lazy()
+            df_q = nw.from_dict(
+                {weight: qlisti}, backend=backend_eager(nw_type.backend)
+            ).lazy_backend(nw_type)
 
             df_byi = join_wrapper(
-                df_by.with_columns(pl.lit(1).alias("___stats_join_full___")),
-                df_q.with_columns(pl.lit(1).alias("___stats_join_full___")),
+                df_by.with_columns(nw.lit(1).alias("___stats_join_full___")),
+                df_q.with_columns(nw.lit(1).alias("___stats_join_full___")),
                 how="full",
                 on=["___stats_join_full___"],
             ).drop("___stats_join_full___")
@@ -646,12 +676,12 @@ def _quantiles_actual(
             concat_wrapper([df_coli, df_byi], how="diagonal")
             .sort(by + [weight])
             .with_columns(
-                pl.col(coli)
+                nw.col(coli)
                 .shift(-1)
                 .over(order_by=by + [weight])
                 .alias("___y_above___")
             )
-            .filter(pl.col(coli).is_null())
+            .filter(nw.col(coli).is_null())
             .drop(coli)
             .rename({"___y_above___": coli})
         )
@@ -667,23 +697,32 @@ def _quantiles_actual(
         temp_by = False
         if len(by) == 0:
             by = ["___by___"]
-            df_coli = df_coli.with_columns(pl.lit(1).alias(by[0]))
+            df_coli = df_coli.with_columns(nw.lit(1).alias(by[0]))
 
             temp_by = True
 
         if df_by is None:
             df_coli = df_coli.with_columns(
-                pl.col(coli).fill_null(strategy="backward").over(order_by=by + [weight])
+                nw.col(coli).fill_null(strategy="backward").over(order_by=by + [weight])
             )
         else:
             df_coli = df_coli.with_columns(
-                pl.col(coli)
+                nw.col(coli)
                 .fill_null(strategy="backward")
                 .over(by, order_by=by + [weight])
             )
 
+        #   No pivot in pyarrow
+        if backend_eager(nw_type.backend) in ["pyarrow", "pandas"]:
+            df_coli = nw.from_native(df_coli.collect().to_polars().lazy())
         df_coli = df_coli.collect().pivot(index=by, on=weight, values=coli)
+        if backend_eager(nw_type.backend) == "pyarrow":
+            df_coli = nw.from_native(df_coli.to_arrow())
+
         df_coli = df_coli.rename(rename).sort(by)
+
+        if nw_type.backend == "pandas":
+            df_coli = nw.from_native(df_coli.to_pandas())
 
         if temp_by:
             df_coli = df_coli.drop(by)
@@ -697,7 +736,7 @@ def _quantiles_actual(
             else:
                 df_out = concat_wrapper([df_out, df_coli], how="horizontal")
 
-    return df_out.lazy()
+    return df_out.lazy_backend(nw_type)
 
 
 def _quantile_interpolated_bin_keys(
@@ -724,82 +763,84 @@ def _quantile_interpolated_bin_keys(
     df_coli = df_binned
 
     if len(by):
-        df_first = df_coli.group_by(by).agg(pl.all().first())
+        df_first = df_coli.group_by(by).agg(nw.all().first())
     else:
         df_first = df_coli.head(1)
     df_first = df_first.with_columns(
         [
-            pl.col(coli) - 1,
-            pl.lit(drb_safe_n_bin).cast(pl.UInt32).alias(var_n_in_bin),
+            nw.col(coli) - 1,
+            nw.lit(drb_safe_n_bin).cast(nw.UInt32).alias(var_n_in_bin),
         ]
     )
 
     if drb_safe_n_bin:
-        smallest_bin = df_coli.select(pl.min(var_n_in_bin))[0, 0]
+        smallest_bin = df_coli.select(nw.min(var_n_in_bin))[0, 0]
 
         while smallest_bin < drb_safe_n_bin:
-            c_too_small = pl.col(var_n_in_bin) < drb_safe_n_bin
+            c_too_small = nw.col(var_n_in_bin) < drb_safe_n_bin
             if len(by):
                 c_prior_too_small = (
-                    pl.col(var_n_in_bin)
+                    nw.col(var_n_in_bin)
                     .shift(n=1)
                     .over(by, order_by=sorted_coli)
-                    .fill_null(pl.lit(drb_safe_n_bin + 1))
+                    .fill_null(nw.lit(drb_safe_n_bin + 1))
                     < drb_safe_n_bin
                 )
                 cum_sum_expr = (
-                    pl.col(var_n_in_bin).cum_sum().over(by, order_by=sorted_coli)
+                    nw.col(var_n_in_bin).cum_sum().over(by, order_by=sorted_coli)
                 )
                 prior_cum_sum_expr = (
-                    pl.col(var_n_cum_sum)
+                    nw.col(var_n_cum_sum)
                     .shift(n=1)
                     .over(by, order_by=sorted_coli)
-                    .fill_null(pl.lit(0))
+                    .fill_null(nw.lit(0))
                 )
             else:
                 c_prior_too_small = (
-                    pl.col(var_n_in_bin)
+                    nw.col(var_n_in_bin)
                     .shift(n=1)
-                    .fill_null(pl.lit(drb_safe_n_bin + 1))
+                    .fill_null(nw.lit(drb_safe_n_bin + 1))
                     < drb_safe_n_bin
                 )
-                cum_sum_expr = pl.col(var_n_in_bin).cum_sum().over(order_by=sorted_coli)
+                cum_sum_expr = nw.col(var_n_in_bin).cum_sum().over(order_by=sorted_coli)
                 prior_cum_sum_expr = (
-                    pl.col(var_n_cum_sum).shift(n=1).fill_null(pl.lit(0))
+                    nw.col(var_n_cum_sum).shift(n=1).fill_null(nw.lit(0))
                 )
 
             df_coli = (
                 df_coli.with_columns([cum_sum_expr.alias(var_n_cum_sum)])
                 .filter(~(c_too_small & ~c_prior_too_small))
                 .with_columns(
-                    [(pl.col(var_n_cum_sum) - prior_cum_sum_expr).alias(var_n_in_bin)]
+                    [(nw.col(var_n_cum_sum) - prior_cum_sum_expr).alias(var_n_in_bin)]
                 )
                 .drop(var_n_cum_sum)
             )
-            smallest_bin = df_coli.select(pl.min(var_n_in_bin))[0, 0]
+            smallest_bin = df_coli.select(nw.min(var_n_in_bin))[0, 0]
 
     df_coli = concat_wrapper([df_first, df_coli], how="diagonal")
     return df_coli.select(sorted_coli)
 
 
 def _quantiles_interpolated(
-    df: pl.LazyFrame,
+    df: nw.LazyFrame,
     column_stats: dict[str, list[str]],
     by: str | list | None = None,
     weight: str = "",
     interpolated_interval: int = 2500,
     drb_safe_n_bin: int = 10,
 ):
-    df = df.lazy()
+    nw_type = NarwhalsType(df)
+    if type(df) is nw.DataFrame:
+        df = df.lazy_backend(nw_type)
 
     if by is None or not len(by):
         by = []
 
     columns = list(column_stats.keys())
     if weight == "":
-        n = df.select(pl.len()).collect().item(0, 0)
+        n = df.select(nw.len()).collect().item(0, 0)
         weight = "___weight___"
-        df = df.with_columns(pl.lit(1 / n).alias(weight))
+        df = df.with_columns(nw.lit(1 / n).alias(weight))
 
     columns_nameonly = []
     for coli in columns:
@@ -820,14 +861,11 @@ def _quantiles_interpolated(
             col_name = coli
             modifier = ""
 
-        c_col = pl.col(col_name)
+        c_col = nw.col(col_name)
 
-        #   Truncating (not floor) division to match the exact binning
-        #   behavior this always had - c_col (income) can be negative,
-        #   where floor vs. truncating division differ.
-        with_floor = 1 + (c_col / interpolated_interval).cast(pl.Int64)
+        with_floor = 1 + (c_col.floordiv(interpolated_interval))
         if modifier == "not0":
-            c_cleared = pl.when(c_col != 0).then(with_floor).otherwise(pl.lit(None))
+            c_cleared = nw.when(c_col != 0).then(with_floor).otherwise(nw.lit(None))
             with_intervals.append(c_cleared.alias(coli))
         else:
             with_intervals.append(with_floor.alias(col_name))
@@ -842,33 +880,33 @@ def _quantiles_interpolated(
 
         sorted_coli = by + [coli]
 
-        #   keep_condition = ~(pl.col(coli).is_null() | pl.col(coli).is_nan()) & ~(pl.col(weight).is_null() | pl.col(weight).is_nan())
-        keep_condition = ~(pl.col(coli).is_null()) & ~(
-            pl.col(weight).is_null() | pl.col(weight).is_nan()
+        #   keep_condition = ~(nw.col(coli).is_null() | nw.col(coli).is_nan()) & ~(nw.col(weight).is_null() | nw.col(weight).is_nan())
+        keep_condition = ~(nw.col(coli).is_null()) & ~(
+            nw.col(weight).is_null() | nw.col(weight).is_nan()
         )
 
         if len(by):
-            by_over = pl.col(weight) / pl.col(weight).sum().over(by)
+            by_over = nw.col(weight) / nw.col(weight).sum().over(by)
             calc_over = (
-                pl.col(weight).cum_sum().over(by, order_by=coli)
-                / pl.col(weight).sum().over(by)
+                nw.col(weight).cum_sum().over(by, order_by=coli)
+                / nw.col(weight).sum().over(by)
             ).alias(weight)
         else:
-            by_over = pl.col(weight) / pl.col(weight).sum()
+            by_over = nw.col(weight) / nw.col(weight).sum()
             calc_over = (
-                pl.col(weight).cum_sum().over(order_by=coli) / pl.col(weight).sum()
+                nw.col(weight).cum_sum().over(order_by=coli) / nw.col(weight).sum()
             ).alias(weight)
 
         var_n_in_bin = "___n_in_bin"
         df_grouped = (
             df.filter(keep_condition)
             .with_columns(by_over)
-            .with_columns(cs.by_dtype(pl.Int8).cast(pl.Int32))
+            .with_columns(cs.by_dtype(nw.Int8).cast(nw.Int32))
             .group_by(sorted_coli)
             .agg(
                 [
-                    pl.col(weight).sum(),
-                    pl.len().alias(var_n_in_bin),
+                    nw.col(weight).sum(),
+                    nw.len().alias(var_n_in_bin),
                 ]
             )
             .sort(sorted_coli)
@@ -892,7 +930,7 @@ def _quantiles_interpolated(
         )
         df_coli = survivor_keys.join(
             df_grouped.select(sorted_coli + [weight]), on=sorted_coli, how="left"
-        ).with_columns(pl.col(weight).fill_null(pl.lit(0.0)))
+        ).with_columns(nw.col(weight).fill_null(nw.lit(0.0)))
 
         if df_by is None:
             if len(by):
@@ -900,13 +938,18 @@ def _quantiles_interpolated(
 
         #   Create rows with the quantiles we want to calculate
         if df_by is None:
-            df_byi = pl.DataFrame({weight: qlisti}).lazy()
+            backend = df.__native_namespace__()
+            df_byi = nw.from_dict(
+                {weight: qlisti}, backend=backend_eager(nw_type.backend)
+            ).lazy_backend(nw_type)
         else:
-            df_q = pl.DataFrame({weight: qlisti}).lazy()
+            df_q = nw.from_dict(
+                {weight: qlisti}, backend=backend_eager(nw_type.backend)
+            ).lazy_backend(nw_type)
 
             df_byi = join_wrapper(
-                df_by.with_columns(pl.lit(1).alias("___stats_join_full___")),
-                df_q.with_columns(pl.lit(1).alias("___stats_join_full___")),
+                df_by.with_columns(nw.lit(1).alias("___stats_join_full___")),
+                df_q.with_columns(nw.lit(1).alias("___stats_join_full___")),
                 how="full",
                 on=["___stats_join_full___"],
             ).drop("___stats_join_full___")
@@ -918,8 +961,8 @@ def _quantiles_interpolated(
         list_y_above = []
 
         with_shift = []
-        c_w = pl.col(weight)
-        c_var = pl.col(coli)
+        c_w = nw.col(weight)
+        c_var = nw.col(coli)
 
         #   This runs on the table sorted by by + [weight] - the shifts
         #   below must stay within each by-group (partitioned via .over),
@@ -935,15 +978,15 @@ def _quantiles_interpolated(
             with_shift.extend(
                 [
                     (
-                        pl.when(_shift_over(c_var, shifti).is_not_null())
+                        nw.when(_shift_over(c_var, shifti).is_not_missing())
                         .then(_shift_over(c_w, shifti))
-                        .otherwise(pl.lit(None))
+                        .otherwise(nw.lit(None))
                         .alias(f"__w_below___{shifti}")
                     ),
                     (
-                        pl.when(_shift_over(c_var, -shifti).is_not_null())
+                        nw.when(_shift_over(c_var, -shifti).is_not_missing())
                         .then(_shift_over(c_w, -shifti))
-                        .otherwise(pl.lit(None))
+                        .otherwise(nw.lit(None))
                         .alias(f"__w_above___{shifti}")
                     ),
                     _shift_over(c_var, shifti).alias(f"__y_below___{shifti}"),
@@ -956,13 +999,13 @@ def _quantiles_interpolated(
             list_y_below.append(f"__y_below___{shifti}")
             list_y_above.append(f"__y_above___{shifti}")
 
-        w_gap = pl.col(weight) - pl.col("__w_below")
-        y_below = pl.col("__y_below")
-        y_above = pl.col("__y_above")
+        w_gap = nw.col(weight) - nw.col("__w_below")
+        y_below = nw.col("__y_below")
+        y_above = nw.col("__y_above")
         y_interval = y_above - y_below
 
-        w_below = pl.col("__w_below")
-        w_above = pl.col("__w_above")
+        w_below = nw.col("__w_below")
+        w_above = nw.col("__w_above")
         w_interval = w_above - w_below
 
         val_interpolated = (
@@ -971,14 +1014,14 @@ def _quantiles_interpolated(
 
         df_coli = (
             concat_wrapper(
-                [df_coli.lazy(), df_byi.lazy()],
+                [df_coli.lazy_backend(nw_type), df_byi.lazy_backend(nw_type)],
                 how="diagonal",
             )
             .sort(by + [weight])
             .collect()
             .with_columns(with_shift)
-            .lazy()
-            .filter(c_var.is_null())
+            .lazy_backend(nw_type)
+            .filter(c_var.is_missing())
             .select(
                 by
                 + [coli, weight]
@@ -989,10 +1032,10 @@ def _quantiles_interpolated(
             )
             .with_columns(
                 [
-                    pl.coalesce(list_w_below).alias("__w_below"),
-                    pl.coalesce(list_y_below).alias("__y_below"),
-                    pl.coalesce(list_w_above).alias("__w_above"),
-                    pl.coalesce(list_y_above).alias("__y_above"),
+                    nw.coalesce(list_w_below).alias("__w_below"),
+                    nw.coalesce(list_y_below).alias("__y_below"),
+                    nw.coalesce(list_w_above).alias("__w_above"),
+                    nw.coalesce(list_y_above).alias("__y_above"),
                 ]
             )
             .with_columns(
@@ -1022,11 +1065,11 @@ def _quantiles_interpolated(
         #                      quietly=True)\
         #             .sort(by + [weight])\
         #             .with_columns(
-        #                     [pl.col(weight).shift(1).alias("___w_below___"),
-        #                      pl.col(weight).shift(-1).alias("___w_above___"),
-        #                      pl.col(coli).shift(1).alias("___y_below___")]
+        #                     [nw.col(weight).shift(1).alias("___w_below___"),
+        #                      nw.col(weight).shift(-1).alias("___w_above___"),
+        #                      nw.col(coli).shift(1).alias("___y_below___")]
         #                 )\
-        #             .filter(pl.col(coli).is_null())\
+        #             .filter(nw.col(coli).is_missing())\
         #             .with_columns(
         #                     (y_below + interpolated_interval*(qi-w_below)/w_interval).alias(coli)
         #                 )\
@@ -1046,12 +1089,18 @@ def _quantiles_interpolated(
         temp_by = False
         if len(by) == 0:
             by = ["___by___"]
-            df_coli = df_coli.with_columns(pl.lit(1).alias(by[0]))
+            df_coli = df_coli.with_columns(nw.lit(1).alias(by[0]))
 
             temp_by = True
 
+        #   No pivot in pyarrow
+        if backend_eager(nw_type.backend) in ["pyarrow", "pandas"]:
+            df_coli = nw.from_native(df_coli.collect().to_polars().lazy())
         df_coli = df_coli.collect().pivot(index=by, on=weight, values=coli)
-        df_coli = df_coli.lazy()
+        if backend_eager(nw_type.backend) == "pyarrow":
+            df_coli = nw.from_native(df_coli.to_arrow())
+
+        df_coli = df_coli.lazy_backend(nw_type)
 
         for coli in df_coli.collect_schema().names():
             rename_to_str = {}
@@ -1062,6 +1111,9 @@ def _quantiles_interpolated(
                 df_coli = df_coli.rename(rename_to_str)
 
         df_coli = df_coli.rename(rename).sort(by)
+
+        if nw_type.backend == "pandas":
+            df_coli = nw.from_native(df_coli.to_pandas())
 
         if temp_by:
             df_coli = df_coli.drop(by)
@@ -1076,13 +1128,13 @@ def _quantiles_interpolated(
             else:
                 df_out = concat_wrapper(
                     [df_out.collect(), df_coli.collect()], how="horizontal"
-                ).lazy()
+                ).lazy_backend(nw_type)
 
     return df_out
 
 
 def _custom_stat_by(
-    df: pl.LazyFrame,
+    df: nw.LazyFrame,
     stat_name: str,
     delegate: Callable,
     column_stats: dict[str, list[str]],
@@ -1090,6 +1142,7 @@ def _custom_stat_by(
     weight: str = "",
     **kwargs,
 ):
+    nw_type = NarwhalsType(df)
     vars_custom = []
     for vari, statsi in column_stats.items():
         if stat_name in statsi:
@@ -1123,7 +1176,7 @@ def _custom_stat_by(
             wherei = None
 
             for j, coli in enumerate(by):
-                condi = pl.col(coli) == rowi[j]
+                condi = nw.col(coli) == rowi[j]
 
                 if wherei is None:
                     wherei = condi
@@ -1138,9 +1191,9 @@ def _custom_stat_by(
     for coli in vars_custom:
         (coli_final, modifier, coli) = _check_special_modifiers(coli)
 
-        keep_condition = pl.col(coli).is_not_null()
+        keep_condition = nw.col(coli).is_not_missing()
         if modifier == "not0":
-            keep_condition = keep_condition & pl.col(coli).ne(0)
+            keep_condition = keep_condition & nw.col(coli).ne(0)
         else:
             modifier = ""
 
@@ -1150,8 +1203,6 @@ def _custom_stat_by(
                 df_byi = df
             else:
                 df_byi = df.filter(filteri)
-
-            df_byi = df_byi.filter(keep_condition)
 
             df_coli = delegate(df=df_byi, weight=weight, variable=coli, **kwargs)
 
@@ -1163,11 +1214,11 @@ def _custom_stat_by(
             if len(by):
                 df_coli = concat_wrapper(
                     [
-                        df_byi.select(by).head(1).collect(),
-                        df_coli.collect(),
+                        nw.maybe_reset_index(df_byi.select(by).head(1).collect()),
+                        nw.maybe_reset_index(df_coli.collect()),
                     ],
                     how="horizontal",
-                ).lazy()
+                ).lazy_backend(nw_type)
 
             if df_outi is None:
                 df_outi = df_coli
@@ -1186,28 +1237,29 @@ def _custom_stat_by(
 
 
 def _gini(
-    df: pl.LazyFrame | pl.DataFrame,
+    df: nw.LazyFrame | nw.DataFrame,
     variable: str,
     weight: str = "",
     censor_at_zero: bool = True,
-) -> pl.LazyFrame | pl.DataFrame:
+) -> nw.LazyFrame | nw.DataFrame:
+    nw_type = NarwhalsType(df)
     if weight == "":
         weight = "__gini_weight__"
-        df = df.select(variable).with_columns(pl.lit(1).alias(weight))
+        df = df.select(variable).with_columns(nw.lit(1).alias(weight))
 
     else:
         df = df.select([variable, weight])
 
-    c_weight = pl.col(weight)
+    c_weight = nw.col(weight)
     df = df.with_columns((c_weight / c_weight.sum()).alias(weight))
 
     schema = df.collect_schema()
     if censor_at_zero:
-        c_income = pl.col(variable) * pl.col(variable).gt(0).cast(schema[variable])
+        c_income = nw.col(variable) * nw.col(variable).gt(0).cast(schema[variable])
     else:
-        c_income = pl.col(variable)
+        c_income = nw.col(variable)
 
-    df = df.sort(variable).filter(c_weight.is_not_null())
+    df = df.sort(variable).filter(c_weight.is_not_missing())
 
     #   Modified from SAS code
     #  retain swt swtey swt2ey swteycw 0;
@@ -1219,8 +1271,8 @@ def _gini(
     # 	end;
     #  End of file
     #  gini = ((2*swteycw-swt2ey)/(swt * swtey)-1);
-    #   swt = pl.col(weight).fill_null(0).cum_sum().alias("swt")
-    swt = pl.col(weight).cum_sum().over(order_by=variable).alias("swt")
+    #   swt = nw.col(weight).fill_null(0).cum_sum().alias("swt")
+    swt = nw.col(weight).cum_sum().over(order_by=variable).alias("swt")
     swtey = (c_weight * c_income).sum().alias("swtey")
     swt2ey = (c_weight.pow(2) * c_income).sum().alias("swt2ey")
     swteycw = (swt * c_weight * c_income).sum().alias("swteycw")
@@ -1243,7 +1295,10 @@ def _gini(
     else:
         gini = None
 
-    df_out = pl.DataFrame({"gini": [gini]}).lazy()
+    df_out = nw.from_dict(
+        {"gini": [gini]}, backend=backend_eager(nw_type.backend)
+    ).lazy_backend(nw_type)
+    # df_out = nw.DataFrame({"gini":[gini]})
 
     return df_out
 
@@ -1377,7 +1432,8 @@ def _batched_simple_stats(
     if not len(column_stats):
         return {}
 
-    df_polars = df
+    nw_type = NarwhalsType(df)
+    df_polars = nw_type.to_polars()
 
     cast_cols = set()
     for coli, stats_list in column_stats.items():
@@ -1389,7 +1445,7 @@ def _batched_simple_stats(
     if len(cast_cols):
         df_polars = safe_sum_cast(df=df_polars, columns=list(cast_cols))
 
-    ndf = df_polars.lazy()
+    ndf = nw.from_native(df_polars).lazy()
     results = {}
 
     for batch_start in range(0, len(weight_list), batch_size):
@@ -1422,7 +1478,7 @@ def _batched_simple_stats(
             denoms = ndf.select(share_exprs).collect()
             wide = wide.with_columns(
                 [
-                    (pl.col(out_col) / pl.lit(denoms[0, denom_col])).alias(out_col)
+                    (nw.col(out_col) / nw.lit(denoms[0, denom_col])).alias(out_col)
                     for out_col, denom_col in share_pairs
                 ]
             )
@@ -1442,7 +1498,9 @@ def _batched_simple_stats(
             suffix = f"___rep{r}"
             rep_cols = [c for c in wide.columns if c.endswith(suffix)]
             rename = {c: c[: -len(suffix)] for c in rep_cols}
-            results[r] = wide.select(by_cols + rep_cols).rename(rename)
+            results[r] = (
+                wide.select(by_cols + rep_cols).rename(rename).to_native()
+            )
 
     return results
 
@@ -1471,24 +1529,25 @@ def _batched_gini(
     if not len(gini_columns):
         return {}
 
-    df_polars = df
-    ndf_base = df_polars.lazy()
+    nw_type = NarwhalsType(df)
+    df_polars = nw_type.to_polars()
+    ndf_base = nw.from_native(df_polars).lazy()
 
     results = {}
 
     for coli in gini_columns:
         (_, modifier, coli_original) = _check_special_modifiers(coli)
 
-        c_keep_condition = pl.col(coli_original).is_not_null()
+        c_keep_condition = nw.col(coli_original).is_not_missing()
         if modifier == "not0":
-            c_keep_condition = c_keep_condition & pl.col(coli_original).ne(0)
+            c_keep_condition = c_keep_condition & nw.col(coli_original).ne(0)
 
         if censor_at_zero:
-            c_income = pl.col(coli_original) * pl.col(coli_original).gt(0).cast(
-                pl.Float64
+            c_income = nw.col(coli_original) * nw.col(coli_original).gt(0).cast(
+                nw.Float64
             )
         else:
-            c_income = pl.col(coli_original)
+            c_income = nw.col(coli_original)
 
         for batch_start in range(0, len(weight_list), batch_size):
             batch_weights = weight_list[batch_start : batch_start + batch_size]
@@ -1498,7 +1557,7 @@ def _batched_gini(
             with_cols = []
             for offset, weight_col in enumerate(batch_weights):
                 r = batch_start + offset
-                c_weight = pl.col(weight_col)
+                c_weight = nw.col(weight_col)
                 if len(by_cols):
                     normalized = (c_weight / c_weight.sum().over(by_cols)).alias(
                         f"___cw{r}"
@@ -1511,7 +1570,7 @@ def _batched_gini(
             swt_cols = []
             for offset, weight_col in enumerate(batch_weights):
                 r = batch_start + offset
-                cw = pl.col(f"___cw{r}")
+                cw = nw.col(f"___cw{r}")
                 if len(by_cols):
                     swt = cw.cum_sum().over(by_cols, order_by=coli_original).alias(
                         f"___swt{r}"
@@ -1524,8 +1583,8 @@ def _batched_gini(
             agg_exprs = []
             for offset, weight_col in enumerate(batch_weights):
                 r = batch_start + offset
-                cw = pl.col(f"___cw{r}")
-                swt = pl.col(f"___swt{r}")
+                cw = nw.col(f"___cw{r}")
+                swt = nw.col(f"___swt{r}")
                 agg_exprs.append((cw * c_income).sum().alias(f"swtey___rep{r}"))
                 agg_exprs.append((cw.pow(2) * c_income).sum().alias(f"swt2ey___rep{r}"))
                 agg_exprs.append((swt * cw * c_income).sum().alias(f"swteycw___rep{r}"))
@@ -1540,10 +1599,10 @@ def _batched_gini(
                 r = batch_start + offset
                 gini_expr = (
                     (
-                        2 * pl.col(f"swteycw___rep{r}")
-                        - pl.col(f"swt2ey___rep{r}")
+                        2 * nw.col(f"swteycw___rep{r}")
+                        - nw.col(f"swt2ey___rep{r}")
                     )
-                    / (pl.col(f"swt___rep{r}") * pl.col(f"swtey___rep{r}"))
+                    / (nw.col(f"swt___rep{r}") * nw.col(f"swtey___rep{r}"))
                     - 1
                 ).alias(f"{coli_original}_gini")
 
@@ -1552,8 +1611,10 @@ def _batched_gini(
                 #   by-group divides by zero and would otherwise leave raw
                 #   NaN instead of null, which can poison the downstream
                 #   replicate-variance sum.
-                out = wide.select(by_cols + [gini_expr]).with_columns(
-                    cs.numeric().fill_nan(None)
+                out = (
+                    wide.select(by_cols + [gini_expr])
+                    .with_columns(cs.numeric().fill_nan(None))
+                    .to_native()
                 )
                 if r not in results:
                     results[r] = out
@@ -1583,15 +1644,16 @@ def _batched_quantiles(
     cumulative share is monotonic non-decreasing in that same order for any
     non-negative weight, so the smallest value at or above a target share q
     is just `value.filter(share_r >= q).first()` (expressed here as a
-    min-of-masked-value to satisfy polars' order-dependence rules) -
+    min-of-masked-value to satisfy narwhals' order-dependence rules) -
     verified as an exact numeric match against _quantiles_actual.
 
     column_stats here must only contain quantile/median stats. Returns
     {replicate_index: single-replicate output table} shaped like
     _quantiles_actual's output (by_cols + "{col}_{suffix}" columns).
     """
-    df_polars = df
-    ndf_base = df_polars.lazy()
+    nw_type = NarwhalsType(df)
+    df_polars = nw_type.to_polars()
+    ndf_base = nw.from_native(df_polars).lazy()
 
     results = {}
 
@@ -1606,9 +1668,9 @@ def _batched_quantiles(
             q = float(resolved.replace("q", "").replace("p", "")) / 100
             quantiles.append((stati, q))
 
-        c_keep_condition = pl.col(coli_original).is_not_null()
+        c_keep_condition = nw.col(coli_original).is_not_missing()
         if modifier == "not0":
-            c_keep_condition = c_keep_condition & pl.col(coli_original).ne(0)
+            c_keep_condition = c_keep_condition & nw.col(coli_original).ne(0)
 
         sort_cols = by_cols + [coli_original]
 
@@ -1616,7 +1678,7 @@ def _batched_quantiles(
             batch_weights = weight_list[batch_start : batch_start + batch_size]
 
             sum_exprs = [
-                pl.col(weight_col).sum().alias(f"__wsum{offset}")
+                nw.col(weight_col).sum().alias(f"__wsum{offset}")
                 for offset, weight_col in enumerate(batch_weights)
             ]
             grouped = (
@@ -1628,7 +1690,7 @@ def _batched_quantiles(
 
             share_exprs = []
             for offset in range(len(batch_weights)):
-                s = pl.col(f"__wsum{offset}")
+                s = nw.col(f"__wsum{offset}")
                 if len(by_cols):
                     share = (
                         s.cum_sum().over(by_cols, order_by=coli_original)
@@ -1644,15 +1706,15 @@ def _batched_quantiles(
             agg_exprs = []
             for offset, weight_col in enumerate(batch_weights):
                 r = batch_start + offset
-                share_col = pl.col(f"__share{offset}")
+                share_col = nw.col(f"__share{offset}")
                 for stati, q in quantiles:
                     suffix = stat_suffix(
                         statistic=("median" if stati == "median" else stati),
                         modifier=modifier,
                     )
                     masked = (
-                        pl.when(share_col >= q)
-                        .then(pl.col(coli_original))
+                        nw.when(share_col >= q)
+                        .then(nw.col(coli_original))
                         .otherwise(None)
                         .min()
                     )
@@ -1670,7 +1732,7 @@ def _batched_quantiles(
                 suffix_tag = f"___rep{r}"
                 rep_cols = [c for c in wide.columns if c.endswith(suffix_tag)]
                 rename = {c: c[: -len(suffix_tag)] for c in rep_cols}
-                out = wide.select(by_cols + rep_cols).rename(rename)
+                out = wide.select(by_cols + rep_cols).rename(rename).to_native()
 
                 if r not in results:
                     results[r] = out
@@ -1716,8 +1778,9 @@ def _batched_quantiles_interpolated(
     if not len(column_stats):
         return {}
 
-    df_polars = df
-    ndf_base = df_polars.lazy()
+    nw_type = NarwhalsType(df)
+    df_polars = nw_type.to_polars()
+    ndf_base = nw.from_native(df_polars).lazy()
 
     results = {}
 
@@ -1733,26 +1796,23 @@ def _batched_quantiles_interpolated(
             quantiles.append((stati, q))
 
         bin_col = f"__{coli}_bin"
-        c_col = pl.col(coli_original)
-        #   Truncating (not floor) division to match the exact binning
-        #   behavior this always had - c_col (income) can be negative,
-        #   where floor vs. truncating division differ.
-        with_floor = 1 + (c_col / interpolated_interval).cast(pl.Int64)
+        c_col = nw.col(coli_original)
+        with_floor = 1 + c_col.floordiv(interpolated_interval)
         if modifier == "not0":
-            binned_expr = pl.when(c_col != 0).then(with_floor).otherwise(pl.lit(None))
+            binned_expr = nw.when(c_col != 0).then(with_floor).otherwise(nw.lit(None))
         else:
             binned_expr = with_floor
 
         sorted_bin = by_cols + [bin_col]
         df_binned_full = ndf_base.with_columns(binned_expr.alias(bin_col)).filter(
-            pl.col(bin_col).is_not_null()
+            nw.col(bin_col).is_not_missing()
         )
 
         #   Replicate-independent: row counts per original bin determine
         #   the surviving (merged) bin keys, shared across every batch.
         df_counts = (
             df_binned_full.group_by(sorted_bin)
-            .agg(pl.len().alias("___n_in_bin"))
+            .agg(nw.len().alias("___n_in_bin"))
             .sort(sorted_bin)
             .collect()
         )
@@ -1768,7 +1828,7 @@ def _batched_quantiles_interpolated(
             batch_weights = weight_list[batch_start : batch_start + batch_size]
 
             sum_exprs = [
-                pl.col(weight_col).sum().alias(f"__wsum{offset}")
+                nw.col(weight_col).sum().alias(f"__wsum{offset}")
                 for offset, weight_col in enumerate(batch_weights)
             ]
             df_grouped = df_binned_full.group_by(sorted_bin).agg(sum_exprs).sort(
@@ -1786,7 +1846,7 @@ def _batched_quantiles_interpolated(
             #   would silently discard every merged-away bin's weight.
             share_exprs = []
             for offset in range(len(batch_weights)):
-                s = pl.col(f"__wsum{offset}")
+                s = nw.col(f"__wsum{offset}")
                 if len(by_cols):
                     share = (
                         s.cum_sum().over(by_cols, order_by=bin_col)
@@ -1808,40 +1868,40 @@ def _batched_quantiles_interpolated(
                 on=sorted_bin,
                 how="left",
             ).with_columns(
-                [pl.col(c).fill_null(pl.lit(0.0)) for c in share_cols]
+                [nw.col(c).fill_null(nw.lit(0.0)) for c in share_cols]
             )
-            ndf_batch = df_coli_batch.lazy()
+            ndf_batch = nw.from_native(df_coli_batch).lazy()
 
             agg_exprs = []
             for offset, weight_col in enumerate(batch_weights):
                 r = batch_start + offset
-                share_col = pl.col(f"__share{offset}")
-                bin_col_expr = pl.col(bin_col)
+                share_col = nw.col(f"__share{offset}")
+                bin_col_expr = nw.col(bin_col)
                 for stati, q in quantiles:
                     suffix = stat_suffix(
                         statistic=("median" if stati == "median" else stati),
                         modifier=modifier,
                     )
                     w_above = (
-                        pl.when(share_col >= q).then(share_col).otherwise(None).min()
+                        nw.when(share_col >= q).then(share_col).otherwise(None).min()
                     )
                     y_above = (
-                        pl.when(share_col >= q)
+                        nw.when(share_col >= q)
                         .then(bin_col_expr)
                         .otherwise(None)
                         .min()
                     )
                     w_below = (
-                        pl.when(share_col < q).then(share_col).otherwise(None).max()
+                        nw.when(share_col < q).then(share_col).otherwise(None).max()
                     )
                     y_below = (
-                        pl.when(share_col < q)
+                        nw.when(share_col < q)
                         .then(bin_col_expr)
                         .otherwise(None)
                         .max()
                     )
 
-                    w_gap = pl.lit(q) - w_below
+                    w_gap = nw.lit(q) - w_below
                     y_interval = y_above - y_below
                     w_interval = w_above - w_below
                     val = (
@@ -1862,7 +1922,7 @@ def _batched_quantiles_interpolated(
                 suffix_tag = f"___rep{r}"
                 rep_cols = [c for c in wide.columns if c.endswith(suffix_tag)]
                 rename = {c: c[: -len(suffix_tag)] for c in rep_cols}
-                out = wide.select(by_cols + rep_cols).rename(rename)
+                out = wide.select(by_cols + rep_cols).rename(rename).to_native()
 
                 if r not in results:
                     results[r] = out

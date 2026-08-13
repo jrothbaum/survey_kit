@@ -1,6 +1,7 @@
 import polars as pl
+import narwhals as nw
 from survey_kit.utilities.random import RandomData
-from survey_kit.utilities.dataframe import summary, columns_from_list
+from survey_kit.utilities.dataframe import summary, columns_from_list, NarwhalsType
 
 from survey_kit.utilities.formula_builder import FormulaBuilder
 from survey_kit.imputation.utilities.lightgbm_wrapper import (
@@ -11,6 +12,9 @@ from survey_kit.imputation.utilities.lightgbm_wrapper import (
 
 
 n_rows = 100_000
+
+to_pandas = True
+to_duckdb = False
 
 as_formula = False
 with_tuning = True
@@ -68,6 +72,14 @@ df = df.with_columns(
     ).alias("y")
 )
 
+if to_pandas:
+    df = df.to_pandas()
+    df_predict = df_predict.to_pandas()
+elif to_duckdb:
+    df = nw.from_native(df).lazy().lazy_backend(NarwhalsType(backend="duckdb"))
+    df_predict = (
+        nw.from_native(df_predict).lazy().lazy_backend(NarwhalsType(backend="duckdb"))
+    )
 summary(df)
 
 fb = FormulaBuilder(df=df)
@@ -114,4 +126,4 @@ if with_tuning:
 lgbm.train()
 df_prediction = lgbm.predict(df_predict=df_predict, merged_to_input=True)
 summary(df_prediction)
-print(lgbm.importance(with_rank=True).lazy().collect())
+print(nw.from_native(lgbm.importance(with_rank=True)).lazy().collect().to_native())

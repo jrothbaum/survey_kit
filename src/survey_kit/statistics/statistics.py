@@ -1,5 +1,6 @@
-import polars as pl
-import polars.selectors as cs
+import narwhals as nw
+import narwhals.selectors as cs
+from narwhals.typing import IntoFrameT
 
 from .rounding import Rounding
 from ..utilities.formula_builder import get_model_frame
@@ -7,6 +8,7 @@ from ..utilities.inputs import list_input
 from ..utilities.dataframe import (
     concat_wrapper,
     columns_from_list,
+    NarwhalsType,
     drop_if_exists,
     safe_columns,
 )
@@ -27,7 +29,7 @@ class Statistics:
         List of statistics to calculate (mean, median, etc.)
         Call Statistics.available_stats() for options
     formula : str, optional
-        R/survey_kit_formula-style formula for defining statistics to be calculated.
+        R/polars_formula-style formula for defining statistics to be calculated.
         The default is "".  This takes precedence over columns
     columns : list[str]|str|None, optional
         List of columns to calculate statistics over. The default is None.
@@ -58,14 +60,18 @@ class Statistics:
         self.quantile_interpolated_interval = quantile_interpolated_interval
         self.stats = stats
 
+    @nw.narwhalify
     def calculate(
         self,
-        df: pl.LazyFrame | pl.DataFrame,
+        df: IntoFrameT,
         weight: str = "",
         by: dict[str, list[str]] | None = None,
         summarize_vars: list | None = None,
         rounding: Rounding | None = None,
+        allow_slow_pandas: bool = False,
     ):
+        nw_type = NarwhalsType(df)
+
         if summarize_vars is None:
             summarize_vars = []
         if rounding is None:
@@ -74,7 +80,7 @@ class Statistics:
         by = self._normalize_by(by)
 
         (df_summary, cols_summary) = self._resolve_summary_df(
-            df=df, weight=weight, summarize_vars=summarize_vars
+            df=df, nw_type=nw_type, weight=weight, summarize_vars=summarize_vars
         )
 
         stats_dict = self._build_column_stats(
@@ -89,6 +95,7 @@ class Statistics:
             weight=weight,
             quantile_interpolated=self.quantile_interpolated,
             quantile_interpolated_interval=self.quantile_interpolated_interval,
+            allow_slow_pandas=allow_slow_pandas,
         )
 
         (stats_headers, suffixes) = self._stats_headers_and_suffixes()
@@ -97,6 +104,7 @@ class Statistics:
             summary_tables=summary_tables,
             by=by,
             cols_summary=cols_summary,
+            nw_type=nw_type,
             summarize_vars=summarize_vars,
             rounding=rounding,
             stats_headers=stats_headers,
@@ -116,14 +124,17 @@ class Statistics:
 
     def _resolve_summary_df(
         self,
-        df: pl.LazyFrame | pl.DataFrame,
+        df: IntoFrameT,
+        nw_type: NarwhalsType,
         weight: str,
         summarize_vars: list,
-    ) -> tuple[pl.LazyFrame | pl.DataFrame, list[str]]:
+    ) -> tuple[IntoFrameT, list[str]]:
         if self.formula != "":
             #   It's a formula, process accordingly
-            df_summary = get_model_frame(self.formula, df)
-            cols_summary = df_summary.lazy().collect_schema().names()
+            df_summary = nw.from_native(
+                get_model_frame(self.formula, df)
+            ).lazy_backend(nw_type)
+            cols_summary = df_summary.collect_schema().names()
         else:
             #   It's a variable list
             if len(self.columns):
@@ -133,14 +144,14 @@ class Statistics:
                 df_summary = df.select(cols)
                 cols_summary = cols
             else:
-                cols_summary = df.lazy().collect_schema().names()
+                cols_summary = df.lazy_backend(nw_type).collect_schema().names()
 
         df_summary = df_summary.select(cs.numeric(), cs.boolean())
         cols_summary = safe_columns(df_summary)
         #   Keep the weights
         if (
             weight != ""
-            and weight not in df_summary.lazy().collect_schema().names()
+            and weight not in df_summary.lazy_backend(nw_type).collect_schema().names()
         ):
             df_summary = concat_wrapper(
                 [df_summary, df.select(weight)], how="horizontal"
@@ -155,7 +166,7 @@ class Statistics:
         return (df_summary, cols_summary)
 
     def _build_column_stats(
-        self, df_summary: pl.LazyFrame | pl.DataFrame, cols_summary: list[str]
+        self, df_summary: IntoFrameT, cols_summary: list[str]
     ) -> dict[str, list[str]]:
         #   Process the stats
         stats_dict = {}
@@ -237,6 +248,7 @@ class Statistics:
         summary_tables: dict,
         by: dict[str, list[str]],
         cols_summary: list[str],
+        nw_type: NarwhalsType,
         summarize_vars: list,
         rounding: Rounding,
         stats_headers: dict[str, str],
@@ -246,6 +258,7 @@ class Statistics:
         default_index = "___index___"
 
         for keyi, valuei in summary_tables.items():
+            valuei = nw.from_native(valuei)
             b_default_index = False
 
             if keyi in by.keys():
@@ -260,7 +273,12 @@ class Statistics:
 
             if index == default_index:
                 #   Just use the row number as the index
-                valuei = valuei.lazy().collect().with_row_index(name=index).lazy()
+                valuei = (
+                    valuei.lazy()
+                    .collect()
+                    .with_row_index(name=index)
+                    .lazy_backend(nw_type)
+                )
                 index = [default_index]
                 b_default_index = True
 
@@ -300,7 +318,7 @@ class Statistics:
                     )
 
                 summaryi = summaryi.with_columns(
-                    pl.lit(coli_original).alias("Variable")
+                    nw.lit(coli_original).alias("Variable")
                 ).select(keep_list_final)
                 summaries_by_var.append(summaryi)
 
@@ -341,7 +359,7 @@ class Statistics:
         rounding.cols_round = list(set(rounding.cols_round + cols_round))
         rounding.cols_n = list(set(rounding.cols_n + cols_n))
 
-        return output_table
+        return output_table.lazy_backend(nw_type)
 
     def stat_suffix(
         self=None,
@@ -393,9 +411,8 @@ class Statistics:
             logger.error(message)
             raise Exception(message)
 
-    def rounding_columns(
-        self, df: pl.LazyFrame | pl.DataFrame
-    ) -> tuple[list[str], list[str]]:
+    @nw.narwhalify
+    def rounding_columns(self, df: IntoFrameT) -> tuple[list[str], list[str]]:
         cols_n = [
             "n",
             "n (missing)",
@@ -458,12 +475,13 @@ class Statistics:
         logger.info(f"""Some examples: {examples}""")
 
 
+@nw.narwhalify
 def column_stats_builder(
     stat: str | list[str],
     column_stats: dict[str, list[str]] | None = None,
     cols_include: list[str] | None = None,
     cols_exclude: list[str] | None = None,
-    df: pl.LazyFrame | pl.DataFrame | None = None,
+    df: IntoFrameT | None = None,
 ):
     if column_stats is None:
         column_stats = {}

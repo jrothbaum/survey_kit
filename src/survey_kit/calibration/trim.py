@@ -1,7 +1,7 @@
 from __future__ import annotations
 from typing import TYPE_CHECKING
 
-import polars as pl
+import narwhals as nw
 
 from ..utilities.dataframe import safe_height
 from ..serializable import Serializable
@@ -100,14 +100,14 @@ class Trim(Serializable):
         if self.trim and (iLoop - 1) < nLoops:
             # Check min and max weight
             max_weight = (
-                c.df.lazy()
-                .select(pl.col(c.final_weight).max())
+                nw.from_native(c.df)
+                .select(nw.col(c.final_weight).max())
                 .collect()
                 .item(0, 0)
             )
             min_weight = (
-                c.df.lazy()
-                .select(pl.col(c.final_weight).min())
+                nw.from_native(c.df)
+                .select(nw.col(c.final_weight).min())
                 .collect()
                 .item(0, 0)
             )
@@ -122,7 +122,9 @@ class Trim(Serializable):
             if max_weight > trim_limit_max:
                 if self.ignore_n > 0:
                     n_to_trim_max = safe_height(
-                        c.df.filter(pl.col(c.final_weight) > trim_limit_max)
+                        nw.from_native(c.df).filter(
+                            nw.col(c.final_weight) > trim_limit_max
+                        )
                     )
 
                     btrim_max = n_to_trim_max > self.ignore_n
@@ -137,7 +139,9 @@ class Trim(Serializable):
             if min_weight < trim_limit_min:
                 if self.ignore_n > 0:
                     n_to_trim_max = safe_height(
-                        c.df.filter(pl.col(c.final_weight) < trim_limit_min)
+                        nw.from_native(c.df).filter(
+                            nw.col(c.final_weight) < trim_limit_min
+                        )
                     )
 
                     btrim_min = n_to_trim_min > self.ignore_n
@@ -161,13 +165,17 @@ class Trim(Serializable):
                 if n_to_trim_max > 0:
                     logger.info(f"     {n_to_trim_max} need trimming")
 
-                c.df = c.df.with_columns(
-                    (
-                        pl.when(pl.col(c.final_weight) > trim_at)
-                        .then(pl.lit(trim_at))
-                        .otherwise(pl.col(c.final_weight))
-                        .alias(c.final_weight)
+                c.df = (
+                    nw.from_native(c.df)
+                    .with_columns(
+                        (
+                            nw.when(nw.col(c.final_weight) > trim_at)
+                            .then(nw.lit(trim_at))
+                            .otherwise(nw.col(c.final_weight))
+                            .alias(c.final_weight)
+                        )
                     )
+                    .to_native()
                 )
 
             if btrim_min:
@@ -181,13 +189,17 @@ class Trim(Serializable):
                 if n_to_trim_min > 0:
                     logger.info(f"     {n_to_trim_min} need trimming")
 
-                c.df = c.df.with_columns(
-                    (
-                        pl.when(pl.col(c.final_weight) < trim_at)
-                        .then(pl.lit(trim_at))
-                        .otherwise(pl.col(c.final_weight))
-                        .alias(c.final_weight)
+                c.df = (
+                    nw.from_native(c.df)
+                    .with_columns(
+                        (
+                            nw.when(nw.col(c.final_weight) < trim_at)
+                            .then(nw.lit(trim_at))
+                            .otherwise(nw.col(c.final_weight))
+                            .alias(c.final_weight)
+                        )
                     )
+                    .to_native()
                 )
 
         return bComplete

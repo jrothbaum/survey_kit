@@ -73,4 +73,12 @@ sc = StatCalculator(
     by=dict(year=["year"]),
 )
 
+sc = StatCalculator(
+    df.collect().to_pandas(),
+    statistics=Statistics(stats=["mean", "median|not0"], columns=["v_1", "income"]),
+    weight="weight_0",
+    replicates=replicates,
+    by=dict(year=["year"]),
+)
+
 logger.info(type(sc.df_estimates))

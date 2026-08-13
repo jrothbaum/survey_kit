@@ -3,15 +3,18 @@ from typing import Callable
 
 import logging
 import math
+import narwhals as nw
+import narwhals.selectors as cs
 import polars as pl
-import polars.selectors as cs
 
+from narwhals.typing import IntoFrameT
 from scipy.stats import norm
 
 from ..utilities.inputs import list_input
 from ..utilities.dataframe import (
     join_wrapper,
     concat_wrapper,
+    NarwhalsType,
     fill_missing,
     columns_from_list,
     safe_columns,
@@ -48,7 +51,7 @@ class Replicates(Serializable):
         the function looks for columns: weight_0, weight_1, ..., weight_n
         where weight_0 is the base weight and weight_1 through weight_n are
         the replicate weights.
-    df : pl.LazyFrame | pl.DataFrame | None, optional
+    df : IntoFrameT | None, optional
         Dataframe containing the weight columns. Used to automatically detect
         the number of replicates. Default is None.
     n_replicates : int | None, optional
@@ -158,7 +161,7 @@ class Replicates(Serializable):
     def __init__(
         self,
         weight_stub: str,
-        df: pl.LazyFrame | pl.DataFrame | None = None,
+        df: IntoFrameT | None = None,
         n_replicates: int | None = None,
         bootstrap: bool = False,
         batch_size: int | None = None,
@@ -200,9 +203,9 @@ class ReplicateStats(Serializable):
 
     def __init__(
         self,
-        df_estimates: pl.LazyFrame | pl.DataFrame | None = None,
-        df_ses: pl.LazyFrame | pl.DataFrame | None = None,
-        df_replicates: pl.LazyFrame | pl.DataFrame | None = None,
+        df_estimates: IntoFrameT | None = None,
+        df_ses: IntoFrameT | None = None,
+        df_replicates: IntoFrameT | None = None,
         bootstrap: bool = False,
     ):
         self.df_estimates = df_estimates
@@ -221,18 +224,20 @@ class ReplicateStats(Serializable):
     def _df_ci(self, join_on: list[str], ci_level: float = 0.95):
         ci_multiple = norm.ppf(1 - (1 - ci_level) / 2, loc=0, scale=1)
 
+        nw_type = NarwhalsType(self.df_estimates)
         cols_stats = (
-            self.df_estimates.lazy()
+            nw.from_native(self.df_estimates)
+            .lazy()
             .drop(join_on)
-            .select(cs.numeric())
+            .select(cs.nw.numeric())
             .collect_schema()
             .names()
         )
 
-        with_cis = [pl.col(coli) * ci_multiple for coli in cols_stats]
+        with_cis = [nw.col(coli) * ci_multiple for coli in cols_stats]
         return self.df_ses.with_columns(with_cis)
 
-    def filter(self, filter_expr: pl.Expr) -> ReplicateStats:
+    def filter(self, filter_expr: nw.Expr) -> ReplicateStats:
         #   Don't edit the underlying object
         self = self.copy()
 
@@ -244,7 +249,7 @@ class ReplicateStats(Serializable):
         return self
 
     def select(
-        self, select_expr: pl.Expr | str | list[str] | list[pl.Expr]
+        self, select_expr: nw.Expr | str | list[str] | list[nw.Expr]
     ) -> ReplicateStats:
         #   Don't edit the underlying object
         self = self.copy()
@@ -266,7 +271,7 @@ class ReplicateStats(Serializable):
             )
         return self
 
-    def with_columns(self, with_expr: pl.Expr | list[pl.Expr]) -> ReplicateStats:
+    def with_columns(self, with_expr: nw.Expr | list[nw.Expr]) -> ReplicateStats:
         #   Don't edit the underlying object
         self = self.copy()
 
@@ -278,7 +283,7 @@ class ReplicateStats(Serializable):
         return self
 
     def sort(
-        self, sort_expr: pl.Expr | list[pl.Expr] | str | list[str]
+        self, sort_expr: nw.Expr | list[nw.Expr] | str | list[str]
     ) -> ReplicateStats:
         #   Don't edit the underlying object
         self = self.copy()
@@ -291,7 +296,7 @@ class ReplicateStats(Serializable):
         return self
 
     def drop(
-        self, drop_expr: pl.Expr | list[pl.Expr] | str | list[str]
+        self, drop_expr: nw.Expr | list[nw.Expr] | str | list[str]
     ) -> ReplicateStats:
         #   Don't edit the underlying object
         self = self.copy()
@@ -338,7 +343,11 @@ class ReplicateStats(Serializable):
         for dfi_name in self._df_attributes:
             dfi = getattr(self, dfi_name)
             if dfi is not None:
-                setattr(self, dfi_name, function(dfi, *args, **kwargs))
+                setattr(
+                    self,
+                    dfi_name,
+                    nw.to_native(function(nw.from_native(dfi), *args, **kwargs)),
+                )
 
         return self
 
@@ -352,7 +361,9 @@ class ReplicateStats(Serializable):
         #   Don't edit the underlying object
         self = self.copy()
 
-        def _concat_df(df: pl.LazyFrame | pl.DataFrame, df_join: pl.LazyFrame | pl.DataFrame) -> pl.LazyFrame | pl.DataFrame:
+        def _concat_df(df: IntoFrameT, df_join: IntoFrameT) -> IntoFrameT:
+            nw_type = NarwhalsType(df)
+
             if how == "horizontal":
                 columns = safe_columns(df)
                 replicate_col_name = "___replicate___"
@@ -361,13 +372,15 @@ class ReplicateStats(Serializable):
                 else:
                     replicate_col = []
 
-                return join_wrapper(
+                df_return = join_wrapper(
                     df,
                     df_join,
                     left_on=join_on_self + replicate_col,
                     right_on=join_on_concat + replicate_col,
                     how="left",
-                )
+                ).lazy_backend(nw_type)
+
+                return df_return
             elif how == "vertical":
                 return concat_wrapper([df, df_join], how="diagonal")
 
@@ -385,8 +398,8 @@ class ReplicateStats(Serializable):
 
 
 def print_se_table(
-    df_estimates: pl.LazyFrame | pl.DataFrame,
-    df_ses: pl.LazyFrame | pl.DataFrame,
+    df_estimates: IntoFrameT,
+    df_ses: IntoFrameT,
     display_all_vars: bool = True,
     display_max_vars: int = 20,
     round_output: bool | int = True,
@@ -409,8 +422,11 @@ def print_se_table(
     cols_n = list_input(cols_n)
     cols_round = list_input(cols_round)
 
-    df_estimates = df_estimates.lazy().collect()
-    df_ses = df_ses.lazy().collect()
+    nw_estimates = NarwhalsType(df_estimates)
+    nw_ses = NarwhalsType(df_ses)
+
+    df_estimates = nw_estimates.to_polars().lazy().collect()
+    df_ses = nw_ses.to_polars().lazy().collect()
 
     stat_vars = df_estimates.drop(sort_vars).collect_schema().names()
     if round_output:
@@ -499,15 +515,15 @@ def print_se_table(
         else:
             f_print(df_display, **f_print_args)
 
-    return df_display
+    return nw_estimates.from_polars(df_display)
 
 
 class _ReplicateSEReturn:
     def __init__(
         self,
-        df_estimates: pl.LazyFrame | pl.DataFrame,
-        df_ses: pl.LazyFrame | pl.DataFrame,
-        df_replicates: pl.LazyFrame | pl.DataFrame,
+        df_estimates: IntoFrameT,
+        df_ses: IntoFrameT,
+        df_replicates: IntoFrameT,
         bootstrap: bool,
     ):
         self.df_estimates = df_estimates
@@ -608,11 +624,11 @@ def _replicates_ses_from_function_sequential(
     weight_stub: str = "",
     weight_count: int = 0,
     replicate_name: str = "___replicate___",
-    df: pl.LazyFrame | pl.DataFrame | None = None,
+    df: IntoFrameT | None = None,
     df_argument_name: str = "df",
     replicate_start: int = 0,
     replicate_end: int = 0,
-) -> pl.LazyFrame | pl.DataFrame:
+) -> IntoFrameT:
     if arguments is None:
         arguments = {}
 
@@ -673,14 +689,14 @@ def _default_batch_size(column_stats: dict[str, list[str]], n_weights: int) -> i
 
 
 def _replicates_ses_batched(
-    df: pl.LazyFrame | pl.DataFrame,
+    df: IntoFrameT,
     column_stats: dict[str, list[str]],
     by_cols: list[str],
     weight_list: list[str],
     batch_size: int | None = None,
     quantile_interpolated: bool = False,
     quantile_interpolated_interval: int = 2500,
-) -> tuple[dict[int, pl.LazyFrame | pl.DataFrame] | None, bool]:
+) -> tuple[dict[int, IntoFrameT] | None, bool]:
     """
     Fast batched alternative to _replicates_ses_from_function_sequential,
     specifically for StatCalculator's own calculate_by-driven replicate-SE
@@ -769,7 +785,9 @@ def _replicates_ses_batched(
     #   gini-only request would silently drop that by-group's row instead
     #   of producing it with null values, unlike calculate_by.
     by_anchor = (
-        df.lazy().select(by_cols).unique().collect() if len(by_cols) else None
+        nw.from_native(df).lazy().select(by_cols).unique().collect().to_native()
+        if len(by_cols)
+        else None
     )
 
     per_replicate_tables = {}
@@ -799,33 +817,35 @@ def _replicates_ses_from_function_one_replicate(
     arguments: dict | None = None,
     weight_argument_name: str = "weight",
     replicate_name: str = "___replicate___",
-    df: pl.LazyFrame | pl.DataFrame | None = None,
+    df: IntoFrameT | None = None,
     df_argument_name: str = "df",
-) -> pl.LazyFrame | pl.DataFrame:
+) -> IntoFrameT:
     arguments[weight_argument_name] = weight
     if df is not None:
         arguments[df_argument_name] = df
 
-    df_replicatesi = delegate(**arguments).with_columns(
-        pl.lit(replicate_number).cast(pl.Int16).alias(replicate_name)
-    )
+    df_replicatesi = (
+        nw.from_native(delegate(**arguments)).with_columns(
+            nw.lit(replicate_number).cast(nw.Int16).alias(replicate_name)
+        )
+    ).to_native()
 
     return df_replicatesi
 
 
 def ses_from_replicates(
-    df_replicates: pl.LazyFrame | pl.DataFrame,
+    df_replicates: IntoFrameT,
     join_on: list[str],
     n_replicates: int,
     bootstrap: bool = False,
     replicate_name: str = "___replicate___",
-) -> tuple[pl.LazyFrame | pl.DataFrame, pl.LazyFrame | pl.DataFrame]:
+) -> tuple[IntoFrameT, IntoFrameT]:
     """
     Take a dataframe of replicate (or bootstrap) weight estimates
         and calculate the SEs
     Parameters
     ----------
-    df_replicates : pl.LazyFrame | pl.DataFrame
+    df_replicates : IntoFrameT
         The table f replicate estimates
     join_on : list[str]
         The column names to "join" the estimates together by across replicates
@@ -850,14 +870,16 @@ def ses_from_replicates(
          df_ses)
     """
 
-    df_replicates = df_replicates.lazy()
-    c_replicate = pl.col(replicate_name)
+    nw_type = NarwhalsType(df_replicates)
+    df_replicates = nw_type.safe_to_narwhals()
+    c_replicate = nw.col(replicate_name)
     stat_variables = (
         df_replicates.drop(join_on).drop(replicate_name).collect_schema().names()
     )
 
     sort_index = "__replicate_calc_sort_index___"
     df_replicates = fill_missing(df_replicates, value=float("nan"))
+    df_replicates = nw.from_native(df_replicates)
 
     if bootstrap:
         #   Replicate factor standard errors
@@ -867,7 +889,7 @@ def ses_from_replicates(
         with_var_to_se = []
         drops = []
         for coli in stat_variables:
-            c_col = pl.col(coli)
+            c_col = nw.col(coli)
 
             c_hat = c_col.mean().over(join_on).alias(f"___mu{coli}")
             with_mus.append(c_hat)
@@ -875,7 +897,7 @@ def ses_from_replicates(
             with_squared_errors.append(c_var)
             with_var_to_se.append(c_col**0.5)
 
-            c_standarderror = pl.col(f"___se{coli}").sum().alias(coli)
+            c_standarderror = nw.col(f"___se{coli}").sum().alias(coli)
             agg_ses.append(c_standarderror)
 
             drops.extend([f"___mu{coli}", f"___se{coli}"])
@@ -899,7 +921,7 @@ def ses_from_replicates(
         with_var_to_se = []
         drops = []
         for coli in stat_variables:
-            c_col = pl.col(coli)
+            c_col = nw.col(coli)
 
             c_hat = (
                 c_col.first()
@@ -911,13 +933,13 @@ def ses_from_replicates(
             with_squared_errors.append(c_var)
             with_var_to_se.append(c_col**0.5)
 
-            c_standarderror = pl.col(f"___se{coli}").sum().alias(coli)
+            c_standarderror = nw.col(f"___se{coli}").sum().alias(coli)
             agg_ses.append(c_standarderror)
 
             drops.extend([f"___mu{coli}", f"___se{coli}"])
 
         df_ses = (
-            df_replicates.with_columns(cs.boolean().cast(pl.Int8))
+            df_replicates.with_columns(cs.boolean().cast(nw.Int8))
             .with_columns(with_mus)
             .with_columns(with_squared_errors)
             .filter(c_replicate != 0)
@@ -934,8 +956,9 @@ def ses_from_replicates(
 
 
 def apply_as_attribute(obj, df_name: str, nw_expr, nw_method: str):
-    dfi = getattr(obj, df_name)
+    dfi = nw.from_native(getattr(obj, df_name))
 
     if dfi is not None:
-        method_callable = getattr(dfi, nw_method)
-        setattr(obj, df_name, method_callable(nw_expr))
+        df_nw = nw.from_native(dfi)
+        nw_method_callable = getattr(df_nw, nw_method)
+        setattr(obj, df_name, (nw_method_callable(nw_expr).to_native()))

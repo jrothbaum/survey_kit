@@ -1,5 +1,6 @@
 #   Class to inherit for to_dict/from_dict Serializable classes
 from __future__ import annotations
+from typing import TYPE_CHECKING
 
 import inspect
 import os
@@ -10,10 +11,13 @@ import dill as pickle
 import json
 from enum import Enum
 
-import polars as pl
-from .utilities.inputs import create_folders_if_needed, is_polars_frame
+import narwhals as nw
+from .utilities.inputs import create_folders_if_needed, is_narwhals_compatible
 
 from . import logger
+
+if TYPE_CHECKING:
+    import polars as pl
 
 
 class Serializable:
@@ -131,10 +135,13 @@ class Serializable:
             path_save = os.path.normpath(f"{folder_path}/{pathi}")
             create_folders_if_needed([os.path.dirname(path_save)])
 
-            if isinstance(dfi, pl.LazyFrame):
-                dfi.sink_parquet(path_save)
+            dfi_nw = nw.from_native(dfi)
+            d_metadata = dict(engine=nw.get_native_namespace(dfi_nw).__package__)
+            SerializableDictionary(d_metadata).save(path_save)
+            if isinstance(dfi_nw, nw.LazyFrame):
+                dfi_nw.sink_parquet(path_save)
             else:
-                dfi.write_parquet(path_save)
+                dfi_nw.write_parquet(path_save)
 
             del valuei["df"]
 
@@ -165,7 +172,7 @@ class Serializable:
         init_kwargs : dict, optional
             Arguments to pass to init function
         df_kwargs : dict, optional
-            Arguments to pass to polars scan_parquet for dataframe loading
+            Arguments to pass to narwhals scan_parquet for dataframe loading
         Returns
         -------
         Serializable
@@ -272,17 +279,27 @@ class Serializable:
     def _load_dfs(
         cls, folder_path: str, dfs: dict, delete: bool = False, **df_kwargs
     ) -> None:
+        #   Avoid circular import
+        from .utilities.dataframe import NarwhalsType
+
         if df_kwargs is None:
             df_kwargs = {}
         for keyi, valuei in dfs.items():
             pathi = valuei["path"]
 
             path_load = os.path.normpath(f"{folder_path}/{pathi}")
-            dfi = pl.scan_parquet(path_load, **df_kwargs)
+            d_metadata = SerializableDictionary.load(path_load)
+            df_kwargsi = df_kwargs.copy()
+            if "backend" not in df_kwargsi:
+                df_kwargsi["backend"] = d_metadata["engine"]
+                backend = d_metadata["engine"]
+            else:
+                backend = df_kwargsi["backend"]
+            dfi = nw.scan_parquet(path_load, **df_kwargsi)
             if delete:
-                dfi = dfi.collect().lazy()
+                dfi = dfi.lazy().collect().lazy_backend(NarwhalsType(backend=backend))
 
-            dfs[keyi]["df"] = dfi
+            dfs[keyi]["df"] = dfi.to_native()
 
     def to_dict(self, dfs: dict | None = None, key_path: str = "") -> dict[str, object]:
         candidate_items = vars(self)
@@ -419,6 +436,11 @@ class Serializable:
 
     @classmethod
     def _from_dict_unpack_polars_expression(cls, item: dict, dfs: dict):
+        try:
+            import polars as pl
+        except ImportError:
+            raise ImportError("Polars is required for unpacking a polars Expression. ")
+
         return pl.Expr.deserialize(io.StringIO(item["__polars_expression__"]))
 
     @classmethod
@@ -476,7 +498,7 @@ class Serializable:
                     )
 
                 self._add_to_items(key=key, value=d_item, items=items)
-            elif is_polars_frame(value):
+            elif is_narwhals_compatible(value):
                 n_dfs = len(dfs.keys())
 
                 df_name = f"__serialized_df_{n_dfs}"

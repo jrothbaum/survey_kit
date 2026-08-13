@@ -1,7 +1,8 @@
 from __future__ import annotations
 from typing import Optional, Callable
 import os
-import polars as pl
+import narwhals as nw
+from narwhals.typing import IntoFrameT
 import shutil
 import random
 import math
@@ -15,6 +16,7 @@ from ..utilities.dataframe import (
     drop_if_exists,
     join_list,
     concat_wrapper,
+    NarwhalsType,
 )
 
 from ..utilities.random import set_seed
@@ -45,7 +47,7 @@ class SRMI(Serializable):
 
     Parameters
     ----------
-    df : pl.LazyFrame | pl.DataFrame
+    df : IntoFrameT
         Data to be used in the imputation
     variables : list[Variable]
         Variables to be imputed (as Variable class instances), by default None
@@ -140,7 +142,7 @@ class SRMI(Serializable):
 
     def __init__(
         self,
-        df: pl.LazyFrame | pl.DataFrame | None = None,
+        df: IntoFrameT | None = None,
         variables: list[Variable] = None,
         model: str | list = "",
         selection: Selection = None,
@@ -184,6 +186,10 @@ class SRMI(Serializable):
             index = []
 
         self.df = df
+        if df is not None:
+            self.nw_type = NarwhalsType(df)
+        else:
+            self.nw_type = None
 
         self.model = model
         if selection is None:
@@ -222,14 +228,17 @@ class SRMI(Serializable):
             self.index = ["___rownumber"]
 
             self.df = (
-                self.df.lazy()
+                nw.from_native(self.df)
+                .lazy()
                 .collect()
                 .with_row_index(name=self.index[0])
+                .lazy_backend(self.nw_type)
+                .to_native()
             )
         else:
             #   Needs to be unique
             if safe_height(
-                self.df.select(index).unique()
+                nw.from_native(self.df).select(index).unique().to_native()
             ) != safe_height(self.df):
                 logger.info("Adding row number to the index as it is not unique")
                 self.df = self.df.with_row_index(name="___rownumber")
@@ -402,9 +411,9 @@ class SRMI(Serializable):
                 vari.imputation_flag = impute_flag
                 if vari.bimpute_if_missing:
                     missing_expr = (
-                        pl.col(vari.impute_var)
-                        .is_null()
-                        .cast(pl.Boolean)
+                        nw.col(vari.impute_var)
+                        .is_missing()
+                        .cast(nw.Boolean)
                         .alias(impute_flag)
                     )
 
@@ -413,7 +422,7 @@ class SRMI(Serializable):
                     vari.where_impute_add_flag(impute_flag)
 
             if len(missing_cols) > 0:
-                self.df = self.df.with_columns(missing_cols)
+                self.df = nw.from_native(self.df).with_columns(missing_cols).to_native()
             self._preprocess()
 
             #   Done, save the srmi information
@@ -501,7 +510,7 @@ class SRMI(Serializable):
                         )
 
                 if len(drop_flags) > 0:
-                    self.df = self.df.drop(drop_flags)
+                    self.df = nw.from_native(self.df).drop(drop_flags).to_native()
 
     def _initialize_implicates(self) -> None:
         if self.is_continuing_srmi:
@@ -509,7 +518,7 @@ class SRMI(Serializable):
             keep_vars = self.vars_implicate + self.continuing_cols
 
             for impi in self.implicates:
-                impi.df = impi.df.select(keep_vars)
+                impi.df = nw.from_native(impi.df).select(keep_vars).to_native()
                 impi.seed = random.randint(1, 2**32 - 1)
 
                 #   Reset progress
@@ -526,7 +535,7 @@ class SRMI(Serializable):
 
             #   implicate dataframe has ONLY the variables to be imputed
             #       and the index for merging
-            df_initial = self.df.select(keep_vars)
+            df_initial = nw.from_native(self.df).select(keep_vars).to_native()
 
             for impi in range(self.n_implicates):
                 this_implicate = Implicate(
@@ -547,7 +556,7 @@ class SRMI(Serializable):
         #     #   Is there any data?
         #     vari.parameters["any_values"] = (
         #         nw.from_native(self.df)
-        #         .select(pl.col(vari.impute_var).is_not_null().cast(pl.Int64).sum())
+        #         .select(nw.col(vari.impute_var).is_not_missing().cast(nw.Int64).sum())
         #         .item(0,0)
         #      ) > 0
 
@@ -611,7 +620,11 @@ class SRMI(Serializable):
                 )
             parameters = variable.parameters["parameters"]
 
-            df_tune = self.df.filter(pl.col(variable.impute_var).is_not_null())
+            df_tune = (
+                nw.from_native(self.df)
+                .filter(nw.col(variable.impute_var).is_not_missing())
+                .to_native()
+            )
             df_tune = variable.df_where(df_tune)
 
             lgbm = kit_lightgbm(
@@ -641,7 +654,7 @@ class SRMI(Serializable):
         path: str,
         path_model_new: str,
         path_append: list[str] | None,
-        append_condition: pl.Expr | None,
+        append_condition: nw.Expr | None,
         append_to_index: list[str] | str | None,
         seed: int = 0,
         pipe=None,
@@ -666,7 +679,7 @@ class SRMI(Serializable):
             List of paths to additional SRMI models to append
                 This lets you run any number of downstream models
                 and combine them into one "srmi" set of implicates
-        append_condition : pl.Expr | None
+        append_condition : nw.Expr | None
             Condition for including appended data
                 I.e., maybe one model was run on the cps in 2023
                     but another predicted SSI state payments in 2023
@@ -717,7 +730,8 @@ class SRMI(Serializable):
                 do_append = True
                 if append_condition is not None:
                     do_append = (
-                        srmi_other.df.select(append_condition)
+                        nw.from_native(srmi_other.df)
+                        .select(append_condition)
                         .lazy()
                         .collect()
                         .item(0, 0)
@@ -768,7 +782,7 @@ class SRMI(Serializable):
         cls,
         path: str,
         srmi_continue: list[SRMIContinueLoad],
-        filter_cond: pl.Expr | None,
+        filter_cond: nw.Expr | None,
     ) -> SRMI:
         """
         Load SRMI with additional continued imputation results.
@@ -781,7 +795,7 @@ class SRMI(Serializable):
             Path to the main SRMI model
         srmi_continue : list[SRMIContinueLoad]
             List of continuation data specifications
-        filter_cond : pl.Expr | None
+        filter_cond : nw.Expr | None
             Filter condition for continued data
 
         Returns
@@ -798,8 +812,12 @@ class SRMI(Serializable):
             for i in range(0, srmi.n_implicates):
                 dfi = srmi_i.implicates[i].df
                 if filter_cond is not None:
-                    dfi = dfi.filter(filter_cond)
-                dfi = dfi.select(srmi.index + srmi_continue_i.varlist)
+                    dfi = nw.from_native(dfi).filter(filter_cond).to_native()
+                dfi = (
+                    nw.from_native(dfi)
+                    .select(srmi.index + srmi_continue_i.varlist)
+                    .to_native()
+                )
                 srmi.implicates[i].df = join_list(
                     [
                         drop_if_exists(
@@ -815,17 +833,19 @@ class SRMI(Serializable):
                     if type(srmi_continue_i.fill_null) is dict:
                         with_null_fill = []
                         for vari, valuei in srmi_continue_i.fill_null.items():
-                            with_null_fill.append(pl.col(vari).fill_null(valuei))
+                            with_null_fill.append(nw.col(vari).fill_null(valuei))
                     else:
                         with_null_fill = [
-                            pl.col(srmi_continue_i.varlist).fill_null(
+                            nw.col(srmi_continue_i.varlist).fill_null(
                                 srmi_continue_i.fill_null
                             )
                         ]
 
                     if len(with_null_fill):
-                        srmi.implicates[i].df = srmi.implicates[i].df.with_columns(
-                            with_null_fill
+                        srmi.implicates[i].df = (
+                            nw.from_native(srmi.implicates[i].df)
+                            .with_columns(with_null_fill)
+                            .to_native()
                         )
 
         return srmi
@@ -950,7 +970,7 @@ class SRMI(Serializable):
         )
 
     def save_appended_cols_to_implicates(
-        self, df_list: DataFrameList | list[pl.LazyFrame | pl.DataFrame], columns: list[str], name: str
+        self, df_list: DataFrameList | list[IntoFrameT], columns: list[str], name: str
     ):
         for i in range(0, self.n_implicates):
             self.implicates[i].save_appended_cols_to_implicate(

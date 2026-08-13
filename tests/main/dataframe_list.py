@@ -1,3 +1,4 @@
+import narwhals as nw
 import polars as pl
 from survey_kit.utilities.random import RandomData, generate_seed, set_seed
 from survey_kit import logger
@@ -50,7 +51,7 @@ def main_test():
     logger.info(df_list.schema)
 
     df_list = df_list.lazy()
-    df_list = df_list.filter(pl.col("index") > 50).collect()
+    df_list = df_list.filter(nw.col("index") > 50).collect()
 
     logger.info(len(df_list))
 

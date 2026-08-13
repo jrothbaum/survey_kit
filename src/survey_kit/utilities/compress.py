@@ -1,20 +1,21 @@
 from __future__ import annotations
+from narwhals.typing import IntoFrameT
 
 import polars as pl
-from .dataframe import safe_height
+from .dataframe import NarwhalsType, safe_height
 
 from .. import logger
 
 
 def compress_df(
-    df: pl.LazyFrame | pl.DataFrame,
+    df: IntoFrameT,
     cols: list[str] | str | None = None,
     check_string: bool = False,
     check_string_only: bool = False,
     cast_all_null_to_int8: bool = True,
     check_date_time: bool = True,
     no_boolean: bool = False,
-) -> pl.LazyFrame | pl.DataFrame:
+) -> IntoFrameT:
     """
     Optimize DataFrame by downcasting numeric types to smallest possible representation.
 
@@ -25,7 +26,7 @@ def compress_df(
 
     Parameters
     ----------
-    df : pl.LazyFrame | pl.DataFrame
+    df : IntoFrameT
         Input data
     cols : list[str], optional
         Specific columns to compress (default: all)
@@ -44,7 +45,7 @@ def compress_df(
 
     Returns
     -------
-    pl.LazyFrame | pl.DataFrame
+    IntoFrameT
         Compressed DataFrame with optimized data types
 
     Examples
@@ -62,6 +63,9 @@ def compress_df(
     Automatically detects the smallest integer type that can hold all values
     in each column, considering ranges like Int8 (-128 to 127), Int16, etc.
     """
+
+    nw_type = NarwhalsType(df)
+    df = nw_type.to_polars()
 
     if check_date_time:
         df = _compress_datetime(df)
@@ -230,10 +234,12 @@ def compress_df(
         if cast_complete:
             df = df.with_columns(dfcast[columni].alias(columni))
 
-    return df
+    df = nw_type.from_polars(df)
+
+    return NarwhalsType.return_df(df, nw_type)
 
 
-def _compress_datetime(df: pl.LazyFrame | pl.DataFrame) -> pl.LazyFrame | pl.DataFrame:
+def _compress_datetime(df: pl.LazyFrame | pl.LazyFrame) -> pl.LazyFrame | pl.DataFrame:
     cols_date = {
         coli: df.schema[coli]
         for coli in df.lazy().collect_schema().names()
