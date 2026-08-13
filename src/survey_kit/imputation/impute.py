@@ -10,7 +10,7 @@ from narwhals.typing import IntoFrameT
 import polars as pl
 import numpy as np
 from copy import deepcopy
-from polars_formula import ModelSpec
+from survey_kit_formula import ModelSpec
 
 #   Nearest neighbor search using sklearn
 from sklearn.neighbors import KDTree
@@ -1668,7 +1668,7 @@ class Impute:
                 frames_to_fit.append(df_pmm_leave_out.select(rhs_vars))
             df_fit_union = pl.concat(frames_to_fit, how="diagonal")
 
-            #   ModelSpec.from_formula() parses with polars_formula's own
+            #   ModelSpec.from_formula() parses with survey_kit_formula's own
             #   parse_formula(), which (unlike FormulaBuilder's parsing)
             #   requires a "~" - f.rhs() is a bare rhs-only fragment.
             model_spec = ModelSpec.from_formula(

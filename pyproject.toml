@@ -21,7 +21,7 @@ dependencies = [
     "dill>=0.4.0",
     "psutil",
     "igraph",
-    "polars-formula",
+    "survey-kit-formula",
     "narwhals>=2.7.0",
     "numexpr>=2.10.2",
     "polars>=1.25.2",
@@ -34,14 +34,16 @@ dependencies = [
     "lightgbm",
     "optuna",
     "numba",
-    "pandas",
+    "numpy>=2.0.2",
 ]
 
+[project.optional-dependencies]
+pandas = ["pandas"]
 
 [dependency-groups]
 dev = [
     "duckdb>=1.4.1",
-    "numpy>=2.0.2",
+    "pandas",
     "ruff>=0.14.0",
     "polars_ds",
     "mkdocs-material",
@@ -61,4 +63,4 @@ target-version = "py313"
 
 [tool.uv.sources]
 survey-kit-data = { git = "https://github.com/jrothbaum/survey_kit_data" }
-polars-formula = { path = "../polars_formula", editable = true }
+survey-kit-formula = { path = "../survey_kit_formula", editable = true }

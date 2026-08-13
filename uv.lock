@@ -1649,26 +1649,6 @@ wheels = [
 ]
 
 [[package]]
-name = "polars-formula"
-version = "0.1.0"
-source = { editable = "../polars_formula" }
-dependencies = [
-    { name = "numpy" },
-    { name = "polars" },
-    { name = "scipy" },
-]
-
-[package.metadata]
-requires-dist = [
-    { name = "numpy", specifier = ">=2.0" },
-    { name = "polars", specifier = ">=1.28.1" },
-    { name = "scipy", specifier = ">=1.14" },
-]
-
-[package.metadata.requires-dev]
-dev = [{ name = "pytest", specifier = ">=8.0" }]
-
-[[package]]
 name = "polars-readstat"
 version = "0.8.2"
 source = { registry = "https://pypi.org/simple" }
@@ -2327,16 +2307,21 @@ dependencies = [
     { name = "narwhals" },
     { name = "numba" },
     { name = "numexpr" },
+    { name = "numpy" },
     { name = "optuna" },
-    { name = "pandas" },
     { name = "polars" },
-    { name = "polars-formula" },
     { name = "psutil" },
     { name = "pyarrow" },
     { name = "pypardiso" },
     { name = "scikit-learn" },
     { name = "scipy" },
     { name = "sparse-dot-mkl" },
+    { name = "survey-kit-formula" },
+]
+
+[package.optional-dependencies]
+pandas = [
+    { name = "pandas" },
 ]
 
 [package.dev-dependencies]
@@ -2346,7 +2331,7 @@ dev = [
     { name = "jupytext" },
     { name = "mkdocs-material" },
     { name = "mkdocstrings", extra = ["python"] },
-    { name = "numpy" },
+    { name = "pandas" },
     { name = "polars-ds" },
     { name = "ruff" },
     { name = "survey-kit-data" },
@@ -2361,17 +2346,19 @@ requires-dist = [
     { name = "narwhals", specifier = ">=2.7.0" },
     { name = "numba" },
     { name = "numexpr", specifier = ">=2.10.2" },
+    { name = "numpy", specifier = ">=2.0.2" },
     { name = "optuna" },
-    { name = "pandas" },
+    { name = "pandas", marker = "extra == 'pandas'" },
     { name = "polars", specifier = ">=1.25.2" },
-    { name = "polars-formula", editable = "../polars_formula" },
     { name = "psutil" },
     { name = "pyarrow", specifier = ">=19.0.0" },
     { name = "pypardiso", specifier = ">=0.4.6" },
     { name = "scikit-learn" },
     { name = "scipy", specifier = ">=1.13.1" },
     { name = "sparse-dot-mkl", specifier = ">=0.9.9" },
+    { name = "survey-kit-formula", editable = "../survey_kit_formula" },
 ]
+provides-extras = ["pandas"]
 
 [package.metadata.requires-dev]
 dev = [
@@ -2380,7 +2367,7 @@ dev = [
     { name = "jupytext", specifier = ">=1.18.1" },
     { name = "mkdocs-material" },
     { name = "mkdocstrings", extras = ["python"] },
-    { name = "numpy", specifier = ">=2.0.2" },
+    { name = "pandas" },
     { name = "polars-ds" },
     { name = "ruff", specifier = ">=0.14.0" },
     { name = "survey-kit-data", git = "https://github.com/jrothbaum/survey_kit_data" },
@@ -2400,6 +2387,26 @@ dependencies = [
     { name = "requests" },
     { name = "tqdm" },
 ]
+
+[[package]]
+name = "survey-kit-formula"
+version = "0.1.0"
+source = { editable = "../survey_kit_formula" }
+dependencies = [
+    { name = "numpy" },
+    { name = "polars" },
+    { name = "scipy" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "numpy", specifier = ">=2.0" },
+    { name = "polars", specifier = ">=1.28.1" },
+    { name = "scipy", specifier = ">=1.14" },
+]
+
+[package.metadata.requires-dev]
+dev = [{ name = "pytest", specifier = ">=8.0" }]
 
 [[package]]
 name = "tbb"

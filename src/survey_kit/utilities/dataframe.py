@@ -343,7 +343,12 @@ class NarwhalsType(Serializable):
             return nw.from_native(self.df).lazy()
 
     def is_polars(self) -> bool:
-        return nw.from_native(self.df).implementation.is_polars()
+        #   self.backend is already resolved once in __init__ via
+        #   nw.get_native_namespace(df).__name__ ("polars" for a polars
+        #   native df) - comparing against it directly avoids re-wrapping
+        #   df through nw.from_native() (and its dispatch/reflection cost)
+        #   on every call.
+        return self.backend == "polars"
 
     def to_polars(self) -> pl.LazyFrame | pl.DataFrame:
         if not self.is_polars():

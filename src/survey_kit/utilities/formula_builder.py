@@ -4,9 +4,9 @@ from typing import Callable
 import narwhals as nw
 from narwhals.typing import IntoFrameT
 import re
-from polars_formula import ModelSpec
-from polars_formula.parser import parse_formula
-from polars_formula.terms.classify import referenced_columns
+from survey_kit_formula import ModelSpec
+from survey_kit_formula.parser import parse_formula
+from survey_kit_formula.terms.classify import referenced_columns
 
 from .inputs import list_input
 from .dataframe import (
@@ -21,7 +21,7 @@ from .. import logger
 
 def _parse_normalized(formula: str):
     """
-    Parse a formula with polars_formula's parse_formula(), which requires a
+    Parse a formula with survey_kit_formula's parse_formula(), which requires a
     "~" - callers throughout FormulaBuilder routinely pass rhs-only
     fragments (formulaic tolerated this), so prepend "~" when missing.
     """
@@ -34,7 +34,7 @@ def get_model_frame(formula: str, df: IntoFrameT) -> IntoFrameT:
     """
     Build a named model/design matrix from a formula against df - the
     practical `model.matrix(formula, data)` equivalent (R's model.matrix()
-    always carries column names, same as this). polars_formula's ModelSpec
+    always carries column names, same as this). survey_kit_formula's ModelSpec
     is polars-only, so df is converted to polars around the call and the
     result converted back to df's original backend.
     """
@@ -53,7 +53,7 @@ class FormulaBuilder:
     using R/Patsy-style syntax. It supports formula manipulation, variable expansion,
     interactions, transformations, and pattern matching against dataframes.
 
-    The class works with polars_formula to parse and expand formulas, and
+    The class works with survey_kit_formula to parse and expand formulas, and
     integrates with the dataframe utilities to resolve wildcards and column
     patterns.
 
@@ -154,7 +154,7 @@ class FormulaBuilder:
 
     See Also
     --------
-    polars_formula.parser.parse_formula : Underlying formula parser
+    survey_kit_formula.parser.parse_formula : Underlying formula parser
     """
 
     def __init__(
@@ -805,7 +805,7 @@ class FormulaBuilder:
         #   String reference - R's contr.treatment "base" is a 1-indexed
         #   integer position, not a label, so resolve it per-column against
         #   that column's own sorted non-null unique levels (the same
-        #   ordering polars_formula's ModelSpec uses to assign levels).
+        #   ordering survey_kit_formula's ModelSpec uses to assign levels).
         #   self.df only ever keeps a 0-row schema reference (see __init__),
         #   which has no values to resolve a label against - a real df with
         #   actual rows must be passed explicitly here.
@@ -1070,7 +1070,7 @@ class FormulaBuilder:
         rhs = self.rhs()
 
         parsed = _parse_normalized(rhs)
-        #   polars_formula pulls the intercept out into its own field rather
+        #   survey_kit_formula pulls the intercept out into its own field rather
         #   than keeping it as a literal "1"/"0" term - re-add it explicitly
         #   so the reconstructed formula matches formulaic's prior shape.
         intercept_term = "1" if parsed.intercept else "0"
@@ -1248,7 +1248,7 @@ class FormulaBuilder:
 
         Column names are matched against a term's own deparsed text as a
         per-":"-part prefix (e.g. term "C(region):age" matches column
-        "C(region)b:age"), matching how polars_formula/R build model matrix
+        "C(region)b:age"), matching how survey_kit_formula/R build model matrix
         column names: variable prefix (deparsed call or var name) plus a
         per-variable suffix (factor level, poly index, ...), joined by ":"
         for interactions.

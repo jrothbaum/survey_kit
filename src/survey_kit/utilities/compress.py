@@ -79,160 +79,142 @@ def compress_df(
     intlist[pl.Int32] = [-(2**31), 2**31 - 1]
     intlist[pl.Int64] = [-(2**63), 2**63 - 1]
 
+    schema = df.lazy().collect_schema()
+
     if cols is None:
-        cols = df.lazy().collect_schema().names()
+        cols = schema.names()
 
-    for columni in cols:
-        cast_complete = False
-        plType = df.lazy().collect_schema()[columni]
-
-        df_col = df.select(pl.col(columni))
-
-        check_integers = False
-        check_float32 = False
-
-        maxValue = None
-        minValue = None
-
-        if check_string and (plType == pl.Utf8 or plType == pl.String):
-            numeric_string = False
-            try:
-                df_col = (
-                    df_col.select(
-                        pl.col(columni).str.strip_chars().cast(pl.Float64, strict=True)
-                    )
-                    .lazy()
-                    .collect()
+    #   String -> numeric conversion, batched across every eligible column:
+    #   a non-strict cast plus a before/after null-count comparison gives the
+    #   same all-or-nothing per-column semantics as the original's per-column
+    #   try/except(strict=True), without a separate collect() per column.
+    if check_string:
+        string_cols = [
+            coli for coli in cols if schema[coli] in (pl.Utf8, pl.String)
+        ]
+        if len(string_cols):
+            checks = (
+                df.lazy()
+                .select(
+                    [pl.col(coli).is_null().sum().alias(f"{coli}___before") for coli in string_cols]
+                    + [
+                        pl.col(coli)
+                        .str.strip_chars()
+                        .cast(pl.Float64, strict=False)
+                        .is_null()
+                        .sum()
+                        .alias(f"{coli}___after")
+                        for coli in string_cols
+                    ]
                 )
-                numeric_string = True
-            except:
-                pass
+                .collect()
+            )
 
-            if numeric_string:
-                plType = pl.Float64
-                df = df.with_columns(df_col[columni].cast(plType).alias(columni))
+            numeric_string_cols = [
+                coli
+                for coli in string_cols
+                if checks[0, f"{coli}___after"] == checks[0, f"{coli}___before"]
+            ]
 
-        if plType == pl.Float64:
-            check_integers = True
-            check_float32 = False
+            if len(numeric_string_cols):
+                df = df.with_columns(
+                    [
+                        pl.col(coli).str.strip_chars().cast(pl.Float64)
+                        for coli in numeric_string_cols
+                    ]
+                )
+                schema = df.lazy().collect_schema()
 
-            plType_intsize = 65
-        elif plType == pl.Float32:
-            check_integers = True
-            check_float32 = False
+    if check_string_only:
+        df = nw_type.from_polars(df)
+        return NarwhalsType.return_df(df, nw_type)
 
-            plType_intsize = 65
+    numeric_intsize = {
+        pl.Float64: 65,
+        pl.Float32: 65,
+        pl.Int64: 64,
+        pl.UInt64: 64,
+        pl.Int32: 32,
+        pl.UInt32: 32,
+        pl.Int16: 16,
+        pl.UInt16: 16,
+        pl.Int8: 8,
+        pl.UInt8: 8,
+    }
 
-        elif plType == pl.Int64 or plType == pl.UInt64:
-            check_integers = True
+    eligible = [coli for coli in cols if schema[coli] in numeric_intsize]
 
-            plType_intsize = 64
-        elif plType == pl.Int32 or plType == pl.UInt32:
-            check_integers = True
+    if len(eligible):
+        #   Gather every column's n_notnull/min/max (and, for float columns,
+        #   whether every non-null value is integer-valued) in ONE pass -
+        #   the original did this per column with its own collect() each.
+        stat_exprs = [pl.len().alias("___height")]
+        for coli in eligible:
+            stat_exprs.append(pl.col(coli).is_not_null().sum().alias(f"{coli}___n"))
+            stat_exprs.append(pl.col(coli).min().alias(f"{coli}___min"))
+            stat_exprs.append(pl.col(coli).max().alias(f"{coli}___max"))
+            if schema[coli] in (pl.Float32, pl.Float64):
+                stat_exprs.append(
+                    (pl.col(coli).drop_nulls().mod(1) == 0)
+                    .all()
+                    .alias(f"{coli}___allint")
+                )
 
-            plType_intsize = 32
-        elif plType == pl.Int16 or plType == pl.UInt16:
-            check_integers = True
+        stats = df.lazy().select(stat_exprs).collect()
+        height = stats[0, "___height"]
 
-            plType_intsize = 16
-        elif plType == pl.Int8 or plType == pl.UInt8:
-            check_integers = True
+        casts = {}
+        for coli in eligible:
+            plType = schema[coli]
+            plType_intsize = numeric_intsize[plType]
+            n_notnull = stats[0, f"{coli}___n"]
 
-            plType_intsize = 8
+            if n_notnull == 0:
+                if height != 0 and cast_all_null_to_int8:
+                    casts[coli] = pl.Int8
+                continue
 
-        #   First check integers
-        if check_integers and not check_string_only:
-            df_col = df_col.lazy().collect()
+            if plType in (pl.Float32, pl.Float64) and not stats[0, f"{coli}___allint"]:
+                #   check_float32 is unreachable in the original (always
+                #   False), so non-integer-valued floats are left as-is here
+                #   too - preserves existing behavior rather than changing it.
+                continue
 
-            dfCastCheck = df_col.filter(pl.col(columni).is_not_null())
+            minValue = stats[0, f"{coli}___min"]
+            maxValue = stats[0, f"{coli}___max"]
 
-            if dfCastCheck.height == 0 and df_col.height != 0:
-                #   All missing, cast to Int8 (for later combinations to ignore)?
-                if cast_all_null_to_int8:
-                    try:
-                        #   Try casting on the non-null values
-                        dfCastCheck = dfCastCheck.select(
-                            pl.col(columni).cast(pl.Int8, strict=True)
-                        )
-                        dfCastCheck = None
-                        #   Worked - then we're good to do on all of them
-                        dfcast = df_col.select(
-                            pl.col(columni).cast(pl.Int8, strict=True)
-                        )
-                        # logger.info("     Cast " + columni + " as " + str(inti))
-                        cast_complete = True
-                    except:
-                        pass
-                        #   logger.warning("     Cannot cast " + columni + " as " + str(pl.Int8))
-            else:
-                #   All integers?
-                if plType == pl.Float32 or plType == pl.Float64:
-                    bAllIntegers = (
-                        dfCastCheck.with_columns(pl.col(columni).mod(1) == 0).sum()[
-                            0, 0
-                        ]
-                        == dfCastCheck.height
-                    )
-                else:
-                    bAllIntegers = True
+            for inti, (lowerbound, upperbound) in intlist.items():
+                intSize = 1 if inti == pl.Boolean else int(str(inti).replace("Int", ""))
+                if (
+                    plType_intsize > intSize
+                    and maxValue <= upperbound
+                    and minValue >= lowerbound
+                ):
+                    casts[coli] = inti
+                    break
 
-                #   Only downcast to an integer if all are integers
-                if bAllIntegers:
-                    maxValue = dfCastCheck.max().row(0)[0]
-                    minValue = dfCastCheck.min().row(0)[0]
-
-                    if minValue is not None:
-                        for inti in intlist:
-                            if inti == pl.Boolean:
-                                intSize = 1
-                            else:
-                                intSize = int(str(inti).replace("Int", ""))
-
-                            if plType_intsize > intSize:
-                                #   logger.info(intlist[inti])
-                                lowerbound = intlist[inti][0]
-                                upperbound = intlist[inti][1]
-                                #   logger.info(lowerbound)
-                                #   logger.info(upperbound)
-
-                                if maxValue <= upperbound and minValue >= lowerbound:
-                                    #   logger.info("in range for " + str(inti))
-
-                                    try:
-                                        #   Try casting on the non-null values
-                                        dfCastCheck = dfCastCheck.select(
-                                            pl.col(columni).cast(inti, strict=True)
-                                        )
-                                        dfCastCheck = None
-                                        #   Worked - then we're good to do on all of them
-                                        dfcast = df_col.select(
-                                            pl.col(columni).cast(inti, strict=True)
-                                        )
-                                        # logger.info("     Cast " + columni + " as " + str(inti))
-                                        cast_complete = True
-
-                                    except:
-                                        logger.warning(
-                                            "     Cannot cast "
-                                            + columni
-                                            + " as "
-                                            + str(inti)
-                                        )
-
-                                    if cast_complete:
-                                        break
-
-        if not cast_complete and check_float32 and minValue is not None:
-            df_col = df_col.lazy().collect()
+        if len(casts):
             try:
-                dfcast = df_col.select(pl.col(columni).cast(pl.Float32, strict=True))
-                # logger.info("     Cast " + columni + " as " + str(pl.Float32))
-                cast_complete = True
-            except:
-                logger.warning("     Cannot cast " + columni + " as " + str(pl.Float32))
-
-        if cast_complete:
-            df = df.with_columns(dfcast[columni].alias(columni))
+                df = df.with_columns(
+                    [
+                        pl.col(coli).cast(target, strict=True).alias(coli)
+                        for coli, target in casts.items()
+                    ]
+                )
+            except Exception:
+                #   Fall back to casting one column at a time so a single
+                #   unexpected failure (e.g. an edge case the min/max check
+                #   didn't catch) only drops that column, matching the
+                #   original's per-column try/except behavior.
+                for coli, target in casts.items():
+                    try:
+                        df = df.with_columns(
+                            pl.col(coli).cast(target, strict=True).alias(coli)
+                        )
+                    except Exception:
+                        logger.warning(
+                            "     Cannot cast " + coli + " as " + str(target)
+                        )
 
     df = nw_type.from_polars(df)
 
@@ -240,10 +222,9 @@ def compress_df(
 
 
 def _compress_datetime(df: pl.LazyFrame | pl.LazyFrame) -> pl.LazyFrame | pl.DataFrame:
+    schema = df.lazy().collect_schema()
     cols_date = {
-        coli: df.schema[coli]
-        for coli in df.lazy().collect_schema().names()
-        if type(df.lazy().collect_schema()[coli]) is pl.Datetime
+        coli: typei for coli, typei in schema.items() if type(typei) is pl.Datetime
     }
 
     for coli, typei in cols_date.items():

@@ -21,7 +21,7 @@ from survey_kit.statistics.bootstrap import bayes_bootstrap
 from survey_kit.utilities.random import set_seed, generate_seed
 
 
-path_model = f"{config.path_temp_files}/py_srmi_test_gbm"
+path_model = f"{config.path_temp_files}/py_srmi_test"
 srmi = SRMI.load(path_model)
 df_implicates = srmi.df_implicates
 

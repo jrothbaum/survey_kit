@@ -120,7 +120,7 @@ class Moment(Serializable):
 
     Notes
     -----
-    - Formulas use R/polars_formula-style syntax, with C() for categorical variables.
+    - Formulas use R/survey_kit_formula-style syntax, with C() for categorical variables.
     - When using 'by' parameter, submoments are automatically created for each group.
     - The rescale option divides model matrix values by targets, which can improve
     convergence but changes the interpretation of calibration parameters.

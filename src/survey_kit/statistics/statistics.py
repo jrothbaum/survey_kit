@@ -29,7 +29,7 @@ class Statistics:
         List of statistics to calculate (mean, median, etc.)
         Call Statistics.available_stats() for options
     formula : str, optional
-        R/polars_formula-style formula for defining statistics to be calculated.
+        R/survey_kit_formula-style formula for defining statistics to be calculated.
         The default is "".  This takes precedence over columns
     columns : list[str]|str|None, optional
         List of columns to calculate statistics over. The default is None.
@@ -281,6 +281,15 @@ class Statistics:
                 )
                 index = [default_index]
                 b_default_index = True
+            else:
+                #   Keep this lazy too (matching the default_index branch
+                #   above) so the select/rename/with_columns chain in the
+                #   per-column loop below builds up one query plan instead
+                #   of materializing on every call - calculate_by's own
+                #   output here is already eager, and without this the
+                #   by-grouped path (unlike the no-by path) was forcing a
+                #   real collect on each of those calls, once per column.
+                valuei = valuei.lazy_backend(nw_type)
 
             summaries_by_var = []
 
