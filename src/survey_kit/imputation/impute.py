@@ -791,7 +791,6 @@ class Impute:
 
         return df
 
-
     ##########################################################
     ##########################################################
     #   Imputation functions - END
@@ -1327,13 +1326,13 @@ class Impute:
 
             df_impute_missing = (
                 nw.from_native(df_impute)
-                .filter(nw.col("___y_draw").is_missing())
+                .filter(nw.col("___y_draw").is_null())
                 .to_native()
             )
 
             df_impute = (
                 nw.from_native(df_impute)
-                .filter(nw.col("___y_draw").is_not_missing())
+                .filter(~nw.col("___y_draw").is_null())
                 .to_native()
             )
 
@@ -1406,14 +1405,14 @@ class Impute:
         #   df_impute= df_impute.with_columns(pl.when(pl.col('_row_index_') <= 20).then(pl.lit(None)).otherwise(pl.col("var1")).alias("var1"))
         n_missing = safe_height(
             nw.from_native(df_impute)
-            .filter(nw.col(self.variable.impute_var).is_missing())
+            .filter(nw.col(self.variable.impute_var).is_null())
             .to_native()
         )
 
         if n_missing > 0:
             df_impute_mean = (
                 nw.from_native(df_impute)
-                .filter(nw.col(self.variable.impute_var).is_missing())
+                .filter(nw.col(self.variable.impute_var).is_null())
                 .to_native()
             )
 
@@ -1435,7 +1434,7 @@ class Impute:
                 b_have_for_recipients = (
                     safe_height(
                         nw.from_native(df_impute_mean)
-                        .filter(nw.col("___yhat").is_missing())
+                        .filter(nw.col("___yhat").is_null())
                         .to_native()
                     )
                     == 0
@@ -1448,7 +1447,7 @@ class Impute:
                 b_have_for_donors = (
                     safe_height(
                         nw.from_native(df_model)
-                        .filter(pl.col("___yhat").is_missing())
+                        .filter(pl.col("___yhat").is_null())
                         .to_native()
                     )
                     == 0
@@ -1478,7 +1477,7 @@ class Impute:
                 [
                     (
                         nw.from_native(df_impute)
-                        .filter(nw.col(self.variable.impute_var).is_not_missing())
+                        .filter(~nw.col(self.variable.impute_var).is_null())
                         .to_native()
                     ),
                     (nw.from_native(df_impute_mean).drop("___yhat").to_native()),
@@ -2186,9 +2185,7 @@ class Impute:
             df_pmm_leave_out = df_model_bool.filter(pl.col(col_leave_out)).drop(
                 col_leave_out
             )
-            df_model = df_model_bool.filter(~pl.col(col_leave_out)).drop(
-                col_leave_out
-            )
+            df_model = df_model_bool.filter(~pl.col(col_leave_out)).drop(col_leave_out)
 
             return (
                 nw_type.from_polars(df_model),
@@ -2477,7 +2474,7 @@ class Impute:
         replace_list = []
         for vari in merge_list:
             replace_list.append(
-                nw.when(nw.col(f"{vari}_right").is_not_missing())
+                nw.when(~nw.col(f"{vari}_right").is_null())
                 .then(nw.col(f"{vari}_right"))
                 .otherwise(nw.col(vari))
                 .alias(vari)
@@ -2623,7 +2620,7 @@ class Impute:
 
         df = (
             nw.from_native(self.variable.df_predict_where(df=df))
-            .filter(nw.col(self.variable.impute_var).is_not_missing())
+            .filter(~nw.col(self.variable.impute_var).is_null())
             .select(keep_vars)
             .lazy()
             .collect()

@@ -8,6 +8,7 @@ from .rounding import Rounding
 from ..utilities.formula_builder import get_model_frame
 from ..utilities.inputs import list_input
 from ..utilities.dataframe import (
+    lazy_backend,
     concat_wrapper,
     columns_from_list,
     NarwhalsType,
@@ -133,9 +134,9 @@ class Statistics:
     ) -> tuple[IntoFrameT, list[str]]:
         if self.formula != "":
             #   It's a formula, process accordingly
-            df_summary = nw.from_native(
-                get_model_frame(self.formula, df)
-            ).lazy_backend(nw_type)
+            df_summary = lazy_backend(
+                nw.from_native(get_model_frame(self.formula, df)), nw_type
+            )
             cols_summary = df_summary.collect_schema().names()
         else:
             #   It's a variable list
@@ -146,14 +147,14 @@ class Statistics:
                 df_summary = df.select(cols)
                 cols_summary = cols
             else:
-                cols_summary = df.lazy_backend(nw_type).collect_schema().names()
+                cols_summary = lazy_backend(df, nw_type).collect_schema().names()
 
         df_summary = df_summary.select(cs.numeric(), cs.boolean())
         cols_summary = safe_columns(df_summary)
         #   Keep the weights
         if (
             weight != ""
-            and weight not in df_summary.lazy_backend(nw_type).collect_schema().names()
+            and weight not in lazy_backend(df_summary, nw_type).collect_schema().names()
         ):
             df_summary = concat_wrapper(
                 [df_summary, df.select(weight)], how="horizontal"
@@ -275,11 +276,8 @@ class Statistics:
 
             if index == default_index:
                 #   Just use the row number as the index
-                valuei = (
-                    valuei.lazy()
-                    .collect()
-                    .with_row_index(name=index)
-                    .lazy_backend(nw_type)
+                valuei = lazy_backend(
+                    valuei.lazy().collect().with_row_index(name=index), nw_type
                 )
                 index = [default_index]
                 b_default_index = True
@@ -291,7 +289,7 @@ class Statistics:
                 #   output here is already eager, and without this the
                 #   by-grouped path (unlike the no-by path) was forcing a
                 #   real collect on each of those calls, once per column.
-                valuei = valuei.lazy_backend(nw_type)
+                valuei = lazy_backend(valuei, nw_type)
 
             summaries_by_var = []
 
@@ -370,7 +368,7 @@ class Statistics:
         rounding.cols_round = list(set(rounding.cols_round + cols_round))
         rounding.cols_n = list(set(rounding.cols_n + cols_n))
 
-        return output_table.lazy_backend(nw_type)
+        return lazy_backend(output_table, nw_type)
 
     def stat_suffix(
         self=None,

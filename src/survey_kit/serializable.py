@@ -280,7 +280,7 @@ class Serializable:
         cls, folder_path: str, dfs: dict, delete: bool = False, **df_kwargs
     ) -> None:
         #   Avoid circular import
-        from .utilities.dataframe import NarwhalsType
+        from .utilities.dataframe import NarwhalsType, lazy_backend
 
         if df_kwargs is None:
             df_kwargs = {}
@@ -297,7 +297,7 @@ class Serializable:
                 backend = df_kwargsi["backend"]
             dfi = nw.scan_parquet(path_load, **df_kwargsi)
             if delete:
-                dfi = dfi.lazy().collect().lazy_backend(NarwhalsType(backend=backend))
+                dfi = lazy_backend(dfi.lazy().collect(), NarwhalsType(backend=backend))
 
             dfs[keyi]["df"] = dfi.to_native()
 

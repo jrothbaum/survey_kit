@@ -9,6 +9,7 @@ from narwhals.typing import IntoFrameT
 from ..utilities.inputs import list_input
 from .replicates import ReplicateStats, ses_from_replicates
 from ..utilities.dataframe import (
+    lazy_backend,
     concat_wrapper,
     join_list,
     safe_height,
@@ -314,16 +315,12 @@ def _compare_one_implicate(
         bootstrap2 = replicate2.replicates.bootstrap
 
     n_replicates1 = (
-        nw.from_native(df1)
-        .select(nw.col(replicate_name).max())
-        .lazy_backend(nw_type)
+        lazy_backend(nw.from_native(df1).select(nw.col(replicate_name).max()), nw_type)
         .collect()
         .item(0, 0)
     )
     n_replicates2 = (
-        nw.from_native(df2)
-        .select(nw.col(replicate_name).max())
-        .lazy_backend(nw_type)
+        lazy_backend(nw.from_native(df2).select(nw.col(replicate_name).max()), nw_type)
         .collect()
         .item(0, 0)
     )
@@ -459,8 +456,12 @@ def replicate_comparison(
 
     #   Upcast UInt columns to signed Int - otherwise the difference/ratio
     #   computations below can silently wrap around instead of going negative.
-    df_replicates1 = upcast_uint_to_int(nw_type1.safe_to_narwhals().lazy_backend(nw_type1))
-    df_replicates2 = upcast_uint_to_int(nw_type2.safe_to_narwhals().lazy_backend(nw_type2))
+    df_replicates1 = upcast_uint_to_int(
+        lazy_backend(nw_type1.safe_to_narwhals(), nw_type1)
+    )
+    df_replicates2 = upcast_uint_to_int(
+        lazy_backend(nw_type2.safe_to_narwhals(), nw_type2)
+    )
 
     join_on1 = list_input(join_on1)
 
@@ -521,27 +522,18 @@ def replicate_comparison(
             replicate_name=replicate_name1,
         )
 
-        outputs["difference_replicates"] = (
-            nw.from_native(df_difference_replicates)
-            .lazy_backend(nw_type1)
-            .collect()
-            .lazy_backend(nw_type1)
-            .to_native()
-        )
-        outputs["difference_estimates"] = (
-            nw.from_native(df_difference_estimates)
-            .lazy_backend(nw_type1)
-            .collect()
-            .lazy_backend(nw_type1)
-            .to_native()
-        )
-        outputs["difference_ses"] = (
-            nw.from_native(df_difference_ses)
-            .lazy_backend(nw_type1)
-            .collect()
-            .lazy_backend(nw_type1)
-            .to_native()
-        )
+        outputs["difference_replicates"] = lazy_backend(
+            lazy_backend(nw.from_native(df_difference_replicates), nw_type1).collect(),
+            nw_type1,
+        ).to_native()
+        outputs["difference_estimates"] = lazy_backend(
+            lazy_backend(nw.from_native(df_difference_estimates), nw_type1).collect(),
+            nw_type1,
+        ).to_native()
+        outputs["difference_ses"] = lazy_backend(
+            lazy_backend(nw.from_native(df_difference_ses), nw_type1).collect(),
+            nw_type1,
+        ).to_native()
 
     if ratio:
         with_ratios = []
@@ -566,27 +558,17 @@ def replicate_comparison(
             replicate_name=replicate_name1,
         )
 
-        outputs["ratio_replicates"] = (
-            nw.from_native(df_ratio_replicates)
-            .lazy_backend(nw_type1)
-            .collect()
-            .lazy_backend(nw_type1)
-            .to_native()
-        )
-        outputs["ratio_estimates"] = (
-            nw.from_native(df_ratio_estimates)
-            .lazy_backend(nw_type1)
-            .collect()
-            .lazy_backend(nw_type1)
-            .to_native()
-        )
-        outputs["ratio_ses"] = (
-            nw.from_native(df_ratio_ses)
-            .lazy_backend(nw_type1)
-            .collect()
-            .lazy_backend(nw_type1)
-            .to_native()
-        )
+        outputs["ratio_replicates"] = lazy_backend(
+            lazy_backend(nw.from_native(df_ratio_replicates), nw_type1).collect(),
+            nw_type1,
+        ).to_native()
+        outputs["ratio_estimates"] = lazy_backend(
+            lazy_backend(nw.from_native(df_ratio_estimates), nw_type1).collect(),
+            nw_type1,
+        ).to_native()
+        outputs["ratio_ses"] = lazy_backend(
+            lazy_backend(nw.from_native(df_ratio_ses), nw_type1).collect(), nw_type1
+        ).to_native()
 
     outputs["bootstrap"] = bootstrap
     return outputs

@@ -27,7 +27,12 @@ from copy import deepcopy
 
 from ...utilities.formula_builder import FormulaBuilder, get_model_frame
 from ...utilities.inputs import create_folders_if_needed
-from ...utilities.dataframe import columns_from_list, concat_wrapper, NarwhalsType
+from ...utilities.dataframe import (
+    columns_from_list,
+    concat_wrapper,
+    NarwhalsType,
+    lazy_backend,
+)
 from ...utilities.random import set_seed, generate_seed
 
 from ... import logger
@@ -421,11 +426,13 @@ class Survey_kit_Lightgbm:
             )
             x_train_arrow = x_train.to_arrow()
             y_train_arrow = y_train.to_arrow()
-            x_train, x_test = x_train_arrow.take(idx_train), x_train_arrow.take(
-                idx_test
+            x_train, x_test = (
+                x_train_arrow.take(idx_train),
+                x_train_arrow.take(idx_test),
             )
-            y_train, y_test = y_train_arrow.take(idx_train), y_train_arrow.take(
-                idx_test
+            y_train, y_test = (
+                y_train_arrow.take(idx_train),
+                y_train_arrow.take(idx_test),
             )
             extra_test = {}
 
@@ -595,7 +602,7 @@ class Survey_kit_Lightgbm:
 
             temp_lgbm.process_formula()
 
-            df_prediction = (
+            df_prediction = lazy_backend(
                 nw.Series.from_numpy(
                     name=name,
                     values=self.model.predict(
@@ -610,11 +617,9 @@ class Survey_kit_Lightgbm:
                         # predict_disable_shape_check=True,
                     ),
                     backend="polars",
-                )
-                .to_frame()
-                .lazy_backend(nw_type)
-                .to_native()
-            )
+                ).to_frame(),
+                nw_type,
+            ).to_native()
 
             if merged_to_input:
                 df_prediction = concat_wrapper(
@@ -624,7 +629,7 @@ class Survey_kit_Lightgbm:
             return NarwhalsType.return_df(df_prediction, nw_type)
         else:
             #   Predict on model data
-            df_prediction = (
+            df_prediction = lazy_backend(
                 nw.Series.from_numpy(
                     name=name,
                     values=self.model.predict(
@@ -639,9 +644,8 @@ class Survey_kit_Lightgbm:
                     ),
                     #   schema={name:nw.Float64},
                     backend="polars",
-                )
-                .to_frame()
-                .lazy_backend(self.nw_type)
+                ).to_frame(),
+                self.nw_type,
             )
 
             if merged_to_input:
@@ -716,7 +720,7 @@ class Survey_kit_Lightgbm:
                 (~pl_cs.by_name("Feature")).rank(descending=True).name.prefix("rank_")
             )
 
-        return nw.from_native(df_importance).lazy_backend(self.nw_type).to_native()
+        return lazy_backend(nw.from_native(df_importance), self.nw_type).to_native()
 
     def _feature_characteristics(
         feature: str = "", tunable_only=False
@@ -1138,4 +1142,3 @@ class tuner_optuna:
             return self.objective(d_test.label, preds)
 
         return _objective
-

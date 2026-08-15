@@ -23,7 +23,12 @@ from .replicates import (
 )
 from .basic_calculations import _is_batchable_stat
 
-from .comparisons import ComparisonItem, statistical_comparison_item, compare, process_compare_lists
+from .comparisons import (
+    ComparisonItem,
+    statistical_comparison_item,
+    compare,
+    process_compare_lists,
+)
 
 from ..utilities.dataframe import (
     join_wrapper,
@@ -34,7 +39,7 @@ from ..utilities.dataframe import (
     safe_columns,
     safe_upcast_list,
     upcast_uint_to_int,
-    drop_if_exists
+    drop_if_exists,
 )
 from ..utilities.inputs import list_input
 from ..utilities.rounding import drb_round_table
@@ -909,7 +914,7 @@ class StatCalculator(Serializable):
             if df_list[0].schema[coli] == nw.String:
                 c_missing = nw.col(coli).is_null() | (pl.col(coli) == "")
             else:
-                c_missing = nw.col(coli).is_missing()
+                c_missing = nw.col(coli).is_null()
 
             variable_filled.append(
                 (
@@ -944,13 +949,9 @@ class StatCalculator(Serializable):
                 .alias(coli)
             )
 
-        df_out = (
-            drop_if_exists(
-                nw.from_native(df_out)
-                .with_columns(with_clear)
-                .to_native(),
-                columns=row_indices
-            )
+        df_out = drop_if_exists(
+            nw.from_native(df_out).with_columns(with_clear).to_native(),
+            columns=row_indices,
         )
         return df_out
 
@@ -1120,8 +1121,12 @@ class StatCalculator(Serializable):
             #   Upcast any columns that need to be
             [df1, df2] = safe_upcast_list(
                 [
-                    upcast_uint_to_int(df1).with_columns(pl.col(pl.Boolean).cast(pl.Int8)),
-                    upcast_uint_to_int(df2).with_columns(pl.col(pl.Boolean).cast(pl.Int8))
+                    upcast_uint_to_int(df1).with_columns(
+                        pl.col(pl.Boolean).cast(pl.Int8)
+                    ),
+                    upcast_uint_to_int(df2).with_columns(
+                        pl.col(pl.Boolean).cast(pl.Int8)
+                    ),
                 ]
             )
 

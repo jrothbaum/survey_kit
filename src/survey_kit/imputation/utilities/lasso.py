@@ -45,7 +45,7 @@ class Lasso:
         if type(x) is str:
             x = [x]
 
-        self.df = nw.from_native(df).filter(nw.col(y).is_not_missing()).to_native()
+        self.df = nw.from_native(df).filter(~nw.col(y).is_null()).to_native()
 
         self.y = y
         self.x = x
@@ -94,7 +94,7 @@ class Lasso:
         #   Drop variables with all missing values
         all_missing = (
             nw.from_native(self.df)
-            .select([nw.col(coli).is_missing().all() for coli in self.x])
+            .select([nw.col(coli).is_null().all() for coli in self.x])
             .to_polars()
             .to_dicts()[0]
         )

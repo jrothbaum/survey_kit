@@ -12,6 +12,7 @@ from scipy.stats import norm
 
 from ..utilities.inputs import list_input
 from ..utilities.dataframe import (
+    lazy_backend,
     join_wrapper,
     concat_wrapper,
     NarwhalsType,
@@ -372,13 +373,16 @@ class ReplicateStats(Serializable):
                 else:
                     replicate_col = []
 
-                df_return = join_wrapper(
-                    df,
-                    df_join,
-                    left_on=join_on_self + replicate_col,
-                    right_on=join_on_concat + replicate_col,
-                    how="left",
-                ).lazy_backend(nw_type)
+                df_return = lazy_backend(
+                    join_wrapper(
+                        df,
+                        df_join,
+                        left_on=join_on_self + replicate_col,
+                        right_on=join_on_concat + replicate_col,
+                        how="left",
+                    ),
+                    nw_type,
+                )
 
                 return df_return
             elif how == "vertical":
@@ -793,9 +797,7 @@ def _replicates_ses_batched(
     per_replicate_tables = {}
     for r in range(len(weight_list)):
         parts = [
-            d[r]
-            for d in (simple_results, gini_results, quantile_results)
-            if r in d
+            d[r] for d in (simple_results, gini_results, quantile_results) if r in d
         ]
         if len(by_cols):
             combined = by_anchor

@@ -8,7 +8,12 @@ from enum import Enum
 from copy import deepcopy
 
 from ..utilities.formula_builder import FormulaBuilder
-from ..utilities.dataframe import columns_from_list, NarwhalsType, safe_height
+from ..utilities.dataframe import (
+    columns_from_list,
+    NarwhalsType,
+    safe_height,
+    lazy_backend,
+)
 from ..utilities.compress import compress_df
 
 #   SRMI modules
@@ -694,8 +699,7 @@ class Variable(Serializable):
             if len(additional_donates):
                 with_bad_donates = [
                     (
-                        nw.col(donatei).is_missing()
-                        & nw.col(self.impute_var).is_not_missing()
+                        nw.col(donatei).is_null() & ~nw.col(self.impute_var).is_null()
                     ).alias(f"bad_{donatei}")
                     for donatei in additional_donates
                 ]
@@ -801,7 +805,7 @@ class Variable(Serializable):
 
             where_index += 1
 
-        return nw.from_native(df).lazy().collect().lazy_backend(nw_type).to_native()
+        return lazy_backend(nw.from_native(df).lazy().collect(), nw_type).to_native()
 
     def split_when_missing(
         variable: Variable, exclude_for_missing: list[str]
@@ -842,17 +846,17 @@ class Variable(Serializable):
                 variable_not_missing.Where_impute = f"({variable_not_missing.Where_impute}) and ({variable.impute_var} is not null)"
         else:
             if variable.Where_impute is None:
-                variable.Where_impute = nw.col(variable.impute_var).is_missing()
-                variable_not_missing.Where_impute = nw.col(
+                variable.Where_impute = nw.col(variable.impute_var).is_null()
+                variable_not_missing.Where_impute = ~nw.col(
                     variable.impute_var
-                ).is_not_missing()
+                ).is_null()
             else:
                 variable.Where_impute = (
-                    variable.Where_impute & nw.col(variable.impute_var).is_missing()
+                    variable.Where_impute & nw.col(variable.impute_var).is_null()
                 )
                 variable_not_missing.Where_impute = (
                     variable_not_missing.Where_impute
-                    & nw.col(variable.impute_var).is_not_missing()
+                    & ~nw.col(variable.impute_var).is_null()
                 )
 
         variable.header += " with missing values"

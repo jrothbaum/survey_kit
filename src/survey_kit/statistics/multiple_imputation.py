@@ -786,7 +786,7 @@ class MultipleImputation(Serializable):
                         when_then_censor_absurd_values.append(
                             (
                                 (
-                                    nw.when(ci.lt(absurd_value_threshold))
+                                    nw.when((ci < absurd_value_threshold))
                                     .then(nw.lit(0.0))
                                     .otherwise(ci)
                                 ).alias(coli)
@@ -818,7 +818,7 @@ class MultipleImputation(Serializable):
                     upper_limit = 10**7
                     with_infinites.append(
                         (
-                            nw.when(c_coli.gt(upper_limit))
+                            nw.when((c_coli > upper_limit))
                             .then(nw.lit(upper_limit))
                             .otherwise(c_coli)
                             .alias(coli)

@@ -12,6 +12,7 @@ from pathlib import Path
 from ..utilities.inputs import create_folders_if_needed
 
 from ..utilities.dataframe import (
+    lazy_backend,
     safe_height,
     drop_if_exists,
     join_list,
@@ -227,14 +228,13 @@ class SRMI(Serializable):
         if len(index) == 0:
             self.index = ["___rownumber"]
 
-            self.df = (
+            self.df = lazy_backend(
                 nw.from_native(self.df)
                 .lazy()
                 .collect()
-                .with_row_index(name=self.index[0])
-                .lazy_backend(self.nw_type)
-                .to_native()
-            )
+                .with_row_index(name=self.index[0]),
+                self.nw_type,
+            ).to_native()
         else:
             #   Needs to be unique
             if safe_height(
@@ -412,7 +412,7 @@ class SRMI(Serializable):
                 if vari.bimpute_if_missing:
                     missing_expr = (
                         nw.col(vari.impute_var)
-                        .is_missing()
+                        .is_null()
                         .cast(nw.Boolean)
                         .alias(impute_flag)
                     )
@@ -622,7 +622,7 @@ class SRMI(Serializable):
 
             df_tune = (
                 nw.from_native(self.df)
-                .filter(nw.col(variable.impute_var).is_not_missing())
+                .filter(~nw.col(variable.impute_var).is_null())
                 .to_native()
             )
             df_tune = variable.df_where(df_tune)

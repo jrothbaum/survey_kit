@@ -37,7 +37,7 @@ def fill_missing(
     if c_numeric is not None:
         df = df.with_columns(c_numeric.fill_nan(value))
 
-    return df.lazy_backend(nw_type)
+    return NarwhalsType.lazy(df, nw_type)
 
 
 @nw.narwhalify
@@ -264,9 +264,9 @@ def join_wrapper(
 def convert_to_backend(df: IntoFrameT | None, nw_type: NarwhalsType) -> IntoFrameT:
     try:
         if NarwhalsType(df).backend != nw_type.backend:
-            return nw.from_native(
-                nw.from_native(df).lazy().collect().to_arrow()
-            ).lazy_backend(nw_type)
+            return NarwhalsType.lazy(
+                nw.from_native(nw.from_native(df).lazy().collect().to_arrow()), nw_type
+            )
     except:
         pass
     return df
@@ -358,8 +358,9 @@ class NarwhalsType(Serializable):
 
     def from_polars(self, df: pl.LazyFrame | pl.DataFrame) -> IntoFrameT:
         if not self.is_polars():
-            return nw.from_native(df.lazy().collect().to_arrow()).lazy_backend(
-                NarwhalsType(backend=self.backend)
+            return NarwhalsType.lazy(
+                nw.from_native(df.lazy().collect().to_arrow()),
+                NarwhalsType(backend=self.backend),
             )
         else:
             return df
@@ -382,8 +383,8 @@ class NarwhalsType(Serializable):
                 if type(df) is nw.LazyFrame:
                     return df
                 else:
-                    return nw.from_native(df).lazy_backend(
-                        NarwhalsType(backend=nw_types[0].backend)
+                    return NarwhalsType.lazy(
+                        nw.from_native(df), NarwhalsType(backend=nw_types[0].backend)
                     )
             else:
                 return df.lazy().collect()
@@ -422,12 +423,8 @@ class NarwhalsType(Serializable):
             return df
 
 
-def upcast_uint_to_int(df:IntoFrameT) -> IntoFrameT:
-    schema = (
-        nw.from_native(df)
-        .lazy()
-        .collect_schema()
-    )
+def upcast_uint_to_int(df: IntoFrameT) -> IntoFrameT:
+    schema = nw.from_native(df).lazy().collect_schema()
 
     new_schema = {}
     for vari, typei in schema.items():
@@ -442,12 +439,12 @@ def upcast_uint_to_int(df:IntoFrameT) -> IntoFrameT:
         elif typei == nw.UInt128:
             new_schema[vari] = pl.Int128
 
-    
     if len(new_schema) == 0:
         return df
     else:
         df_comp = pl.DataFrame(schema=new_schema)
-        return safe_upcast_list([df,df_comp])[0]
+        return safe_upcast_list([df, df_comp])[0]
+
 
 def safe_upcast_list(
     dfs: list[IntoFrameT | nw.LazyFrame | nw.DataFrame],
@@ -678,15 +675,11 @@ def safe_height(df: IntoFrameT) -> int:
     return nw.from_native(df).lazy().select(nw.len()).collect().item(0, 0)
 
 
-#   Monkey patch lazy
 def lazy_backend(
-    self: nw.LazyFrame | nw.DataFrame, nw_type: NarwhalsType
+    df: nw.LazyFrame | nw.DataFrame, nw_type: NarwhalsType
 ) -> nw.LazyFrame:
-    return NarwhalsType.lazy(self, nw_type)
-
-
-nw.LazyFrame.lazy_backend = lazy_backend
-nw.DataFrame.lazy_backend = lazy_backend
+    """Convert df to a lazy narwhals frame on nw_type's backend."""
+    return NarwhalsType.lazy(df, nw_type)
 
 
 def backend_eager(backend: str):

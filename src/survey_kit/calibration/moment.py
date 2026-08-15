@@ -5,6 +5,7 @@ from narwhals.typing import IntoFrameT
 from ..utilities.inputs import list_input
 from ..utilities.formula_builder import FormulaBuilder, get_model_frame
 from ..utilities.dataframe import (
+    lazy_backend,
     concat_wrapper,
     fill_missing,
     join_wrapper,
@@ -214,8 +215,7 @@ class Moment(Serializable):
 
                 if len(sort_by) == 0:
                     sort_by = (
-                        nw.from_native(df)
-                        .lazy_backend(self.nw_type)
+                        lazy_backend(nw.from_native(df), self.nw_type)
                         .collect_schema()
                         .names()[0]
                     )
@@ -276,8 +276,7 @@ class Moment(Serializable):
             df_by = nw.from_native(
                 get_model_frame(
                     f_by.formula,
-                    nw.from_native(self.df)
-                    .lazy_backend(self.nw_type)
+                    lazy_backend(nw.from_native(self.df), self.nw_type)
                     .collect()
                     .to_native(),
                 )
@@ -293,20 +292,16 @@ class Moment(Serializable):
         #   For interactions, get the unique values of the variables
         interactioncols = [
             coli
-            for coli in df_by.lazy_backend(self.nw_type).collect_schema().names()
+            for coli in lazy_backend(df_by, self.nw_type).collect_schema().names()
             if coli.find(":") >= 0
         ]
 
         if len(interactioncols) > 0:
             for interi in interactioncols:
                 subcols = interi.split(":")
-                df_inter = (
-                    df_by.select(subcols)
-                    .unique()
-                    .sort(subcols)
-                    .lazy_backend(self.nw_type)
-                    .collect()
-                )
+                df_inter = lazy_backend(
+                    df_by.select(subcols).unique().sort(subcols), self.nw_type
+                ).collect()
 
                 for i, rowi in enumerate(df_inter.rows()):
                     if i > 0 or not self.keep_full_group:
@@ -336,14 +331,10 @@ class Moment(Serializable):
             df_by = df_by.drop(list(set(droplist)))
 
         #   Any non-interacted columns (remaining?)
-        for coli in df_by.lazy_backend(self.nw_type).collect_schema().names():
-            df_inter = (
-                df_by.select(coli)
-                .unique()
-                .sort(coli)
-                .lazy_backend(self.nw_type)
-                .collect()
-            )
+        for coli in lazy_backend(df_by, self.nw_type).collect_schema().names():
+            df_inter = lazy_backend(
+                df_by.select(coli).unique().sort(coli), self.nw_type
+            ).collect()
 
             for rowi in df_inter.rows():
                 condi = nw.col(coli) == rowi[0]
@@ -359,7 +350,9 @@ class Moment(Serializable):
         model_matrix = nw.from_native(
             get_model_frame(
                 fb.formula,
-                nw.from_native(self.df).lazy_backend(self.nw_type).collect().to_native(),
+                lazy_backend(nw.from_native(self.df), self.nw_type)
+                .collect()
+                .to_native(),
             )
         )
 
@@ -370,20 +363,18 @@ class Moment(Serializable):
         self.df = nw.from_native(self.df).select(keep_df).to_native()
 
         #   Append the index to the model matrix, so we can link to it
-        self.model_matrix = (
+        self.model_matrix = lazy_backend(
             concat_wrapper(
                 [
-                    nw.from_native(self.df)
-                    .select(self.index)
-                    .lazy_backend(self.nw_type)
-                    .collect(),
-                    nw.from_native(model_matrix).lazy_backend(self.nw_type).collect(),
+                    lazy_backend(
+                        nw.from_native(self.df).select(self.index), self.nw_type
+                    ).collect(),
+                    lazy_backend(nw.from_native(model_matrix), self.nw_type).collect(),
                 ],
                 how="horizontal",
-            )
-            .lazy_backend(self.nw_type)
-            .to_native()
-        )
+            ),
+            self.nw_type,
+        ).to_native()
 
     def _get_targets(self, non_zero_only: bool = False):
         col_df = [self.weight]
@@ -437,7 +428,7 @@ class Moment(Serializable):
 
             targets = nw.from_native(self.targets)
 
-            for coli in targets.lazy_backend(self.nw_type).collect_schema().names():
+            for coli in lazy_backend(targets, self.nw_type).collect_schema().names():
                 cols_scale.append((nw.col(coli) ** -1).alias(coli))
                 cols_targets.append(nw.lit(1).alias(coli))
             self.scale = targets.with_columns(cols_scale).to_native()
@@ -465,8 +456,7 @@ class Moment(Serializable):
         #   Make sure the weight sums do not overflow
         self.df = safe_sum_cast(df=self.df, columns=[self.weight])
         total_weight = (
-            nw.from_native(self.df)
-            .lazy_backend(self.nw_type)
+            lazy_backend(nw.from_native(self.df), self.nw_type)
             .select(nw.col(self.weight).sum())
             .collect()
             .item(0, 0)
@@ -478,15 +468,15 @@ class Moment(Serializable):
             bykeep.append(self.weight)
             bykeep.extend(self.index)
             bykeep.extend(self.byvars)
-            df_by = nw.from_native(self.df).lazy_backend(self.nw_type).select(bykeep)
+            df_by = lazy_backend(nw.from_native(self.df), self.nw_type).select(bykeep)
         else:
-            df_by = nw.from_native(self.df).lazy_backend(self.nw_type)
+            df_by = lazy_backend(nw.from_native(self.df), self.nw_type)
 
         for i_by, byi in enumerate(self.by_where_expressions):
             df_byi = df_by.filter(byi)
 
             group_weight = (
-                df_byi.lazy_backend(self.nw_type)
+                lazy_backend(df_byi, self.nw_type)
                 .select(nw.col(self.weight).sum())
                 .collect()
                 .item(0, 0)
@@ -573,14 +563,12 @@ class Moment(Serializable):
             with_columns = []
 
             cols_main = (
-                nw.from_native(df_out)
-                .lazy_backend(self.nw_type)
+                lazy_backend(nw.from_native(df_out), self.nw_type)
                 .collect_schema()
                 .names()
             )
             cols_scale = (
-                nw.from_native(self.scale)
-                .lazy_backend(self.nw_type)
+                lazy_backend(nw.from_native(self.scale), self.nw_type)
                 .collect_schema()
                 .names()
             )
@@ -588,8 +576,7 @@ class Moment(Serializable):
                 if coli not in self.index:
                     #   Get the scale adjustment from self.scale
                     valuei = (
-                        nw.from_native(self.scale)
-                        .lazy_backend(self.nw_type)
+                        lazy_backend(nw.from_native(self.scale), self.nw_type)
                         .select(coli)
                         .collect()
                         .item(0, 0)
@@ -597,8 +584,7 @@ class Moment(Serializable):
                     with_columns.append((nw.col(coli) * valuei).alias(coli))
 
             df_out = (
-                nw.from_native(df_out)
-                .lazy_backend(self.nw_type)
+                lazy_backend(nw.from_native(df_out), self.nw_type)
                 .with_columns(with_columns)
                 .to_native()
             )

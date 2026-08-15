@@ -8,6 +8,7 @@ from narwhals.typing import IntoFrameT
 from ..utilities.inputs import list_input
 
 from ..utilities.dataframe import (
+    lazy_backend,
     _columns_original_order,
     safe_sum_cast,
     join_wrapper,
@@ -45,7 +46,7 @@ def calculate_by(
         df = nw_type.to_polars()
         nw_type = NarwhalsType(df)
 
-    df = nw.from_native(df).lazy_backend(nw_type)
+    df = lazy_backend(nw.from_native(df), nw_type)
 
     columns_to_keep = []
     for coli in column_stats.keys():
@@ -85,9 +86,9 @@ def calculate_by(
 
     df_out = {}
     if weight != "":
-        df = nw.from_native(
-            safe_sum_cast(df=df.to_native(), columns=weight)
-        ).lazy_backend(nw_type)
+        df = lazy_backend(
+            nw.from_native(safe_sum_cast(df=df.to_native(), columns=weight)), nw_type
+        )
         weight_for_batched = weight
     else:
         #   _batched_gini/_batched_quantiles need an actual weight column to
@@ -114,9 +115,14 @@ def calculate_by(
                 share_stats.append(col_stat_info)
 
             if col_stat_info.need_sum_cast:
-                df = nw.from_native(
-                    safe_sum_cast(df=df.to_native(), columns=col_stat_info.column_name)
-                ).lazy_backend(nw_type)
+                df = lazy_backend(
+                    nw.from_native(
+                        safe_sum_cast(
+                            df=df.to_native(), columns=col_stat_info.column_name
+                        )
+                    ),
+                    nw_type,
+                )
 
             if col_stat_info.stat_expr is not None:
                 if col_stat_info.output_name not in names_already:
@@ -186,7 +192,7 @@ def calculate_by(
                     batch_size=1,
                 )
             if len(batched_q):
-                df_join.append(nw.from_native(batched_q[0]).lazy_backend(nw_type))
+                df_join.append(lazy_backend(nw.from_native(batched_q[0]), nw_type))
 
         if len(gini_stats):
             batched_gini = _batched_gini(
@@ -197,7 +203,7 @@ def calculate_by(
                 batch_size=1,
             )
             if len(batched_gini):
-                df_join.append(nw.from_native(batched_gini[0]).lazy_backend(nw_type))
+                df_join.append(lazy_backend(nw.from_native(batched_gini[0]), nw_type))
 
         if len(df_join):
             if len(byi):
@@ -208,14 +214,16 @@ def calculate_by(
 
             else:
                 #   No by, just one row
-                df_byi = concat_wrapper(
-                    [df_byi.collect()] + [dfi.collect() for dfi in df_join],
-                    how="horizontal",
-                ).lazy_backend(nw_type)
+                df_byi = lazy_backend(
+                    concat_wrapper(
+                        [df_byi.collect()] + [dfi.collect() for dfi in df_join],
+                        how="horizontal",
+                    ),
+                    nw_type,
+                )
 
         df_out[bynamei] = compress_df(
-            nw.from_native(fill_missing(df_byi, value=None))
-            .lazy_backend(nw_type)
+            lazy_backend(nw.from_native(fill_missing(df_byi, value=None)), nw_type)
             .collect()
             .to_native(),
             no_boolean=True,
@@ -844,9 +852,7 @@ def _batched_simple_stats(
             suffix = f"___rep{r}"
             rep_cols = [c for c in wide.columns if c.endswith(suffix)]
             rename = {c: c[: -len(suffix)] for c in rep_cols}
-            results[r] = (
-                wide.select(by_cols + rep_cols).rename(rename).to_native()
-            )
+            results[r] = wide.select(by_cols + rep_cols).rename(rename).to_native()
 
     return results
 
@@ -884,12 +890,12 @@ def _batched_gini(
     for coli in gini_columns:
         (_, modifier, coli_original) = _check_special_modifiers(coli)
 
-        c_keep_condition = nw.col(coli_original).is_not_missing()
+        c_keep_condition = ~nw.col(coli_original).is_null()
         if modifier == "not0":
-            c_keep_condition = c_keep_condition & nw.col(coli_original).ne(0)
+            c_keep_condition = c_keep_condition & (nw.col(coli_original) != 0)
 
         if censor_at_zero:
-            c_income = nw.col(coli_original) * nw.col(coli_original).gt(0).cast(
+            c_income = nw.col(coli_original) * (nw.col(coli_original) > 0).cast(
                 nw.Float64
             )
         else:
@@ -918,8 +924,10 @@ def _batched_gini(
                 r = batch_start + offset
                 cw = nw.col(f"___cw{r}")
                 if len(by_cols):
-                    swt = cw.cum_sum().over(by_cols, order_by=coli_original).alias(
-                        f"___swt{r}"
+                    swt = (
+                        cw.cum_sum()
+                        .over(by_cols, order_by=coli_original)
+                        .alias(f"___swt{r}")
                     )
                 else:
                     swt = cw.cum_sum().over(order_by=coli_original).alias(f"___swt{r}")
@@ -932,7 +940,7 @@ def _batched_gini(
                 cw = nw.col(f"___cw{r}")
                 swt = nw.col(f"___swt{r}")
                 agg_exprs.append((cw * c_income).sum().alias(f"swtey___rep{r}"))
-                agg_exprs.append((cw.pow(2) * c_income).sum().alias(f"swt2ey___rep{r}"))
+                agg_exprs.append(((cw**2) * c_income).sum().alias(f"swt2ey___rep{r}"))
                 agg_exprs.append((swt * cw * c_income).sum().alias(f"swteycw___rep{r}"))
                 agg_exprs.append(swt.max().alias(f"swt___rep{r}"))
 
@@ -944,13 +952,12 @@ def _batched_gini(
             for offset, weight_col in enumerate(batch_weights):
                 r = batch_start + offset
                 gini_expr = (
-                    (
-                        2 * nw.col(f"swteycw___rep{r}")
-                        - nw.col(f"swt2ey___rep{r}")
-                    )
+                    (2 * nw.col(f"swteycw___rep{r}") - nw.col(f"swt2ey___rep{r}"))
                     / (nw.col(f"swt___rep{r}") * nw.col(f"swtey___rep{r}"))
                     - 1
-                ).alias(f"{coli_original}_{stat_suffix(statistic='gini', modifier=modifier)}")
+                ).alias(
+                    f"{coli_original}_{stat_suffix(statistic='gini', modifier=modifier)}"
+                )
 
                 #   Matches calculate_by's fill_missing(..., value=None)
                 #   cleanup - a degenerate all-zero (post-censoring) income
@@ -965,10 +972,10 @@ def _batched_gini(
                 if r not in results:
                     results[r] = out
                 else:
-                    results[r] = join_wrapper(
-                        results[r], out, on=by_cols, how="full"
-                    ) if len(by_cols) else concat_wrapper(
-                        [results[r], out], how="horizontal"
+                    results[r] = (
+                        join_wrapper(results[r], out, on=by_cols, how="full")
+                        if len(by_cols)
+                        else concat_wrapper([results[r], out], how="horizontal")
                     )
 
     return results
@@ -1014,9 +1021,9 @@ def _batched_quantiles(
             q = float(resolved.replace("q", "").replace("p", "")) / 100
             quantiles.append((stati, q))
 
-        c_keep_condition = nw.col(coli_original).is_not_missing()
+        c_keep_condition = ~nw.col(coli_original).is_null()
         if modifier == "not0":
-            c_keep_condition = c_keep_condition & nw.col(coli_original).ne(0)
+            c_keep_condition = c_keep_condition & (nw.col(coli_original) != 0)
 
         sort_cols = by_cols + [coli_original]
 
@@ -1043,9 +1050,9 @@ def _batched_quantiles(
                         / s.sum().over(by_cols)
                     ).alias(f"__share{offset}")
                 else:
-                    share = (
-                        s.cum_sum().over(order_by=coli_original) / s.sum()
-                    ).alias(f"__share{offset}")
+                    share = (s.cum_sum().over(order_by=coli_original) / s.sum()).alias(
+                        f"__share{offset}"
+                    )
                 share_exprs.append(share)
             grouped = grouped.with_columns(share_exprs)
 
@@ -1064,9 +1071,7 @@ def _batched_quantiles(
                         .otherwise(None)
                         .min()
                     )
-                    agg_exprs.append(
-                        masked.alias(f"{coli_original}_{suffix}___rep{r}")
-                    )
+                    agg_exprs.append(masked.alias(f"{coli_original}_{suffix}___rep{r}"))
 
             if len(by_cols):
                 wide = grouped.group_by(by_cols).agg(agg_exprs).collect()
@@ -1083,10 +1088,10 @@ def _batched_quantiles(
                 if r not in results:
                     results[r] = out
                 else:
-                    results[r] = join_wrapper(
-                        results[r], out, on=by_cols, how="full"
-                    ) if len(by_cols) else concat_wrapper(
-                        [results[r], out], how="horizontal"
+                    results[r] = (
+                        join_wrapper(results[r], out, on=by_cols, how="full")
+                        if len(by_cols)
+                        else concat_wrapper([results[r], out], how="horizontal")
                     )
 
     return results
@@ -1143,7 +1148,7 @@ def _batched_quantiles_interpolated(
 
         bin_col = f"__{coli}_bin"
         c_col = nw.col(coli_original)
-        with_floor = 1 + c_col.floordiv(interpolated_interval)
+        with_floor = 1 + (c_col // interpolated_interval)
         if modifier == "not0":
             binned_expr = nw.when(c_col != 0).then(with_floor).otherwise(nw.lit(None))
         else:
@@ -1151,7 +1156,7 @@ def _batched_quantiles_interpolated(
 
         sorted_bin = by_cols + [bin_col]
         df_binned_full = ndf_base.with_columns(binned_expr.alias(bin_col)).filter(
-            nw.col(bin_col).is_not_missing()
+            ~nw.col(bin_col).is_null()
         )
 
         #   Replicate-independent: row counts per original bin determine
@@ -1177,8 +1182,8 @@ def _batched_quantiles_interpolated(
                 nw.col(weight_col).sum().alias(f"__wsum{offset}")
                 for offset, weight_col in enumerate(batch_weights)
             ]
-            df_grouped = df_binned_full.group_by(sorted_bin).agg(sum_exprs).sort(
-                sorted_bin
+            df_grouped = (
+                df_binned_full.group_by(sorted_bin).agg(sum_exprs).sort(sorted_bin)
             )
 
             #   Cumulative share must be computed on the FULL per-original-
@@ -1199,9 +1204,9 @@ def _batched_quantiles_interpolated(
                         / s.sum().over(by_cols)
                     ).alias(f"__share{offset}")
                 else:
-                    share = (
-                        s.cum_sum().over(order_by=bin_col) / s.sum()
-                    ).alias(f"__share{offset}")
+                    share = (s.cum_sum().over(order_by=bin_col) / s.sum()).alias(
+                        f"__share{offset}"
+                    )
                 share_exprs.append(share)
             df_grouped = df_grouped.with_columns(share_exprs).collect()
 
@@ -1213,9 +1218,7 @@ def _batched_quantiles_interpolated(
                 df_grouped.select(sorted_bin + share_cols),
                 on=sorted_bin,
                 how="left",
-            ).with_columns(
-                [nw.col(c).fill_null(nw.lit(0.0)) for c in share_cols]
-            )
+            ).with_columns([nw.col(c).fill_null(nw.lit(0.0)) for c in share_cols])
             ndf_batch = nw.from_native(df_coli_batch).lazy()
 
             agg_exprs = []
@@ -1232,19 +1235,13 @@ def _batched_quantiles_interpolated(
                         nw.when(share_col >= q).then(share_col).otherwise(None).min()
                     )
                     y_above = (
-                        nw.when(share_col >= q)
-                        .then(bin_col_expr)
-                        .otherwise(None)
-                        .min()
+                        nw.when(share_col >= q).then(bin_col_expr).otherwise(None).min()
                     )
                     w_below = (
                         nw.when(share_col < q).then(share_col).otherwise(None).max()
                     )
                     y_below = (
-                        nw.when(share_col < q)
-                        .then(bin_col_expr)
-                        .otherwise(None)
-                        .max()
+                        nw.when(share_col < q).then(bin_col_expr).otherwise(None).max()
                     )
 
                     w_gap = nw.lit(q) - w_below
@@ -1254,9 +1251,7 @@ def _batched_quantiles_interpolated(
                         y_below + (w_gap / w_interval) * y_interval
                     ) * interpolated_interval
 
-                    agg_exprs.append(
-                        val.alias(f"{coli_original}_{suffix}___rep{r}")
-                    )
+                    agg_exprs.append(val.alias(f"{coli_original}_{suffix}___rep{r}"))
 
             if len(by_cols):
                 wide = ndf_batch.group_by(by_cols).agg(agg_exprs).collect()
@@ -1273,10 +1268,10 @@ def _batched_quantiles_interpolated(
                 if r not in results:
                     results[r] = out
                 else:
-                    results[r] = join_wrapper(
-                        results[r], out, on=by_cols, how="full"
-                    ) if len(by_cols) else concat_wrapper(
-                        [results[r], out], how="horizontal"
+                    results[r] = (
+                        join_wrapper(results[r], out, on=by_cols, how="full")
+                        if len(by_cols)
+                        else concat_wrapper([results[r], out], how="horizontal")
                     )
 
     return results
@@ -1287,5 +1282,3 @@ def _batched_quantiles_interpolated(
 #   Batched replicate-weight computation - END
 ##########################################################
 ##########################################################
-
-

@@ -285,7 +285,7 @@ class Selection(Serializable):
 
         include_base_with_interaction = self.parameters["include_base_with_interaction"]
 
-        df = nw.from_native(df).filter(nw.col(y).is_not_missing()).to_native()
+        df = nw.from_native(df).filter(~nw.col(y).is_null()).to_native()
 
         if missing_dummies:
             [df, formula, missing_dummies] = Selection._add_missing_dummy(
@@ -451,7 +451,7 @@ class Selection(Serializable):
         missing_dummies = self.parameters["missing_dummies"]
         include_base_with_interaction = self.parameters["include_base_with_interaction"]
 
-        df = nw.from_native(df).filter(nw.col(y).is_not_missing()).to_native()
+        df = nw.from_native(df).filter(~nw.col(y).is_null()).to_native()
         if missing_dummies:
             [df, formula, missing_dummies] = Selection._add_missing_dummy(
                 df=df, y=y, formula=formula
@@ -516,19 +516,19 @@ class Selection(Serializable):
                 n_missing = safe_height(
                     nw.from_native(df)
                     .select(coli)
-                    .filter(nw.col(coli).is_missing())
+                    .filter(nw.col(coli).is_null())
                     .to_native()
                 )
 
                 if n_missing > 0:
                     missing_dummies.append(
-                        nw.when(nw.col(coli).is_missing())
+                        nw.when(nw.col(coli).is_null())
                         .then(nw.lit(True))
                         .otherwise(nw.lit(False))
                         .alias(f"___missing___dummy___{coli}")
                     )
                     missing_recodes.append(
-                        nw.when(nw.col(coli).is_missing())
+                        nw.when(nw.col(coli).is_null())
                         .then(nw.lit(0))
                         .otherwise(nw.col(coli))
                         .alias(coli)

@@ -15,7 +15,7 @@ from typing import Tuple
 from scipy.optimize import minimize
 from numba import jit, prange
 
-from ...utilities.dataframe import NarwhalsType
+from ...utilities.dataframe import NarwhalsType, lazy_backend
 from ...utilities.random import set_seed, RandomNumberGenerator
 from ... import logger
 
@@ -738,13 +738,12 @@ class DrawFromQuantileVectors:
         df_p = pl.DataFrame(p).rename(rename_p)
         df_values = pl.DataFrame(samples).rename(rename_values)
 
-        return (
+        return lazy_backend(
             nw.from_native(
                 self.nw_type.from_polars(pl.concat([df_p, df_values], how="horizontal"))
-            )
-            .lazy_backend(self.nw_type)
-            .to_native()
-        )
+            ),
+            self.nw_type,
+        ).to_native()
 
     def __repr__(self):
         tail_names = {v: k for k, v in TAIL_TYPES.items()}

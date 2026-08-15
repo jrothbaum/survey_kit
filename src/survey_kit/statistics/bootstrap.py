@@ -6,7 +6,12 @@ import narwhals as nw
 from narwhals.typing import IntoFrameT
 
 from ..utilities.random import RandomData
-from ..utilities.dataframe import safe_height, NarwhalsType, concat_wrapper
+from ..utilities.dataframe import (
+    safe_height,
+    NarwhalsType,
+    concat_wrapper,
+    lazy_backend,
+)
 
 
 def bayes_bootstrap_weights(
@@ -56,7 +61,7 @@ def bayes_bootstrap_weights(
     if len(with_columns):
         df = nw.from_native(df).with_columns(with_columns).to_native()
 
-    return nw.from_native(df).lazy_backend(nw_type).to_native()
+    return lazy_backend(nw.from_native(df), nw_type).to_native()
 
 
 def bayes_bootstrap(

@@ -474,7 +474,7 @@ class Implicate(Serializable):
 
             if "By" in cols_stats:
                 clear_name.append(
-                    nw.when(nw.col("#").mod(4) == 0)
+                    nw.when((nw.col("#") % 4) == 0)
                     .then(nw.col("By"))
                     .otherwise(nw.lit(None))
                     .alias("By")
@@ -684,7 +684,7 @@ class Implicate(Serializable):
                 nw.col("ignore_#").min().over("ignore_Variable").alias("ignore_min_#")
             )
             .filter(
-                nw.col("Variable").is_not_null()
+                ~nw.col("Variable").is_null()
                 & (nw.col("ignore_min_#") == nw.col("ignore_#"))
             )
             .select("ignore_min_#", "Variable")
@@ -820,7 +820,7 @@ class Implicate(Serializable):
             )
             .sort(["ignore_min_#", "ignore_Iteration", "ignore_#", "row_number"])
             .filter(
-                nw.col("mean").is_not_missing()
+                ~nw.col("mean").is_null()
                 | (
                     nw.col("row_number")
                     == nw.col("row_number").max().over("ignore_Variable")
@@ -828,7 +828,7 @@ class Implicate(Serializable):
             )
             .drop(["row_number"])
             .with_columns(
-                nw.when(nw.col("#").is_not_missing() | (nw.col("ignore_final") == 1))
+                nw.when(~nw.col("#").is_null() | (nw.col("ignore_final") == 1))
                 .then(nw.col("ignore_Iteration"))
                 .otherwise(nw.lit(None))
                 .alias("Iteration")
@@ -859,7 +859,7 @@ class Implicate(Serializable):
                 variable_list = (
                     nw.from_native(df_out)
                     .filter(
-                        nw.col("Variable").is_not_null()
+                        ~nw.col("Variable").is_null()
                         & (nw.col("ignore_min_#") == nw.col("ignore_#"))
                     )
                     .select("ignore_min_#", "Variable")
@@ -875,7 +875,7 @@ class Implicate(Serializable):
                         .filter(nw.col("ignore_Variable") == vari)
                         .select(col_ordered)
                         .drop("Variable")
-                        .filter(nw.col("mean").is_not_missing())
+                        .filter(~nw.col("mean").is_null())
                         .to_native()
                     )
                     stats_calc.print(round_output=True, sub_log=self.logging)

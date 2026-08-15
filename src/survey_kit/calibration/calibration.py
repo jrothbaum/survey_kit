@@ -16,6 +16,7 @@ import numpy as np
 
 from ..utilities.inputs import list_input
 from ..utilities.dataframe import (
+    lazy_backend,
     fill_missing,
     safe_height,
     NarwhalsType,
@@ -198,7 +199,7 @@ class Calibration(Serializable):
         #   Check that base weight is > 0
         if weight != "":
             c_weight = nw.col(weight)
-            c_invalid_weights = c_weight.le(0) | c_weight.is_null()
+            c_invalid_weights = (c_weight <= 0) | c_weight.is_null()
 
             n_invalid = safe_height(
                 nw.from_native(df).lazy().select(weight).filter(c_invalid_weights)
@@ -208,17 +209,15 @@ class Calibration(Serializable):
                     f"  Dropping {n_invalid} observation(s) with invalid base weights (<= 0 or missing)"
                 )
                 df = df.filter(~c_invalid_weights)
-        self.df = df.lazy_backend(self.nw_type)
+        self.df = lazy_backend(df, self.nw_type)
 
         # Add an index, if there isn't one
         #   We need one to be able to put the file back together again
 
         if len(index) == 0:
             self.index = ["___rownumber"]
-            self.df = (
-                self.df.collect()
-                .with_row_index(name=self.index[0])
-                .lazy_backend(self.nw_type)
+            self.df = lazy_backend(
+                self.df.collect().with_row_index(name=self.index[0]), self.nw_type
             )
         else:
             self.index = index
@@ -658,7 +657,7 @@ class Calibration(Serializable):
                         how="left",
                     )
                 )
-                .filter(nw.col("bExist").is_missing())
+                .filter(nw.col("bExist").is_null())
                 .drop("bExist")
                 .to_native()
             )
@@ -867,11 +866,9 @@ class Calibration(Serializable):
                 diagnostics["converged"] = converged
 
             if "diagnostics" in diagnostics.keys():
-                diagnostics["diagnostics"] = (
-                    nw.from_native(diagnostics["diagnostics"])
-                    .lazy_backend(self.nw_type)
-                    .to_native()
-                )
+                diagnostics["diagnostics"] = lazy_backend(
+                    nw.from_native(diagnostics["diagnostics"]), self.nw_type
+                ).to_native()
             self.diagnostics_out = diagnostics
 
             if print_diagnostics:
@@ -1526,23 +1523,22 @@ class Calibration(Serializable):
                 ],
                 how="horizontal",
             )
-            self.df = (
+            self.df = lazy_backend(
                 nw.from_native(
                     join_wrapper(self.df, weights, on=self.index, how="left")
                 )
                 .with_columns(
-                    nw.when(nw.col(temp_name).is_not_missing())
+                    nw.when(~nw.col(temp_name).is_null())
                     .then(nw.col(temp_name))
                     .otherwise(nw.col(self.final_weight))
                     .alias(self.final_weight)
                 )
-                .drop(temp_name)
-                .lazy_backend(self.nw_type)
-                .to_native()
-            )
+                .drop(temp_name),
+                self.nw_type,
+            ).to_native()
         else:
             #   Concatenate, it's faster (since the data's sorted and the same length)
-            self.df = (
+            self.df = lazy_backend(
                 concat_wrapper(
                     [
                         nw.from_native(self.df)
@@ -1552,10 +1548,9 @@ class Calibration(Serializable):
                         nw.from_native(weights).rename({temp_name: self.final_weight}),
                     ],
                     how="horizontal",
-                )
-                .lazy_backend(self.nw_type)
-                .to_native()
-            )
+                ),
+                self.nw_type,
+            ).to_native()
 
         # diagi = self._diagnostics_moment(m=m,
         #                                  with_by_prefix=False,
@@ -1597,7 +1592,7 @@ class Calibration(Serializable):
 
         diag = (
             nw.from_native(diag)
-            .filter((nw.col("Estimates").is_not_missing()))
+            .filter(~(nw.col("Estimates").is_null()))
             .with_columns((nw.col("Estimates") - nw.col("Targets")).alias("diff"))
             .with_columns(
                 (100 * (nw.col("Estimates") / nw.col("Targets") - 1)).alias("percent")
@@ -1767,7 +1762,7 @@ class Calibration(Serializable):
             .rename({"column": "Variable"})
         )
 
-        return nw.from_native(df_diagnostics).lazy_backend(nw_type).to_native()
+        return lazy_backend(nw.from_native(df_diagnostics), nw_type).to_native()
 
     def print_diagnostics(
         self,
@@ -1877,7 +1872,7 @@ class Calibration(Serializable):
         truncate = None
         if truncate_low is not None:
             #   N to truncate?
-            expr_low = c_final_weight.lt(truncate_low)
+            expr_low = c_final_weight < truncate_low
             n_truncate_low = safe_height(
                 nw.from_native(df_weights).filter(expr_low).to_native()
             )
@@ -1887,7 +1882,7 @@ class Calibration(Serializable):
                 truncate = nw.when(expr_low).then(nw.lit(truncate_low))
         if truncate_high is not None:
             #   N to truncate?
-            expr_high = c_final_weight.gt(truncate_high)
+            expr_high = c_final_weight > truncate_high
             n_truncate_high = safe_height(
                 nw.from_native(df_weights).filter(expr_high).to_native()
             )
