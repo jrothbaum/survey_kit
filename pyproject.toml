@@ -21,7 +21,7 @@ dependencies = [
     "dill>=0.4.0",
     "psutil",
     "igraph",
-    "survey-kit-formula",
+    "survey-kit-formula>=0.1.0",
     "narwhals>=2.7.0",
     "numexpr>=2.10.2",
     "polars>=1.25.2",
