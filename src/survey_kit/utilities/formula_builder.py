@@ -152,9 +152,19 @@ class FormulaBuilder:
     1. Object mode: Create instance and chain methods
     2. Static mode: Call methods with self=None for one-off operations
 
+    FormulaBuilder only builds and manipulates the formula string itself -
+    it doesn't touch data. To actually expand a finished formula into a
+    model/design matrix, pass its string (`str(fb)`) to `get_model_frame`.
+    survey_kit_formula's own ModelSpec (which does the real expansion) only
+    accepts polars DataFrame/LazyFrame; get_model_frame converts to polars
+    internally and converts the result back to whatever backend you passed
+    in (pandas, polars, pyarrow, ...), so it works with any narwhals-
+    supported backend even though ModelSpec itself doesn't.
+
     See Also
     --------
     survey_kit_formula.parser.parse_formula : Underlying formula parser
+    get_model_frame : Expand a formula string against data of any backend
     """
 
     def __init__(

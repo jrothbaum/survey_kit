@@ -35,3 +35,9 @@
         show_root_heading: true
         show_root_full_path: false
         heading_level: 2
+
+::: survey_kit.utilities.formula_builder.get_model_frame
+    options:
+        show_root_heading: true
+        show_root_full_path: false
+        heading_level: 2

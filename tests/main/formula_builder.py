@@ -1,9 +1,8 @@
 from survey_kit.utilities.random import RandomData
-from survey_kit.utilities.formula_builder import FormulaBuilder
+from survey_kit.utilities.formula_builder import FormulaBuilder, get_model_frame
 
-from survey_kit_formula import ModelSpec
-
-from survey_kit.utilities.dataframe import summary
+from survey_kit.utilities.dataframe import summary, NarwhalsType
+from survey_kit import logger
 
 n_rows = 100_000
 df = (
@@ -69,17 +68,30 @@ f.interact_clauses(
 
 # f.function(df=df, columns=["v_bs"], function_item="bs", degree=5)
 
-f_out = ModelSpec.from_formula(f.__str__(), df)
-
 print(f"original: {f}")
-print(f"survey_kit_formula: {f_out.formula}")
 
-columns_in_formula = FormulaBuilder.columns_from_formula(formula=f.__str__())
+#   Captured once, before f.expand() below (which mutates f.formula to its
+#   own rhs-only representation) - both get_model_frame() calls need the
+#   same, still-tilde-prefixed formula string.
+formula_str = f.__str__()
+
+columns_in_formula = FormulaBuilder.columns_from_formula(formula=formula_str)
 print(columns_in_formula)
 
-
-df_mm = f_out.get_model_frame(df)
+#   get_model_frame() is the public, backend-safe way to expand a formula
+#   against data: survey_kit_formula's own ModelSpec is polars-only, so
+#   get_model_frame() converts to polars internally and converts the
+#   result back to df's original backend - never call ModelSpec directly
+#   from outside survey_kit_formula unless df is already polars.
+df_mm = get_model_frame(formula_str, df)
 print(df_mm.schema)
 summary(df_mm)
 
 print(f.expand())
+
+#   Confirm that bridging actually works end to end for a non-polars
+#   backend too, not just the polars df this script otherwise uses.
+df_mm_pandas = get_model_frame(formula_str, df.to_pandas())
+logger.info(f"get_model_frame backend for pandas input: {NarwhalsType(df_mm_pandas).backend}")
+assert NarwhalsType(df_mm_pandas).backend == "pandas"
+summary(df_mm_pandas)
