@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import polars as pl
 from survey_kit.utilities.random import RandomData
 from survey_kit.utilities.dataframe import summary

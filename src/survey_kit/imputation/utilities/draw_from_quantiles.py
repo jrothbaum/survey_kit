@@ -5,6 +5,8 @@ This version automatically uses:
 - Numba parallel (zero overhead) for Gaussian/Exponential/Lognormal tails
 """
 
+from __future__ import annotations
+
 import polars as pl
 import narwhals as nw
 from narwhals.typing import IntoFrameT

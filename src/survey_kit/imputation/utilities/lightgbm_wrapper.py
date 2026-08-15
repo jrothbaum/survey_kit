@@ -5,6 +5,7 @@
 from __future__ import annotations
 
 import os
+import numpy as np
 import narwhals as nw
 import narwhals.selectors as cs
 from narwhals.typing import IntoFrameT
@@ -407,11 +408,24 @@ class Survey_kit_Lightgbm:
             extra_data["categorical_feature"] = self.categorical_feature
 
         if self.test_size > 0:
-            x_train, x_test, y_train, y_test = train_test_split(
-                x_train.to_arrow(),
-                y_train.to_arrow(),
+            #   Split on row indices rather than handing sklearn the arrow
+            #   tables directly - train_test_split's array-like indexing of
+            #   a raw pyarrow.Table is version-sensitive (broken on the
+            #   scikit-learn<1.7 line that's still the only option on
+            #   Python<3.10), while pyarrow's own .take() is stable, so use
+            #   that to apply the same split instead.
+            idx_train, idx_test = train_test_split(
+                np.arange(x_train.shape[0]),
                 test_size=self.test_size,
                 random_state=int(generate_seed()),
+            )
+            x_train_arrow = x_train.to_arrow()
+            y_train_arrow = y_train.to_arrow()
+            x_train, x_test = x_train_arrow.take(idx_train), x_train_arrow.take(
+                idx_test
+            )
+            y_train, y_test = y_train_arrow.take(idx_train), y_train_arrow.take(
+                idx_test
             )
             extra_test = {}
 
