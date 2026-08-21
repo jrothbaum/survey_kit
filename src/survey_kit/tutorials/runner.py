@@ -1,4 +1,5 @@
 import os
+import re
 import subprocess
 import html
 from pathlib import Path
@@ -163,6 +164,126 @@ def run_jupyter_to_html(path: str):
         )
 
 
+#   logger.info(".[!n]") / logger.info(f"{n}[!n]") (see replicates.py) rely on a
+#   no-newline terminator that works in a real terminal, but nbconvert --execute
+#   emits each logging call as its own <pre> output block, so every "." and
+#   replicate number ends up on its own line. Collapse consecutive dot/number
+#   blocks back onto one line. The blank-line block emitted every 50 replicates
+#   (replicate_number % 50 == 0) is absorbed into the same merged line as a real
+#   "\n" rather than left as a separate block, and a "\n" is force-inserted every
+#   PROGRESS_BREAK_EVERY replicates even when no such marker was emitted (e.g. a
+#   survey with fewer than 50 replicate weights), so line breaks land at
+#   predictable, replicate-count-based points instead of wherever pre-wrap CSS
+#   happens to wrap the raw text.
+PROGRESS_BREAK_EVERY = 50
+_OUTPUT_CHILD_RE = re.compile(
+    r'<div class="jp-OutputArea-child">\s*'
+    r'<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>\s*'
+    r'<div class="jp-RenderedText jp-OutputArea-output"([^>]*)>\s*'
+    r"<pre>([^<]*)</pre>\s*"
+    r"</div>\s*"
+    r"</div>"
+)
+_PROGRESS_TOKEN_RE = re.compile(r"^(?:\.|\d+)$")
+_PROGRESS_BREAK_TEXT = "\n"
+
+
+def merge_progress_dot_outputs(content: str) -> str:
+    matches = list(_OUTPUT_CHILD_RE.finditer(content))
+
+    result = []
+    pos = 0
+    i = 0
+    while i < len(matches):
+        m = matches[i]
+        if not _PROGRESS_TOKEN_RE.match(m.group(2)):
+            i += 1
+            continue
+
+        run_items = [m.group(2)]
+        run_end = i
+        j = i + 1
+        while j < len(matches):
+            gap = content[matches[j - 1].end() : matches[j].start()]
+            if gap.strip() != "":
+                break
+            text = matches[j].group(2)
+            if not (_PROGRESS_TOKEN_RE.match(text) or text == _PROGRESS_BREAK_TEXT):
+                break
+            run_items.append(text)
+            run_end = j
+            j += 1
+
+        if run_end == i:
+            i += 1
+            continue
+
+        result.append(content[pos : m.start()])
+        result.append(
+            '<div class="jp-OutputArea-child">\n'
+            '<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>\n'
+            f'<div class="jp-RenderedText jp-OutputArea-output"{m.group(1)}>\n'
+            f"<pre>{_render_progress_run(run_items)}</pre>\n"
+            "</div>\n"
+            "</div>"
+        )
+        pos = matches[run_end].end()
+        i = run_end + 1
+
+    result.append(content[pos:])
+    return "".join(result)
+
+
+#   How close a forced break is allowed to land next to a natural (source-emitted)
+#   one before we skip forcing and just wait the extra few tokens for the real
+#   one - avoids stranding a single token (e.g. "50") on its own line between a
+#   forced break and the natural one that follows almost immediately after.
+_PROGRESS_BREAK_LOOKAHEAD = 5
+
+
+def _render_progress_run(run_items: list) -> str:
+    break_positions = [
+        idx for idx, text in enumerate(run_items) if text == _PROGRESS_BREAK_TEXT
+    ]
+
+    parts = []
+    count_since_break = 0
+    for idx, text in enumerate(run_items):
+        if text == _PROGRESS_BREAK_TEXT:
+            if parts and parts[-1] != _PROGRESS_BREAK_TEXT:
+                parts.append(_PROGRESS_BREAK_TEXT)
+            count_since_break = 0
+            continue
+
+        parts.append(text)
+        count_since_break += 1
+
+        if count_since_break >= PROGRESS_BREAK_EVERY:
+            upcoming_break = next((p for p in break_positions if p > idx), None)
+            if (
+                upcoming_break is not None
+                and upcoming_break - idx <= _PROGRESS_BREAK_LOOKAHEAD
+            ):
+                continue
+            parts.append(_PROGRESS_BREAK_TEXT)
+            count_since_break = 0
+
+    while parts and parts[-1] == _PROGRESS_BREAK_TEXT:
+        parts.pop()
+
+    return "".join(parts)
+
+
+def merge_progress_dot_outputs_in_file(path: str):
+    with open(path, "r", encoding="utf-8") as f:
+        content = f.read()
+
+    new_content = merge_progress_dot_outputs(content)
+    if new_content != content:
+        with open(path, "w", encoding="utf-8") as f:
+            f.write(new_content)
+
+
 def escape_html_code(path: str):
     # Read the original, rendered HTML content
     with open(path, "r", encoding="utf-8") as f:
@@ -183,6 +304,11 @@ def run_all_tutorials():
 
     config.data_root = path_scratch
     run_tutorials_in_path(path_tutorials)
+
+    for html_dir in [Path(path_tutorials), path / "docs" / "tutorials"]:
+        if html_dir.exists():
+            for html_path in html_dir.rglob("*.html"):
+                merge_progress_dot_outputs_in_file(html_path.as_posix())
 
 
 if __name__ == "__main__":

@@ -57,7 +57,7 @@ df_stats = summary(
     df,
     weight="weight_0",
     additional_stats=["q10", "q95", "n|not0", "share|not0"],
-    print=False,
+    display=False,
 )
 
 logger.info(df_stats.collect())
