@@ -4,12 +4,10 @@ from timeit import default_timer as timer
 
 import numexpr as ne
 import numpy as np
-import pypardiso
 import scipy
 import scipy.sparse as sp
-import sparse_dot_mkl as sdmkl
 
-from . import shared
+from . import linalg_compat, shared
 from .shared import sp_fmt_flag, sparse_array
 from .typing import Any, AnyArray, FArr, Optional
 
@@ -205,7 +203,8 @@ def entropy_balance(
     primal_step = np.full(n, np.inf)
     backtrack = 1.0
     wstar = np.copy(options.get("initial_ratio_guess", np.ones(n))) * q
-    dot = sdmkl.dot_product_mkl
+    dot = linalg_compat.dot_product_mkl
+    dual_step_solver = linalg_compat.SparseLinearSolver(k, spd=True)
 
     while continue_weighting:
         f_val = ne.evaluate("sum(wstar / q * log(wstar / q) + wstar / q - 1)")
@@ -226,7 +225,7 @@ def entropy_balance(
         log_status(status)
         wstar_c = dot(sp.diags_array(np.sqrt(wstar), format=sp_fmt_flag), x_sample)
 
-        hess_lowerdiag = sdmkl.gram_matrix_mkl(wstar_c)
+        hess_lowerdiag = linalg_compat.gram_matrix_mkl(wstar_c)
         hess = (
             hess_lowerdiag
             + hess_lowerdiag.T
@@ -237,14 +236,12 @@ def entropy_balance(
             1e-8, float(1e-5 * np.linalg.norm(np.concatenate((Cd, Ce))) ** 0.55)
         )
 
-        lhs_dual_step = hess + dual_step_penalty * sp.eye_array(k)
         rhs_dual_step = -(Ce / np.sum(weights0) - dot(x_sample.T, wstar * Cd))
 
-        if sp.issparse(lhs_dual_step):
-            dual_step = pypardiso.spsolve(
-                lhs_dual_step, rhs_dual_step, set_matrix_type=2
-            )
+        if sp.issparse(hess):
+            dual_step = dual_step_solver.solve(hess, rhs_dual_step, dual_step_penalty)
         else:
+            lhs_dual_step = hess + dual_step_penalty * sp.eye_array(k)
             while True:
                 try:
                     dual_step = scipy.linalg.solve(
@@ -356,7 +353,7 @@ def entropy_balance_elastic(
 
     if sp.issparse(x_sample):
         x_sample = sparse_array(x_sample)
-    A_mat = sdmkl.dot_product_mkl(
+    A_mat = linalg_compat.dot_product_mkl(
         sp.diags_array(weights0, format=sp_fmt_flag), x_sample
     )
     agg_population_moments = mean_population_moments * np.sum(weights0)
@@ -414,7 +411,8 @@ def entropy_balance_elastic(
     r_step = np.full(n, np.inf)
     dual_step_eq: FArr = np.full(k, np.inf)
     backtrack = 1.0
-    dot = sdmkl.dot_product_mkl
+    dot = linalg_compat.dot_product_mkl
+    dual_step_eq_solver = linalg_compat.SparseLinearSolver(k, spd=True)
     while True:
         f_val, grad, inverse_hess_diag = shared.criterion(ratio, weights0)
         Cd = 1 / eta * grad - dot(A_mat, multipliers_eq) - dot(A_ineq, multipliers_ineq)
@@ -464,8 +462,8 @@ def entropy_balance_elastic(
         htilde = sp.diags_array(h_tilde_diag, format=sp_fmt_flag)
 
         inv_h_sqrt = sp.diags_array(np.sqrt(1 / h_tilde_diag), format=sp_fmt_flag)
-        AtHA_sqrt = sdmkl.dot_product_mkl(inv_h_sqrt, A_mat)
-        AtHA_lowerdiag = sdmkl.gram_matrix_mkl(AtHA_sqrt, cast=True).T
+        AtHA_sqrt = linalg_compat.dot_product_mkl(inv_h_sqrt, A_mat)
+        AtHA_lowerdiag = linalg_compat.gram_matrix_mkl(AtHA_sqrt, cast=True).T
         AtHA = (
             AtHA_lowerdiag
             + AtHA_lowerdiag.T
@@ -493,9 +491,7 @@ def entropy_balance_elastic(
             )
         )
         if sp.issparse(lhs):
-            dual_step_eq = -pypardiso.spsolve(
-                lhs + dual_step_penalty * sp.eye_array(k), rhs
-            )
+            dual_step_eq = -dual_step_eq_solver.solve(lhs, rhs, dual_step_penalty)
         else:
             while True:
                 try:

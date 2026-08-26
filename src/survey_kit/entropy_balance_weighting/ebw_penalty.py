@@ -3,12 +3,10 @@ from __future__ import annotations
 from timeit import default_timer as timer
 
 import numpy as np
-import pypardiso
 import scipy
 import scipy.sparse as sp
-import sparse_dot_mkl as sdmkl
 
-from . import shared
+from . import linalg_compat, shared
 from .shared import sp_fmt_flag, sparse_array
 from .typing import Any, AnyArray, FArr, Optional, Union
 
@@ -148,7 +146,7 @@ def entropy_balance_penalty(
 
     if sp.issparse(x_sample):
         x_sample = sparse_array(x_sample)
-    A_mat = sdmkl.dot_product_mkl(
+    A_mat = linalg_compat.dot_product_mkl(
         sp.diags_array(weights0, format=sp_fmt_flag), x_sample
     )
     agg_population_moments = mean_population_moments * np.sum(weights0)
@@ -186,6 +184,7 @@ def entropy_balance_penalty(
     primal_step = np.full(n, np.inf)
     dual_step = np.full(k, np.inf)
     backtrack = 1.0
+    woodbury_solver = linalg_compat.SparseLinearSolver(k, spd=False)
     while True:
         f_val, _, _ = shared.criterion(ratio, weights0)
         Ce = constraint_gap(A_mat, ratio, agg_population_moments)
@@ -193,12 +192,12 @@ def entropy_balance_penalty(
             A_mat, sp.diags_array(penalty_parameter, format="csc"), Ce
         )
         Am1 = sp.diags_array(1 / weights0 * ratio, format="csc")
-        U = sdmkl.dot_product_mkl(
+        U = linalg_compat.dot_product_mkl(
             A_mat, sp.diags_array(penalty_parameter, format="csc")
         )
         V = A_mat.T
         rhs = Cd
-        newton_step = woodbury_times_vector(Am1, U, V, -rhs)
+        newton_step = woodbury_times_vector(Am1, U, V, -rhs, solver=woodbury_solver)
         candidate_primal_step = newton_step
         optimality_violation = shared.full_problem_violation(Cd, Ce)
         status = {
@@ -272,7 +271,9 @@ def entropy_balance_penalty_bounded(
 
     penalty_parameter = check_penalty_parameter(k, penalty_parameter)
 
-    A_mat = sdmkl.dot_product_mkl(sp.diags_array(weights0, format="csr"), x_sample)
+    A_mat = linalg_compat.dot_product_mkl(
+        sp.diags_array(weights0, format="csr"), x_sample
+    )
     A_ineq = sp.block_array([[sp.eye_array(n), -sp.eye_array(n)]], format="csr")
 
     if bounds[0] < 0.0:
@@ -300,10 +301,11 @@ def entropy_balance_penalty_bounded(
     primal_step = np.full(n, np.inf)
     dual_step = np.full(k, np.inf)
     backtrack_primal = 1.0
-    dot = sdmkl.dot_product_mkl
+    dot = linalg_compat.dot_product_mkl
     slacks = dot(A_ineq.T, ratio) - bounds
     mu = 1.0
     lambda_ineq = mu / slacks
+    woodbury_solver = linalg_compat.SparseLinearSolver(k, spd=False)
 
     while True:
         f_val, _, _ = shared.criterion(ratio, weights0)
@@ -325,7 +327,15 @@ def entropy_balance_penalty_bounded(
 
         H = sp.diags_array(1 / ratio * weights0, format="csc")
         p_r = _penalty_bounded_primal_step(
-            Cd, lambda_ineq, mu, slacks, H, penalty_parameter, A_mat, A_ineq
+            Cd,
+            lambda_ineq,
+            mu,
+            slacks,
+            H,
+            penalty_parameter,
+            A_mat,
+            A_ineq,
+            solver=woodbury_solver,
         )
 
         candidate_primal_step = p_r
@@ -409,8 +419,10 @@ def _penalty_bounded_primal_step(
     penalty_parameter: FArr,
     A_mat: AnyArray,
     A_ineq: AnyArray,
+    *,
+    solver: Optional[linalg_compat.SparseLinearSolver] = None,
 ) -> FArr:
-    dot = sdmkl.dot_product_mkl
+    dot = linalg_compat.dot_product_mkl
     Hb = H + dot(
         dot(A_ineq, sp.diags_array(1 / slacks * lambda_ineq, format="csr")),
         A_ineq.T,
@@ -420,14 +432,14 @@ def _penalty_bounded_primal_step(
     V = A_mat.T
 
     rhs = Cd + dot(A_ineq, lambda_ineq - mu / slacks)
-    p_r = woodbury_times_vector(Am1, U, V, -rhs)
+    p_r = woodbury_times_vector(Am1, U, V, -rhs, solver=solver)
     return p_r
 
 
 def _recover_penalty_bounded_dual_step(
     p_r: FArr, slacks: FArr, mu: float, lambda_ineq: FArr, A_ineq: AnyArray
 ) -> FArr:
-    dot = sdmkl.dot_product_mkl
+    dot = linalg_compat.dot_product_mkl
     out: FArr = dot(
         sp.diags_array(lambda_ineq / slacks, format="csr"),
         (-dot(A_ineq.T, p_r) - (slacks - mu / lambda_ineq)),
@@ -436,11 +448,18 @@ def _recover_penalty_bounded_dual_step(
 
 
 def _recover_penalty_bounded_slacks_step(p_r: FArr, A_ineq: AnyArray) -> FArr:
-    out: FArr = sdmkl.dot_product_mkl(A_ineq.T, p_r)
+    out: FArr = linalg_compat.dot_product_mkl(A_ineq.T, p_r)
     return out
 
 
-def woodbury_times_vector(invA: AnyArray, U: AnyArray, V: AnyArray, x: FArr) -> FArr:
+def woodbury_times_vector(
+    invA: AnyArray,
+    U: AnyArray,
+    V: AnyArray,
+    x: FArr,
+    *,
+    solver: Optional[linalg_compat.SparseLinearSolver] = None,
+) -> FArr:
     """
     Calculate (A + UV)^{-1} @ x in a memory-efficient way.
 
@@ -448,13 +467,20 @@ def woodbury_times_vector(invA: AnyArray, U: AnyArray, V: AnyArray, x: FArr) -> 
     the UV product may be impossible, so use the Woodbury
     formula to make sure we never have more than an NxK
     multiplication.
+
+    `solver`, if given, is reused across repeated calls with the same K (e.g.
+    from within a Newton iteration loop) instead of re-picking a backend and
+    rebuilding a KxK identity matrix on every call. Note the KxK system here
+    (I + V @ invA @ U) is not generally symmetric (penalty_parameter can be a
+    vector), so it's always solved as a general system, never via CHOLMOD.
     """
-    d = sdmkl.dot_product_mkl
+    d = linalg_compat.dot_product_mkl
     t1 = shared.chain_dot(V, invA, x)
     if sp.issparse(V) and sp.issparse(invA) and sp.issparse(U):
-        t2 = pypardiso.spsolve(
-            sp.eye_array(V.shape[0], format="csc") + shared.chain_dot(V, invA, U), t1
-        )
+        schur = shared.chain_dot(V, invA, U)
+        if solver is None:
+            solver = linalg_compat.SparseLinearSolver(V.shape[0], spd=False)
+        t2 = solver.solve(schur, t1, regularizer=1.0)
     else:
         t2 = scipy.linalg.solve(
             sp.eye_array(V.shape[0]) + shared.chain_dot(V, invA, U), t1
@@ -487,7 +513,7 @@ def perturbed_KKT_error_function(Cd: FArr, Cs: FArr) -> float:
 
 def constraint_gap(A_mat: AnyArray, ratio: FArr, agg_population_moments: FArr) -> FArr:
     """Calculate how much the constraints differ from 0."""
-    out: FArr = sdmkl.dot_product_mkl(A_mat.T, ratio) - agg_population_moments
+    out: FArr = linalg_compat.dot_product_mkl(A_mat.T, ratio) - agg_population_moments
     return out
 
 

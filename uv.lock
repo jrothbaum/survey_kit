@@ -3815,6 +3815,41 @@ wheels = [
 ]
 
 [[package]]
+name = "scikit-sparse"
+version = "0.4.16"
+source = { registry = "https://pypi.org/simple" }
+resolution-markers = [
+    "python_full_version < '3.10'",
+]
+dependencies = [
+    { name = "numpy", version = "2.0.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.10'" },
+    { name = "scipy", version = "1.13.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.10'" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/33/f2/b391faf6120b72b994b574caef9dac5ea2b7667de59fbd3c8336c07403b3/scikit_sparse-0.4.16.tar.gz", hash = "sha256:3baf49ac98ae8cc4357005af49a0df93a6a53f4e61708705da2942ea4fa61a56", size = 214435, upload-time = "2025-04-27T18:20:37.052Z" }
+
+[[package]]
+name = "scikit-sparse"
+version = "0.5.0"
+source = { registry = "https://pypi.org/simple" }
+resolution-markers = [
+    "python_full_version >= '3.14' and sys_platform == 'win32'",
+    "python_full_version >= '3.14' and sys_platform == 'emscripten'",
+    "python_full_version >= '3.14' and sys_platform != 'emscripten' and sys_platform != 'win32'",
+    "python_full_version >= '3.11' and python_full_version < '3.14' and sys_platform == 'win32'",
+    "python_full_version >= '3.11' and python_full_version < '3.14' and sys_platform == 'emscripten'",
+    "python_full_version >= '3.11' and python_full_version < '3.14' and sys_platform != 'emscripten' and sys_platform != 'win32'",
+    "python_full_version == '3.10.*'",
+]
+dependencies = [
+    { name = "numpy", version = "2.2.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version == '3.10.*'" },
+    { name = "numpy", version = "2.3.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
+    { name = "packaging", marker = "python_full_version >= '3.10'" },
+    { name = "scipy", version = "1.15.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version == '3.10.*'" },
+    { name = "scipy", version = "1.16.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/4a/70/2351a8755de0b3d9821864299d6bba3feafb91e106b9b762a2675910392e/scikit_sparse-0.5.0.tar.gz", hash = "sha256:217579251b1d91dcfeab5a16d6408f462dc353939f9e5dfa65ec0b41f0b603dc", size = 106285, upload-time = "2026-03-03T19:18:41.586Z" }
+
+[[package]]
 name = "scipy"
 version = "1.13.1"
 source = { registry = "https://pypi.org/simple" }
@@ -4142,14 +4177,20 @@ dependencies = [
     { name = "psutil" },
     { name = "pyarrow", version = "21.0.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.10'" },
     { name = "pyarrow", version = "22.0.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.10'" },
-    { name = "pypardiso" },
+    { name = "pypardiso", marker = "platform_machine == 'x86_64'" },
     { name = "scikit-learn", version = "1.6.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.10'" },
     { name = "scikit-learn", version = "1.7.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.10'" },
     { name = "scipy", version = "1.13.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.10'" },
     { name = "scipy", version = "1.15.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version == '3.10.*'" },
     { name = "scipy", version = "1.16.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
-    { name = "sparse-dot-mkl" },
+    { name = "sparse-dot-mkl", marker = "platform_machine == 'x86_64'" },
     { name = "survey-kit-formula" },
+]
+
+[package.optional-dependencies]
+fast-solve = [
+    { name = "scikit-sparse", version = "0.4.16", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.10'" },
+    { name = "scikit-sparse", version = "0.5.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.10'" },
 ]
 
 [package.dev-dependencies]
@@ -4180,12 +4221,14 @@ requires-dist = [
     { name = "polars", specifier = ">=1.25.2" },
     { name = "psutil" },
     { name = "pyarrow", specifier = ">=19.0.0" },
-    { name = "pypardiso", specifier = ">=0.4.6" },
+    { name = "pypardiso", marker = "platform_machine == 'x86_64'", specifier = ">=0.4.6" },
     { name = "scikit-learn" },
+    { name = "scikit-sparse", marker = "extra == 'fast-solve'", specifier = ">=0.4.12" },
     { name = "scipy", specifier = ">=1.13.1" },
-    { name = "sparse-dot-mkl", specifier = ">=0.9.9" },
+    { name = "sparse-dot-mkl", marker = "platform_machine == 'x86_64'", specifier = ">=0.9.9" },
     { name = "survey-kit-formula", editable = "../survey_kit_formula" },
 ]
+provides-extras = ["fast-solve"]
 
 [package.metadata.requires-dev]
 dev = [

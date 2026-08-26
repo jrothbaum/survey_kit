@@ -31,14 +31,19 @@ dependencies = [
     "polars>=1.25.2",
     "pyarrow>=19.0.0",
     "cffi",
-    "pypardiso>=0.4.6",
+    "pypardiso>=0.4.6; platform_machine == 'x86_64'",
     "scipy>=1.13.1",
-    "sparse-dot-mkl>=0.9.9",
+    "sparse-dot-mkl>=0.9.9; platform_machine == 'x86_64'",
     "scikit-learn",
     "lightgbm",
     "optuna",
     "numba",
     "numpy>=2.0.2",
+]
+
+[project.optional-dependencies]
+fast-solve = [
+    "scikit-sparse>=0.4.12",
 ]
 
 [dependency-groups]

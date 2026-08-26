@@ -4,8 +4,8 @@ import zipfile
 import numexpr as ne
 import numpy as np
 import scipy.sparse as sp
-import sparse_dot_mkl as sdmkl
 
+from . import linalg_compat
 from .typing import AnyArray, FArr, TypeVar, Union
 
 sparse_array = sp.csr_array
@@ -98,7 +98,7 @@ def chain_dot(*args: T) -> T:
     """Evaluate (A @ (B @ (C @ ... (Y @ Z))))."""
     out = args[-1]
     for n in range(2, len(args) + 1):
-        out = sdmkl.dot_product_mkl(args[-n], out)
+        out = linalg_compat.dot_product_mkl(args[-n], out)
     return out
 
 
