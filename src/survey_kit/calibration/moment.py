@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from collections import defaultdict
+
 import narwhals as nw
 from narwhals.typing import IntoFrameT
 from ..utilities.inputs import list_input
@@ -17,6 +19,7 @@ from ..utilities.deepcopy_with_copy_fallback import deepcopy_with_fallback
 from ..statistics.statistics import column_stats_builder
 from ..statistics.basic_calculations import calculate_by
 from ..serializable import Serializable
+from .. import logger
 
 
 class Moment(Serializable):
@@ -176,6 +179,12 @@ class Moment(Serializable):
         #   Processed By into a list of where statements
         self.by_where_expressions = []
         self.by_where_strings = []
+        # Parallel to by_where_expressions/strings: the exact {column: value}
+        # pairs and the column-set each expression tests, so a batched groupby's
+        # rows can be matched back to the right sub_moment without re-parsing
+        # by_where_strings.
+        self.by_where_values = []
+        self.by_where_columns = []
         # By group adjustment to weights (i.e. this group's share of the total weight)
         self.by_share = by_share
 
@@ -306,10 +315,12 @@ class Moment(Serializable):
                 for i, rowi in enumerate(df_inter.rows()):
                     if i > 0 or not self.keep_full_group:
                         wherei = None
+                        valuesi = {}
 
                         for j, coli in enumerate(subcols):
                             condi = nw.col(coli) == rowi[j]
                             stringi = f"{coli}=={rowi[j]}"
+                            valuesi[coli] = rowi[j]
                             if wherei is None:
                                 wherei = condi
                                 wherei_string = stringi
@@ -319,6 +330,8 @@ class Moment(Serializable):
 
                         self.by_where_expressions.append(wherei)
                         self.by_where_strings.append(wherei_string)
+                        self.by_where_values.append(valuesi)
+                        self.by_where_columns.append(tuple(subcols))
 
             #   Now drop the interactions and the sub-items
             droplist = []
@@ -341,6 +354,8 @@ class Moment(Serializable):
                 stringi = f"{coli}=={rowi[0]}"
                 self.by_where_expressions.append(condi)
                 self.by_where_strings.append(stringi)
+                self.by_where_values.append({coli: rowi[0]})
+                self.by_where_columns.append((coli,))
 
     def _get_model_matrix(self):
         fb = FormulaBuilder(df=self.df, formula=self.formula)
@@ -476,6 +491,216 @@ class Moment(Serializable):
         #   the whole upstream lazy plan from scratch on every group.
         df_by = lazy_backend(df_by.collect(), self.nw_type)
 
+        n_groups = len(self.by_where_expressions)
+
+        if n_groups > 0:
+            try:
+                self._create_sub_moments_batched(
+                    df_by=df_by,
+                    total_weight=total_weight,
+                    total_obs=total_obs if (self.equalize_by and self.equalize_by_obs_share) else None,
+                    targets_equalize=targets_equalize if self.equalize_by else None,
+                    n_groups=n_groups,
+                )
+            except Exception as err:
+                logger.warning(
+                    f"Batched by-group computation failed ({err!r}); falling back "
+                    "to the slower per-group loop for this Moment (e.g. some "
+                    "backends -- pyarrow in particular -- don't support the "
+                    "compound aggregation a weighted mean needs inside a "
+                    "group_by)."
+                )
+                self.sub_moments = []
+                self._create_sub_moments_looped(
+                    df_by=df_by,
+                    total_weight=total_weight,
+                    total_obs=total_obs if (self.equalize_by and self.equalize_by_obs_share) else None,
+                    targets_equalize=targets_equalize if self.equalize_by else None,
+                    n_groups=n_groups,
+                )
+
+        if len(self.by_where_expressions) == 0:
+            #   No sub_moments
+            self.n_observations = safe_height(self.df)
+
+        #   Rescale the Target moments, if necessary
+        self._rescale_targets()
+
+        for subi in self.sub_moments:
+            subi._rescale_targets()
+
+        #   Don't need df or model_matrix anymore
+        self.df = None
+        self.model_matrix = None
+
+        #   Get rid of the other dataframes if this isn't going to be
+        #       used as a moment to match to
+        if len(self.by_where_expressions) > 0 and not self.keep_full_group:
+            self.targets = None
+            self.non_zero = None
+            self.scale = None
+
+    def _create_sub_moments_batched(
+        self,
+        df_by,
+        total_weight: float,
+        total_obs: int | None,
+        targets_equalize,
+        n_groups: int,
+    ) -> None:
+        """
+        Fast path: compute weight/obs sums for every group in one .select(),
+        and weighted-mean targets / non-zero counts for every group via one
+        calculate_by(..., by=[cols]) groupby call per distinct column-set
+        (interaction terms share a call; each plain by-column gets its own),
+        instead of a separate join + aggregation per group.
+
+        Raises on any backend that can't run the compound weighted-mean
+        aggregation inside a group_by (e.g. pyarrow) -- the caller falls back
+        to _create_sub_moments_looped in that case.
+        """
+        #   Weight sum (and row count) for every group in one pass.
+        group_select = []
+        for i, byi in enumerate(self.by_where_expressions):
+            mask = byi.cast(nw.Int64)
+            group_select.append(
+                (nw.col(self.weight) * mask).sum().alias(f"___by_group_weight_{i}")
+            )
+            group_select.append(mask.sum().alias(f"___by_group_obs_{i}"))
+
+        group_stats_row = df_by.select(group_select).collect()
+
+        def _group_weight(i: int) -> float:
+            return group_stats_row.item(0, f"___by_group_weight_{i}")
+
+        def _group_obs(i: int) -> int:
+            return group_stats_row.item(0, f"___by_group_obs_{i}")
+
+        #   Weighted-mean targets and non-zero counts for every group, batched
+        #   by which columns each group's condition depends on.
+        need_targets = not self.equalize_by
+        df_targets_all = join_wrapper(
+            self.model_matrix,
+            nw.from_native(self.df).select([self.weight] + self.index + self.byvars),
+            on=self.index,
+            how="left",
+        )
+        summary_mean = column_stats_builder(
+            df=self.model_matrix, cols_exclude=self.index, stat="mean"
+        )
+        summary_nonzero = column_stats_builder(
+            df=self.model_matrix,
+            cols_include="*",
+            cols_exclude=self.index,
+            stat="rawcount_not0",
+        )
+
+        indices_by_column_set = defaultdict(list)
+        for i, cols in enumerate(self.by_where_columns):
+            indices_by_column_set[cols].append(i)
+
+        batched_targets_by_index = {}
+        batched_nonzero_by_index = {}
+        for cols, indices in indices_by_column_set.items():
+            cols_list = list(cols)
+
+            batched_nonzero = nw.from_native(
+                calculate_by(
+                    df=df_targets_all,
+                    column_stats=dict(summary_nonzero),
+                    weight=self.weight,
+                    by=[cols_list],
+                    no_suffix=True,
+                )
+            ).lazy()
+            if need_targets:
+                batched_targets = nw.from_native(
+                    calculate_by(
+                        df=df_targets_all,
+                        column_stats=dict(summary_mean),
+                        weight=self.weight,
+                        by=[cols_list],
+                        no_suffix=True,
+                    )
+                ).lazy()
+
+            for i in indices:
+                values_i = self.by_where_values[i]
+                match_expr = None
+                for coli in cols_list:
+                    condi = nw.col(coli) == values_i[coli]
+                    match_expr = condi if match_expr is None else match_expr & condi
+
+                batched_nonzero_by_index[i] = (
+                    batched_nonzero.filter(match_expr)
+                    .drop(cols_list)
+                    .collect()
+                    .to_native()
+                )
+                if need_targets:
+                    batched_targets_by_index[i] = (
+                        batched_targets.filter(match_expr)
+                        .drop(cols_list)
+                        .collect()
+                        .to_native()
+                    )
+
+        for i_by, byi in enumerate(self.by_where_expressions):
+            group_weight = _group_weight(i_by)
+
+            #  What is the share of the weight that should go to the
+            #      group identified by this byi
+            if self.equalize_by:
+                if self.equalize_by_obs_share:
+                    by_share = _group_obs(i_by) / total_obs
+                elif self.equalize_by_weight_share:
+                    by_share = group_weight / total_weight
+                else:
+                    by_share = 1 / n_groups
+            else:
+                by_share = group_weight / total_weight
+
+            sub_moment = Moment(
+                df=None,
+                nw_type=self.nw_type,
+                formula=self.formula,
+                weight=self.weight,
+                index=self.index,
+                rescale=self.rescale,
+                by_share=by_share,
+                is_sub_moment=True,
+            )
+
+            sub_moment.non_zero = batched_nonzero_by_index[i_by]
+            sub_moment.n_observations = _group_obs(i_by)
+
+            if self.equalize_by:
+                sub_moment.targets = (
+                    nw.from_native(targets_equalize)
+                    .with_columns(nw.all() * by_share)
+                    .to_native()
+                )
+            else:
+                sub_moment.targets = (
+                    nw.from_native(batched_targets_by_index[i_by])
+                    .with_columns(nw.all() * by_share)
+                    .to_native()
+                )
+
+            sub_moment.by_where_expressions = [byi]
+            sub_moment.by_where_strings = [self.by_where_strings[i_by]]
+            self.sub_moments.append(sub_moment)
+
+    def _create_sub_moments_looped(
+        self,
+        df_by,
+        total_weight: float,
+        total_obs: int | None,
+        targets_equalize,
+        n_groups: int,
+    ) -> None:
+        """Slow path: the original one-group-at-a-time implementation, kept
+        as a fallback for backends _create_sub_moments_batched can't handle."""
         for i_by, byi in enumerate(self.by_where_expressions):
             df_byi = df_by.filter(byi)
 
@@ -495,7 +720,7 @@ class Moment(Serializable):
                 elif self.equalize_by_weight_share:
                     by_share = group_weight / total_weight
                 else:
-                    by_share = 1 / len(self.by_where_expressions)
+                    by_share = 1 / n_groups
             else:
                 by_share = group_weight / total_weight
 
@@ -531,30 +756,9 @@ class Moment(Serializable):
             sub_moment.by_where_strings = [self.by_where_strings[i_by]]
             self.sub_moments.append(sub_moment)
 
-        if len(self.by_where_expressions) == 0:
-            #   No sub_moments
-            self.n_observations = safe_height(self.df)
-
-        #   Rescale the Target moments, if necessary
-        self._rescale_targets()
-
-        for subi in self.sub_moments:
-            subi._rescale_targets()
-
-        #   Don't need df or model_matrix anymore
-        self.df = None
-        self.model_matrix = None
-        for subi in self.sub_moments:
-            subi.n_observations = safe_height(subi.df)
-            subi.df = None
-            subi.model_matrix = None
-
-        #   Get rid of the other dataframes if this isn't going to be
-        #       used as a moment to match to
-        if len(self.by_where_expressions) > 0 and not self.keep_full_group:
-            self.targets = None
-            self.non_zero = None
-            self.scale = None
+            sub_moment.n_observations = safe_height(sub_moment.df)
+            sub_moment.df = None
+            sub_moment.model_matrix = None
 
     def rescaled_model_matrix(self, narrow: bool = False):
         if narrow and len(self.columns) > 0:
