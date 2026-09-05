@@ -472,6 +472,10 @@ class Moment(Serializable):
         else:
             df_by = lazy_backend(nw.from_native(self.df), self.nw_type)
 
+        #   Materialize once so each group's .filter() below doesn't re-run
+        #   the whole upstream lazy plan from scratch on every group.
+        df_by = lazy_backend(df_by.collect(), self.nw_type)
+
         for i_by, byi in enumerate(self.by_where_expressions):
             df_byi = df_by.filter(byi)
 

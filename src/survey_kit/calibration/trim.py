@@ -133,12 +133,12 @@ class Trim(Serializable):
                         logger.info(
                             f"Max weight ({max_weight}) is greater than trim_max({trim_limit_max}), but NOT TRIMMING because only {n_to_trim_max}  need trimming against a passed limit of {self.ignore_n}"
                         )
-            else:
-                btrim_max = True
+                else:
+                    btrim_max = True
 
             if min_weight < trim_limit_min:
                 if self.ignore_n > 0:
-                    n_to_trim_max = safe_height(
+                    n_to_trim_min = safe_height(
                         nw.from_native(c.df).filter(
                             nw.col(c.final_weight) < trim_limit_min
                         )
@@ -150,8 +150,8 @@ class Trim(Serializable):
                         logger.info(
                             f"Min weight ({min_weight}) is greater than trim_max({trim_limit_min}), but NOT TRIMMING because only {n_to_trim_min}  need trimming against a passed limit of {self.ignore_n}"
                         )
-                    else:
-                        btrim_min = True
+                else:
+                    btrim_min = True
 
             if btrim_max:
                 bComplete = False
@@ -204,7 +204,7 @@ class Trim(Serializable):
 
         return bComplete
 
-    def _str__(self):
+    def __str__(self):
         return (
             f"trim           = {self.trim}"
             + "\n"

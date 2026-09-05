@@ -332,68 +332,6 @@ class Calibration(Serializable):
             )
             m_weight.columns = list(set(cols_target).intersection(cols_weight))
 
-    def censor_to_min_obs(self, min_obs: int = 0) -> None:
-        """
-        In calibration, do we want to limit to moments with greater than some
-           threshold of observations where x != 0
-
-        Parameters
-        ----------
-        min_obs : int, optional
-            The minimum number of != 0 observations.
-            The default is 0. (don't censor)
-
-        Returns
-        -------
-        None
-
-        """
-        for momenti in self.moments:
-            self._censort_to_min_obs_by_moment(min_obs=min_obs, m=momenti)
-
-            for subi in momenti.sub_moments:
-                self._censort_to_min_obs_by_moment(min_obs=min_obs, m=subi)
-
-        if self.c_combined is not None:
-            self.c_combined.censor_to_min_obs(min_obs=min_obs)
-
-    def _censort_to_min_obs_by_moment(self, min_obs: int, m: Moment) -> None:
-        """
-        For each moment, censor, if needed
-
-        Parameters
-        ----------
-        min_obs : int
-            Minimum non-zero observations to censor at
-        m : Moment
-            Moment to censor
-
-        Returns
-        -------
-        None
-        """
-
-        if m.non_zero_target is not None and len(m.columns) > 0:
-            nw_type = NarwhalsType(m.non_zero_target)
-            nonzero_cols = (
-                nw_type.to_polars().select(m.columns).transpose(include_header=True)
-            )
-
-            m.columns = nonzero_cols.filter(
-                pl.col(nonzero_cols.lazy().collect_schema().names()[1]) >= min_obs
-            )[nonzero_cols.lazy().collect_schema().names()[0]].to_list()
-
-        if m.non_zero is not None and len(m.columns) > 0:
-            nw_type = NarwhalsType(m.non_zero)
-
-            nonzero_cols = (
-                nw_type.to_polars().select(m.columns).transpose(include_header=True)
-            )
-
-            m.columns = nonzero_cols.filter(
-                pl.col(nonzero_cols.lazy().collect_schema().names()[1]) >= min_obs
-            )[nonzero_cols.lazy().collect_schema().names()[0]].to_list()
-
     def combine_moments(self, all: bool = False, sub_moments: bool = True) -> None:
         """
         To simultaneously weight to lots of moments, we need to combine them
@@ -820,16 +758,16 @@ class Calibration(Serializable):
                 #   Need trimming?
                 #       Don't trim if aebw without separately passed bounds
                 if trim.trim and (
-                    self.method != "aebw" and "bounds" in additional_params.keys()
+                    self.method != "aebw" or "bounds" in additional_params.keys()
                 ):
-                    b_complete = trim.trim_in_loop(c=self, iLoop=iLoop, n_loops=n_loops)
+                    b_complete = trim.trim_in_loop(c=self, iLoop=iLoop, nLoops=n_loops)
 
             if self.aggregation == "Sequential":
                 # Check the max deviation against the tolerance
                 diagnostics = self.diagnostics()
                 max_diff = diagnostics["max_diff"]
 
-                converged = max_diff <= self.Tolerance_Loop
+                converged = max_diff <= self.tolerance
                 b_complete = converged
 
             iLoop += 1
@@ -1049,7 +987,7 @@ class Calibration(Serializable):
         for i_moment, m in enumerate(self.moments):
             logger.info(f"    Moment: {i_moment + 1}")
 
-            if m.ModelMatrix is not None:
+            if m.model_matrix is not None:
                 converged = fCalibrate(m=m, sequential=True, **additional_params)
 
             for i_sub, subi in enumerate(m.sub_moments):
@@ -1508,8 +1446,10 @@ class Calibration(Serializable):
         #   .rename({wOut.columns[0]:self.final_weight}
 
         if sequential:
-            weights = nw.from_native(weights).with_columns(
-                nw.all() * m.by_share / n_obs / safe_height(self.df)
+            weights = (
+                nw.from_native(weights)
+                .with_columns(nw.all() * m.by_share / n_obs / safe_height(self.df))
+                .to_native()
             )
 
             #   Merge by index
