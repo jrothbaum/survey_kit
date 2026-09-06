@@ -79,11 +79,11 @@ except ImportError:
 
 try:
     from sksparse.cholmod import CholmodError as _CholmodError
-    from sksparse.cholmod import analyze as _cholmod_analyze
+    from sksparse.cholmod import cho_factor as _cholmod_cho_factor
 
     HAS_CHOLMOD = True
 except ImportError:
-    _cholmod_analyze = None
+    _cholmod_cho_factor = None
 
     class _CholmodError(Exception):  # type: ignore[no-redef]
         """Placeholder so `except _CholmodError` is always valid when unavailable."""
@@ -239,10 +239,15 @@ class SparseLinearSolver:
     def _solve_cholmod(self, lhs: AnyArray, rhs: FArr) -> FArr:
         key = _pattern_key(lhs)
         if self._cholmod_factor is None or key != self._cholmod_pattern:
-            self._cholmod_factor = _cholmod_analyze(lhs)
+            #   First time (or pattern changed): full symbolic + numeric
+            #   factorization.
+            self._cholmod_factor = _cholmod_cho_factor(lhs)
             self._cholmod_pattern = key
-        self._cholmod_factor.cholesky_inplace(lhs)
-        return self._cholmod_factor(rhs)
+        else:
+            #   Same pattern, new values: reuse the stored symbolic ordering,
+            #   only redo the numeric factorization.
+            self._cholmod_factor.factorize(lhs)
+        return self._cholmod_factor.solve(rhs)
 
     def _solve_with_backend(self, name: str, lhs: AnyArray, rhs: FArr) -> FArr:
         if name == "pypardiso":

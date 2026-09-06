@@ -58,7 +58,8 @@ m = Moment(
     formula=f.formula,
     weight="weight_0",
     index="index",
-    #    by=["year"],
+    by=["year"],
+    equalize_by=True,
     rescale=True,
 )
 

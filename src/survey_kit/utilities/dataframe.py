@@ -79,14 +79,20 @@ def columns_from_list(
 ) -> list[str]:
     columns = list_input(columns)
     exclude = list_input(exclude)
+
+    #   Resolve the schema once up front - a formula/columns list with
+    #   several wildcard entries used to re-collect_schema() once per "*"
+    #   entry (via _by_name_asterisk) plus again at the end for ordering.
+    schema_names = df.lazy().collect_schema().names() if df is not None else None
+
     all_cols = []
     for coli in columns:
         if coli == "*":
-            all_cols.extend(df.lazy().collect_schema().names())
+            all_cols.extend(schema_names)
         elif "*" in coli:
             all_cols.extend(
-                _by_name_asterisk(
-                    df=df, pattern=coli, case_insensitive=case_insensitive
+                _match_asterisk_names(
+                    names=schema_names, pattern=coli, case_insensitive=case_insensitive
                 )
             )
         else:
@@ -101,7 +107,7 @@ def columns_from_list(
             all_cols = [coli for coli in all_cols if coli not in cols_exclude]
     if df is not None:
         return _columns_original_order(
-            list(set(all_cols)), columns_ordered=df.lazy().collect_schema().names()
+            list(set(all_cols)), columns_ordered=schema_names
         )
     else:
         return list(dict.fromkeys(all_cols))
@@ -113,19 +119,16 @@ def _columns_original_order(
     if len(set(columns_unordered).intersection(columns_ordered)) == len(
         columns_unordered
     ):
-        d_cols = {}
-        for coli in columns_unordered:
-            index = columns_ordered.index(coli)
-            d_cols[index] = coli
-
-        return list(dict(sorted(d_cols.items())).values())
+        #   Dict lookup instead of columns_ordered.index(coli) per column -
+        #   avoids an O(n) list scan for every column being ordered.
+        index_map = {coli: i for i, coli in enumerate(columns_ordered)}
+        return sorted(columns_unordered, key=lambda coli: index_map[coli])
     else:
         return columns_unordered
 
 
-@nw.narwhalify
-def _by_name_asterisk(
-    df: IntoFrameT, pattern: str = "", case_insensitive: bool = False
+def _match_asterisk_names(
+    names: list[str], pattern: str = "", case_insensitive: bool = False
 ) -> list[str]:
     if case_insensitive:
         casei_regex = "(?i)"
@@ -135,7 +138,18 @@ def _by_name_asterisk(
     pattern_regex = casei_regex + "^" + pattern.replace("*", ".*") + "$"
 
     regex = re.compile(pattern_regex)
-    return [col for col in df.lazy().collect_schema().names() if regex.match(col)]
+    return [col for col in names if regex.match(col)]
+
+
+@nw.narwhalify
+def _by_name_asterisk(
+    df: IntoFrameT, pattern: str = "", case_insensitive: bool = False
+) -> list[str]:
+    return _match_asterisk_names(
+        names=df.lazy().collect_schema().names(),
+        pattern=pattern,
+        case_insensitive=case_insensitive,
+    )
 
 
 def join_list(
@@ -449,7 +463,7 @@ def upcast_uint_to_int(df: IntoFrameT) -> IntoFrameT:
 def safe_upcast_list(
     dfs: list[IntoFrameT | nw.LazyFrame | nw.DataFrame],
 ) -> list[IntoFrameT | nw.LazyFrame | nw.DataFrame]:
-    d_castordering = _cast_ordering(False)
+    d_castordering = _CAST_ORDERING
 
     schemas = [nw.from_native(dfi).lazy().collect_schema() for dfi in dfs]
 
@@ -669,6 +683,12 @@ def _cast_ordering(
         d_ordering[_CastOrderingItem(type1, type2)] = _CastOrderingItem(cast1, cast2)
         d_ordering[_CastOrderingItem(type2, type1)] = _CastOrderingItem(cast2, cast1)
     return d_ordering
+
+
+#   _cast_ordering() is a fixed type->cast lookup table, independent of any
+#   particular join/concat's dataframes - build it once at import instead of
+#   on every safe_upcast_list() call (i.e. every join and concat).
+_CAST_ORDERING = _cast_ordering(False)
 
 
 def safe_height(df: IntoFrameT) -> int:

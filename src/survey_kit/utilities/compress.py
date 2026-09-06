@@ -2,7 +2,7 @@ from __future__ import annotations
 from narwhals.typing import IntoFrameT
 
 import polars as pl
-from .dataframe import NarwhalsType, safe_height
+from .dataframe import NarwhalsType
 
 from .. import logger
 
@@ -223,16 +223,17 @@ def compress_df(
 
 def _compress_datetime(df: pl.LazyFrame | pl.LazyFrame) -> pl.LazyFrame | pl.DataFrame:
     schema = df.lazy().collect_schema()
-    cols_date = {
-        coli: typei for coli, typei in schema.items() if type(typei) is pl.Datetime
-    }
+    cols_date = [coli for coli, typei in schema.items() if type(typei) is pl.Datetime]
 
-    for coli, typei in cols_date.items():
-        cast_complete = False
-        dfcast = None
+    if not len(cols_date):
+        return df
 
+    #   Check every datetime column's "has a nonzero time component" flag in
+    #   ONE pass - the original did a separate filter()+collect() per column.
+    has_time_exprs = []
+    for coli in cols_date:
         c_d = pl.col(coli)
-        df_time = df.filter(
+        has_time_exprs.append(
             (
                 c_d.dt.nanosecond()
                 + c_d.dt.microsecond()
@@ -240,18 +241,30 @@ def _compress_datetime(df: pl.LazyFrame | pl.LazyFrame) -> pl.LazyFrame | pl.Dat
                 + c_d.dt.second()
                 + c_d.dt.minute()
                 + c_d.dt.hour()
-            ).ne(0)
+            )
+            .ne(0)
+            .any()
+            .alias(coli)
         )
-        convert_to_date = safe_height(df_time) == 0
 
-        if convert_to_date:
+    flags = df.lazy().select(has_time_exprs).collect()
+    date_only_cols = [coli for coli in cols_date if not flags[0, coli]]
+
+    if not len(date_only_cols):
+        return df
+
+    try:
+        df = df.with_columns(
+            [pl.col(coli).cast(pl.Date, strict=True) for coli in date_only_cols]
+        )
+    except Exception:
+        #   Fall back to casting one column at a time so a single
+        #   unexpected failure only drops that column, matching the
+        #   original's per-column try/except behavior.
+        for coli in date_only_cols:
             try:
-                dfcast = df.select(c_d.cast(pl.Date, strict=True))
-                cast_complete = True
-            except:
+                df = df.with_columns(pl.col(coli).cast(pl.Date, strict=True))
+            except Exception:
                 logger.warning(f"     Cannot cast {coli} as {pl.Date}")
-
-            if cast_complete:
-                df = pl.concat([df.drop(coli), dfcast], how="horizontal")
 
     return df

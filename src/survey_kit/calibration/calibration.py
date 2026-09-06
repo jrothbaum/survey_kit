@@ -295,7 +295,15 @@ class Calibration(Serializable):
         if len(m.sub_moments) > 0:
             sub_moments = []
             for subi in m.sub_moments:
-                subi = self.process_single_moment(subi, m.df)
+                #   Restrict to this sub_moment's own group before recursing,
+                #   otherwise its targets/model matrix get built from every
+                #   row in m.df instead of just its own by-group.
+                df_subi = (
+                    nw.from_native(m.df)
+                    .filter(subi.by_where_expressions[0])
+                    .to_native()
+                )
+                subi = self.process_single_moment(subi, df_subi)
 
                 sub_moments.append(subi)
 
