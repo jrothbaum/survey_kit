@@ -438,6 +438,16 @@ class Impute:
             keep_vars.append(self.weight)
             model_vars.append(self.weight)
 
+        #   donate_by groups are partitioned out of both df_model and
+        #   df_impute in _find_nearest_neighbor_by, so (unlike donate_list,
+        #   which only the donor pool needs) it has to be kept in both. Only
+        #   add names not already present - keep_vars isn't deduplicated here
+        #   and .select() errors on a repeated column name (e.g. donate_by
+        #   grouping on a variable that's also a model predictor).
+        for vari in self.variable.parameters["donate_by"]:
+            if vari not in keep_vars:
+                keep_vars.append(vari)
+
         df_impute = self.df_impute(df=df, keep_vars=keep_vars)
 
         if safe_height(df_impute) == 0:
@@ -533,6 +543,14 @@ class Impute:
         if errordraw == Parameters.ErrorDraw.pmm:
             if len(self.variable.parameters["donate_list"]) > 0:
                 keep_vars.extend(self.variable.parameters["donate_list"])
+
+            #   donate_by groups are partitioned out of both df_model and
+            #   df_impute in _find_nearest_neighbor_by, so both need it kept.
+            #   Only add names not already present - keep_vars isn't
+            #   deduplicated here and .select() errors on a repeated name.
+            for vari in self.variable.parameters["donate_by"]:
+                if vari not in keep_vars:
+                    keep_vars.append(vari)
 
         df_model = self.df_model(df=df, keep_vars=keep_vars)
 
