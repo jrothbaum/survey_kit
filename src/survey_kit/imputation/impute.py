@@ -26,6 +26,7 @@ from ..utilities.dataframe import (
     safe_upcast_list,
     columns_from_list,
     safe_columns,
+    winsorize_by_percentiles,
 )
 from ..utilities.compress import compress_df
 from ..utilities.formula_builder import FormulaBuilder
@@ -460,6 +461,7 @@ class Impute:
             donate_vars.extend(self.variable.parameters["donate_list"])
 
         df_model = self.df_model(df=df, keep_vars=keep_vars)
+        (df_model, b_winsorized) = self._pmm_winsorize_for_fit(df_model)
 
         regmodel = self.variable.parameters["model"]
 
@@ -485,6 +487,10 @@ class Impute:
             df_model = concat_wrapper([df_pmm_model, df_pmm_leave_out], how="diagonal")
         else:
             df_model = df_pmm_model
+
+        #   ___prediction is computed now - safe to swap the donor pool's
+        #   impute_var back to its true (un-winsorized) value before donation.
+        df_model = self._pmm_restore_true_value(df_model, b_winsorized)
 
         df_impute = self._find_nearest_neighbor_by(
             df_model=df_model,
@@ -560,7 +566,9 @@ class Impute:
             self.logging.info("No rows to impute")
             return df
 
+        b_winsorized = False
         if errordraw == Parameters.ErrorDraw.pmm:
+            (df_model, b_winsorized) = self._pmm_winsorize_for_fit(df_model)
             (df_pmm_model, df_pmm_leave_out) = self._pmm_leave_out(df_model=df_model)
         else:
             df_pmm_model = df_model
@@ -585,6 +593,11 @@ class Impute:
             df_model = concat_wrapper([df_pmm_model, df_pmm_leave_out], how="diagonal")
         else:
             df_model = df_pmm_model
+
+        #   ___prediction is computed now - safe to swap back to the true
+        #   (un-winsorized) value before _regression_draw_errors's pmm branch
+        #   uses df_model as the donor pool.
+        df_model = self._pmm_restore_true_value(df_model, b_winsorized)
 
         df_impute = self._regression_draw_errors(
             df_model=df_model,
@@ -2195,6 +2208,62 @@ class Impute:
     #   HELPERS - pmm - START
     ##########################################################
     ##########################################################
+
+    _PMM_WINSOR_TRUE_VALUE_COL = "___pmm_winsor_true_value___"
+
+    def _pmm_winsorize_for_fit(self, df_model: IntoFrameT) -> tuple[IntoFrameT, bool]:
+        """
+        Clip the outcome before it's used to fit the regression that produces
+        ___prediction, so a handful of extreme values don't distort the fit
+        (matching Selection.lasso()'s same winsorize-before-fit pattern).
+
+        Only the fit is affected - the donor's actual value must stay
+        un-clipped, since it's what PMM copies onto the recipient. The true
+        value is preserved in a temp column here and restored via
+        _pmm_restore_true_value() once ___prediction has been computed from
+        it, before df_model is used as the donor pool.
+
+        Returns
+        -------
+        tuple[IntoFrameT, bool]
+            The (possibly winsorized) df_model, and whether winsorizing
+            actually happened (i.e. whether restoration is needed later).
+        """
+        #   [0, 1] is the no-winsorization sentinel (Parameters.pmm's default).
+        winsor = self.variable.parameters.get("winsor", [0, 1])
+        if list(winsor) == [0, 1]:
+            return (df_model, False)
+
+        df_model = (
+            nw.from_native(df_model)
+            .with_columns(
+                nw.col(self.variable.impute_var).alias(
+                    self._PMM_WINSOR_TRUE_VALUE_COL
+                )
+            )
+            .to_native()
+        )
+        df_model = winsorize_by_percentiles(
+            df=df_model, percentiles=winsor, columns=self.variable.impute_var
+        )
+        return (df_model, True)
+
+    def _pmm_restore_true_value(
+        self, df_model: IntoFrameT, b_winsorized: bool
+    ) -> IntoFrameT:
+        if not b_winsorized:
+            return df_model
+
+        return (
+            nw.from_native(df_model)
+            .with_columns(
+                nw.col(self._PMM_WINSOR_TRUE_VALUE_COL).alias(
+                    self.variable.impute_var
+                )
+            )
+            .drop(self._PMM_WINSOR_TRUE_VALUE_COL)
+            .to_native()
+        )
 
     def _pmm_leave_out(self, df_model: IntoFrameT) -> (IntoFrameT, IntoFrameT):
         if self.variable.parameters["share_leave_out"] > 0:
