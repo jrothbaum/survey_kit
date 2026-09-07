@@ -2,7 +2,6 @@ from __future__ import annotations
 from typing import Optional
 
 import os
-import numpy as np
 import narwhals as nw
 import narwhals.selectors as cs
 from narwhals.typing import IntoFrameT
@@ -108,7 +107,7 @@ class Lasso:
         fb = FormulaBuilder(df=self.df, formula=self.formula)
 
         #   Do we need to get the model matrix?
-        b_need_mm = fb.formula.find("(") > 0 or fb.formula.find(":") > 0
+        b_need_mm = fb.needs_model_matrix()
 
         if b_need_mm:
             #       Get analysis dataset (the model matrix)
@@ -153,6 +152,17 @@ class Lasso:
     def _process_formula_list(self):
         self.x = columns_from_list(df=self.df, columns=self.formula)
 
+    def _sample_weight_kwargs(self) -> dict:
+        #   self.weight is only used for standardizing x in process_formula()
+        #   otherwise - this is what actually makes the regression itself weighted.
+        if self.weight == "":
+            return {}
+        return {
+            "sample_weight": (
+                nw.from_native(self.df).select(self.weight).to_numpy().ravel()
+            )
+        }
+
     def find_optimal_lambda(self):
         self.df = nw.from_native(self.df).lazy().collect().to_native()
         set_seed(self.seed)
@@ -161,16 +171,22 @@ class Lasso:
         #   Update seed
         self.seed = generate_seed()
 
+        #   Let LassoCV pick its own alpha path from the data (alpha_max derived
+        #   from X/y, then a log-spaced grid down from there) rather than a fixed
+        #   range - y isn't standardized here (only x is), so a hardcoded range
+        #   like [1e-4, 1] can sit entirely off-scale for y with large natural
+        #   units (e.g. income), causing LassoCV to always land on a boundary
+        #   alpha regardless of the data.
         lasso_cv = LassoCV(
             cv=self.nfolds,
             random_state=random_state,
             max_iter=self.max_iter,
-            alphas=np.logspace(-4, 0, 100),
         )
 
         lasso_cv.fit(
             nw.from_native(self.df).select(self.x).to_numpy(),
             nw.from_native(self.df).select(self.y).to_numpy().ravel(),
+            **self._sample_weight_kwargs(),
         )
 
         self.optimal_lambda = lasso_cv.alpha_
@@ -192,10 +208,10 @@ class Lasso:
         lasso.fit(
             nw.from_native(self.df).select(self.x).to_numpy(),
             nw.from_native(self.df).select(self.y).to_numpy().ravel(),
+            **self._sample_weight_kwargs(),
         )
 
         coef = lasso.coef_
-        print(coef)
         vars_kept = []
 
         for i in range(0, len(self.x)):

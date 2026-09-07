@@ -444,9 +444,11 @@ class MultipleImputation(Serializable):
         )
 
         def p_value(t, df):
-            if t == float("inf") or t == float("nan"):
+            #   NaN != NaN (IEEE 754) - `x == float("nan")` never fires, so use
+            #   self-inequality (the standard NaN check) instead.
+            if t == float("inf") or t != t:
                 return 0
-            if df == float("inf") or df == float("nan"):
+            if df == float("inf") or df != df:
                 df = 1_000_000
 
             return scipy.stats.t.sf(t, df) * 2
@@ -1434,7 +1436,7 @@ def mi_ses_from_function(
     arguments = copy(arguments)
     if parallel:
         if path_srmi != "":
-            n_implicates = SRMI.load(path_srmi).n_implicates
+            n_implicates = SRMI.load(path_srmi).replication.n_implicates
         else:
             n_implicates = len(df_implicates)
         if parallel_inputs is None:
@@ -1540,7 +1542,7 @@ def _mi_ses_from_function_parallel(
     path_implicates = []
 
     if path_srmi != "":
-        n_implicates = SRMI.load(path_srmi).n_implicates
+        n_implicates = SRMI.load(path_srmi).replication.n_implicates
     else:
         n_implicates = len(df_implicates)
 
@@ -1571,7 +1573,7 @@ def _mi_ses_from_function_parallel(
 
     #   Collect the results
     if path_srmi != "":
-        n_implicates = SRMI.load(path_srmi).n_implicates
+        n_implicates = SRMI.load(path_srmi).replication.n_implicates
     else:
         n_implicates = len(df_implicates)
 

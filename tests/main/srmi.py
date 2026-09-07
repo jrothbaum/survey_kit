@@ -365,7 +365,7 @@ v_lgbm2 = Variable(
     selection=Selection(method=Selection.Method.No),
     preselection=Selection(method=Selection.Method.No),
     parameters=parameters_lgbm2,
-    preFunctions=preFunctions,
+    hooks=Variable.Hooks(pre=preFunctions),
 )
 vars_impute.append(v_lgbm2)
 
@@ -373,21 +373,22 @@ vars_impute.append(v_lgbm2)
 srmi = SRMI(
     df=df,  #     .lazy().collect().to_pandas(),
     variables=vars_impute,
-    n_implicates=2,
-    n_iterations=1,
-    parallel=False,
-    # parallel_CallInputs=CallInputs(CallType=CallTypes.shell,
-    #                                CPUs=4,
-    #                                MemInMB=5000),
-    selection=Selection(method=Selection.Method.LASSO),
-    # preselection=Selection(method=Selection.Method.LASSO,
-    #                        parameters=Selection.Parameters.lasso(scale_lambda=0.5)),
-    modeltype=modeltype,
-    model=f_model.formula,
-    bayesian_bootstrap=True,
-    parallel_testing=False,
-    path_model=f"{path_scratch}/py_srmi_test",
-    force_start=True,
+    replication=SRMI.Replication(n_implicates=2, n_iterations=1),
+    parallel=SRMI.Parallel(enabled=False, testing=False),
+    # parallel=SRMI.Parallel(enabled=False, testing=False,
+    #                        call_inputs=CallInputs(call_type=CallTypes.shell,
+    #                                                n_cpu=4, mem_in_mb=5000)),
+    bootstrap=SRMI.Bootstrap(enabled=True),
+    defaults=SRMI.Defaults(
+        selection=Selection(method=Selection.Method.LASSO),
+        # preselection=Selection(method=Selection.Method.LASSO,
+        #                        parameters=Selection.Parameters.lasso(scale_lambda=0.5)),
+        modeltype=modeltype,
+        model=f_model.formula,
+    ),
+    storage=SRMI.Storage(
+        path_model=f"{path_scratch}/py_srmi_test", force_start=True
+    ),
 )
 
 srmi.run()
@@ -409,7 +410,7 @@ if True:
         summary(dfs[i].select(impute_vars))
         summary(dfs_loaded[i].select(impute_vars))
 
-        if not srmi.parallel:
+        if not srmi.parallel.enabled:
             logger.info("Assert imputed variables are equal across run/loaded")
             assert dfs[i].collect().equals(dfs_loaded[i].collect())
 
@@ -418,7 +419,7 @@ if True:
                 "Assert stable variables stay constant across run/loaded and implicates"
             )
 
-            if not srmi.parallel:
+            if not srmi.parallel.enabled:
                 assert (
                     dfs[i]
                     .select(stable_vars)

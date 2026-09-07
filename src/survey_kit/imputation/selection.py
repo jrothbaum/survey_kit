@@ -200,9 +200,14 @@ class Selection(Serializable):
             Custom selection function - if you want to use your own variable selection approach
                 Function arguments need to be:
                 df:IntoFrameT,
-                variable:Variable,
+                y:str,
+                formula:str,
+                weight:str,
+                sub_log:logging|None,
                 parameters:dict,
                 preselection:bool
+                and it should return the selected model as a formula string
+                (or "" to keep the original formula unchanged)
 
         Returns
         -------
@@ -227,6 +232,12 @@ class Selection(Serializable):
         self.function = function
         self.select_within_by = select_within_by
 
+        #   Whether this Selection instance is being used as a Variable's
+        #   preselection (Variable.__init__ flips this to True when it is) -
+        #   defaulted here so Custom selection's run() can always read it,
+        #   even when this instance is used as the main selection instead.
+        self.preselection = False
+
     def run(
         self,
         df: IntoFrameT,
@@ -235,7 +246,7 @@ class Selection(Serializable):
         weight: str = "",
         sub_log: logging | None = None,
     ):
-        arguments = {"df": df, "y": y, "formula": formula, "sub_log": sub_log}
+        arguments = {"df": df, "y": y, "formula": formula, "weight": weight, "sub_log": sub_log}
 
         delegate = None
         if self.method == Selection.Method.LASSO:
@@ -451,6 +462,17 @@ class Selection(Serializable):
         missing_dummies = self.parameters["missing_dummies"]
         include_base_with_interaction = self.parameters["include_base_with_interaction"]
 
+        if weight != "":
+            #   RFECV.fit() doesn't accept sample_weight without opting into
+            #   sklearn's metadata-routing config (set_config(enable_metadata_routing=True)
+            #   plus set_fit_request/set_score_request on the estimator and scorer) -
+            #   not worth the added complexity/fragility for a selection method that
+            #   isn't the primary one in use. Logging so this doesn't fail silently.
+            sub_log.warning(
+                f"Stepwise selection does not support sample weights - "
+                f"running unweighted despite weight='{weight}' being set."
+            )
+
         df = nw.from_native(df).filter(~nw.col(y).is_null()).to_native()
         if missing_dummies:
             [df, formula, missing_dummies] = Selection._add_missing_dummy(
@@ -469,10 +491,8 @@ class Selection(Serializable):
         df_x = get_model_frame(formula, df)
 
         df_y = nw.from_native(df).select(y).to_native()
-        # if winsorize is not None:
-        #     df_y = winsorize_by_percentiles(df=df_y,
-        #                                     percentiles=winsorize,
-        #                                     columns=y)
+        if winsorize is not None:
+            df_y = winsorize_by_percentiles(df=df_y, percentiles=winsorize, columns=y)
         selector = selector.fit(
             nw.from_native(df_x).to_numpy(), nw.from_native(df_y).to_numpy()
         )

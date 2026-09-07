@@ -325,10 +325,12 @@ def _compute_spline_params_fast(
             tail_param_u[i, 1] = sigma_u
 
         elif tail_upper == 1:  # Exponential
+            #   Eval-time model is Q(p) = loc - scale*ln(1-p), so anchoring at
+            #   p=a0 requires loc = q0 + scale*ln(1-a0) (note the +, not -).
             log_a0 = np.log(1 - alphas[n_q - 2])
             log_a1 = np.log(1 - alphas[n_q - 1])
             scale_u = (q[n_q - 2] - q[n_q - 1]) / (log_a1 - log_a0)
-            loc_u = q[n_q - 2] - scale_u * log_a0
+            loc_u = q[n_q - 2] + scale_u * log_a0
             tail_param_u[i, 0] = loc_u
             tail_param_u[i, 1] = scale_u
 

@@ -28,65 +28,25 @@ class Variable(Serializable):
 
     """
     Defines a variable to be imputed and its imputation specifications.
-    
+
     This class encapsulates all settings for imputing a single variable,
     including model type, formula, selection methods, and conditions.
-    
-    Parameters
-    ----------
-    impute_var : str
-        Name of the variable to be imputed
-    Where : nw.Expr | None, optional
-        General condition to restrict sample for imputation, by default None
-            This restricts the sample before anything happens
-    Where_impute : nw.Expr | None, optional
-        Condition defining observations to be imputed, by default None
-            Whose values are getting imputed
-    Where_predict : nw.Expr | None, optional
-        Condition defining observations for prediction, by default None
-            Whose values are used for the prediction (i.e. in a regression)
-    Where_predict_only_when_not_imputed : bool, optional
-        Only predict for non-imputed observations, by default False
-            i.e. in iteration 2, should I include the imputed values from 
-            iteration 1 in the prediction model?
-    bimpute_if_missing : bool, optional
-        Include missingness as imputation condition, by default True
-    preFunctions : list | Variable.PrePost.Function | Variable.PrePost.NarwhalsExpression | nw.Expr | None, optional
-        Operations to run before imputation, by default None
-    postFunctions : list | Variable.PrePost.Function | Variable.PrePost.NarwhalsExpression | nw.Expr | None, optional
-        Operations to run after imputation, by default None
-    preFunctions_initialize_implicate : list | Variable.PrePost.Function | Variable.PrePost.NarwhalsExpression | nw.Expr | None, optional
-        Operations to run once before first iteration, by default None
-            This can be useful if different data needs to be merged to each implicate
-    predictors_exclude : list, optional
-        Variables to exclude from the model, by default None
-            i.e. I don't want to include occupation as a predictor
-            for the presence of earnings since all earners have an occupation
-    predictors_exclude_first_iteration : list, optional
-        Variables to exclude only in first iteration, by default None
-    predictors_require : list, optional
-        Variables to always include in model, by default None
-    weight : str, optional
-        Weight variable name, by default ""
-    joint : dict, optional
-        Variables to include together if any is selected, by default None
-    header : str, optional
-        Header text for logging, by default ""
-    model : str, optional
-        R formula string or variable list for model, by default ""
-    selection : Selection, optional
-        Variable selection method, by default None
-    preselection : Selection, optional
-        Pre-imputation variable selection, by default None
-    modeltype : ModelType, optional
-        Type of imputation model, by default None
-    modelfunction : callable, optional
-        Custom imputation function, by default None
-    parameters : dict, optional
-        Model-specific parameters, by default None
-    By : list, optional
-        Variables defining by-groups for separate models, by default None
-            i.e. if by=["state"] it would run a separate imputation model for each state
+    Construction groups related settings into sub-objects - see __init__
+    for the full parameter list:
+
+    impute_var, header, model, weight, modelfunction, modeltype, parameters,
+    selection, preselection, By : flat, core settings
+    sample : Variable.Sample - which rows this variable's imputation applies to
+        (Where / Where_impute / Where_predict / Where_predict_only_when_not_imputed /
+        bimpute_if_missing)
+    hooks : Variable.Hooks - pre/post-imputation operations
+        (pre / post / pre_initialize)
+    predictors : Variable.Predictors - predictor inclusion/exclusion control
+        (exclude / exclude_first_iteration / require / joint)
+
+    For code still using the pre-refactor flat-kwarg signature
+    (Where=..., preFunctions=..., predictors_exclude=..., etc.), use
+    Variable.from_legacy(...) instead of Variable(...).
     """
 
     class ModelType(Enum):
@@ -228,101 +188,198 @@ class Variable(Serializable):
 
                 return df
 
+    class Sample(Serializable):
+        """Which rows this variable's imputation applies to."""
+
+        _save_suffix = "variable.sample"
+
+        def __init__(
+            self,
+            Where: nw.Expr | None = None,
+            Where_impute: nw.Expr | None = None,
+            Where_predict: nw.Expr | None = None,
+            Where_predict_only_when_not_imputed: bool = False,
+            bimpute_if_missing: bool = True,
+        ):
+            """
+            Parameters
+            ----------
+            Where : nw.Expr, optional
+                Condition to restrict sample for this imputation. The default is None.
+            Where_impute : nw.Expr, optional
+                Define the set of observations to be imputed, in addition
+                to bimpute_if_missing | Where. The default is None.
+            Where_predict : nw.Expr, optional
+                Define the set of observations for the prediction | Where. The default is None.
+            Where_predict_only_when_not_imputed : bool, optional
+                Predict only if not imputed.  The default is False.
+            bimpute_if_missing : bool, optional
+                Make an imputation condition that the variable is initially missing.
+                The default is True.
+            """
+            self.Where = Where
+            self.Where_impute_original = Where_impute
+            self.Where_impute = Where_impute
+            self.Where_predict = Where_predict
+            self.Where_predict_only_when_not_imputed = (
+                Where_predict_only_when_not_imputed
+            )
+            self.bimpute_if_missing = bimpute_if_missing
+
+        def with_Where(self, value: nw.Expr | None) -> Variable.Sample:
+            return self._with(Where=value)
+
+        def with_Where_impute(self, value: nw.Expr | None) -> Variable.Sample:
+            #   Where_impute_original tracks the pristine (pre where_impute_add_flag)
+            #   value - setting a new Where_impute here is a fresh user-specified
+            #   value, so both move together, matching __init__'s behavior.
+            return self._with(Where_impute=value, Where_impute_original=value)
+
+        def with_Where_predict(self, value: nw.Expr | None) -> Variable.Sample:
+            return self._with(Where_predict=value)
+
+        def with_Where_predict_only_when_not_imputed(self, value: bool) -> Variable.Sample:
+            return self._with(Where_predict_only_when_not_imputed=value)
+
+        def with_bimpute_if_missing(self, value: bool) -> Variable.Sample:
+            return self._with(bimpute_if_missing=value)
+
+    class Hooks(Serializable):
+        """Operations to run before/after this variable's imputation each iteration."""
+
+        _save_suffix = "variable.hooks"
+
+        def __init__(
+            self,
+            pre: list[
+                Variable.PrePost.Function | Variable.PrePost.NarwhalsExpression | nw.Expr
+            ]
+            | Variable.PrePost.Function
+            | Variable.PrePost.NarwhalsExpression
+            | nw.Expr
+            | None = None,
+            post: list[
+                Variable.PrePost.Function | Variable.PrePost.NarwhalsExpression | nw.Expr
+            ]
+            | Variable.PrePost.Function
+            | Variable.PrePost.NarwhalsExpression
+            | nw.Expr
+            | None = None,
+            pre_initialize: list[
+                Variable.PrePost.Function | Variable.PrePost.NarwhalsExpression | nw.Expr
+            ]
+            | Variable.PrePost.Function
+            | Variable.PrePost.NarwhalsExpression
+            | nw.Expr
+            | None = None,
+        ):
+            """
+            Parameters
+            ----------
+            pre : list, optional
+                Any operations to run before this imputation at each iteration.
+                The default is None.
+            post : list, optional
+                Any operations to run after this imputation at each iteration.
+                The default is None.
+            pre_initialize : list, optional
+                Any operations to run before this imputation ONLY ONCE before running
+                the first implicate. If it's a function, it will expect the implicate
+                to be passed in. The default is None.
+            """
+            self.pre = Variable._parse_pre_post_function_inputs(pre)
+            self.post = Variable._parse_pre_post_function_inputs(post)
+            self.pre_initialize = Variable._parse_pre_post_function_inputs(
+                pre_initialize
+            )
+
+        def with_pre(self, value) -> Variable.Hooks:
+            return self._with(pre=Variable._parse_pre_post_function_inputs(value))
+
+        def with_post(self, value) -> Variable.Hooks:
+            return self._with(post=Variable._parse_pre_post_function_inputs(value))
+
+        def with_pre_initialize(self, value) -> Variable.Hooks:
+            return self._with(
+                pre_initialize=Variable._parse_pre_post_function_inputs(value)
+            )
+
+    class Predictors(Serializable):
+        """Which predictor variables enter (or are forced into/out of) this variable's model."""
+
+        _save_suffix = "variable.predictors"
+
+        def __init__(
+            self,
+            exclude: list = None,
+            exclude_first_iteration: list = None,
+            require: list = None,
+            joint: dict = None,
+        ):
+            """
+            Parameters
+            ----------
+            exclude : list, optional
+                What to exclude from the model. The default is None.
+            exclude_first_iteration : list, optional
+                The first iteration, it will exclude downstream variables
+                by default, use this to override the default. The default is None.
+            require : list, optional
+                What to include no matter what. The default is None.
+            joint : dict, optional
+                dictionary of key (variable name) value lists/pairs where if the
+                key is selected for the model, then so must the values. The default is None.
+            """
+            if exclude is None:
+                exclude = []
+            self.exclude = exclude
+
+            if exclude_first_iteration is None:
+                exclude_first_iteration = []
+            self.exclude_first_iteration = exclude_first_iteration
+
+            self.require = require
+            self.joint = joint
+
+        def with_exclude(self, value: list | None) -> Variable.Predictors:
+            return self._with(exclude=value if value is not None else [])
+
+        def with_exclude_first_iteration(self, value: list | None) -> Variable.Predictors:
+            return self._with(exclude_first_iteration=value if value is not None else [])
+
+        def with_require(self, value: list | None) -> Variable.Predictors:
+            return self._with(require=value)
+
+        def with_joint(self, value: dict | None) -> Variable.Predictors:
+            return self._with(joint=value)
+
     def __init__(
         self,
         impute_var: str = "",
-        Where: nw.Expr | None = None,
-        Where_impute: nw.Expr | None = None,
-        Where_predict: nw.Expr | None = None,
-        Where_predict_only_when_not_imputed: bool = False,
-        bimpute_if_missing: bool = True,
-        preFunctions: list[
-            Variable.PrePost.Function | Variable.PrePost.NarwhalsExpression | nw.Expr
-        ]
-        | Variable.PrePost.Function
-        | Variable.PrePost.NarwhalsExpression
-        | nw.Expr
-        | None = None,
-        postFunctions: list[
-            Variable.PrePost.Function | Variable.PrePost.NarwhalsExpression | nw.Expr
-        ]
-        | Variable.PrePost.Function
-        | Variable.PrePost.NarwhalsExpression
-        | nw.Expr
-        | None = None,
-        preFunctions_initialize_implicate: list[
-            Variable.PrePost.Function | Variable.PrePost.NarwhalsExpression | nw.Expr
-        ]
-        | Variable.PrePost.Function
-        | Variable.PrePost.NarwhalsExpression
-        | nw.Expr
-        | None = None,
-        predictors_exclude: list = None,
-        predictors_exclude_first_iteration: list = None,
-        predictors_require: list = None,
-        weight: str = "",
-        joint: dict = None,
         header: str = "",
         model: str = "",
+        weight: str = "",
+        modelfunction=None,
+        modeltype: ModelType = None,
+        parameters: dict = None,
         selection: Selection = None,
         preselection: Selection = None,
-        modeltype: ModelType = None,
-        modelfunction=None,
-        parameters: dict = None,
         By: list = None,
+        sample: Variable.Sample = None,
+        hooks: Variable.Hooks = None,
+        predictors: Variable.Predictors = None,
     ):
         """
-
-
         Parameters
         ----------
         impute_var : str
             Variable to be imputed
-        Where : nw.Expr, optional
-            Condition to restrict sample for this imputation. The default is "".
-        Where_impute : nw.Expr, optional
-            Define the set of observations to be imputed, in addition
-            to bimpute_if_missing | Where. The default is "".
-        Where_predict : nw.Expr, optional
-            Define the set of observations for the prediction | Where. The default is "".
-        Where_predict_only_when_not_imputed : bool, optional
-            Predict only if not imputed.  The default is False
-        bimpute_if_missing : bool, optional
-            Make an imputation condition that the variable is initially missing
-        preFunctions : list, optional
-            Any operations to run before this imputation at each iteration. The default is None.
-        postFunctions : list, optional
-            Any operations to run after this imputation at each iteration. The default is None.
-        preFunctions_initialize_implicate: list, optional
-            Any operations to run before this imputation ONLY ONCE before running the first implicate
-            If it's a function, it will expect the implicate to be passed in
-        predictors_exclude : list, optional
-            What to exclude from the model. The default is None.
-        predictors_exclude_first_iteration: list, optional
-            The first iteration, it will exclude downstream variables
-            by default, use this to override the default
-        predictors_require : list, optional
-            What to include no matter what. The default is None.
-        weight : str, optional
-            Weight for the imputation modeling. The default is "".
-        joint : dict, optional
-            dictionary of key (variable name) value lists/pairs where if the
-            key is selected for the model, then so most the values. The default is None.
         header : str, optional
             Just a header to write to the log when this variable comes up. The default is "".
         model : str, optional
             R string formula, Override the "parent" SRMI model?. The default is "" (no).
-        selection : Selection, optional
-            Override the "parent" SRMI selection used?
-            If variable selection is used within the imputation, this class
-                handles it.  The default is no selection
-        preselection : Selection, optional
-            Override the "parent" SRMI selection used?
-            If variable selection is done before the SRMI starts
-                to pre-prune the inputs, this class handles it.
-                The default is no selection
-        modeltype : ModelType, optional
-            Override the "parent" SRMI modeltype?. The default is "" (no).
+        weight : str, optional
+            Weight for the imputation modeling. The default is "".
         modelfunction : function delegate, optional
             Override modeltype completely and just run a custom imputation function, optional
             The function arguments are
@@ -332,10 +389,27 @@ class Variable(Serializable):
                 weight:str - weight variable?
                 sub_log:logging - to write the imputation output to a separate file in the
                     implicate folder
+        modeltype : ModelType, optional
+            Override the "parent" SRMI modeltype?. The default is "" (no).
         parameters : dict, optional
             Override the "parent" SRMI model parameters?. The default is "" (no).
+        selection : Selection, optional
+            Override the "parent" SRMI selection used?
+            If variable selection is used within the imputation, this class
+                handles it.  The default is no selection
+        preselection : Selection, optional
+            Override the "parent" SRMI selection used?
+            If variable selection is done before the SRMI starts
+                to pre-prune the inputs, this class handles it.
+                The default is no selection
         By : list, optional
             Variable list for by groups
+        sample : Variable.Sample, optional
+            Which rows this variable's imputation applies to. The default is Variable.Sample().
+        hooks : Variable.Hooks, optional
+            Pre/post-imputation operations. The default is Variable.Hooks().
+        predictors : Variable.Predictors, optional
+            Predictor inclusion/exclusion control. The default is Variable.Predictors().
 
         Returns
         -------
@@ -346,48 +420,11 @@ class Variable(Serializable):
         self.impute_var = impute_var
         self.header = header
 
-        #   Validate that the wheres are all either strings (for SQL filtering)
-        #       or narwhals expressions (for .filter) - deprecated as only using expressions
-        wheres = [Where, Where_impute, Where_predict]
-        #   self.b_where_strings = all(type(wherei) is str or wherei is None for wherei in wheres)
-        #   b_where_expressions = all(type(wherei) is nw.Expr or wherei is None for wherei in wheres)
+        self.sample = sample if sample is not None else Variable.Sample()
+        self.hooks = hooks if hooks is not None else Variable.Hooks()
+        self.predictors = predictors if predictors is not None else Variable.Predictors()
 
-        # if not (self.b_where_strings or b_where_expressions):
-        #     where_types = {
-        #                 "Where":type(Where),
-        #                 "Where_impute":type(Where_impute),
-        #                 "Where_predict":type(Where_predict)
-        #         }
-        #     message = f"Must pass where clauses as all strings or all narwhals expressions, passed as {where_types}"
-        #     logger.error(message)
-        #     raise Exception(message)
-
-        self.Where = Where
-        self.Where_impute_original = Where_impute
-        self.Where_impute = Where_impute
-        self.Where_predict = Where_predict
-        self.Where_predict_only_when_not_imputed = Where_predict_only_when_not_imputed
-
-        self.bimpute_if_missing = bimpute_if_missing
-
-        self.preFunctions = self._parse_pre_post_function_inputs(preFunctions)
-        self.postFunctions = self._parse_pre_post_function_inputs(postFunctions)
-        self.preFunctions_initialize_implicate = self._parse_pre_post_function_inputs(
-            preFunctions_initialize_implicate
-        )
-
-        if predictors_exclude is None:
-            predictors_exclude = []
-        self.predictors_exclude = predictors_exclude
-
-        if predictors_exclude_first_iteration is None:
-            predictors_exclude_first_iteration = []
-        self.predictors_exclude_first_iteration = predictors_exclude_first_iteration
-
-        self.predictors_require = predictors_require
         self.weight = weight
-        self.joint = joint
-        self.header = header
         self.model = model
 
         self.selection = selection
@@ -420,8 +457,188 @@ class Variable(Serializable):
             #   logger.info(f"      Setting selection to {Selection.Method.No} for {self.impute_var}, no selection for {self.modeltype}")
             self.selection = Selection(method=Selection.Method.No)
 
+    @classmethod
+    def from_legacy(
+        cls,
+        impute_var: str = "",
+        Where: nw.Expr | None = None,
+        Where_impute: nw.Expr | None = None,
+        Where_predict: nw.Expr | None = None,
+        Where_predict_only_when_not_imputed: bool = False,
+        bimpute_if_missing: bool = True,
+        preFunctions=None,
+        postFunctions=None,
+        preFunctions_initialize_implicate=None,
+        predictors_exclude: list = None,
+        predictors_exclude_first_iteration: list = None,
+        predictors_require: list = None,
+        weight: str = "",
+        joint: dict = None,
+        header: str = "",
+        model: str = "",
+        selection: Selection = None,
+        preselection: Selection = None,
+        modeltype: ModelType = None,
+        modelfunction=None,
+        parameters: dict = None,
+        By: list = None,
+    ) -> Variable:
+        """
+        Construct a Variable from the pre-refactor flat-kwarg signature.
+
+        Migration aid only - new code should pass sample=Variable.Sample(...),
+        hooks=Variable.Hooks(...), predictors=Variable.Predictors(...) directly
+        to Variable() instead.
+        """
+        return cls(
+            impute_var=impute_var,
+            header=header,
+            model=model,
+            weight=weight,
+            modelfunction=modelfunction,
+            modeltype=modeltype,
+            parameters=parameters,
+            selection=selection,
+            preselection=preselection,
+            By=By,
+            sample=Variable.Sample(
+                Where=Where,
+                Where_impute=Where_impute,
+                Where_predict=Where_predict,
+                Where_predict_only_when_not_imputed=Where_predict_only_when_not_imputed,
+                bimpute_if_missing=bimpute_if_missing,
+            ),
+            hooks=Variable.Hooks(
+                pre=preFunctions,
+                post=postFunctions,
+                pre_initialize=preFunctions_initialize_implicate,
+            ),
+            predictors=Variable.Predictors(
+                exclude=predictors_exclude,
+                exclude_first_iteration=predictors_exclude_first_iteration,
+                require=predictors_require,
+                joint=joint,
+            ),
+        )
+
+    #####################################################
+    #   Flat-attribute compatibility properties - BEGIN
+    #       Where/preFunctions/predictors_exclude/etc. are read (and in some
+    #       cases mutated) throughout this file plus implicate.py and impute.py.
+    #       These properties redirect that existing behavior onto the new
+    #       self.sample/self.hooks/self.predictors objects so none of those
+    #       call sites needed to change - only construction did.
+    #####################################################
+    @property
+    def Where(self):
+        return self.sample.Where
+
+    @Where.setter
+    def Where(self, value):
+        self.sample.Where = value
+
+    @property
+    def Where_impute(self):
+        return self.sample.Where_impute
+
+    @Where_impute.setter
+    def Where_impute(self, value):
+        self.sample.Where_impute = value
+
+    @property
+    def Where_impute_original(self):
+        return self.sample.Where_impute_original
+
+    @Where_impute_original.setter
+    def Where_impute_original(self, value):
+        self.sample.Where_impute_original = value
+
+    @property
+    def Where_predict(self):
+        return self.sample.Where_predict
+
+    @Where_predict.setter
+    def Where_predict(self, value):
+        self.sample.Where_predict = value
+
+    @property
+    def Where_predict_only_when_not_imputed(self):
+        return self.sample.Where_predict_only_when_not_imputed
+
+    @Where_predict_only_when_not_imputed.setter
+    def Where_predict_only_when_not_imputed(self, value):
+        self.sample.Where_predict_only_when_not_imputed = value
+
+    @property
+    def bimpute_if_missing(self):
+        return self.sample.bimpute_if_missing
+
+    @bimpute_if_missing.setter
+    def bimpute_if_missing(self, value):
+        self.sample.bimpute_if_missing = value
+
+    @property
+    def preFunctions(self):
+        return self.hooks.pre
+
+    @preFunctions.setter
+    def preFunctions(self, value):
+        self.hooks.pre = value
+
+    @property
+    def postFunctions(self):
+        return self.hooks.post
+
+    @postFunctions.setter
+    def postFunctions(self, value):
+        self.hooks.post = value
+
+    @property
+    def preFunctions_initialize_implicate(self):
+        return self.hooks.pre_initialize
+
+    @preFunctions_initialize_implicate.setter
+    def preFunctions_initialize_implicate(self, value):
+        self.hooks.pre_initialize = value
+
+    @property
+    def predictors_exclude(self):
+        return self.predictors.exclude
+
+    @predictors_exclude.setter
+    def predictors_exclude(self, value):
+        self.predictors.exclude = value
+
+    @property
+    def predictors_exclude_first_iteration(self):
+        return self.predictors.exclude_first_iteration
+
+    @predictors_exclude_first_iteration.setter
+    def predictors_exclude_first_iteration(self, value):
+        self.predictors.exclude_first_iteration = value
+
+    @property
+    def predictors_require(self):
+        return self.predictors.require
+
+    @predictors_require.setter
+    def predictors_require(self, value):
+        self.predictors.require = value
+
+    @property
+    def joint(self):
+        return self.predictors.joint
+
+    @joint.setter
+    def joint(self, value):
+        self.predictors.joint = value
+
+    #####################################################
+    #   Flat-attribute compatibility properties - END
+    #####################################################
+
+    @staticmethod
     def _parse_pre_post_function_inputs(
-        self,
         functions: list[
             Variable.PrePost.Function
             | Variable.PrePost.NarwhalsExpression
@@ -806,64 +1023,3 @@ class Variable(Serializable):
             where_index += 1
 
         return lazy_backend(nw.from_native(df).lazy().collect(), nw_type).to_native()
-
-    def split_when_missing(
-        variable: Variable, exclude_for_missing: list[str]
-    ) -> list[Variable]:
-        # """
-        # For an impute variable, split it into two impute stages
-        #     where the first is when it is not missing and it can use the
-        #     model as is and the second handles when it is missing by dropping
-        #     any other variables that will be missing with this variable.
-        #     An example of this is if ern_yn is imputed to True in the CPS ASEC,
-        #     all the downstream earnings variables will be missing simultaneously
-        #     and can't be used in the imputation (some may be derived)
-        # Parameters
-        # ----------
-        # variable : Variable
-        #     Variable information
-        # exclude_for_missing : list[str]
-        #     List of model variables to exclude when variable.impute_var is missing
-
-        # Returns
-        # -------
-        # list[Variable]
-
-        # """
-
-        vars_out = []
-
-        variable_not_missing = deepcopy(variable)
-
-        if variable.b_where_strings:
-            if not variable.Where_impute:
-                variable.Where_impute = f"{variable.impute_var} is null"
-                variable_not_missing.Where_impute = f"{variable.impute_var} is not null"
-            else:
-                variable.Where_impute = (
-                    f"({variable.Where_impute}) and ({variable.impute_var} is null)"
-                )
-                variable_not_missing.Where_impute = f"({variable_not_missing.Where_impute}) and ({variable.impute_var} is not null)"
-        else:
-            if variable.Where_impute is None:
-                variable.Where_impute = nw.col(variable.impute_var).is_null()
-                variable_not_missing.Where_impute = ~nw.col(
-                    variable.impute_var
-                ).is_null()
-            else:
-                variable.Where_impute = (
-                    variable.Where_impute & nw.col(variable.impute_var).is_null()
-                )
-                variable_not_missing.Where_impute = (
-                    variable_not_missing.Where_impute
-                    & ~nw.col(variable.impute_var).is_null()
-                )
-
-        variable.header += " with missing values"
-        variable_not_missing.header += " with no missing values"
-        variable.predictors_exclude.extend(exclude_for_missing)
-
-        vars_out.append(variable_not_missing)
-        vars_out.append(variable)
-
-        return vars_out

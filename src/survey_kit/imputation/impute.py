@@ -39,9 +39,6 @@ from ..statistics.basic_calculations import calculate_by
 from ..statistics.statistics import Statistics
 from ..statistics.calculator import StatCalculator
 
-
-from ..utilities.dataframe import NarwhalsType, join_list, concat_wrapper
-
 from ..utilities.random import RandomNumberGenerator, generate_seed
 
 from ..utilities.rounding import drb_round_table, first_digit_position
@@ -113,7 +110,7 @@ class Impute:
                 del logging.root.manager.loggerDict["SRMI_Impute_Variable"]
             self.logging = set_logging(
                 path_log=os.path.normpath(path_diagnostics),
-                to_console=not self.parent.parallel,
+                to_console=not self.parent.parallel.enabled,
                 force=True,
                 name="SRMI_Impute_Variable",
                 level=logging.INFO,
@@ -208,7 +205,10 @@ class Impute:
 
             [fb, _, _] = self.variable.process_model(df=self.df, NoConstant=True)
             selected_model = self.variable.selection.run(
-                df=self.df, y=self.variable.impute_var, formula=fb.formula
+                df=self.df,
+                y=self.variable.impute_var,
+                formula=fb.formula,
+                weight=self.weight,
             )
 
             self.variable = deepcopy(self.original_variable)
@@ -1730,11 +1730,25 @@ class Impute:
             )
         )
 
+        #   For Logit, model.predict() returns the hard 0/1 class label, not a
+        #   probability - PMM matching and the "Random" error draw both need the
+        #   continuous predicted probability (P(y=1|X)), so use predict_proba()
+        #   instead. OLS has no predict_proba() and model.predict() is already
+        #   the continuous yhat we want.
+        if regmodel == Parameters.RegressionModel.Logit:
+
+            def _predict(X):
+                return model.predict_proba(X)[:, 1]
+        else:
+
+            def _predict(X):
+                return model.predict(X)
+
         predict_model = pl.DataFrame(
-            model.predict(df_model_mm), schema=dict(___prediction=pl.Float64)
+            _predict(df_model_mm), schema=dict(___prediction=pl.Float64)
         )
         predict_impute = pl.DataFrame(
-            model.predict(df_impute_mm), schema=dict(___prediction=pl.Float64)
+            _predict(df_impute_mm), schema=dict(___prediction=pl.Float64)
         )
 
         del df_model_mm
@@ -1755,7 +1769,7 @@ class Impute:
 
         if df_pmm_leave_out is not None:
             predict_leave_out = pl.DataFrame(
-                model.predict(df_pmm_leave_out_mm),
+                _predict(df_pmm_leave_out_mm),
                 schema=dict(___prediction=pl.Float64),
             )
 

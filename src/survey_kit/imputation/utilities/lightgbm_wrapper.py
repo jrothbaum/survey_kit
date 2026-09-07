@@ -206,7 +206,7 @@ class Survey_kit_Lightgbm:
             fb.exclude_interactions(b_exclude_powers=False)
 
         #   Do we need to get the model matrix from R?
-        b_need_mm = fb.formula.find("(") > 0 or fb.formula.find(":") > 0
+        b_need_mm = fb.needs_model_matrix()
 
         if b_need_mm:
             #       Get analysis dataset (the model matrix)
@@ -441,7 +441,7 @@ class Survey_kit_Lightgbm:
                 x_test = nw.from_native(x_test).drop(self.weight).to_native()
                 extra_test["weight"] = nw.from_native(weight_test).to_numpy().ravel()
 
-            self.train_y = y_test
+            self.test_y = y_test
             self.test_data = lgb.Dataset(
                 (
                     nw.from_native(x_test)
@@ -811,12 +811,10 @@ class Survey_kit_Lightgbm:
         params["test_size"] = 0
         params["min_data_per_group"] = 25
 
-        if (
-            os.environ["OMP_NUM_THREADS"] is not None
-            and os.environ["OMP_NUM_THREADS"] != ""
-        ):
+        omp_num_threads = os.environ.get("OMP_NUM_THREADS", "")
+        if omp_num_threads != "":
             try:
-                cpus = int(os.environ["OMP_NUM_THREADS"])
+                cpus = int(omp_num_threads)
                 params["num_threads"] = max(1, cpus)
             except:
                 pass
@@ -833,12 +831,27 @@ class Tuner:
         pass
 
     class Objectives(Enum):
-        binary_accuracy = accuracy_score
+        #   Values must NOT be plain functions - Enum silently treats
+        #   function-valued (or otherwise descriptor-like, e.g. functools.partial
+        #   on newer Python) class attributes as methods rather than registering
+        #   them as real members, so string values are used here instead and the
+        #   actual scoring function is looked up via _OBJECTIVE_SCORERS below.
+        binary_accuracy = "binary_accuracy"
         #   Same Sum/Mean squared error
-        sse = mean_squared_error
-        mse = mean_squared_error
+        sse = "sse"
+        mse = "mse"
+        mae = "mae"
 
-        mae = mean_absolute_error
+        def __call__(self, *args, **kwargs):
+            return _OBJECTIVE_SCORERS[self](*args, **kwargs)
+
+
+_OBJECTIVE_SCORERS = {
+    Tuner.Objectives.binary_accuracy: accuracy_score,
+    Tuner.Objectives.sse: mean_squared_error,
+    Tuner.Objectives.mse: mean_squared_error,
+    Tuner.Objectives.mae: mean_absolute_error,
+}
 
 
 class Tuner_optuna:
@@ -891,7 +904,7 @@ class Tuner_optuna:
             if bDefaultSampler:
                 logger.info("Setting default optuna sampler: TPESampler")
 
-            if self.objective in [tuner_objectives.binary_accuracy]:
+            if self.objective == Tuner.Objectives.binary_accuracy:
                 direction = "maximize"
             else:
                 direction = "minimize"
@@ -967,7 +980,7 @@ class Tuner_optuna:
         params = deepcopy(params_lgbm)
 
         def _objective(trial):
-            trial_hyperparams = tuner_optuna._optuna_ranges(trial, self.hyperparameters)
+            trial_hyperparams = Tuner_optuna._ranges(trial, self.hyperparameters)
             for keyi, valuei in trial_hyperparams.items():
                 params[keyi] = trial_hyperparams[keyi]
 
@@ -987,158 +1000,3 @@ class Tuner_optuna:
 
         return _objective
 
-
-class tuner_objectives(Enum):
-    binary_accuracy = accuracy_score
-    #   Same Sum/Mean squared error
-    sse = mean_squared_error
-    mse = mean_squared_error
-
-    mae = mean_absolute_error
-
-
-class tuner_optuna:
-    def __init__(
-        self,
-        n_trials: int = 10,
-        params: dict | None = None,
-        hyperparameters: dict | None = None,
-        study: optuna.study = None,
-        objective: tuner_objectives = tuner_objectives.sse,
-        path_save: str = "",
-        test_size: float = 0.5,
-        nfold: int = 3,
-    ):
-        if params is None:
-            params = {}
-        if hyperparameters is None:
-            hyperparameters = {}
-
-        self.n_trials = n_trials
-        self.params = params
-        self.hyperparameters = hyperparameters
-        self.objective = objective
-        self.study = study
-        self.path_save = path_save
-        self.test_size = test_size
-        self.nfold = nfold
-
-    def parameters(
-        self,
-        study: optuna.study | None = None,
-        sampler: optuna.sampler | None = None,
-        #   Pass the callbacks
-        callbacks: list | None = None,
-        seed: int = 0,
-        #   Or pass callback items
-        n_early_stopping: int | None = None,
-        n_log_evaluation: int | None = None,
-    ):
-        if seed == 0:
-            seed = random.randint(1, 2**32 - 1)
-
-        bDefaultSampler = False
-        if sampler is None:
-            sampler = optuna.samplers.TPESampler(seed=seed)
-
-            bDefaultSampler = True
-
-        if self.study is None:
-            if bDefaultSampler:
-                logger.info("Setting default optuna sampler: TPESampler")
-
-            if self.objective in [tuner_objectives.binary_accuracy]:
-                direction = "maximize"
-            else:
-                direction = "minimize"
-            self.study = optuna.create_study(sampler=sampler, direction=direction)
-        if callbacks is None:
-            callbacks = []
-
-            if n_early_stopping is not None:
-                callbacks.append(early_stopping(n_early_stopping))
-
-            if n_log_evaluation is not None:
-                callbacks.append(log_evaluation(n_log_evaluation))
-
-        if len(callbacks) > 0:
-            self.params["callbacks"] = callbacks
-        if seed > 0:
-            self.params["optuna_seed"] = seed
-
-    def _optuna_ranges(trial=None, params: dict = None):
-        if params is None:
-            params = {}
-        else:
-            params = deepcopy(params)
-
-        valid_options = Survey_kit_Lightgbm._feature_characteristics(tunable_only=True)
-
-        invalid_passed = list(
-            set(list(params.keys())).difference(list(valid_options.keys()))
-        )
-
-        if len(invalid_passed) > 0:
-            message = f"Invalid option(s) passed: {', '.join(invalid_passed)}\n"
-            message += (
-                f"               Acceptable options include: {', '.join(valid_options)}"
-            )
-
-            raise Exception(message)
-
-        message = ""
-        for key, value in params.items():
-            [typei, _] = valid_options[key]
-
-            if typei is int:
-                if type(value[0]) is not int or type(value[1]) is not int:
-                    message += f"               Invalid value passed for {key}: passed [{value[0]},{value[1]}] but expects {typei}\n"
-                else:
-                    params[key] = trial.suggest_int(key, value[0], value[1])
-            if typei is float:
-                if (type(value[0]) is not int and type(value[0]) is not float) or (
-                    type(value[1]) is not int and type(value[1]) is not float
-                ):
-                    message += f"               Invalid value passed for {key}: passed [{value[0]},{value[1]}] but expects {typei}\n"
-                else:
-                    if len(value) > 2:
-                        params[key] = trial.suggest_float(
-                            key, value[0], value[1], log=value[2]
-                        )
-                    else:
-                        params[key] = trial.suggest_float(key, value[0], value[1])
-
-        if message != "":
-            message = f"Invalid hyperparameter range input:\n{message}"
-            raise Exception(message)
-
-        return params
-
-    def get_objective(
-        self,
-        d_train: lgb.basic.Dataset,
-        d_test: lgb.basic.Dataset,
-        params_lgbm: dict = None,
-    ):
-        params = deepcopy(params_lgbm)
-
-        def _objective(trial):
-            trial_hyperparams = tuner_optuna._optuna_ranges(trial, self.hyperparameters)
-            for keyi, valuei in trial_hyperparams.items():
-                params[keyi] = trial_hyperparams[keyi]
-
-            if "num_iterations" in params.keys():
-                num_boost_round = params["num_iterations"]
-                del params["num_iterations"]
-            else:
-                num_boost_round = 100
-
-            gbm_model = lgb.train(
-                params=params, train_set=d_train, num_boost_round=num_boost_round
-            )
-
-            preds = gbm_model.predict(d_test.data)
-
-            return self.objective(d_test.label, preds)
-
-        return _objective

@@ -237,27 +237,32 @@ parameters_lgbm2 = Parameters.LightGBM(
 
 v_gbm2 = Variable(
     impute_var="var_gbm2",
-    Where=nw.col("var_gbm1"),
-    #   Needed in case var_gbm1 changes between iterations
-    Where_predict=(nw.col("var_gbm2") != 0),
+    sample=Variable.Sample(
+        Where=nw.col("var_gbm1"),
+        #   Needed in case var_gbm1 changes between iterations
+        Where_predict=(nw.col("var_gbm2") != 0),
+    ),
     model=["var_*", "var4", "var3", "var5", "unrelated_*", "repeat_*"],
     modeltype=Variable.ModelType.LightGBM,
     parameters=parameters_lgbm2,
-    postFunctions=[
-        (
-            nw.when(nw.col("var_gbm1"))
-            .then(nw.col("var_gbm2"))
-            .otherwise(nw.lit(0))
-            .alias("var_gbm2")
-        ),
-        Variable.PrePost.Function(
-            recalculate_interaction,
-            parameters=dict(var1="var_gbm1", var2="var_gbm2", name="var_gbm12"),
-        ),
-        Variable.PrePost.Function(
-            square_var, parameters=dict(var_to_square="var_gbm2", name="var_gbm2_sq")
-        ),
-    ],
+    hooks=Variable.Hooks(
+        post=[
+            (
+                nw.when(nw.col("var_gbm1"))
+                .then(nw.col("var_gbm2"))
+                .otherwise(nw.lit(0))
+                .alias("var_gbm2")
+            ),
+            Variable.PrePost.Function(
+                recalculate_interaction,
+                parameters=dict(var1="var_gbm1", var2="var_gbm2", name="var_gbm12"),
+            ),
+            Variable.PrePost.Function(
+                square_var,
+                parameters=dict(var_to_square="var_gbm2", name="var_gbm2_sq"),
+            ),
+        ]
+    ),
 )
 
 vars_impute.append(v_gbm2)
@@ -286,20 +291,24 @@ parameters_lgbm3 = Parameters.LightGBM(
 
 v_gbm3 = Variable(
     impute_var="var_gbm3",
-    Where=nw.col("var_gbm1"),
-    #   Needed in case var_gbm1 changes between iterations
-    Where_predict=(nw.col("var_gbm3") != 0),
+    sample=Variable.Sample(
+        Where=nw.col("var_gbm1"),
+        #   Needed in case var_gbm1 changes between iterations
+        Where_predict=(nw.col("var_gbm3") != 0),
+    ),
     model=["var_*", "var4", "var3", "var5", "unrelated_*", "repeat_*"],
     modeltype=Variable.ModelType.LightGBM,
     parameters=parameters_lgbm3,
-    postFunctions=[
-        (
-            nw.when(nw.col("var_gbm1"))
-            .then(nw.col("var_gbm3"))
-            .otherwise(nw.lit(0))
-            .alias("var_gbm3")
-        )
-    ],
+    hooks=Variable.Hooks(
+        post=[
+            (
+                nw.when(nw.col("var_gbm1"))
+                .then(nw.col("var_gbm3"))
+                .otherwise(nw.lit(0))
+                .alias("var_gbm3")
+            )
+        ]
+    ),
 )
 
 vars_impute.append(v_gbm3)
@@ -310,14 +319,14 @@ logger.info("Set up the imputation")
 srmi = SRMI(
     df=df,
     variables=vars_impute,
-    n_implicates=2,
-    n_iterations=2,
-    parallel=False,
     index=["index"],
-    modeltype=Variable.ModelType.pmm,
-    bayesian_bootstrap=True,
-    path_model=f"{config.path_temp_files}/py_srmi_test_gbm",
-    force_start=True,
+    replication=SRMI.Replication(n_implicates=2, n_iterations=2),
+    parallel=SRMI.Parallel(enabled=False),
+    bootstrap=SRMI.Bootstrap(enabled=True),
+    defaults=SRMI.Defaults(modeltype=Variable.ModelType.pmm),
+    storage=SRMI.Storage(
+        path_model=f"{config.path_temp_files}/py_srmi_test_gbm", force_start=True
+    ),
 )
 
 # %%

@@ -909,6 +909,30 @@ class FormulaBuilder:
 
         return out
 
+    def needs_model_matrix(self=None, formula: str = "") -> bool:
+        """
+        Whether a formula requires building an explicit model matrix
+        (i.e. it has a transformation "(" or an interaction ":").
+
+        Parameters
+        ----------
+        formula : str, optional
+            Formula string. If empty, uses self.formula. Default is "".
+
+        Returns
+        -------
+        bool
+            True if the formula contains "(" or ":".
+        """
+        if type(self) is str:
+            formula = self
+            self = None
+
+        if self is not None and formula == "":
+            formula = self.formula
+
+        return formula.find("(") >= 0 or formula.find(":") >= 0
+
     def lhs(self=None, formula: str = "") -> str:
         """
         Get left-hand side of formula.
@@ -1055,6 +1079,209 @@ class FormulaBuilder:
         self.formula = self.formula.replace("~1+", "~")
         self.formula = self.formula.replace("~0+", "~")
         self.formula = self.formula.replace("~", "~0+")
+
+    def _is_factor(clause: str) -> bool:
+        return clause.startswith("C(")
+
+    def _is_scale(clause: str) -> bool:
+        return clause.startswith("scale(") or clause.startswith("center(")
+
+    def recode_to_continuous(
+        self=None,
+        df: IntoFrameT | None = None,
+        formula: str = "",
+        remove_factor: bool = True,
+        remove_scale: bool = True,
+    ) -> tuple[str, list[str]]:
+        """
+        Strip C(...)/scale(...)/center(...) wrappers down to the bare
+        variable, for models (e.g. tree-based ones like LightGBM) that
+        want the raw column rather than dummy-expansion or standardization.
+
+        Parameters
+        ----------
+        df : IntoFrameT | None, optional
+            Reference dataframe. Default is None.
+        formula : str, optional
+            Formula string. If empty, uses self.formula. Default is "".
+        remove_factor : bool, optional
+            Strip C(...) wrappers. Default is True.
+        remove_scale : bool, optional
+            Strip scale(...)/center(...) wrappers. Default is True.
+
+        Returns
+        -------
+        tuple[str, list[str]]
+            The recoded formula, and the list of variables that had a
+            C(...) wrapper removed (so the caller can mark them as
+            categorical instead of continuous).
+        """
+        if self is not None:
+            if formula == "":
+                formula = self.formula
+        else:
+            self = FormulaBuilder(df=df, formula=formula)
+
+        #   It's easier with the expanded formula
+        self.expand()
+        formula = self.formula
+
+        #   Separate into subclauses
+        sides = formula.split("~")
+        if len(sides) == 2:
+            lhs = sides[0]
+            rhs = sides[1]
+        else:
+            lhs = ""
+            rhs = sides[0]
+
+        subclauses = rhs.split("+")
+
+        processed_rhs = ""
+        recoded_factors = []
+        for clausei in subclauses:
+            if ":" in clausei:
+                #   Interaction
+                interaction = ""
+                for subi in clausei.split(":"):
+                    if interaction != "":
+                        colon = ":"
+                    else:
+                        colon = ""
+
+                    if FormulaBuilder._is_factor(subi):
+                        if remove_factor:
+                            subi = FormulaBuilder.columns_from_formula(
+                                formula=f"~{subi}"
+                            )[0]
+                            recoded_factors.append(subi)
+                    elif FormulaBuilder._is_scale(subi):
+                        if remove_scale:
+                            subi = FormulaBuilder.columns_from_formula(
+                                formula=f"~{subi}"
+                            )[0]
+                    interaction += f"{colon}{subi}"
+
+                processed_rhs += f"+{interaction}"
+            else:
+                if FormulaBuilder._is_factor(clausei):
+                    if remove_factor:
+                        clausei = FormulaBuilder.columns_from_formula(
+                            formula=f"~{clausei}"
+                        )[0]
+                        recoded_factors.append(clausei)
+                elif FormulaBuilder._is_scale(clausei):
+                    if remove_scale:
+                        clausei = FormulaBuilder.columns_from_formula(
+                            formula=f"~{clausei}"
+                        )[0]
+
+                processed_rhs += f"+{clausei}"
+
+        #   Get rid of leading +
+        processed_rhs = processed_rhs[1:]
+        output = f"{lhs}~{processed_rhs}"
+
+        self.formula = output
+
+        #   Remove duplicates from recoded_factors, keeping first-seen order
+        seen = set()
+        recoded_factors_deduped = []
+        for vari in recoded_factors:
+            if vari not in seen:
+                seen.add(vari)
+                recoded_factors_deduped.append(vari)
+
+        return (output, recoded_factors_deduped)
+
+    def interactions_with_cols_to_dict(
+        self=None,
+        formula: str = "",
+        df: IntoFrameT | None = None,
+        col_check: list = None,
+    ) -> dict:
+        """
+        For each column in col_check, find every formula subclause (the bare
+        column itself, or any interaction term) that references it.
+
+        Parameters
+        ----------
+        formula : str, optional
+            Formula string. If empty, uses self.formula. Default is "".
+        df : IntoFrameT | None, optional
+            Reference dataframe. Default is None.
+        col_check : list, optional
+            Columns to check for. Default is None.
+
+        Returns
+        -------
+        dict
+            {column: [subclauses referencing it]} for each column in col_check.
+        """
+        if self is not None:
+            if df is None:
+                df = self.df
+            if formula == "":
+                formula = self.formula
+        else:
+            self = FormulaBuilder(df=df, formula=formula)
+
+        self.expand()
+
+        #   Separate into subclauses
+        sides = self.formula.split("~")
+        if len(sides) == 2:
+            rhs = sides[1]
+        else:
+            rhs = sides[0]
+
+        subclauses = rhs.split("+")
+
+        interactions = {coli: [] for coli in col_check}
+        for clausei in subclauses:
+            cols_in_clausei = FormulaBuilder.columns_from_formula(formula=f"~{clausei}")
+            for coli in col_check:
+                if coli in cols_in_clausei:
+                    interactions[coli].append(clausei)
+
+        return interactions
+
+    def interactions_with_cols_to_list(
+        self=None,
+        formula: str = "",
+        df: IntoFrameT | None = None,
+        col_check: list = None,
+    ) -> list:
+        """
+        Flattened, deduplicated version of interactions_with_cols_to_dict -
+        every formula subclause that references any column in col_check.
+
+        Parameters
+        ----------
+        formula : str, optional
+            Formula string. If empty, uses self.formula. Default is "".
+        df : IntoFrameT | None, optional
+            Reference dataframe. Default is None.
+        col_check : list, optional
+            Columns to check for. Default is None.
+
+        Returns
+        -------
+        list
+            Subclauses referencing any column in col_check.
+        """
+        interactions_dict = FormulaBuilder.interactions_with_cols_to_dict(
+            self=self, formula=formula, df=df, col_check=col_check
+        )
+
+        outputs = []
+        for valuei in interactions_dict.values():
+            outputs.extend(valuei)
+
+        #   Remove duplicates and return
+        return _columns_original_order(
+            columns_unordered=list(set(outputs)), columns_ordered=outputs
+        )
 
     def expand(self=None, formula: str = ""):
         """

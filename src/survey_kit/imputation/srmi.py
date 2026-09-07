@@ -46,71 +46,27 @@ class SRMI(Serializable):
     This class manages the complete SRMI process including variable setup, model configuration,
     parallel execution, and result management across multiple implicates and iterations.
 
-    Parameters
-    ----------
-    df : IntoFrameT
-        Data to be used in the imputation
-    variables : list[Variable]
-        Variables to be imputed (as Variable class instances), by default None
-    model : str | list, optional
-        R string formula that is the default for the imputation
-    selection : Selection, optional
-        Variable selection method used within the imputation (if any), by default None
-    preselection : Selection, optional
-        Variable selection done before SRMI starts to pre-prune inputs, by default None
-    modeltype : Variable.ModelType, optional
-        Imputation model type from the ModelType enumeration, by default None
-    parameters : dict, optional
-        Model parameters dictionary, by default None
-    joint : dict, optional
-        Key-value pairs of variables to be included together (i.e. if one is selected
-            in the variable selection step, the other is too), by default None
-    ordered_categorical : list, optional
-        List of categorical variables in model that are ordered, by default None
-            An example would be education (vs. a variable with no ordering like state or county code)
-    seed : int, optional
-        Random seed for replicability, by default 0 (no seed)
-    weight : str, optional
-        Weight variable name for imputation modeling, by default ""
-    n_implicates : int
-        Number of separate implicates to impute
-    n_iterations : int
-        Number of iterations in each implicate
-    bayesian_bootstrap : bool, optional
-        Use Bayesian Bootstrap to account for uncertainty in coefficients, by default True
-    bootstrap_index : list, optional
-        Index variables for resampling in Bayesian Bootstrap (i.e. if you want to resample by household, not person), by default None
-    bootstrap_where : str, optional
-        SQL Condition for keeping observations when resampling, by default ""
-    index : list, optional
-        Columns that uniquely identify observations such as ["h_seq","pppos"], by default None
-    parallel : bool, optional
-        Run implicates in parallel, by default True
-    parallel_variables_per_job : int, optional
-        Number of variables per parallel job (for memory management and to deal with memory leaks, if there are any), by default 0
-    parallel_CallInputs : CallInputs | None, optional
-        Parameters for parallel execution such as memory and CPU allocation, by default None
-    parallel_testing : bool, optional
-        Test parallel jobs without running them, by default False
-    path_model : str, optional
-        Directory to save model data and temporary files
-    model_name : str
-        Model name for continuing existing runs, by default ""
-    force_start : bool, optional
-        Restart imputation even if existing run exists, by default False
-    save_every_variable : bool, optional
-        Save data after each variable is imputed, by default False
-    save_every_iteration : bool, optional
-        Save data after each iteration completes, by default True
-    from_load : bool, optional
-        Flag indicating object created from saved state, by default False
-    imputation_stats : list[str] | None, optional
-        List of statistics to calculate during imputation, by default None
+    Construction groups related settings into sub-objects - see __init__ for the full
+    parameter list:
+
+    df, variables, index, imputation_stats : flat, core settings
+    replication : SRMI.Replication - n_implicates / n_iterations / seed
+    parallel : SRMI.Parallel - enabled / variables_per_job / call_inputs / testing
+    storage : SRMI.Storage - path_model / model_name / force_start /
+        save_every_variable / save_every_iteration
+    bootstrap : SRMI.Bootstrap - enabled / index / where
+    defaults : SRMI.Defaults - weight / model / joint / selection / preselection /
+        modeltype / parameters / ordered_categorical (fallback values applied to each
+        Variable added via AddVariable() when that Variable doesn't specify its own)
+
+    For code still using the pre-refactor flat-kwarg signature (n_implicates=...,
+    bayesian_bootstrap=..., parallel_CallInputs=..., etc.), use SRMI.from_legacy(...)
+    instead of SRMI(...).
 
     Raises
     ------
     Exception
-        If n_implicates < 1 or n_iterations < 1
+        If replication.n_implicates < 1 or replication.n_iterations < 1
         If path equals path_model_new in load_to_continue_prior
 
     Examples
@@ -120,9 +76,8 @@ class SRMI(Serializable):
     >>> srmi = SRMI(
     ...     df=data,
     ...     variables=[var1, var2],
-    ...     n_implicates=5,
-    ...     n_iterations=10,
-    ...     path_model="/path/to/model"
+    ...     replication=SRMI.Replication(n_implicates=5, n_iterations=10),
+    ...     storage=SRMI.Storage(path_model="/path/to/model"),
     ... )
     >>> srmi.run()
 
@@ -131,55 +86,295 @@ class SRMI(Serializable):
     >>> srmi = SRMI(
     ...     df=data,
     ...     variables=vars_list,
-    ...     n_implicates=5,
-    ...     n_iterations=10,
-    ...     parallel=True,
-    ...     parallel_CallInputs=CallInputs(CPUs=4, MemInMB=5000)
+    ...     replication=SRMI.Replication(n_implicates=5, n_iterations=10),
+    ...     parallel=SRMI.Parallel(enabled=True, call_inputs=CallInputs(n_cpu=4, mem_in_mb=5000)),
     ... )
     """
 
     _save_suffix = "srmi"
     _save_exclude_items = ["implicates"]
 
+    class Replication(Serializable):
+        """How many implicates/iterations to run, and the base random seed."""
+
+        _save_suffix = "srmi.replication"
+
+        def __init__(self, n_implicates: int = 0, n_iterations: int = 0, seed: int = 0):
+            """
+            Parameters
+            ----------
+            n_implicates : int
+                Number of separate implicates to impute.
+            n_iterations : int
+                Number of iterations in each implicate.
+            seed : int, optional
+                Random seed for replicability, by default 0 (no seed).
+            """
+            self.n_implicates = n_implicates
+            self.n_iterations = n_iterations
+            self.seed = seed
+
+        def with_n_implicates(self, value: int) -> SRMI.Replication:
+            return self._with(n_implicates=value)
+
+        def with_n_iterations(self, value: int) -> SRMI.Replication:
+            return self._with(n_iterations=value)
+
+        def with_seed(self, value: int) -> SRMI.Replication:
+            return self._with(seed=value)
+
+    class Parallel(Serializable):
+        """Parallel execution settings for running implicates."""
+
+        _save_suffix = "srmi.parallel"
+
+        def __init__(
+            self,
+            enabled: bool = True,
+            variables_per_job: int = 0,
+            call_inputs: CallInputs | None = None,
+            testing: bool = False,
+        ):
+            """
+            Parameters
+            ----------
+            enabled : bool, optional
+                Run implicates in parallel, by default True.
+            variables_per_job : int, optional
+                Number of variables per parallel job (for memory management and to
+                deal with memory leaks, if there are any), by default 0.
+            call_inputs : CallInputs | None, optional
+                Parameters for parallel execution such as memory and CPU allocation,
+                by default None (auto-sized from Config().cpus and n_implicates).
+            testing : bool, optional
+                Test parallel jobs without running them, by default False.
+            """
+            self.enabled = enabled
+            self.variables_per_job = variables_per_job
+            self.call_inputs = call_inputs
+            self.testing = testing
+
+        def with_enabled(self, value: bool) -> SRMI.Parallel:
+            return self._with(enabled=value)
+
+        def with_variables_per_job(self, value: int) -> SRMI.Parallel:
+            return self._with(variables_per_job=value)
+
+        def with_call_inputs(self, value: CallInputs | None) -> SRMI.Parallel:
+            return self._with(call_inputs=value)
+
+        def with_testing(self, value: bool) -> SRMI.Parallel:
+            return self._with(testing=value)
+
+    class Storage(Serializable):
+        """Where/how the imputation model's data and progress are saved."""
+
+        _save_suffix = "srmi.storage"
+
+        #   force_start is a one-time "wipe and restart" instruction for the
+        #   construction call it's passed to - it must never be persisted, or
+        #   replaying it via SRMI.load() (which reconstructs SRMI/Storage through
+        #   this same __init__) would delete the very directory being loaded.
+        _save_exclude_items = ["force_start"]
+
+        def __init__(
+            self,
+            path_model: str = "",
+            model_name: str = "",
+            force_start: bool = False,
+            save_every_variable: bool = False,
+            save_every_iteration: bool = True,
+        ):
+            """
+            Parameters
+            ----------
+            path_model : str, optional
+                Directory to save model data and temporary files.
+            model_name : str, optional
+                Model name for continuing existing runs, by default "".
+            force_start : bool, optional
+                Restart imputation even if existing run exists, by default False.
+                Not persisted - see _save_exclude_items above.
+            save_every_variable : bool, optional
+                Save data after each variable is imputed, by default False.
+            save_every_iteration : bool, optional
+                Save data after each iteration completes, by default True.
+            """
+            self.path_model = path_model
+            self.model_name = model_name
+            self.force_start = force_start
+            self.save_every_variable = save_every_variable
+            self.save_every_iteration = save_every_iteration
+
+        def with_path_model(self, value: str) -> SRMI.Storage:
+            return self._with(path_model=value)
+
+        def with_model_name(self, value: str) -> SRMI.Storage:
+            return self._with(model_name=value)
+
+        def with_force_start(self, value: bool) -> SRMI.Storage:
+            return self._with(force_start=value)
+
+        def with_save_every_variable(self, value: bool) -> SRMI.Storage:
+            return self._with(save_every_variable=value)
+
+        def with_save_every_iteration(self, value: bool) -> SRMI.Storage:
+            return self._with(save_every_iteration=value)
+
+    class Bootstrap(Serializable):
+        """Bayesian Bootstrap settings for accounting for coefficient uncertainty."""
+
+        _save_suffix = "srmi.bootstrap"
+
+        def __init__(
+            self,
+            enabled: bool = True,
+            index: list[str] | None = None,
+            where: str = "",
+        ):
+            """
+            Parameters
+            ----------
+            enabled : bool, optional
+                Use Bayesian Bootstrap to account for uncertainty in coefficients,
+                by default True.
+            index : list, optional
+                Index variables for resampling (i.e. if you want to resample by
+                household, not person), by default None.
+            where : str, optional
+                SQL condition for keeping observations when resampling, by default "".
+            """
+            self.enabled = enabled
+            self.index = index
+            self.where = where
+
+        def with_enabled(self, value: bool) -> SRMI.Bootstrap:
+            return self._with(enabled=value)
+
+        def with_index(self, value: list[str] | None) -> SRMI.Bootstrap:
+            return self._with(index=value)
+
+        def with_where(self, value: str) -> SRMI.Bootstrap:
+            return self._with(where=value)
+
+    class Defaults(Serializable):
+        """
+        Fallback settings applied to each Variable added via AddVariable() when
+        that Variable doesn't specify its own.
+        """
+
+        _save_suffix = "srmi.defaults"
+
+        def __init__(
+            self,
+            weight: str = "",
+            model: str | list = "",
+            joint: dict = None,
+            selection: Selection = None,
+            preselection: Selection = None,
+            modeltype: Variable.ModelType = None,
+            parameters: dict = None,
+            ordered_categorical: list[str] = None,
+        ):
+            """
+            Parameters
+            ----------
+            weight : str, optional
+                Weight variable name for imputation modeling, by default "".
+            model : str | list, optional
+                R string formula that is the default for the imputation.
+            joint : dict, optional
+                Key-value pairs of variables to be included together (i.e. if one is
+                selected in the variable selection step, the other is too), by default None.
+            selection : Selection, optional
+                Variable selection method used within the imputation (if any), by default None.
+            preselection : Selection, optional
+                Variable selection done before SRMI starts to pre-prune inputs, by default None.
+            modeltype : Variable.ModelType, optional
+                Imputation model type from the ModelType enumeration, by default None.
+            parameters : dict, optional
+                Model parameters dictionary, by default None.
+            ordered_categorical : list, optional
+                List of categorical variables in model that are ordered, by default None
+                    An example would be education (vs. a variable with no ordering like
+                    state or county code).
+            """
+            self.weight = weight
+            self.model = model
+            self.joint = joint
+
+            if selection is None:
+                selection = Selection(method=Selection.Method.No)
+            self.selection = selection
+
+            if preselection is None:
+                preselection = Selection(method=Selection.Method.No)
+            self.preselection = preselection
+
+            self.modeltype = modeltype
+            self.parameters = parameters
+            self.ordered_categorical = ordered_categorical
+
+        def with_weight(self, value: str) -> SRMI.Defaults:
+            return self._with(weight=value)
+
+        def with_model(self, value: str | list) -> SRMI.Defaults:
+            return self._with(model=value)
+
+        def with_joint(self, value: dict) -> SRMI.Defaults:
+            return self._with(joint=value)
+
+        def with_selection(self, value: Selection | None) -> SRMI.Defaults:
+            return self._with(
+                selection=value if value is not None else Selection(method=Selection.Method.No)
+            )
+
+        def with_preselection(self, value: Selection | None) -> SRMI.Defaults:
+            return self._with(
+                preselection=value
+                if value is not None
+                else Selection(method=Selection.Method.No)
+            )
+
+        def with_modeltype(self, value: Variable.ModelType) -> SRMI.Defaults:
+            return self._with(modeltype=value)
+
+        def with_parameters(self, value: dict) -> SRMI.Defaults:
+            return self._with(parameters=value)
+
+        def with_ordered_categorical(self, value: list[str]) -> SRMI.Defaults:
+            return self._with(ordered_categorical=value)
+
     def __init__(
         self,
         df: IntoFrameT | None = None,
         variables: list[Variable] = None,
-        model: str | list = "",
-        selection: Selection = None,
-        preselection: Selection = None,
-        modeltype: Variable.ModelType = None,
-        parameters: dict = None,
-        joint: dict = None,
-        ordered_categorical: list[str] = None,
-        seed: int = 0,
-        weight: str = "",
-        n_implicates: int = 0,
-        n_iterations: int = 0,
-        bayesian_bootstrap: bool = True,
-        bootstrap_index: list[str] = None,
-        bootstrap_where: str = "",
         index: list[str] = None,
-        parallel: bool = True,
-        parallel_variables_per_job: int = 0,
-        parallel_CallInputs: CallInputs | None = None,
-        parallel_testing: bool = False,
-        path_model: str = "",
-        model_name: str = "",
-        force_start: bool = False,
-        save_every_variable: bool = False,
-        save_every_iteration: bool = True,
         imputation_stats: list[str] | None = None,
-        from_load: bool = False,
+        replication: SRMI.Replication = None,
+        parallel: SRMI.Parallel = None,
+        storage: SRMI.Storage = None,
+        bootstrap: SRMI.Bootstrap = None,
+        defaults: SRMI.Defaults = None,
     ):
+        self.replication = replication if replication is not None else SRMI.Replication()
+        self.parallel = parallel if parallel is not None else SRMI.Parallel()
+        self.storage = storage if storage is not None else SRMI.Storage()
+        self.bootstrap = bootstrap if bootstrap is not None else SRMI.Bootstrap()
+        self.defaults = defaults if defaults is not None else SRMI.Defaults()
+
         #   Error checking
-        if n_implicates < 1:
-            message = f"Must pass at least 1 implicate (passed {n_implicates})"
+        if self.replication.n_implicates < 1:
+            message = (
+                f"Must pass at least 1 implicate (passed {self.replication.n_implicates})"
+            )
             logger.error(message)
             raise Exception(message)
 
-        if n_iterations < 1:
-            message = f"Must pass at least 1 iteration (passed {n_iterations})"
+        if self.replication.n_iterations < 1:
+            message = (
+                f"Must pass at least 1 iteration (passed {self.replication.n_iterations})"
+            )
             logger.error(message)
             raise Exception(message)
 
@@ -192,33 +387,8 @@ class SRMI(Serializable):
         else:
             self.nw_type = None
 
-        self.model = model
-        if selection is None:
-            selection = Selection(method=Selection.Method.No)
-        self.selection = selection
-        if preselection is None:
-            preselection = Selection(method=Selection.Method.No)
-
-        self.preselection = preselection
-        self.modeltype = modeltype
-        self.parameters = parameters
-        self.joint = joint
-        self.ordered_categorical = ordered_categorical
-        self.seed = seed
-
-        if self.seed > 0:
-            set_seed(self.seed)
-
-        self.weight = weight
-
-        self.n_implicates = n_implicates
-        self.n_iterations = n_iterations
-        self.bayesian_bootstrap = bayesian_bootstrap
-        self.bootstrap_index = bootstrap_index
-        self.bootstrap_where = bootstrap_where
-
-        self.save_every_variable = save_every_variable
-        self.save_every_iteration = save_every_iteration
+        if self.replication.seed > 0:
+            set_seed(self.replication.seed)
 
         # Add an index, if there isn't one
         #   We need one to be able to put the file back together again
@@ -246,71 +416,39 @@ class SRMI(Serializable):
 
             self.index = index
 
-        self.parallel = parallel
-        self.parallel_variables_per_job = parallel_variables_per_job
-
-        if self.parallel and parallel_CallInputs is None:
-            #   Make sure the data is in memory to get the estimated size
-            # file_size = NarwhalsType(self.df).to_polars().lazy().collect().estimated_size(unit="mb")
-
-            # if file_size <= 1_000:
-            #     MemInMB = 5_000
-            # elif file_size <= 10_000:
-            #     MemInMB = 30_000
-            # elif file_size <= 25_000:
-            #     MemInMB = 75_000
-            # elif file_size <= 50_000:
-            #     MemInMB = 125_000
-            # elif file_size <= 75_000:
-            #     MemInMB = 175_000
-            # elif file_size <= 100_000:
-            #     MemInMB = 250_000
-            # elif file_size <= 150_000:
-            #     MemInMB = 350_000
-            # else:
-            #     MemInMB = 500_000
-
-            # if self.parallel_variables_per_job == 0:
-            #     MemInMB = min(self.parallel_variables_per_job*5,500_000)
-            # elif self.parallel_variables_per_job >= 100:
-            #     MemInMB = min(self.parallel_variables_per_job*3,500_000)
-            # elif self.parallel_variables_per_job >= 50:
-            #     MemInMB = min(self.parallel_variables_per_job*2,500_000)
-
+        if self.parallel.enabled and self.parallel.call_inputs is None:
             n_available_cpus = Config().cpus
-            n_parallel_cpus = max(int(n_available_cpus / self.n_implicates), 1)
+            n_parallel_cpus = max(
+                int(n_available_cpus / self.replication.n_implicates), 1
+            )
 
-            self.parallel_CallInputs = CallInputs(
+            self.parallel.call_inputs = CallInputs(
                 call_type=CallTypes.shell,
                 n_cpu=n_parallel_cpus,
-                process_limit=min(n_available_cpus, self.n_implicates),
+                process_limit=min(n_available_cpus, self.replication.n_implicates),
             )
-        else:
-            self.parallel_CallInputs = parallel_CallInputs
-        self.parallel_testing = parallel_testing
 
         self.imputation_stats = imputation_stats
 
         self.setup_complete = False
 
         #   No model path, use a temporary one (with temp, can't really continue)
-        if path_model == "":
+        if self.storage.path_model == "":
             if Config().path_temp_files == "":
-                message = "You must pass in a path to save the imputation files to (path_model)"
+                message = "You must pass in a path to save the imputation files to (storage.path_model)"
                 logger.error(message)
                 raise Exception(message)
             else:
-                path_model = Config().path_temp_with_random()
+                self.storage.path_model = Config().path_temp_with_random()
 
         #   For safety against accidental deletes, file path has .srmi suffix
-        if not path_model.endswith(".srmi"):
-            path_model = path_model + ".srmi"
-        self.path_model = path_model
+        if not self.storage.path_model.endswith(".srmi"):
+            self.storage.path_model = self.storage.path_model + ".srmi"
 
         #   Force start? - then delete any saved data
-        if os.path.isdir(self.path_model) and force_start:
-            logger.info(f"Removing existing directory {self.path_model}")
-            shutil.rmtree(self.path_model)
+        if os.path.isdir(self.storage.path_model) and self.storage.force_start:
+            logger.info(f"Removing existing directory {self.storage.path_model}")
+            shutil.rmtree(self.storage.path_model)
 
         self.variables = []
         if variables is not None:
@@ -322,6 +460,80 @@ class SRMI(Serializable):
         #   Defaults to false
         self.is_continuing_srmi = False
         self.continuing_cols = []
+
+    @classmethod
+    def from_legacy(
+        cls,
+        df: IntoFrameT | None = None,
+        variables: list[Variable] = None,
+        model: str | list = "",
+        selection: Selection = None,
+        preselection: Selection = None,
+        modeltype: Variable.ModelType = None,
+        parameters: dict = None,
+        joint: dict = None,
+        ordered_categorical: list[str] = None,
+        seed: int = 0,
+        weight: str = "",
+        n_implicates: int = 0,
+        n_iterations: int = 0,
+        bayesian_bootstrap: bool = True,
+        bootstrap_index: list[str] = None,
+        bootstrap_where: str = "",
+        index: list[str] = None,
+        parallel: bool = True,
+        parallel_variables_per_job: int = 0,
+        parallel_CallInputs: CallInputs | None = None,
+        parallel_testing: bool = False,
+        path_model: str = "",
+        model_name: str = "",
+        force_start: bool = False,
+        save_every_variable: bool = False,
+        save_every_iteration: bool = True,
+        imputation_stats: list[str] | None = None,
+    ) -> SRMI:
+        """
+        Construct an SRMI from the pre-refactor flat-kwarg signature.
+
+        Migration aid only - new code should pass replication=SRMI.Replication(...),
+        parallel=SRMI.Parallel(...), storage=SRMI.Storage(...), bootstrap=SRMI.Bootstrap(...),
+        defaults=SRMI.Defaults(...) directly to SRMI() instead.
+        """
+        return cls(
+            df=df,
+            variables=variables,
+            index=index,
+            imputation_stats=imputation_stats,
+            replication=cls.Replication(
+                n_implicates=n_implicates, n_iterations=n_iterations, seed=seed
+            ),
+            parallel=cls.Parallel(
+                enabled=parallel,
+                variables_per_job=parallel_variables_per_job,
+                call_inputs=parallel_CallInputs,
+                testing=parallel_testing,
+            ),
+            storage=cls.Storage(
+                path_model=path_model,
+                model_name=model_name,
+                force_start=force_start,
+                save_every_variable=save_every_variable,
+                save_every_iteration=save_every_iteration,
+            ),
+            bootstrap=cls.Bootstrap(
+                enabled=bayesian_bootstrap, index=bootstrap_index, where=bootstrap_where
+            ),
+            defaults=cls.Defaults(
+                weight=weight,
+                model=model,
+                joint=joint,
+                selection=selection,
+                preselection=preselection,
+                modeltype=modeltype,
+                parameters=parameters,
+                ordered_categorical=ordered_categorical,
+            ),
+        )
 
     def AddVariable(self, variable: Variable) -> None:
         """
@@ -354,14 +566,14 @@ class SRMI(Serializable):
 
         for stri in str_override:
             if getattr(variable, stri) == "":
-                setattr(variable, stri, getattr(self, stri))
+                setattr(variable, stri, getattr(self.defaults, stri))
 
         for obji in none_override:
             if getattr(variable, obji) is None:
-                setattr(variable, obji, getattr(self, obji))
+                setattr(variable, obji, getattr(self.defaults, obji))
 
         if len(variable.parameters) == 0:
-            variable.parameters = self.parameters
+            variable.parameters = self.defaults.parameters
 
         #   Remove the variable itself from its own model
         #       and any variables in variable.predictors_exclude
@@ -392,7 +604,7 @@ class SRMI(Serializable):
         """
 
         #   Create folder if needed
-        create_folders_if_needed(self.path_model, quietly=True)
+        create_folders_if_needed(self.storage.path_model, quietly=True)
 
         #   Create/Load the implicates
         self._initialize_implicates()
@@ -429,14 +641,14 @@ class SRMI(Serializable):
             self.setup_complete = True
             self.save()
 
-        if self.parallel:
+        if self.parallel.enabled:
             #   Set up jobs to run the implicates in parallel
             f_implicates = []
             for impi in self.implicates:
-                for iterationi in range(1, self.n_iterations + 1):
-                    if self.parallel_variables_per_job > 0:
+                for iterationi in range(1, self.replication.n_iterations + 1):
+                    if self.parallel.variables_per_job > 0:
                         n_jobs_per_loop = math.ceil(
-                            len(self.variables) / self.parallel_variables_per_job
+                            len(self.variables) / self.parallel.variables_per_job
                         )
                     else:
                         n_jobs_per_loop = 1
@@ -449,33 +661,33 @@ class SRMI(Serializable):
                             prior_sub = sub_job - 1
                             prior_iteration = iterationi
 
-                        if self.parallel_variables_per_job == 0:
+                        if self.parallel.variables_per_job == 0:
                             variable_start = 0
                             variable_end = 0
                         else:
                             variable_start = (
-                                sub_job * self.parallel_variables_per_job + 1
+                                sub_job * self.parallel.variables_per_job + 1
                             )
                             variable_end = (
-                                variable_start + self.parallel_variables_per_job - 1
+                                variable_start + self.parallel.variables_per_job - 1
                             )
 
                         #   Dummy inputs and outputs to order the iteration runs properly
                         if sub_job > 0 or iterationi > 1:
                             inputs = [
-                                f"{self.path_model}/logs/iteration_{impi}_{prior_iteration}_{prior_sub}.log"
+                                f"{self.storage.path_model}/logs/iteration_{impi}_{prior_iteration}_{prior_sub}.log"
                             ]
                         else:
                             inputs = []
                         outputs = [
-                            f"{self.path_model}/logs/iteration_{impi}_{iterationi}_{sub_job}.log"
+                            f"{self.storage.path_model}/logs/iteration_{impi}_{iterationi}_{sub_job}.log"
                         ]
 
                         f_implicates.append(
                             FunctionFromPython(
                                 function=run_implicate_async,
                                 parameters={
-                                    "path_model": Path(self.path_model).as_posix(),
+                                    "path_model": Path(self.storage.path_model).as_posix(),
                                     "implicate": impi.number,
                                     "iteration": iterationi,
                                     "variable_start": variable_start,
@@ -488,9 +700,9 @@ class SRMI(Serializable):
 
             log = run_function_list(
                 function_list=f_implicates,
-                call_input=self.parallel_CallInputs,
+                call_input=self.parallel.call_inputs,
                 run_all=True,
-                testing=self.parallel_testing,
+                testing=self.parallel.testing,
             )
 
         else:
@@ -537,7 +749,7 @@ class SRMI(Serializable):
             #       and the index for merging
             df_initial = nw.from_native(self.df).select(keep_vars).to_native()
 
-            for impi in range(self.n_implicates):
+            for impi in range(self.replication.n_implicates):
                 this_implicate = Implicate(
                     parent=self, number=impi + 1, seed=random.randint(1, 2**32 - 1)
                 )
@@ -588,7 +800,10 @@ class SRMI(Serializable):
                 ] = None
 
         selected_model = variable.preselection.run(
-            df=self.df, y=variable.impute_var, formula=fb.formula
+            df=self.df,
+            y=variable.impute_var,
+            formula=fb.formula,
+            weight=variable.weight,
         )
         if selected_model != "":
             variable.model = selected_model
@@ -631,7 +846,7 @@ class SRMI(Serializable):
                 df=df_tune,
                 y=variable.impute_var,
                 formula=variable.model,
-                weight=self.weight,
+                weight=self.defaults.weight,
                 parameters=parameters,
                 tuner=tuner,
             )
@@ -717,10 +932,10 @@ class SRMI(Serializable):
             raise Exception(message)
         srmi_prior = SRMI.load(path)
 
-        srmi_prior.seed = seed
+        srmi_prior.replication.seed = seed
 
-        if srmi_prior.seed > 0:
-            set_seed(srmi_prior.seed)
+        if srmi_prior.replication.seed > 0:
+            set_seed(srmi_prior.replication.seed)
 
         if path_append is not None:
             srmis_to_append = []
@@ -739,7 +954,7 @@ class SRMI(Serializable):
                 if do_append:
                     srmis_to_append.append(srmi_other)
             if len(srmis_to_append):
-                for i in range(0, srmi_prior.n_implicates + 1):
+                for i in range(0, srmi_prior.replication.n_implicates + 1):
                     df_concat = [srmi_prior.df_containers[i].df] + [
                         srmi_other.df_containers[i].df for srmi_other in srmis_to_append
                     ]
@@ -764,7 +979,7 @@ class SRMI(Serializable):
         srmi_prior.is_continuing_srmi = True
         srmi_prior.setup_complete = False
         srmi_prior.continuing_cols = srmi_prior.vars_imputed.copy()
-        srmi_prior.path_model = path_model_new
+        srmi_prior.storage.path_model = path_model_new
 
         srmi_prior.variables = []
         return srmi_prior
@@ -809,7 +1024,7 @@ class SRMI(Serializable):
             srmi_i = cls.load(srmi_continue_i.path)
 
             #   Replace/append the value of varlist to the original SRMI
-            for i in range(0, srmi.n_implicates):
+            for i in range(0, srmi.replication.n_implicates):
                 dfi = srmi_i.implicates[i].df
                 if filter_cond is not None:
                     dfi = nw.from_native(dfi).filter(filter_cond).to_native()
@@ -972,7 +1187,7 @@ class SRMI(Serializable):
     def save_appended_cols_to_implicates(
         self, df_list: DataFrameList | list[IntoFrameT], columns: list[str], name: str
     ):
-        for i in range(0, self.n_implicates):
+        for i in range(0, self.replication.n_implicates):
             self.implicates[i].save_appended_cols_to_implicate(
                 df_list[i], columns=columns, name=name
             )
@@ -986,9 +1201,9 @@ class SRMI(Serializable):
 
     @property
     def paths_full(self) -> list[str]:
-        paths = [self.path_model]
+        paths = [self.storage.path_model]
 
-        for i in range(0, self.n_implicates):
+        for i in range(0, self.replication.n_implicates):
             paths.extend(self.implicates[i].paths_full)
 
         return paths
@@ -997,7 +1212,7 @@ class SRMI(Serializable):
     def df_containers(self) -> list:
         #   A list to make editing the underlying dataframes easier
         containers = [self]
-        for i in range(0, self.n_implicates):
+        for i in range(0, self.replication.n_implicates):
             containers.append(self.implicates[i])
 
         return containers
@@ -1006,7 +1221,7 @@ class SRMI(Serializable):
     #   Serializable - BEGIN
     #####################################################
     def save(self):
-        path = f"{self.path_model}/SRMI"
+        path = f"{self.storage.path_model}/SRMI"
         super().save(path)
 
         for impi in self.implicates:
@@ -1021,7 +1236,7 @@ class SRMI(Serializable):
         cls, path_model: str = "", implicate_number: int = 0, **df_kwargs
     ) -> SRMI | None:
         if isinstance(cls, SRMI) and path_model == "":
-            path_model = cls.path_model
+            path_model = cls.storage.path_model
         else:
             path_model = os.path.normpath(path_model)
             if not os.path.isdir(path_model) and os.path.isdir(
@@ -1032,7 +1247,7 @@ class SRMI(Serializable):
         obj = super().load(os.path.normpath(f"{path_model}/SRMI"), **df_kwargs)
 
         #   Load the implicates:
-        for impi in range(1, obj.n_implicates + 1):
+        for impi in range(1, obj.replication.n_implicates + 1):
             impi = Implicate(
                 parent=obj,
                 number=impi,

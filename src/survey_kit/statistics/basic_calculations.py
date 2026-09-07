@@ -444,8 +444,13 @@ def _mean(
     c_col = nw.col(column)
     if weight != "":
         c_weight = nw.col(weight)
-        statout = (c_filter * c_col * c_weight).sum() / (
-            c_filter * (~c_col.is_null()).cast(nw.Int8) * c_weight
+        #   c_filter can be None (no filter) - the weighted branch used to
+        #   multiply by it unconditionally, so unlike the unweighted branch
+        #   below it had no None case and produced NaN whenever weight was
+        #   set with no filter. nw.lit(1) makes it a no-op multiplier.
+        c_filter_w = c_filter if c_filter is not None else nw.lit(1)
+        statout = (c_filter_w * c_col * c_weight).sum() / (
+            c_filter_w * (~c_col.is_null()).cast(nw.Int8) * c_weight
         ).sum()
     else:
         if c_filter is not None:
@@ -462,7 +467,8 @@ def _sum(
     c_col = nw.col(column)
     if weight != "":
         c_weight = nw.col(weight)
-        statout = (c_filter * c_col * c_weight).sum()
+        c_filter_w = c_filter if c_filter is not None else nw.lit(1)
+        statout = (c_filter_w * c_col * c_weight).sum()
     else:
         if c_filter is not None:
             statout = (c_col * c_filter).sum()
@@ -477,7 +483,8 @@ def _count(
 ) -> nw.Expr:
     if weight != "":
         c_weight = nw.col(weight)
-        statout = (c_filter * c_weight).sum()
+        c_filter_w = c_filter if c_filter is not None else nw.lit(1)
+        statout = (c_filter_w * c_weight).sum()
     else:
         if c_filter is not None:
             statout = c_filter.sum()
@@ -498,7 +505,8 @@ def _share(
 ) -> nw.Expr:
     if weight != "":
         c_weight = nw.col(weight)
-        statout = (c_filter * c_weight).sum() / c_weight.sum()
+        c_filter_w = c_filter if c_filter is not None else nw.lit(1)
+        statout = (c_filter_w * c_weight).sum() / c_weight.sum()
     else:
         if c_filter is not None:
             statout = c_filter.sum() / nw.len()
@@ -520,10 +528,11 @@ def _var(
     c_col = nw.col(column)
     if weight != "":
         c_weight = nw.col(weight)
+        c_filter_w = c_filter if c_filter is not None else nw.lit(1)
         c_mean = _mean(column=column, c_filter=c_filter, weight=weight, suffix=suffix)
         c_n = _rawcount(column=column, c_filter=c_filter, weight=weight, suffix=suffix)
-        num = (c_weight * c_filter * ((c_col - c_mean) ** 2)).sum()
-        denom = ((c_n - 1) / c_n) * (c_filter * c_weight).sum()
+        num = (c_weight * c_filter_w * ((c_col - c_mean) ** 2)).sum()
+        denom = ((c_n - 1) / c_n) * (c_filter_w * c_weight).sum()
 
         statout = num / denom
     else:

@@ -214,7 +214,7 @@ class Implicate(Serializable):
                         return None
             else:
                 start_at = 1
-                end_at = self.parent.n_iterations
+                end_at = self.parent.replication.n_iterations
 
             for iterationi in range(start_at, end_at + 1):
                 if self.status_iteration <= iterationi:
@@ -227,9 +227,9 @@ class Implicate(Serializable):
                     did_anything = did_anything or did_something
 
                     if (
-                        iterationi == self.parent.n_iterations
+                        iterationi == self.parent.replication.n_iterations
                         and self.status_iteration_complete
-                        and self.status_iteration == self.parent.n_iterations
+                        and self.status_iteration == self.parent.replication.n_iterations
                     ):
                         self.complete = True
 
@@ -346,8 +346,8 @@ class Implicate(Serializable):
                 )
                 self.logging.info("\n\n\n\n\n\n\n\n\n\n")
 
-                if self.parent.save_every_variable and not (
-                    self.parent.save_every_iteration
+                if self.parent.storage.save_every_variable and not (
+                    self.parent.storage.save_every_iteration
                     and variable_index != (len(self.parent.variables) - 1)
                 ):
                     self.status_variable = variable_index + 1
@@ -398,8 +398,8 @@ class Implicate(Serializable):
                 self.status_iteration_complete = True
 
             if (
-                self.parent.save_every_iteration
-                and iterationi != self.parent.n_iterations
+                self.parent.storage.save_every_iteration
+                and iterationi != self.parent.replication.n_iterations
                 and self.status_iteration_complete
             ):
                 #   Save (if not finished, since then it'll save later)
@@ -429,17 +429,17 @@ class Implicate(Serializable):
         None
 
         """
-        if self.parent.bayesian_bootstrap:
+        if self.parent.bootstrap.enabled:
             self.df = bayes_bootstrap_weights(
                 df=self.df,
-                weight=self.parent.weight,
+                weight=self.parent.defaults.weight,
                 prefix="bbweight__",
                 n_replicates=1,
                 sum_to=safe_height(self.df),
             )
             weight = "bbweight__1"
         else:
-            weight = self.parent.weight
+            weight = self.parent.defaults.weight
 
         impute = Impute(
             df=self.df,
@@ -510,7 +510,7 @@ class Implicate(Serializable):
                     how="diagonal",
                 )
 
-        if self.parent.bayesian_bootstrap:
+        if self.parent.bootstrap.enabled:
             self.df = nw.from_native(self.df).drop(weight).to_native()
 
         del impute
@@ -762,7 +762,7 @@ class Implicate(Serializable):
             Path.
 
         """
-        return f"{self.parent.path_model}/{self.number}"
+        return f"{self.parent.storage.path_model}/{self.number}"
 
     @property
     def path_logs(self):
@@ -775,7 +775,7 @@ class Implicate(Serializable):
             Path.
 
         """
-        return f"{self.parent.path_model}/logs/{self.number}"
+        return f"{self.parent.storage.path_model}/logs/{self.number}"
 
     @property
     def path_appended_stat(self) -> str:
@@ -793,7 +793,7 @@ class Implicate(Serializable):
 
         """
 
-        return f"{self.parent.path_model}/appended/{self.number}"
+        return f"{self.parent.storage.path_model}/appended/{self.number}"
 
     def df_full_summary_stats(
         self, print_table: bool = False, print_by_variable: bool = True
@@ -912,7 +912,7 @@ class Implicate(Serializable):
             .lazy()
             .collect()
             .write_csv(
-                f"{self.parent.path_model}/{self.number}.final_summary_stats.csv"
+                f"{self.parent.storage.path_model}/{self.number}.final_summary_stats.csv"
             )
         )
 

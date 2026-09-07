@@ -9,6 +9,7 @@ import importlib
 import shutil
 import dill as pickle
 import json
+from copy import deepcopy
 from enum import Enum
 
 import narwhals as nw
@@ -34,6 +35,23 @@ class Serializable:
 
     def __init__(self):
         self.__fully_serializable__ = True
+
+    def _with(self, **kwargs) -> Serializable:
+        """
+        Return a deep copy of this object with the given fields replaced.
+
+        Backs fluent with_x() builder methods on config-shaped Serializable
+        subclasses (e.g. SRMI.Storage.with_path_model(...)): each with_x()
+        does its own field-specific normalization (matching what __init__
+        does for that field) and then calls self._with(x=value) to produce
+        the updated copy, leaving the original object untouched.
+        """
+        new = deepcopy(self)
+        for key, value in kwargs.items():
+            if not hasattr(new, key):
+                raise AttributeError(f"{type(new).__name__} has no field {key!r}")
+            setattr(new, key, value)
+        return new
 
     def __init_subclass__(cls, **kwargs):
         """Automatically register subclasses when they're defined"""

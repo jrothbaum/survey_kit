@@ -1,7 +1,3 @@
-import sys
-import os
-from pathlib import Path
-
 import narwhals as nw
 import polars as pl
 import polars.selectors as cs
@@ -17,14 +13,6 @@ from survey_kit.imputation.selection import Selection
 from survey_kit import logger, config
 from survey_kit.utilities.dataframe import summary, columns_from_list
 from survey_kit.utilities.formula_builder import FormulaBuilder
-
-
-path = Path(config.code_root)
-sys.path.append(os.path.normpath(path.parent.parent / "tests"))
-from scratch import path_scratch
-
-
-config.data_root = path_scratch(temp_file_suffix=False)
 
 
 # %%
@@ -153,16 +141,18 @@ logger.info("   and the formula")
 logger.info("   as well as a post-processing edit to set var_reg2=0 when var_reg1==0")
 v_reg2 = Variable(
     impute_var="var_reg2",
-    Where=nw.col("var_reg1"),
+    sample=Variable.Sample(Where=nw.col("var_reg1")),
     modeltype=Variable.ModelType.pmm,
     model=f_model.formula,
     #   Default parameters
     parameters=Parameters.Regression(),
-    postFunctions=(
-        nw.when(nw.col("var_reg1"))
-        .then(nw.col("var_reg2"))
-        .otherwise(nw.lit(0))
-        .alias("var_reg2")
+    hooks=Variable.Hooks(
+        post=(
+            nw.when(nw.col("var_reg1"))
+            .then(nw.col("var_reg2"))
+            .otherwise(nw.lit(0))
+            .alias("var_reg2")
+        )
     ),
 )
 
@@ -175,15 +165,18 @@ logger.info("Add LASSO selection before each imputation")
 srmi = SRMI(
     df=df,
     variables=vars_impute,
-    n_implicates=2,
-    n_iterations=2,
-    parallel=False,
-    selection=Selection(method=Selection.Method.LASSO),
-    modeltype=Variable.ModelType.pmm,
-    model=f_model.formula,
-    bayesian_bootstrap=True,
-    path_model=f"{config.path_temp_files}/py_srmi_test_regression",
-    force_start=True,
+    replication=SRMI.Replication(n_implicates=2, n_iterations=2),
+    parallel=SRMI.Parallel(enabled=False),
+    bootstrap=SRMI.Bootstrap(enabled=True),
+    defaults=SRMI.Defaults(
+        selection=Selection(method=Selection.Method.LASSO),
+        modeltype=Variable.ModelType.pmm,
+        model=f_model.formula,
+    ),
+    storage=SRMI.Storage(
+        path_model=f"{config.path_temp_files}/py_srmi_test_regression",
+        force_start=True,
+    ),
 )
 
 # %%

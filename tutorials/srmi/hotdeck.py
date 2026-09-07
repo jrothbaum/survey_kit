@@ -135,15 +135,17 @@ logger.info("   as well as a post-processing edit to set var_hd2=0 when var_hd1=
 
 v_hd2 = Variable(
     impute_var="var_hd2",
-    Where=nw.col("var_hd1"),
+    sample=Variable.Sample(Where=nw.col("var_hd1")),
     By=["year", "month"],
     modeltype=Variable.ModelType.HotDeck,
     parameters=Parameters.HotDeck(model_list=["var2", "var3", "var5"]),
-    postFunctions=(
-        nw.when(nw.col("var_hd1"))
-        .then(nw.col("var_hd2"))
-        .otherwise(nw.lit(0))
-        .alias("var_hd2")
+    hooks=Variable.Hooks(
+        post=(
+            nw.when(nw.col("var_hd1"))
+            .then(nw.col("var_hd2"))
+            .otherwise(nw.lit(0))
+            .alias("var_hd2")
+        )
     ),
 )
 vars_impute.append(v_hd2)
@@ -154,13 +156,12 @@ logger.info("Set up the imputation")
 srmi = SRMI(
     df=df,
     variables=vars_impute,
-    n_implicates=2,
-    n_iterations=1,
-    parallel=False,
-    bayesian_bootstrap=True,
-    parallel_testing=False,
-    path_model=f"{config.path_temp_files}/py_srmi_test_hd",
-    force_start=True,
+    replication=SRMI.Replication(n_implicates=2, n_iterations=1),
+    parallel=SRMI.Parallel(enabled=False, testing=False),
+    bootstrap=SRMI.Bootstrap(enabled=True),
+    storage=SRMI.Storage(
+        path_model=f"{config.path_temp_files}/py_srmi_test_hd", force_start=True
+    ),
 )
 
 # %%

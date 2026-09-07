@@ -989,7 +989,9 @@ class StatCalculator(Serializable):
         cols_stats = self.df_estimates.drop(join_on).columns
 
         def p_value(t):
-            if t == float("inf") or t == float("nan"):
+            #   NaN != NaN (IEEE 754) - `x == float("nan")` never fires, so use
+            #   self-inequality (the standard NaN check) instead.
+            if t == float("inf") or t != t:
                 return 0
             df = 1_000_000
 
