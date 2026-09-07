@@ -1,18 +1,7 @@
 from __future__ import annotations
-from typing import Optional
 
-import os
 import narwhals as nw
-import narwhals.selectors as cs
 from narwhals.typing import IntoFrameT
-from enum import Enum
-import lightgbm as lgb
-
-from sklearn.linear_model import LassoCV
-from sklearn.linear_model import Lasso as sk_lasso
-from sklearn.model_selection import train_test_split
-
-from copy import deepcopy
 
 from ...utilities.random import set_seed, generate_seed
 from ...utilities.dataframe import (
@@ -164,6 +153,11 @@ class Lasso:
         }
 
     def find_optimal_lambda(self):
+        #   Imported here (not at module level) since sklearn's base import is
+        #   ~450ms - Lasso is only instantiated by LASSO-selection runs, and
+        #   this module gets imported unconditionally via selection.py.
+        from sklearn.linear_model import LassoCV
+
         self.df = nw.from_native(self.df).lazy().collect().to_native()
         set_seed(self.seed)
         random_state = generate_seed()
@@ -192,6 +186,8 @@ class Lasso:
         self.optimal_lambda = lasso_cv.alpha_
 
     def run(self) -> list[str]:
+        from sklearn.linear_model import Lasso as sk_lasso
+
         self.df = nw.from_native(self.df).lazy().collect().to_native()
         if self.optimal_lambda is None:
             self.find_optimal_lambda()

@@ -1,19 +1,13 @@
 from __future__ import annotations
 from typing import Optional
-import os
 import logging
 import narwhals as nw
 from narwhals.typing import IntoFrameT
 from copy import deepcopy
 from enum import Enum
 
-from sklearn.feature_selection import RFECV
-from sklearn.linear_model import LinearRegression
-
-
 from ..utilities.formula_builder import FormulaBuilder, get_model_frame
 
-from ..orchestration.config import Config
 from .utilities.lasso import Lasso as rep_lasso
 from ..utilities.dataframe import safe_height, winsorize_by_percentiles
 from ..serializable import Serializable
@@ -478,6 +472,13 @@ class Selection(Serializable):
             [df, formula, missing_dummies] = Selection._add_missing_dummy(
                 df=df, y=y, formula=formula
             )
+
+        #   Imported here (not at module level) since sklearn's base import is
+        #   ~450ms and Stepwise is the only Selection method that needs it -
+        #   LASSO/HotDeck/StatMatch/LightGBM runs never call this and
+        #   shouldn't pay for it.
+        from sklearn.feature_selection import RFECV
+        from sklearn.linear_model import LinearRegression
 
         estimator = LinearRegression()
         selector = RFECV(

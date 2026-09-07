@@ -12,11 +12,6 @@ import numpy as np
 from copy import deepcopy
 from survey_kit_formula import ModelSpec
 
-#   Nearest neighbor search using sklearn
-from sklearn.neighbors import KDTree
-from scipy.special import expit
-from scipy.stats import norm
-
 from ..utilities.logging import set_logging
 from ..utilities.inputs import create_folders_if_needed
 
@@ -1653,7 +1648,10 @@ class Impute:
         else:
             f = FormulaBuilder(formula=formula)
             f.remove_constant()
-            rhs_vars = FormulaBuilder.columns_from_formula(formula=f.rhs())
+            #   Named to match the list-formula branch's vars_rhs above -
+            #   the min_n_x_var block below references vars_rhs regardless
+            #   of which branch built the model frame.
+            vars_rhs = FormulaBuilder.columns_from_formula(formula=f.rhs())
 
             #   Fit the spec against the union of every frame it'll be
             #   reapplied to (with null_dummy=True) so a companion
@@ -1662,9 +1660,9 @@ class Impute:
             #   no nulls in df_model - otherwise a null showing up only at
             #   reapply time raises (no companion column was allocated for
             #   it when the spec's structure was fixed at fit time).
-            frames_to_fit = [df_model.select(rhs_vars), df_impute.select(rhs_vars)]
+            frames_to_fit = [df_model.select(vars_rhs), df_impute.select(vars_rhs)]
             if df_pmm_leave_out is not None:
-                frames_to_fit.append(df_pmm_leave_out.select(rhs_vars))
+                frames_to_fit.append(df_pmm_leave_out.select(vars_rhs))
             df_fit_union = pl.concat(frames_to_fit, how="diagonal")
 
             #   ModelSpec.from_formula() parses with survey_kit_formula's own
@@ -1689,12 +1687,18 @@ class Impute:
                 display=False,
                 round_output=False,
             )
+            #   round_output=False can leave df_estimates as a LazyFrame (see
+            #   _post_impute_statistics's use of nw.from_native(...) on the
+            #   same round_output=False output) - collect before the polars-
+            #   native filter+bracket-index below, which only works on an
+            #   eager DataFrame.
+            df_n_not0 = nw.from_native(sc.df_estimates).lazy().collect().to_native()
 
-            vars_rhs = sc.df_estimates.filter(pl.col("n (not 0)") >= min_n_x_var)[
+            vars_rhs = df_n_not0.filter(pl.col("n (not 0)") >= min_n_x_var)[
                 "Variable"
             ].to_list()
             self.logging.info(
-                f"            Dropping {sc.df_estimates.filter(pl.col('n (not 0)') < min_n_x_var)['Variable'].to_list()}"
+                f"            Dropping {df_n_not0.filter(pl.col('n (not 0)') < min_n_x_var)['Variable'].to_list()}"
             )
 
             df_model_mm = df_model_mm.select(vars_rhs)
@@ -2388,6 +2392,11 @@ class Impute:
             high=jitter_base * jitter_range_multiple,
             size=(safe_height(df_impute), 1),
         )
+
+        #   Imported here (not at module level) since sklearn's base import is
+        #   ~450ms and this is the only place in the module that needs it -
+        #   HotDeck/StatMatch-only runs never call this and shouldn't pay for it.
+        from sklearn.neighbors import KDTree
 
         #   Set up the nearest neighbor object for the donors (df_model)
         kdt = KDTree(

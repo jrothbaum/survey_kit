@@ -12,15 +12,16 @@ from narwhals.typing import IntoFrameT
 import polars.selectors as pl_cs
 
 from enum import Enum
-import lightgbm as lgb
-import optuna
 import pickle
 import random
 import gc
 
-from lightgbm import log_evaluation, early_stopping
-from sklearn.metrics import accuracy_score, mean_squared_error, mean_absolute_error
-from sklearn.model_selection import train_test_split
+#   lightgbm/optuna/sklearn are all imported lazily at their points of use
+#   below (not here) - their base imports cost roughly a second combined,
+#   and this module gets imported unconditionally by both srmi.py and
+#   impute.py regardless of whether LightGBM is actually the modeltype in
+#   use. That cost is also paid per-process under SRMI's parallel execution,
+#   since each worker re-imports the module from scratch.
 
 from copy import deepcopy
 
@@ -397,6 +398,9 @@ class Survey_kit_Lightgbm:
         self._params_prepared = True
 
     def _prepare_test_train(self):
+        import lightgbm as lgb
+        from sklearn.model_selection import train_test_split
+
         x_train = nw.from_native(self.df).lazy().collect().select(self.x)
         y_train = nw.from_native(self.df).lazy().collect().select(self.y)
 
@@ -481,6 +485,8 @@ class Survey_kit_Lightgbm:
         self._test_train_prepared = True
 
     def train(self, show_eval: bool = True):
+        import lightgbm as lgb
+
         #   Parse/process the input parameters, if needed
         if not self._params_prepared:
             self._prepare_params()
@@ -843,15 +849,30 @@ class Tuner:
         mae = "mae"
 
         def __call__(self, *args, **kwargs):
-            return _OBJECTIVE_SCORERS[self](*args, **kwargs)
+            return _objective_scorers()[self](*args, **kwargs)
 
 
-_OBJECTIVE_SCORERS = {
-    Tuner.Objectives.binary_accuracy: accuracy_score,
-    Tuner.Objectives.sse: mean_squared_error,
-    Tuner.Objectives.mse: mean_squared_error,
-    Tuner.Objectives.mae: mean_absolute_error,
-}
+#   Built lazily (not at module level) so importing this module doesn't
+#   require sklearn just to define the Objectives enum.
+_OBJECTIVE_SCORERS = None
+
+
+def _objective_scorers() -> dict:
+    global _OBJECTIVE_SCORERS
+    if _OBJECTIVE_SCORERS is None:
+        from sklearn.metrics import (
+            accuracy_score,
+            mean_squared_error,
+            mean_absolute_error,
+        )
+
+        _OBJECTIVE_SCORERS = {
+            Tuner.Objectives.binary_accuracy: accuracy_score,
+            Tuner.Objectives.sse: mean_squared_error,
+            Tuner.Objectives.mse: mean_squared_error,
+            Tuner.Objectives.mae: mean_absolute_error,
+        }
+    return _OBJECTIVE_SCORERS
 
 
 class Tuner_optuna:
@@ -891,6 +912,9 @@ class Tuner_optuna:
         n_early_stopping: int | None = None,
         n_log_evaluation: int | None = None,
     ):
+        import optuna
+        from lightgbm import log_evaluation, early_stopping
+
         if seed == 0:
             seed = random.randint(1, 2**32 - 1)
 
@@ -977,6 +1001,8 @@ class Tuner_optuna:
         d_test: lgb.basic.Dataset,
         params_lgbm: dict = None,
     ):
+        import lightgbm as lgb
+
         params = deepcopy(params_lgbm)
 
         def _objective(trial):
