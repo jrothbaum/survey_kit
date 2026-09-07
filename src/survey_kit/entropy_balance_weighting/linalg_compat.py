@@ -6,10 +6,12 @@ isn't on the loader's search path inside a venv). Rather than let that crash
 the whole subpackage on import, everything here degrades gracefully:
 
     dot products / gram matrix : sparse_dot_mkl -> scipy/numpy
-    SPD sparse solve           : pypardiso -> scikit-sparse (CHOLMOD) -> scipy
-    general sparse solve       : pypardiso -> scipy
-    (CHOLMOD assumes real symmetric positive definite input, so it's only
-    used for the SPD case.)
+    sparse solve               : pypardiso -> scipy
+
+(scikit-sparse/CHOLMOD was tried as an extra solve tier and dropped: it never
+beat plain scipy in benchmarks at any tested problem size, while adding a
+source-compile-only dependency and an API that already changed out from under
+this code once. See git history if that tradeoff changes.)
 """
 
 from __future__ import annotations
@@ -77,24 +79,6 @@ except ImportError:
         "falling back to scipy/numpy matrix products, which are slower."
     )
 
-try:
-    from sksparse.cholmod import CholmodError as _CholmodError
-    from sksparse.cholmod import cho_factor as _cholmod_cho_factor
-
-    HAS_CHOLMOD = True
-except ImportError:
-    _cholmod_cho_factor = None
-
-    class _CholmodError(Exception):  # type: ignore[no-redef]
-        """Placeholder so `except _CholmodError` is always valid when unavailable."""
-
-    HAS_CHOLMOD = False
-    logger.warning(
-        "scikit-sparse is unavailable (missing the package or the system "
-        "SuiteSparse/CHOLMOD library it builds against); the SPD sparse solve "
-        "will fall back further to scipy, which is slower."
-    )
-
 
 def dot_product_mkl(a: AnyArray, b: AnyArray, *, cast: bool = False) -> AnyArray:
     """Matrix product, via MKL when available, else the plain ``@`` operator."""
@@ -127,32 +111,30 @@ class SparseLinearSolver:
     caller-supplied Tikhonov term.
 
     Backend order (fastest first, picked once at construction):
-        spd=True:  PARDISO (general mode) -> CHOLMOD -> scipy (SuperLU)
-        spd=False: PARDISO (general mode) -> scipy (SuperLU)
+        PARDISO (general mode) -> scipy (SuperLU)
 
-    Only pass ``spd=True`` when ``matrix`` is guaranteed real symmetric
-    positive (semi)definite -- CHOLMOD assumes that and will silently use only
-    half the matrix, or hard-error, if it isn't true. PARDISO always runs in
-    its general (mtype=11) mode regardless of `spd`: its dedicated SPD mode
-    requires upper-triangular-only storage and is easy to crash/hang via the
-    ctypes internals this class needs for factorization reuse, so it isn't
-    used here (the pre-existing code's `set_matrix_type=2` calls never
-    actually engaged it either -- pypardiso's `spsolve()` silently ignores
-    that kwarg, so mtype was always 11 in practice).
+    ``spd`` is accepted for callers that know their matrix is real symmetric
+    positive (semi)definite, but doesn't currently pick a different backend --
+    PARDISO always runs in its general (mtype=11) mode regardless: its
+    dedicated SPD mode requires upper-triangular-only storage and is easy to
+    crash/hang via the ctypes internals this class needs for factorization
+    reuse, so it isn't used here (the pre-existing code's
+    `set_matrix_type=2` calls never actually engaged it either -- pypardiso's
+    `spsolve()` silently ignores that kwarg, so mtype was always 11 in
+    practice).
 
-    Factorization reuse: PARDISO and CHOLMOD both split a solve into a
-    pattern-only "analysis" step (fill-reducing reordering) and a
-    values-dependent "numeric factorization" step. Since the pattern doesn't
-    change across calls here, this class keeps a persistent solver/factor
-    object and only re-runs analysis when the pattern actually changes
-    (checked via `_pattern_key`), redoing just the numeric factorization +
-    solve otherwise. For PARDISO this means driving phases (11, then 23)
-    directly through pypardiso's underscore-prefixed internals rather than
-    its public `spsolve()`, which always redoes both -- if that internal API
-    ever changes shape, this degrades automatically to the old
-    call-`spsolve()`-every-time behavior (see `_pardiso_reuse_ok`). The
-    plain-scipy backend has no such split in its public API, so it gets no
-    benefit from any of this.
+    Factorization reuse: PARDISO splits a solve into a pattern-only
+    "analysis" step (fill-reducing reordering) and a values-dependent
+    "numeric factorization" step. Since the pattern doesn't change across
+    calls here, this class keeps a persistent solver object and only re-runs
+    analysis when the pattern actually changes (checked via `_pattern_key`),
+    redoing just the numeric factorization + solve otherwise. This means
+    driving phases (11, then 23) directly through pypardiso's
+    underscore-prefixed internals rather than its public `spsolve()`, which
+    always redoes both -- if that internal API ever changes shape, this
+    degrades automatically to the old call-`spsolve()`-every-time behavior
+    (see `_pardiso_reuse_ok`). The plain-scipy backend has no such split in
+    its public API, so it gets no benefit from any of this.
 
     On a solve failure or a non-finite result (matrix effectively
     rank-deficient), ``regularizer`` is increased and the same backend is
@@ -174,9 +156,6 @@ class SparseLinearSolver:
         self._pardiso: Any = None
         self._pardiso_reuse_ok = False
         self._pardiso_pattern: Optional[tuple[bytes, bytes]] = None
-
-        self._cholmod_factor: Any = None
-        self._cholmod_pattern: Optional[tuple[bytes, bytes]] = None
 
         if "pypardiso" in self._backend_names:
             # mtype=11 (general real unsymmetric) regardless of `spd`: PARDISO's
@@ -212,8 +191,6 @@ class SparseLinearSolver:
         backends = []
         if HAS_PYPARDISO:
             backends.append("pypardiso")
-        if self._spd and HAS_CHOLMOD:
-            backends.append("cholmod")
         backends.append("scipy")  # always available: scipy is a hard dependency
         return backends
 
@@ -236,24 +213,9 @@ class SparseLinearSolver:
         solver.set_phase(23)  # numeric factorization + solve, reusing analysis
         return solver._call_pardiso(lhs, b)
 
-    def _solve_cholmod(self, lhs: AnyArray, rhs: FArr) -> FArr:
-        key = _pattern_key(lhs)
-        if self._cholmod_factor is None or key != self._cholmod_pattern:
-            #   First time (or pattern changed): full symbolic + numeric
-            #   factorization.
-            self._cholmod_factor = _cholmod_cho_factor(lhs)
-            self._cholmod_pattern = key
-        else:
-            #   Same pattern, new values: reuse the stored symbolic ordering,
-            #   only redo the numeric factorization.
-            self._cholmod_factor.factorize(lhs)
-        return self._cholmod_factor.solve(rhs)
-
     def _solve_with_backend(self, name: str, lhs: AnyArray, rhs: FArr) -> FArr:
         if name == "pypardiso":
             return self._solve_pardiso(lhs, rhs)
-        if name == "cholmod":
-            return self._solve_cholmod(lhs, rhs)
         return spla.spsolve(lhs, rhs)
 
     def _note_fallback(self, from_name: str, to_name: str, reason: str) -> None:
@@ -278,7 +240,7 @@ class SparseLinearSolver:
                     if np.all(np.isfinite(x)):
                         return x
                     last_reason = "non-finite solution (near-singular matrix)"
-                except (RuntimeError, ValueError, _CholmodError, _PyPardisoError) as err:
+                except (RuntimeError, ValueError, _PyPardisoError) as err:
                     last_reason = str(err)
                 current_regularizer = max(current_regularizer, 1e-10) * self._RETRY_GROWTH
                 lhs = (matrix + current_regularizer * self._eye).tocsc()

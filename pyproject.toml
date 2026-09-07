@@ -1,6 +1,6 @@
 [project]
 name = "survey-kit"
-version = "0.1.2"
+version = "0.2.0"
 description = "Tools for working with survey and other data"
 readme = "README.md"
 requires-python = ">=3.9"
@@ -39,11 +39,6 @@ dependencies = [
     "optuna",
     "numba",
     "numpy>=2.0.2",
-]
-
-[project.optional-dependencies]
-fast-solve = [
-    "scikit-sparse>=0.4.12",
 ]
 
 [dependency-groups]
