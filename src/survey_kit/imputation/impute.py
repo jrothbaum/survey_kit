@@ -524,6 +524,16 @@ class Impute:
             keep_vars.append(self.weight)
             model_vars.append(self.weight)
 
+        regmodel = self.variable.parameters["model"]
+        errordraw = self.variable.parameters["error"]
+
+        #   Any other variables donated? Only relevant for PMM-style error
+        #   draws (which assign values via nearest-neighbor donation) - Random
+        #   draws compute the imputed value directly and never donate.
+        if errordraw == Parameters.ErrorDraw.pmm:
+            if len(self.variable.parameters["donate_list"]) > 0:
+                keep_vars.extend(self.variable.parameters["donate_list"])
+
         df_model = self.df_model(df=df, keep_vars=keep_vars)
 
         df_impute = self.df_impute(df=df, keep_vars=keep_vars)
@@ -531,9 +541,6 @@ class Impute:
         if safe_height(df_impute) == 0:
             self.logging.info("No rows to impute")
             return df
-
-        regmodel = self.variable.parameters["model"]
-        errordraw = self.variable.parameters["error"]
 
         if errordraw == Parameters.ErrorDraw.pmm:
             (df_pmm_model, df_pmm_leave_out) = self._pmm_leave_out(df_model=df_model)
@@ -579,7 +586,11 @@ class Impute:
             df_model=df_model, df_impute=df_impute, donate_vars=donate_vars
         )
         df = self._merge_imputes_to_df(
-            df_imputed=df_impute, df=df, merge_list=self.variable.impute_var
+            df_imputed=df_impute,
+            df=df,
+            merge_list=(
+                donate_vars if donate_vars is not None else self.variable.impute_var
+            ),
         )
 
         return df
@@ -1442,7 +1453,7 @@ class Impute:
                 b_have_for_donors = (
                     safe_height(
                         nw.from_native(df_model)
-                        .filter(pl.col("___yhat").is_null())
+                        .filter(nw.col("___yhat").is_null())
                         .to_native()
                     )
                     == 0
@@ -1516,30 +1527,33 @@ class Impute:
         if errordraw == Parameters.ErrorDraw.Random:
             rng = RandomNumberGenerator()
 
-            if (
-                regmodel == Parameters.RegressionModel.Logit
-                or regmodel == Parameters.RegressionModel.Probit
-            ):
+            #   Probit isn't an implemented RegressionModel option (see
+            #   parameters.py) - only Logit needs the Bernoulli-style draw below.
+            if regmodel == Parameters.RegressionModel.Logit:
                 #   Draw the values for df_impute from the uniform where 1 if <= prediction
 
                 nw_type = NarwhalsType(df_impute)
-                df_impute = nw.from_native(
-                    concat_wrapper(
-                        [
-                            df_impute,
-                            nw_type.from_polars(
-                                pl.from_numpy(
-                                    rng.uniform(size=safe_height(df_impute)),
-                                    schema={"___phat": pl.Float64},
-                                )
-                            ),
-                        ],
-                        how="horizontal",
-                    ).with_columns(
+                df_impute = (
+                    nw.from_native(
+                        concat_wrapper(
+                            [
+                                df_impute,
+                                nw_type.from_polars(
+                                    pl.from_numpy(
+                                        rng.uniform(size=safe_height(df_impute)),
+                                        schema={"___phat": pl.Float64},
+                                    )
+                                ),
+                            ],
+                            how="horizontal",
+                        )
+                    )
+                    .with_columns(
                         (nw.col("___phat") <= nw.col("___prediction"))
                         .cast(nw.Boolean)
                         .alias(self.variable.impute_var)
                     )
+                    .to_native()
                 )
             elif regmodel == Parameters.RegressionModel.OLS:
                 #   Get the sd of the errors in the model data set
@@ -1578,7 +1592,7 @@ class Impute:
                 df_impute = (
                     nw.from_native(df_impute)
                     .with_columns(
-                        (pl.col("___prediction") + nw.col("___ehat")).alias(
+                        (nw.col("___prediction") + nw.col("___ehat")).alias(
                             self.variable.impute_var
                         )
                     )
