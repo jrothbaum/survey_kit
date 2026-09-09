@@ -1210,3 +1210,159 @@ except ValueError as e:
     logger.info(f"Correctly rejected: {e}")
 
 logger.info("srmi.py: plot_imputation_quality checks passed")
+
+
+#   ============================================================
+#   SRMI.plot_propensity() - a DIFFERENT, conditional question from
+#       plot_imputation_quality()'s marginal comparison: under MAR,
+#       missing rows can legitimately have a different marginal
+#       distribution than observed ones, so this compares observed vs.
+#       imputed CONDITIONAL on predicted response-propensity (a binary
+#       LightGBM model of the imputation_flag on that variable's own
+#       predictors) instead of overall. kind="density" (the default)
+#       compares the kernel density of residuals from regressing y on
+#       the propensity - matching the diagnostic in Raghunathan &
+#       Bondarenko (2007)/Bondarenko & Raghunathan (2016), the same one
+#       used in the user's own SRMI/CPS-ASEC paper. kind="binned_mean"
+#       is a simpler mean-by-propensity-bin alternative. Also covers
+#       categorical_feature threading through to the propensity model -
+#       a variable (e.g. CatBoost()) can keep a categorical predictor
+#       OUT of its own formula and add it only via categorical_feature,
+#       which must still reach the propensity model or it silently
+#       vanishes.
+#   ============================================================
+
+logger.info("plot_propensity: variable=None (all, no categorical predictors), kind='density' default")
+fig_prop_all = srmi_qual.plot_propensity()
+#   2 variables x (1 Observed + 3 implicates) = 8 traces
+assert len(fig_prop_all.data) == 8, f"expected 8 traces, got {len(fig_prop_all.data)}"
+
+logger.info("plot_propensity: variable by name")
+fig_prop_name = srmi_qual.plot_propensity(variable="y2_qual")
+assert len(fig_prop_name.data) == 4
+
+logger.info("plot_propensity: variable by 0-indexed position, kind='binned_mean'")
+fig_prop_idx = srmi_qual.plot_propensity(variable=0, kind="binned_mean", n_bins=5)
+assert len(fig_prop_idx.data) == 4
+
+logger.info("plot_propensity: kind='binned_mean' with n_bins < 2 raises")
+try:
+    srmi_qual.plot_propensity(kind="binned_mean", n_bins=1)
+    raise AssertionError("expected n_bins=1 to raise")
+except AssertionError:
+    raise
+except ValueError as e:
+    logger.info(f"Correctly rejected: {e}")
+
+logger.info("plot_propensity: kind='density' with cv_folds < 2 raises")
+try:
+    srmi_qual.plot_propensity(cv_folds=1)
+    raise AssertionError("expected cv_folds=1 to raise")
+except AssertionError:
+    raise
+except ValueError as e:
+    logger.info(f"Correctly rejected: {e}")
+
+logger.info("plot_propensity: kind='density' with a smaller cv_folds still produces traces")
+fig_prop_cv = srmi_qual.plot_propensity(cv_folds=3)
+assert len(fig_prop_cv.data) == 8, f"expected 8 traces, got {len(fig_prop_cv.data)}"
+
+logger.info("plot_propensity: bad kind raises")
+try:
+    srmi_qual.plot_propensity(kind="bogus")
+    raise AssertionError("expected a bad kind to raise")
+except AssertionError:
+    raise
+except ValueError as e:
+    logger.info(f"Correctly rejected: {e}")
+
+logger.info("plot_propensity: bad variable name/index raise")
+try:
+    srmi_qual.plot_propensity(variable="bogus")
+    raise AssertionError("expected a bad variable name to raise")
+except AssertionError:
+    raise
+except ValueError as e:
+    logger.info(f"Correctly rejected: {e}")
+
+try:
+    srmi_qual.plot_propensity(variable=99)
+    raise AssertionError("expected an out-of-range index to raise")
+except AssertionError:
+    raise
+except IndexError as e:
+    logger.info(f"Correctly rejected: {e}")
+
+logger.info("plot_propensity: path= also saves a self-contained HTML file")
+path_prop_html = f"{path_scratch}/py_srmi_test_plot_propensity.html"
+srmi_qual.plot_propensity(path=path_prop_html)
+assert os.path.isfile(path_prop_html)
+assert os.path.getsize(path_prop_html) > 0
+
+#   ------------------------------------------------------------
+#   categorical_feature threading: a CatBoost() variable whose
+#       categorical predictor is deliberately kept out of the
+#       formula (added only via categorical_feature, same convention
+#       tests/main/tabular_ml.py uses) must still reach the
+#       propensity model as a native categorical, not silently drop
+#       out of the predictor list or crash on a raw string column.
+#   ------------------------------------------------------------
+
+rng_prop_cat = np.random.default_rng(20260910)
+n_prop_cat = 800
+x_prop_cat = rng_prop_cat.normal(size=n_prop_cat)
+cat_levels_prop = {"a": 0.0, "b": 3.0, "c": -2.0}
+cat_prop = rng_prop_cat.choice(list(cat_levels_prop.keys()), size=n_prop_cat)
+cat_effect_prop = np.array([cat_levels_prop[ci] for ci in cat_prop])
+y_prop_cat = 1.5 * x_prop_cat + cat_effect_prop + rng_prop_cat.normal(
+    scale=0.5, size=n_prop_cat
+)
+miss_prop_cat = rng_prop_cat.random(n_prop_cat) < 0.25
+df_prop_cat = pl.DataFrame(
+    dict(
+        idx_prop_cat=range(n_prop_cat),
+        x_prop_cat=x_prop_cat,
+        cat_prop_cat=cat_prop,
+        y_prop_cat=[
+            None if miss_prop_cat[i] else float(y_prop_cat[i])
+            for i in range(n_prop_cat)
+        ],
+    )
+)
+var_prop_cat = Variable(
+    impute_var="y_prop_cat",
+    model="~1+x_prop_cat",
+    modeltype=Variable.ModelType.CatBoost,
+    parameters=Parameters.CatBoost(categorical_feature=["cat_prop_cat"]),
+)
+srmi_prop_cat = SRMI(
+    df=df_prop_cat,
+    variables=[var_prop_cat],
+    index=["idx_prop_cat"],
+    replication=SRMI.Replication(n_implicates=2, n_iterations=2),
+    parallel=SRMI.Parallel(enabled=False),
+    bootstrap=SRMI.Bootstrap(enabled=True),
+    storage=SRMI.Storage(
+        path_model=f"{path_scratch}/py_srmi_test_propensity_cat", force_start=True
+    ),
+)
+srmi_prop_cat.run()
+
+logger.info("plot_propensity: categorical_feature (CatBoost, formula-excluded) threads through")
+resolved_predictors = srmi_prop_cat._variable_predictors(
+    var_prop_cat, srmi_prop_cat.implicates[0].df
+)
+assert "cat_prop_cat" in resolved_predictors, (
+    f"categorical_feature column should be unioned into predictors even "
+    f"though it's not in the formula, got {resolved_predictors}"
+)
+assert srmi_prop_cat._variable_categorical_predictors(var_prop_cat) == ["cat_prop_cat"]
+
+fig_prop_cat = srmi_prop_cat.plot_propensity()
+#   1 variable x (1 Observed + 2 implicates) = 3 traces
+assert len(fig_prop_cat.data) == 3, f"expected 3 traces, got {len(fig_prop_cat.data)}"
+
+fig_prop_cat_binned = srmi_prop_cat.plot_propensity(kind="binned_mean", n_bins=4)
+assert len(fig_prop_cat_binned.data) == 3, f"expected 3 traces, got {len(fig_prop_cat_binned.data)}"
+
+logger.info("srmi.py: plot_propensity checks passed")

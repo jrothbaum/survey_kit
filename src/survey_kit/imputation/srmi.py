@@ -36,6 +36,11 @@ from .utilities.quality_diagnostics import (
     observed_vs_imputed_long_table,
     density_long_table,
 )
+from .utilities.propensity_diagnostics import (
+    fit_propensity,
+    propensity_binned_table,
+    propensity_residual_data,
+)
 
 #   SRMI modules
 from .variable import Variable
@@ -1627,6 +1632,322 @@ class SRMI(Serializable):
                     if kind == "strip"
                     else "Observed vs. imputed - box plot (mice bwplot()-equivalent)"
                 ),
+            )
+
+        fig.update_xaxes(matches=None)
+        fig.update_yaxes(matches=None)
+
+        if path is not None:
+            fig.write_html(path)
+
+        return fig
+
+    def _variable_categorical_predictors(self, vari: Variable) -> list[str]:
+        """
+        The variable's own imputation model may already declare which
+        of its predictors are native categoricals - CatBoost()/
+        XGBoost()/RandomForest()/SklearnModel()/OrderedCategorical() all
+        store this at parameters["categorical_feature"] (see
+        Parameters._sklearn_model_params), while LightGBM() stores it
+        nested inside its own raw parameters dict at
+        parameters["parameters"]["categorical_feature"]. Reused so the
+        propensity model (also a LightGBM fit) treats the same columns
+        as categorical rather than mis-coding them as numeric.
+        """
+        cat = vari.parameters.get("categorical_feature")
+        if not cat:
+            nested = vari.parameters.get("parameters")
+            if isinstance(nested, dict):
+                cat = nested.get("categorical_feature")
+        if not cat:
+            return []
+        if isinstance(cat, str):
+            return [cat]
+        return list(cat)
+
+    def _variable_predictors(self, vari: Variable, df0: IntoFrameT) -> list[str]:
+        """
+        Plain list of raw predictor column names for vari, for the
+        propensity model - deliberately NOT the same model-matrix
+        machinery vari's own imputation model may use, since the
+        propensity model is a from-scratch LightGBM fit that handles
+        categoricals/interactions natively and has no use for
+        engineered dummy columns. A list-form vari.model is already a
+        resolved column list, used as-is. A formula-string vari.model
+        is reduced to its raw right-hand-side variable names via
+        FormulaBuilder.columns_rhs (pre-transform - a simplification
+        for a formula using C(...)/interactions, which this does NOT
+        expand, since those become irrelevant once LightGBM is doing
+        its own native categorical/interaction handling anyway).
+        Either way, any categorical_feature columns not already
+        present are unioned in raw - mirroring how impute.py's own
+        _run_regression appends categorical_feature columns that
+        aren't referenced in the formula (see its "categorical_feature
+        columns not referenced in the formula" comment) - otherwise a
+        CatBoost() variable whose categorical predictor is deliberately
+        kept OUT of the formula (added only via categorical_feature)
+        would silently vanish from the propensity model entirely.
+        """
+        model = vari.model
+        if isinstance(model, list):
+            predictors = list(model)
+        else:
+            from ..utilities.formula_builder import FormulaBuilder
+
+            predictors = list(FormulaBuilder(df=df0, formula=model).columns_rhs)
+
+        for c in self._variable_categorical_predictors(vari):
+            if c not in predictors:
+                predictors.append(c)
+
+        return predictors
+
+    def _propensity_data(
+        self, variables: list[Variable], parameters: dict | None = None
+    ) -> dict[str, dict]:
+        """
+        {impute_var: {"observed": {"y": [...], "propensity": [...]},
+        "implicates": [{"y": [...], "propensity": [...]}, ...]}} - the
+        propensity model is fit ONCE per variable, on implicate 0's own
+        completed predictors (a single LightGBM fit, not one per
+        implicate - a deliberate simplification, since the propensity
+        is meant to summarize each row's own covariate profile, which
+        is usually close to stable across implicates), then joined
+        by self.index onto every implicate's own df so each implicate's
+        newly-imputed rows get scored on that same shared propensity
+        scale. Skips a variable with no imputation_flag column (never
+        actually imputed) or with no variation in that flag (nothing,
+        or everything, missing - no propensity model to fit).
+        """
+        df0 = nw.from_native(self.implicates[0].df).lazy().collect().to_native()
+        data = {}
+        for vari in variables:
+            impute_col = vari.impute_var
+            flag_col = vari.imputation_flag
+            if impute_col not in df0.columns or flag_col not in df0.columns:
+                continue
+
+            if df0[flag_col].drop_nulls().n_unique() < 2:
+                logger.info(
+                    f"plot_propensity(): skipping {impute_col!r} - its "
+                    f"imputation_flag has no variation (nothing, or "
+                    f"everything, missing) to fit a propensity model on."
+                )
+                continue
+
+            propensity = fit_propensity(
+                df0,
+                predictors=self._variable_predictors(vari, df0),
+                flag_col=flag_col,
+                categorical_feature=self._variable_categorical_predictors(vari),
+                parameters=parameters,
+            )
+            df0_p = df0.with_columns(pl.Series("___propensity", propensity))
+
+            observed_df = (
+                df0_p.filter(~pl.col(flag_col))
+                .select([impute_col, "___propensity"])
+                .drop_nulls(subset=[impute_col])
+            )
+            observed = {
+                "y": observed_df[impute_col].to_list(),
+                "propensity": observed_df["___propensity"].to_list(),
+            }
+
+            propensity_lookup = df0_p.select(self.index + ["___propensity"])
+
+            implicates_data = []
+            for impi in self.implicates:
+                dfi = nw.from_native(impi.df).lazy().collect().to_native()
+                dfi_p = dfi.join(propensity_lookup, on=self.index, how="left")
+                imputed_df = (
+                    dfi_p.filter(pl.col(flag_col))
+                    .select([impute_col, "___propensity"])
+                    .drop_nulls(subset=[impute_col])
+                )
+                implicates_data.append(
+                    {
+                        "y": imputed_df[impute_col].to_list(),
+                        "propensity": imputed_df["___propensity"].to_list(),
+                    }
+                )
+
+            data[impute_col] = {"observed": observed, "implicates": implicates_data}
+
+        return data
+
+    def plot_propensity(
+        self,
+        variable: str | int | list[str | int] | None = None,
+        kind: str = "density",
+        n_bins: int = 10,
+        cv_folds: int = 5,
+        lightgbm_parameters: dict | None = None,
+        residual_model_parameters: dict | None = None,
+        path: str | None = None,
+    ) -> "plotly.graph_objects.Figure":  # noqa: F821
+        """
+        Response-propensity diagnostic - a different, conditional
+        question from plot_imputation_quality()'s marginal density/
+        strip/box comparison: instead of "does the imputed marginal
+        distribution look like the observed marginal distribution"
+        (which a correct MAR imputation can legitimately fail, since
+        missing rows can differ systematically on the predictors),
+        this asks "conditional on how similar a row's covariate
+        profile is to a typically-missing row (its response
+        propensity, from a binary LightGBM model of the imputation_flag
+        on that variable's own predictors), does the imputed value
+        track the observed one." See utilities/propensity_diagnostics.py's
+        module docstring for the full rationale, including how
+        kind="density" matches the diagnostic used in Raghunathan &
+        Bondarenko (2007)/Bondarenko & Raghunathan (2016) - and in the
+        user's own SRMI/CPS-ASEC paper (Hokayem, Raghunathan &
+        Rothbaum) - rather than an invented convenience.
+
+        No "auto-plot" flag, same as plot_convergence()/
+        plot_imputation_quality() - call this whenever you want,
+        including on an SRMI you've just SRMI.load()ed. Requires the
+        optional 'plotly' package, same as the other two.
+
+        Parameters
+        ----------
+        variable : str | int | list[str | int] | None, optional
+            Which variable(s) to plot - a name (impute_var), a 0-indexed
+            position in self.variables, a list mixing either, or None
+            for every variable in self.variables. By default None (all).
+        kind : str, optional
+            "density" (default) - regress y on the propensity (a
+            LightGBM regression, one continuous feature, fit on the
+            observed rows only), then compare the KERNEL DENSITY of the
+            residuals - observed vs. each implicate's own imputed rows,
+            scored against that same fit. Similar location AND spread
+            across groups is the good outcome; a shifted or
+            differently-spread residual density for an implicate
+            suggests the imputation model is missing something the
+            missingness mechanism itself depends on. The observed
+            group's own residuals come from cv_folds-way cross-
+            validated (out-of-fold) predictions specifically to avoid
+            biasing them tighter than the (always out-of-sample)
+            implicate residuals - see
+            propensity_diagnostics.propensity_residual_data()'s
+            docstring for why that matters for a single-feature model.
+            "binned_mean" - a simpler, cruder alternative: bin rows by
+            propensity (quantiles of the pooled sample) and compare
+            mean(y), not residuals, within each bin.
+        n_bins : int, optional
+            Only used by kind="binned_mean" - number of quantile bins
+            of the pooled propensity to group rows into, by default 10.
+            Must be >= 2.
+        cv_folds : int, optional
+            Only used by kind="density" - number of cross-validation
+            folds for the observed group's out-of-fold residuals, by
+            default 5. Must be >= 2 to matter; a variable with too few
+            observed rows for the requested fold count (fewer than
+            2*cv_folds) is silently skipped (logged), same as any other
+            insufficient-data case elsewhere in these diagnostics.
+        lightgbm_parameters : dict | None, optional
+            Overrides for the propensity model's LightGBM parameters -
+            merged onto propensity_diagnostics.DEFAULT_PROPENSITY_PARAMETERS
+            (a deliberately shallow/regularized default - an
+            unregularized GBM overfits the in-sample propensity toward
+            0/1 and collapses the diagnostic). By default None. Each
+            variable's own categorical_feature (from its CatBoost()/
+            XGBoost()/RandomForest()/SklearnModel()/LightGBM()
+            parameters, whichever it uses) is detected and passed to
+            the propensity model automatically - no need to repeat it
+            here unless you want to override it.
+        residual_model_parameters : dict | None, optional
+            Only used by kind="density" - overrides for the y~propensity
+            LightGBM regression's own parameters, merged onto
+            propensity_diagnostics.DEFAULT_RESIDUAL_MODEL_PARAMETERS.
+            By default None.
+        path : str | None, optional
+            If given, also save the figure there as a self-contained
+            HTML file. By default None.
+
+        Returns
+        -------
+        plotly.graph_objects.Figure
+        """
+        try:
+            import plotly.express as px
+        except ImportError as e:
+            message = (
+                "SRMI.plot_propensity() needs the 'plotly' package, "
+                "which isn't installed - it's optional (nothing about "
+                "running SRMI itself needs it, only this diagnostic "
+                "plot). Install it with `uv add --dev plotly` (or `pip "
+                "install plotly`), then call this again - it works just "
+                "as well on an SRMI.load()ed object as on one you just ran."
+            )
+            logger.error(message)
+            raise ImportError(message) from e
+
+        if kind not in ("density", "binned_mean"):
+            message = (
+                f"SRMI.plot_propensity(): kind={kind!r} not recognized - "
+                f"use 'density' or 'binned_mean'."
+            )
+            logger.error(message)
+            raise ValueError(message)
+
+        if kind == "binned_mean" and n_bins < 2:
+            message = f"SRMI.plot_propensity(): n_bins={n_bins} must be >= 2."
+            logger.error(message)
+            raise ValueError(message)
+
+        if kind == "density" and cv_folds < 2:
+            message = f"SRMI.plot_propensity(): cv_folds={cv_folds} must be >= 2."
+            logger.error(message)
+            raise ValueError(message)
+
+        variables = self._resolve_variables(variable)
+        data = self._propensity_data(variables, parameters=lightgbm_parameters)
+
+        if kind == "density":
+            resid_data = propensity_residual_data(
+                data, cv_folds=cv_folds, parameters=residual_model_parameters
+            )
+            df_long = density_long_table(resid_data)
+            df_pd = nw.from_native(df_long).lazy().collect().to_pandas()
+            fig = px.line(
+                df_pd,
+                x="x",
+                y="density",
+                color="group",
+                facet_col="vrb",
+                labels={
+                    "x": "Residual of y ~ response propensity",
+                    "density": "Density",
+                    "group": "",
+                },
+                title=(
+                    "Observed vs. imputed - residual density by response "
+                    "propensity (Raghunathan & Bondarenko (2007)-style)"
+                ),
+            )
+        else:
+            df_long = propensity_binned_table(data, n_bins=n_bins)
+            df_pd = (
+                nw.from_native(df_long)
+                .lazy()
+                .collect()
+                .sort(["vrb", "group", "propensity"])
+                .to_pandas()
+            )
+            fig = px.line(
+                df_pd,
+                x="propensity",
+                y="mean_y",
+                color="group",
+                facet_col="vrb",
+                markers=True,
+                labels={
+                    "propensity": "Response propensity (predicted P(missing))",
+                    "mean_y": "Mean of variable",
+                    "group": "",
+                },
+                title="Observed vs. imputed - mean value by response-propensity bin",
             )
 
         fig.update_xaxes(matches=None)
