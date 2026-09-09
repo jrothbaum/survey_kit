@@ -217,7 +217,8 @@ def entropy_balance_penalty(
             ratio, candidate_primal_step
         )
 
-        ratio += candidate_primal_step
+        primal_step = candidate_primal_step * backtrack
+        ratio += primal_step
 
         if np.linalg.norm(Cd) < options.get("optimality_violation", 1e-5) or bool(
             np.linalg.norm(primal_step) < options.get("step_tol", 1e-8)

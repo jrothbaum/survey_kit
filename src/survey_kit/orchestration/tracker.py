@@ -503,15 +503,15 @@ class FunctionTracker:
                         self.on_complete_by_file(**paramsi)
                         completed_files.append(filei)
 
+                if len(completed_files):
+                    for filei in completed_files:
+                        del self.on_complete_by_file_params[filei]
+
                 if final_call:
                     #   Log which files never showed up
                     logger.info("\nPost-processing never run for:")
                     for keyi in self.on_complete_by_file_params.keys():
                         logger.info(f"     {keyi}")
-
-                if len(completed_files):
-                    for filei in completed_files:
-                        del self.on_complete_by_file_params[filei]
 
     @classmethod
     def args_to_keep(cls, args: list[str]):

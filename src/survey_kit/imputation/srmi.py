@@ -1,6 +1,8 @@
 from __future__ import annotations
 from typing import Optional, Callable
 import os
+import numpy as np
+import polars as pl
 import narwhals as nw
 from narwhals.typing import IntoFrameT
 import shutil
@@ -29,6 +31,11 @@ from ..orchestration.from_python import FunctionFromPython
 from ..orchestration.callers import run_function_list
 
 from .utilities.lightgbm_wrapper import Survey_kit_Lightgbm as kit_lightgbm
+from .utilities.convergence_diagnostics import convergence_table, convergence_long_table
+from .utilities.quality_diagnostics import (
+    observed_vs_imputed_long_table,
+    density_long_table,
+)
 
 #   SRMI modules
 from .variable import Variable
@@ -312,7 +319,11 @@ class SRMI(Serializable):
             self.preselection = preselection
 
             self.modeltype = modeltype
+
+            if parameters is None:
+                parameters = {}
             self.parameters = parameters
+
             self.ordered_categorical = ordered_categorical
 
         def with_weight(self, value: str) -> SRMI.Defaults:
@@ -580,7 +591,7 @@ class SRMI(Serializable):
         variable.exclude_variables_from_models(df=self.df)
 
         #   Do some pre-checks to catch any errors that will stop things later
-        variable.validate_inputs(df=self.df)
+        variable.validate_inputs(df=self.df, bootstrap_enabled=self.bootstrap.enabled)
 
         self.variables.append(variable)
 
@@ -749,9 +760,30 @@ class SRMI(Serializable):
             #       and the index for merging
             df_initial = nw.from_native(self.df).select(keep_vars).to_native()
 
+            #   run() calls _initialize_implicates() unconditionally,
+            #       every time it's called - including a second call on
+            #       an already-loaded SRMI (e.g. SRMI.load(path) then
+            #       .run() again to extend to a higher n_iterations,
+            #       after checking SRMI.convergence()). self.implicates
+            #       is already fully populated in that case (by
+            #       SRMI.load()'s own explicit per-implicate loading
+            #       loop), so appending unconditionally here would
+            #       silently duplicate every implicate - confirmed:
+            #       len(self.implicates) doubles, the run loop (indexed
+            #       by number, not iterating the list) only ever touches
+            #       the ORIGINAL entries so the duplicates just sit
+            #       there stale, but anything that iterates
+            #       self.implicates directly (e.g. SRMI.convergence()'s
+            #       own m = len(self.implicates)) silently corrupts on
+            #       the phantom extras. Skip any number already present.
+            existing_numbers = {impi.number for impi in self.implicates}
             for impi in range(self.replication.n_implicates):
+                number = impi + 1
+                if number in existing_numbers:
+                    continue
+
                 this_implicate = Implicate(
-                    parent=self, number=impi + 1, seed=random.randint(1, 2**32 - 1)
+                    parent=self, number=number, seed=random.randint(1, 2**32 - 1)
                 )
 
                 if not this_implicate.in_progress:
@@ -806,7 +838,7 @@ class SRMI(Serializable):
             weight=variable.weight,
         )
         if selected_model != "":
-            variable.model = selected_model
+            variable.model = variable.union_required_predictors(selected_model)
 
             if variable.selection is not None:
                 if variable.preselection.method == Selection.Method.LASSO:
@@ -1183,6 +1215,427 @@ class SRMI(Serializable):
         return self.implicates[index].df_full(
             drop_flags=drop_flags, with_appended_cols=with_appended_cols
         )
+
+    def convergence(self, diagnostic: str = "all", parameter: str = "mean") -> IntoFrameT:
+        """
+        Convergence diagnostics for the imputed variables, across
+        implicates and iterations - matches mice's own convergence()
+        function (R/convergence.R) as closely as possible, including
+        the exact algorithm it delegates to for the potential scale
+        reduction factor (rstan::Rhat(), i.e. the rank-normalized,
+        folded, split-Rhat of Vehtari et al. 2021 - see
+        utilities/convergence_diagnostics.py's module docstring for the
+        verified-against-source details).
+
+        Callable any time after at least 3 iterations of at least 2
+        implicates have run (mid-run is fine, not just after a
+        completed SRMI) - it reads whatever each Impute.chain_mean/
+        chain_std has already accumulated on self.implicates, the same
+        mean/std of each variable's own newly-imputed values every
+        iteration that Impute._post_impute_statistics computes (and
+        that already respects the Variable's own Where restriction,
+        since it's read from df_impute, which Impute.df_impute() has
+        already filtered by Where before this ever sees it).
+
+        Parameters
+        ----------
+        diagnostic : str, optional
+            "all" (both ac and psrf), "ac" (lag-1 autocorrelation only),
+            or "psrf"/"gr" (potential scale reduction factor only). By
+            default "all".
+        parameter : str, optional
+            "mean" or "sd" - diagnose the chain means or the chain
+            standard deviations. By default "mean".
+
+        Returns
+        -------
+        IntoFrameT
+            One row per (iteration, variable) - columns ".it", "vrb",
+            and "ac"/"psrf" per `diagnostic`, same names mice uses. NaN
+            wherever a variable has no numeric/boolean imputed values to
+            track for that (iteration, implicate) - e.g. a Multinomial()/
+            OrderedCategorical() category-label target, or an iteration
+            where that variable had nothing to impute.
+        """
+        chain_mean, chain_std = self._collect_chain_arrays()
+
+        return convergence_table(
+            chain_mean=chain_mean,
+            chain_std=chain_std,
+            diagnostic=diagnostic,
+            parameter=parameter,
+        )
+
+    def _collect_chain_arrays(self) -> tuple[dict[str, np.ndarray], dict[str, np.ndarray]]:
+        """
+        Shared data-gathering for convergence()/plot_convergence(): read
+        each implicate's Impute.chain_mean/chain_std accumulation into
+        {variable: (n_iterations, n_implicates) numpy array} pairs, with
+        mice's own m>=2/iterations>=3 validation (convergence()
+        docstring has the full explanation of what these values are and
+        where they come from).
+        """
+        m = len(self.implicates)
+        if m < 2:
+            message = (
+                f"SRMI.convergence()/plot_convergence(): the number of "
+                f"implicates should be at least two (m > 1), got {m}."
+            )
+            logger.error(message)
+            raise ValueError(message)
+
+        #   Implicate.chain_mean/chain_std are {impute_var: {iteration:
+        #       value}} - the inner "iteration" keys are plain Python
+        #       ints on a freshly-run (in-memory) implicate, but come
+        #       back as STRINGS after a save()/load() round trip (JSON
+        #       object keys are always strings) - int(...) here makes
+        #       this work identically either way, which matters for
+        #       exactly the "reload and run more iterations" workflow
+        #       convergence()/plot_convergence() exist to support.
+        max_it = 0
+        for impi in self.implicates:
+            for chain_mean_var in impi.chain_mean.values():
+                if chain_mean_var:
+                    max_it = max(max_it, max(int(it) for it in chain_mean_var.keys()))
+        if max_it < 3:
+            message = (
+                f"SRMI.convergence()/plot_convergence(): the number of "
+                f"iterations should be at least three (maxit > 2), got "
+                f"{max_it}."
+            )
+            logger.error(message)
+            raise ValueError(message)
+
+        vrbs = []
+        for vari in self.variables:
+            if vari.impute_var not in vrbs:
+                vrbs.append(vari.impute_var)
+
+        chain_mean = {v: np.full((max_it, m), np.nan) for v in vrbs}
+        chain_std = {v: np.full((max_it, m), np.nan) for v in vrbs}
+
+        for chain_idx, impi in enumerate(self.implicates):
+            for v in vrbs:
+                for it_raw, val in impi.chain_mean.get(v, {}).items():
+                    it = int(it_raw)
+                    if it <= max_it and val is not None:
+                        chain_mean[v][it - 1, chain_idx] = val
+                for it_raw, val in impi.chain_std.get(v, {}).items():
+                    it = int(it_raw)
+                    if it <= max_it and val is not None:
+                        chain_std[v][it - 1, chain_idx] = val
+
+        return chain_mean, chain_std
+
+    def plot_convergence(
+        self, parameter: str = "both", path: str | None = None
+    ) -> "plotly.graph_objects.Figure":  # noqa: F821
+        """
+        Plot the trace lines of the SRMI algorithm - matches mice's own
+        plot(imp) (plot.mids(), R/mids.R) as closely as possible: for
+        each imputed variable, one line per implicate, the chain mean
+        (and/or chain sd) against iteration number. On convergence, the
+        lines within a panel should intermingle and be free of any
+        trend - the same "worm plot" reading as mice's own.
+
+        Purely a plotting convenience on top of the same data
+        convergence() reads (Impute.chain_mean/chain_std, accumulated
+        on self.implicates) - there's no "auto-plot" flag anywhere in
+        SRMI's own run() - call this whenever you want, including on an
+        SRMI you've just SRMI.load()ed in a completely different
+        process/environment from the one that ran the imputation (e.g.
+        one where plotly wasn't installed at run time, but is now).
+
+        Requires the optional 'plotly' package - not a survey_kit
+        dependency at all (imputation itself never needs it), so
+        nothing about running SRMI requires having it installed; only
+        calling this specific method does.
+
+        Parameters
+        ----------
+        parameter : str, optional
+            "both" (mice's own default - one row of panels for chain
+            means, one for chain sds), "mean", or "sd". By default
+            "both".
+        path : str | None, optional
+            If given, also save the figure there as a self-contained
+            HTML file (fig.write_html) - no extra dependency beyond
+            plotly itself needed for that, unlike a static image export
+            (which would need kaleido too). By default None (don't
+            save - just return the Figure; display it yourself, e.g.
+            fig.show() in a script or automatically in a notebook).
+
+        Returns
+        -------
+        plotly.graph_objects.Figure
+            Always returned (even when `path` is also given) so you can
+            further customize it, .show() it, or save it yourself in a
+            different format.
+        """
+        try:
+            import plotly.express as px
+        except ImportError as e:
+            message = (
+                "SRMI.plot_convergence() needs the 'plotly' package, "
+                "which isn't installed - it's optional (nothing about "
+                "running SRMI itself needs it, only this diagnostic "
+                "plot). Install it with `uv add --dev plotly` (or `pip "
+                "install plotly`), then call this again - the "
+                "underlying chain_mean/chain_std data is already saved "
+                "with the SRMI, so this works just as well on an "
+                "SRMI.load()ed object in a totally separate "
+                "process/environment from the one that ran the "
+                "imputation, any time after."
+            )
+            logger.error(message)
+            raise ImportError(message) from e
+
+        if parameter not in ("both", "mean", "sd"):
+            message = (
+                f"SRMI.plot_convergence(): parameter={parameter!r} not "
+                f"recognized - use 'both', 'mean', or 'sd'."
+            )
+            logger.error(message)
+            raise ValueError(message)
+
+        chain_mean, chain_std = self._collect_chain_arrays()
+        df_long = convergence_long_table(chain_mean=chain_mean, chain_std=chain_std)
+
+        nw_df = nw.from_native(df_long)
+        if parameter != "both":
+            nw_df = nw_df.filter(nw.col("parameter") == parameter)
+        df_pd = (
+            nw_df.with_columns(nw.col("implicate").cast(nw.String))
+            .lazy()
+            .collect()
+            .to_pandas()
+        )
+
+        fig = px.line(
+            df_pd,
+            x=".it",
+            y="value",
+            color="implicate",
+            facet_row="parameter" if parameter == "both" else None,
+            facet_col="vrb",
+            labels={
+                ".it": "Iteration",
+                "value": "",
+                "implicate": "Implicate",
+                "vrb": "",
+            },
+            title="SRMI convergence (mice plot.mids()-equivalent trace plot)",
+        )
+        #   Free y-scale per panel - matches mice's own
+        #       scales=list(y=list(relation="free")) (different
+        #       variables/parameters are rarely on comparable scales).
+        fig.update_yaxes(matches=None)
+
+        if path is not None:
+            fig.write_html(path)
+
+        return fig
+
+    def _resolve_variables(
+        self, variable: str | int | list[str | int] | None
+    ) -> list[Variable]:
+        if variable is None:
+            return list(self.variables)
+        if not isinstance(variable, list):
+            variable = [variable]
+        resolved = []
+        for vi in variable:
+            if isinstance(vi, bool):
+                raise TypeError(f"variable entry {vi!r} must be a str or int, not bool")
+            if isinstance(vi, int):
+                resolved.append(self.variables[vi])
+            elif isinstance(vi, str):
+                match = next((v for v in self.variables if v.impute_var == vi), None)
+                if match is None:
+                    message = (
+                        f"No variable named {vi!r} in self.variables - have: "
+                        f"{[v.impute_var for v in self.variables]}."
+                    )
+                    logger.error(message)
+                    raise ValueError(message)
+                resolved.append(match)
+            else:
+                raise TypeError(
+                    f"variable entry {vi!r} must be a str (name) or int "
+                    f"(0-indexed position in self.variables), got {type(vi)}"
+                )
+        return resolved
+
+    def _observed_vs_imputed_data(
+        self, variables: list[Variable]
+    ) -> dict[str, dict[str, list]]:
+        """
+        {impute_var: {"observed": [...], "implicates": [[...], ...]}} -
+        split via each Variable's own imputation_flag column (the exact
+        same "was this row originally missing" indicator SRMI's own
+        engine uses to decide what needed imputing in the first place -
+        more robust than re-deriving it from self.df's own null
+        pattern, since it's already the canonical source of truth,
+        already present on every implicate's own df). "observed" is
+        read from implicate 0 alone - the truly-observed values never
+        differ across implicates, so there's nothing to gain (and
+        something to lose - it'd overweight it M-fold) from repeating
+        them M times, matching mice's own densityplot()/stripplot()
+        convention of a single "observed" group set alongside M
+        "imputed" ones.
+        """
+        data = {}
+        df0 = nw.from_native(self.implicates[0].df).lazy().collect().to_native()
+        for vari in variables:
+            impute_col = vari.impute_var
+            flag_col = vari.imputation_flag
+            if impute_col not in df0.columns or flag_col not in df0.columns:
+                continue
+
+            observed = df0.filter(~pl.col(flag_col))[impute_col].drop_nulls().to_list()
+
+            implicates_values = []
+            for impi in self.implicates:
+                dfi = nw.from_native(impi.df).lazy().collect().to_native()
+                imputed_i = (
+                    dfi.filter(pl.col(flag_col))[impute_col].drop_nulls().to_list()
+                )
+                implicates_values.append(imputed_i)
+
+            data[impute_col] = {"observed": observed, "implicates": implicates_values}
+
+        return data
+
+    def plot_imputation_quality(
+        self,
+        variable: str | int | list[str | int] | None = None,
+        kind: str = "density",
+        sample_k: int | None = None,
+        seed: int | None = None,
+        path: str | None = None,
+    ) -> "plotly.graph_objects.Figure":  # noqa: F821
+        """
+        Plot observed vs. imputed values - a DIFFERENT question from
+        plot_convergence()'s "did the chain stabilize": here it's "do
+        the imputed values look plausible next to the observed ones."
+        Matches mice's own densityplot()/stripplot()/bwplot() as
+        closely as possible (see utilities/quality_diagnostics.py's
+        module docstring for the verified-against-source convention):
+        one group for the truly observed values (pooled once), plus one
+        group per implicate holding ONLY that implicate's own newly
+        imputed values - never the whole column.
+
+        Not built here (a materially bigger lift - needs a fitted
+        propensity/detrending model, not just a reshape): mice's
+        propensity-score xyplot() and its own "worm plot" (a detrended
+        Q-Q plot conditional on a covariate - unrelated to the trace
+        lines plot_convergence() draws, despite the similar-sounding
+        name).
+
+        No "auto-plot" flag in run() here either, same as
+        plot_convergence() - call this whenever you want, including on
+        an SRMI you've just SRMI.load()ed.
+
+        Requires the optional 'plotly' package, same as
+        plot_convergence() - raises a clear ImportError if it isn't
+        installed, only when this is actually called.
+
+        Parameters
+        ----------
+        variable : str | int | list[str | int] | None, optional
+            Which variable(s) to plot - a name (impute_var), a 0-indexed
+            position in self.variables, a list mixing either, or None
+            for every variable in self.variables. By default None (all).
+        kind : str, optional
+            "density" (kernel density per group - numeric/boolean
+            variables only, silently skips a group with fewer than 2
+            distinct finite values, same wall mice's own densityplot()
+            hits with no workaround), "strip" (every individual point,
+            one column per group), or "box" (five-number-summary box
+            plot per group). By default "density".
+        sample_k : int | None, optional
+            Only meaningful for kind="strip" - randomly sample at most
+            this many points per (group, variable) to avoid overplotting
+            a large dataset (mice's own guidance: stripplot is best for
+            small datasets, use bwplot/box for large ones - this is the
+            other way to cope with a large one and still see individual
+            points). Ignored for "density"/"box", which should always
+            use every point. By default None (no sampling).
+        seed : int | None, optional
+            Seed for the sample_k random sample. By default None.
+        path : str | None, optional
+            If given, also save the figure there as a self-contained
+            HTML file. By default None.
+
+        Returns
+        -------
+        plotly.graph_objects.Figure
+        """
+        try:
+            import plotly.express as px
+        except ImportError as e:
+            message = (
+                "SRMI.plot_imputation_quality() needs the 'plotly' "
+                "package, which isn't installed - it's optional (nothing "
+                "about running SRMI itself needs it, only this diagnostic "
+                "plot). Install it with `uv add --dev plotly` (or `pip "
+                "install plotly`), then call this again - it works just "
+                "as well on an SRMI.load()ed object as on one you just ran."
+            )
+            logger.error(message)
+            raise ImportError(message) from e
+
+        if kind not in ("density", "strip", "box"):
+            message = (
+                f"SRMI.plot_imputation_quality(): kind={kind!r} not "
+                f"recognized - use 'density', 'strip', or 'box'."
+            )
+            logger.error(message)
+            raise ValueError(message)
+
+        variables = self._resolve_variables(variable)
+        data = self._observed_vs_imputed_data(variables)
+
+        if kind == "density":
+            df_long = density_long_table(data)
+            df_pd = nw.from_native(df_long).lazy().collect().to_pandas()
+            fig = px.line(
+                df_pd,
+                x="x",
+                y="density",
+                color="group",
+                facet_col="vrb",
+                labels={"x": "", "density": "Density", "group": ""},
+                title="Observed vs. imputed - density (mice densityplot()-equivalent)",
+            )
+        else:
+            df_long = observed_vs_imputed_long_table(
+                data, sample_k=sample_k if kind == "strip" else None, seed=seed
+            )
+            df_pd = nw.from_native(df_long).lazy().collect().to_pandas()
+            plot_fn = px.strip if kind == "strip" else px.box
+            fig = plot_fn(
+                df_pd,
+                x="group",
+                y="value",
+                color="group",
+                facet_col="vrb",
+                labels={"group": "", "value": ""},
+                title=(
+                    "Observed vs. imputed - individual points "
+                    "(mice stripplot()-equivalent)"
+                    if kind == "strip"
+                    else "Observed vs. imputed - box plot (mice bwplot()-equivalent)"
+                ),
+            )
+
+        fig.update_xaxes(matches=None)
+        fig.update_yaxes(matches=None)
+
+        if path is not None:
+            fig.write_html(path)
+
+        return fig
 
     def save_appended_cols_to_implicates(
         self, df_list: DataFrameList | list[IntoFrameT], columns: list[str], name: str

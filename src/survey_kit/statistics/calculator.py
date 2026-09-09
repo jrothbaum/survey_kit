@@ -602,18 +602,28 @@ class StatCalculator(Serializable):
 
         if self.scale_wgts_to > 0:
             if self.weight != "":
-                self.df = self.df.with_columns(
-                    (
-                        nw.col(self.weight) / nw.sum(self.weight) * self.scale_wgts_to
-                    ).alias(self.weight)
+                self.df = (
+                    nw.from_native(self.df)
+                    .with_columns(
+                        (
+                            nw.col(self.weight)
+                            / nw.sum(self.weight)
+                            * self.scale_wgts_to
+                        ).alias(self.weight)
+                    )
+                    .to_native()
                 )
 
             if self.replicates is not None:
                 for weighti in self.replicates.rep_list:
-                    self.df = self.df.with_columns(
-                        (nw.col(weighti) / nw.sum(weighti) * self.scale_wgts_to).alias(
-                            weighti
+                    self.df = (
+                        nw.from_native(self.df)
+                        .with_columns(
+                            (
+                                nw.col(weighti) / nw.sum(weighti) * self.scale_wgts_to
+                            ).alias(weighti)
                         )
+                        .to_native()
                     )
 
     def print(
@@ -870,7 +880,7 @@ class StatCalculator(Serializable):
         select_order = sort_vars + [estimate_type_variable_name]
         remaining = []
         rename = {}
-        for coli in df_display.lazy.collect_schema().names():
+        for coli in df_display.collect_schema().names():
             if coli not in select_order and coli != col_sort:
                 if variable_prefix != "":
                     rename[coli] = f"{variable_prefix}{coli}"
@@ -899,7 +909,7 @@ class StatCalculator(Serializable):
 
         if len(rename):
             df_display = df_display.rename(rename)
-        return nw_ordered[0].lazy().from_polars(df_display)
+        return nw_ordered[0].from_polars(df_display)
 
     def join_tables_of_estimates(
         self, df_list: list[IntoFrameT], estimate_type_variable_name: str = "Statistic"
@@ -1272,7 +1282,7 @@ class StatCalculator(Serializable):
 
                     with_scale = [
                         (nw.col(weighti) / nw.col(weighti).sum() * scale_wgts_to).alias(
-                            nw.col(weighti)
+                            weighti
                         )
                         for weighti in weights_to_cast
                     ]

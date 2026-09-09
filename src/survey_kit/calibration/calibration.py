@@ -944,7 +944,7 @@ class Calibration(Serializable):
             self._run_sequential(fCalibrate=fCalibrate, **additional_params)
             diagnostics = self.diagnostics()
 
-            if diagnostics["max_diff"] > self.Tolerance:
+            if diagnostics["max_diff"] > self.tolerance:
                 logger.info(
                     "     Did not converge for sequential, running combined calibration"
                 )
@@ -976,6 +976,7 @@ class Calibration(Serializable):
                 logger.info(
                     "     Converged for sequential, skipping combined calibration"
                 )
+                diagnostics["converged"] = True
 
         if diagnostics is None:
             diagnostics = {"converged": converged}
@@ -1289,7 +1290,7 @@ class Calibration(Serializable):
                 rerun_with_bounds = rerun_with_bounds or (upper_bound < max_ratio)
 
             if rerun_with_bounds:
-                logger.info("\n\nBounds satisfied:")
+                logger.info("\n\nBounds violated:")
                 logger.info(f"     bounds = {bounds}")
                 logger.info(f"     limits = {[min_ratio, max_ratio]}")
 
@@ -1373,8 +1374,8 @@ class Calibration(Serializable):
         )
 
         if self.initial_guess != "":
-            qi_base = qi.select(self.final_weight)
-            qi = qi.select(self.initial_guess)
+            qi_base = nw.from_native(qi).select(self.final_weight).to_native()
+            qi = nw.from_native(qi).select(self.initial_guess).to_native()
 
             qi_base = (
                 nw.from_native(safe_sum_cast(df=qi_base, columns=[self.final_weight]))
@@ -1689,7 +1690,7 @@ class Calibration(Serializable):
         )
         if prefix != "":
             df_diagnostics = rename_with_prefix_suffix(
-                df=df_diagnostics, prefix=prefix, ExcludeList=["Column"]
+                df=df_diagnostics, prefix=prefix, exclude_list=["Column"]
             )
 
         #   Reorder and transpose the diagnostics to be easier to read

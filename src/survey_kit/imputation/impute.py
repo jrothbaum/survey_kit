@@ -3,7 +3,6 @@ from typing import TYPE_CHECKING
 
 import os
 import logging
-import gc
 import narwhals as nw
 import narwhals.selectors as cs
 from narwhals.typing import IntoFrameT
@@ -41,6 +40,7 @@ from ..utilities.rounding import drb_round_table, first_digit_position
 
 from .utilities.draw_from_quantiles import DrawFromQuantileVectors
 from .utilities.lightgbm_wrapper import Survey_kit_Lightgbm as kit_lightgbm
+from .utilities.leaf_donor_matching import leaf_cooccurrence_match, extract_leaf_indices
 from .variable import Variable
 from .parameters import Parameters
 from .selection import Selection
@@ -115,6 +115,13 @@ class Impute:
             self.logging = logger
 
         self.df_post_impute_statistics = None
+        #   SRMI.convergence()'s chainMean/chainVar equivalent - only
+        #       actually set inside _post_impute_statistics, which isn't
+        #       always reached (e.g. "No rows to impute" short-circuits
+        #       before it) - default None here so Implicate._impute_variable
+        #       can always read these attributes safely either way.
+        self.chain_mean = None
+        self.chain_std = None
         self.current_by = {}
 
         self.variable_number = variable_number
@@ -169,14 +176,31 @@ class Impute:
 
                 if self.variable.modelfunction is not None:
                     df_by[idf] = self.variable.modelfunction(self, df=df_by[idf])
-                elif self.variable.modeltype == Variable.ModelType.Regression:
+                elif self.variable.modeltype in (
+                    Variable.ModelType.Regression,
+                    Variable.ModelType.RandomForest,
+                    Variable.ModelType.XGBoost,
+                    Variable.ModelType.CatBoost,
+                    Variable.ModelType.SklearnModel,
+                    #   pmm is, mechanically, just regression with a fixed
+                    #       model/error choice baked into
+                    #       Parameters.pmm()'s own convenience builder -
+                    #       see its docstring. No separate impute.py
+                    #       method any more - routes here, same as
+                    #       RandomForest()/etc.
+                    Variable.ModelType.pmm,
+                ):
+                    #   RandomForest/XGBoost/CatBoost/SklearnModel are all
+                    #       "regression with a different model plugged in"
+                    #       - see Parameters.RandomForest() etc. and
+                    #       _run_regression's estimator handling.
                     df_by[idf] = self.regression(df=df_by[idf])
-                elif self.variable.modeltype == Variable.ModelType.pmm:
-                    df_by[idf] = self.pmm(df=df_by[idf])
                 elif self.variable.modeltype == Variable.ModelType.LightGBM:
                     df_by[idf] = self.lightgbm(df=df_by[idf])
-                elif self.variable.modeltype == Variable.ModelType.NearestNeighbor:
-                    df_by[idf] = self.nearestneighbor(df=df_by[idf])
+                elif self.variable.modeltype == Variable.ModelType.Multinomial:
+                    df_by[idf] = self.multinomial(df=df_by[idf])
+                elif self.variable.modeltype == Variable.ModelType.OrderedCategorical:
+                    df_by[idf] = self.ordered_categorical(df=df_by[idf])
                 # elif self.variable.modeltype == Variable.ModelType.TwoSampleRegression:
                 #     df_by[idf] = self.two_sample_regression(df=df_by[idf])
                 self.logging.info("\n\n\n\n")
@@ -199,16 +223,18 @@ class Impute:
                 f"     Running variable selection: {self.variable.selection.method}"
             )
 
-            [fb, _, _] = self.variable.process_model(df=self.df, NoConstant=True)
+            [fb, _, _] = self.variable.process_model(df=df, NoConstant=True)
             selected_model = self.variable.selection.run(
-                df=self.df,
+                df=df,
                 y=self.variable.impute_var,
                 formula=fb.formula,
                 weight=self.weight,
             )
 
             self.variable = deepcopy(self.original_variable)
-            self.variable.model = selected_model
+            self.variable.model = self.variable.union_required_predictors(
+                selected_model
+            )
 
     ##########################################################
     ##########################################################
@@ -402,113 +428,6 @@ class Impute:
             )
         return df
 
-    def pmm(self, df: IntoFrameT | None = None) -> IntoFrameT:
-        """
-        Perform predictive mean matching imputation.
-
-        Fits regression model, finds nearest neighbors based on predicted values,
-        and randomly selects donor values.
-
-        Parameters
-        ----------
-        df : IntoFrameT | None, optional
-            Input dataframe, uses self.df if None
-
-        Returns
-        -------
-        IntoFrameT
-            Dataframe with PMM-imputed values
-        """
-        if df is None:
-            df = self.df
-
-        regression_type = self.variable.parameters["model"]
-        self.logging.info(
-            f"     Imputation using {regression_type.name} regression with PMM matching"
-        )
-
-        [fb, _, model_vars] = self.variable.process_model(df)
-        # fb = FormulaBuilder(df=df)
-        # fb.formula = f"{self.variable.impute_var}{self.variable.model}"
-        # model_vars = fb.columns
-        donate_vars = [self.variable.impute_var]
-
-        keep_vars = model_vars + self.index
-
-        if self.weight != "":
-            keep_vars.append(self.weight)
-            model_vars.append(self.weight)
-
-        #   donate_by groups are partitioned out of both df_model and
-        #   df_impute in _find_nearest_neighbor_by, so (unlike donate_list,
-        #   which only the donor pool needs) it has to be kept in both. Only
-        #   add names not already present - keep_vars isn't deduplicated here
-        #   and .select() errors on a repeated column name (e.g. donate_by
-        #   grouping on a variable that's also a model predictor).
-        for vari in self.variable.parameters["donate_by"]:
-            if vari not in keep_vars:
-                keep_vars.append(vari)
-
-        df_impute = self.df_impute(df=df, keep_vars=keep_vars)
-
-        if safe_height(df_impute) == 0:
-            self.logging.info("No rows to impute")
-            return df
-
-        #   Any other variables donated?
-        if len(self.variable.parameters["donate_list"]) > 0:
-            keep_vars.extend(self.variable.parameters["donate_list"])
-            donate_vars.extend(self.variable.parameters["donate_list"])
-
-        df_model = self.df_model(df=df, keep_vars=keep_vars)
-        (df_model, b_winsorized) = self._pmm_winsorize_for_fit(df_model)
-
-        regmodel = self.variable.parameters["model"]
-
-        (df_pmm_model, df_pmm_leave_out) = self._pmm_leave_out(df_model=df_model)
-
-        [df_pmm_model, df_impute, _, df_pmm_leave_out] = self._run_regression(
-            df_model=df_pmm_model,
-            df_impute=df_impute,
-            model_vars=model_vars,
-            formula=fb.formula,
-            regmodel=regmodel,
-            df_pmm_leave_out=df_pmm_leave_out,
-        )
-
-        if df_pmm_leave_out is not None:
-            df_impute = df_impute.sort(self.index)
-
-            # self._pmm_adjust_leave_out(df_impute=df_impute,
-            #                            p_pmm_model=df_impute.select("___prediction"),
-            #                            p_pmm_leave_out=df_pmm_leave_out.select("___prediction"),
-            #                            p_col="___prediction")
-
-            df_model = concat_wrapper([df_pmm_model, df_pmm_leave_out], how="diagonal")
-        else:
-            df_model = df_pmm_model
-
-        #   ___prediction is computed now - safe to swap the donor pool's
-        #   impute_var back to its true (un-winsorized) value before donation.
-        df_model = self._pmm_restore_true_value(df_model, b_winsorized)
-
-        df_impute = self._find_nearest_neighbor_by(
-            df_model=df_model,
-            df_impute=df_impute,
-            knearest=self.variable.parameters["knearest"],
-            match_on=["___prediction"],
-            donate_vars=donate_vars,
-            donate_by=self.variable.parameters["donate_by"],
-        )
-
-        self._post_impute_statistics(
-            df_model=df_model, df_impute=df_impute, donate_vars=donate_vars
-        )
-        df = self._merge_imputes_to_df(
-            df_imputed=df_impute, df=df, merge_list=donate_vars
-        )
-        return df
-
     def regression(self, df: IntoFrameT | None = None) -> IntoFrameT:
         """
         Perform regression-based imputation.
@@ -527,8 +446,13 @@ class Impute:
         if df is None:
             df = self.df
 
-        regression_type = self.variable.parameters["model"]
-        self.logging.info(f"     Imputation using {regression_type.name} regression")
+        #   "model" (the RegressionModel enum) is only meaningful for
+        #       plain OLS/Logit - RandomForest()/XGBoost()/CatBoost()/
+        #       SklearnModel() don't set it at all (they set "estimator"
+        #       instead), so log/derive the model choice from
+        #       self.variable.modeltype, which is accurate either way.
+        regmodel = self.variable.parameters.get("model")
+        self.logging.info(f"     Imputation using {self.variable.modeltype.name}")
 
         [fb, _, model_vars] = self.variable.process_model(df)
         # fb = FormulaBuilder(df=df)
@@ -536,23 +460,80 @@ class Impute:
         # model_vars = fb.columns
         keep_vars = model_vars + self.index
 
+        #   categorical_feature columns are deliberately left out of a
+        #       formula-string model= (see
+        #       Variable._validate_estimator_available /
+        #       _run_regression's raw-column concat), so process_model's
+        #       model_vars won't include them - add them here or they'd
+        #       get dropped by the df_model/df_impute select below before
+        #       _run_regression ever sees them. No-op for the list-model
+        #       branch, where they're already part of model_vars.
+        categorical_feature = self.variable.parameters.get("categorical_feature")
+        if categorical_feature:
+            for vari in categorical_feature:
+                if vari not in keep_vars:
+                    keep_vars.append(vari)
+
         if self.weight != "":
             keep_vars.append(self.weight)
             model_vars.append(self.weight)
 
-        regmodel = self.variable.parameters["model"]
-        errordraw = self.variable.parameters["error"]
+        #   self.weight (used for sample_weight, above) and
+        #       self.original_variable.weight (the Variable's own declared
+        #       weight, read only by _post_impute_statistics's descriptive
+        #       display below) are DIFFERENT columns whenever bootstrap is
+        #       enabled - self.weight becomes the bootstrap replicate
+        #       weight then, overriding whatever the Variable declared.
+        #       Both need to already be present in df_model/df_impute, or
+        #       _post_impute_statistics fails looking for a column that
+        #       was never fetched.
+        if (
+            self.original_variable.weight != ""
+            and self.original_variable.weight not in keep_vars
+        ):
+            keep_vars.append(self.original_variable.weight)
 
-        #   Any other variables donated? Only relevant for PMM-style error
-        #   draws (which assign values via nearest-neighbor donation) - Random
-        #   draws compute the imputed value directly and never donate.
-        if errordraw == Parameters.ErrorDraw.pmm:
+        #   group_levels (Parameters.Regression()/RandomForest()/etc.) -
+        #       the nested random-intercept-heuristic columns (e.g. state,
+        #       county, hhid) need to be present for _run_regression's
+        #       shrinkage step, and the PRIOR iteration's persisted
+        #       intercept estimate (if this isn't the first iteration)
+        #       needs to ride along too so _run_regression can residualize
+        #       against it before fitting - see _nested_group_shrinkage.
+        group_levels = self.variable.parameters.get("group_levels", [])
+        group_intercept_col = f"___group_intercept_{self.variable.impute_var}___"
+        if group_levels:
+            for vari in group_levels:
+                if vari not in keep_vars:
+                    keep_vars.append(vari)
+            if (
+                group_intercept_col
+                in nw.from_native(df).lazy().collect_schema().names()
+                and group_intercept_col not in keep_vars
+            ):
+                keep_vars.append(group_intercept_col)
+
+        #   .get() with a pmm default, not a bare key lookup - Parameters.pmm()'s
+        #       own dict (used directly by Variable.ModelType.pmm, which
+        #       routes here too, not to its own now-removed pmm() method)
+        #       has no "error" key at all, since standalone pmm-modeltype
+        #       imputation always was, unconditionally, pmm-style matching.
+        errordraw = self.variable.parameters.get("error", Parameters.ErrorDraw.pmm)
+
+        #   Any other variables donated? Relevant for any donation-based
+        #   error draw (assigns values via matching, not a direct draw) -
+        #   PMM (knearest on scalar yhat) and leaf (tree leaf
+        #   co-occurrence, RandomForest()/XGBoost()/CatBoost()/
+        #   SklearnModel() only) both donate; Random computes the imputed
+        #   value directly and never donates.
+        if errordraw in (Parameters.ErrorDraw.pmm, Parameters.ErrorDraw.leaf):
             if len(self.variable.parameters["donate_list"]) > 0:
                 keep_vars.extend(self.variable.parameters["donate_list"])
 
             #   donate_by groups are partitioned out of both df_model and
-            #   df_impute in _find_nearest_neighbor_by, so both need it kept.
-            #   Only add names not already present - keep_vars isn't
+            #   df_impute in _find_nearest_neighbor_by/
+            #   _leaf_match_donor_positions, so both need it kept. Only
+            #   add names not already present - keep_vars isn't
             #   deduplicated here and .select() errors on a repeated name.
             for vari in self.variable.parameters["donate_by"]:
                 if vari not in keep_vars:
@@ -567,36 +548,53 @@ class Impute:
             return df
 
         b_winsorized = False
-        if errordraw == Parameters.ErrorDraw.pmm:
+        if errordraw in (Parameters.ErrorDraw.pmm, Parameters.ErrorDraw.leaf):
             (df_model, b_winsorized) = self._pmm_winsorize_for_fit(df_model)
-            (df_pmm_model, df_pmm_leave_out) = self._pmm_leave_out(df_model=df_model)
-        else:
-            df_pmm_model = df_model
-            df_pmm_leave_out = None
 
-        [df_pmm_model, df_impute, _, df_pmm_leave_out] = self._run_regression(
-            df_model=df_pmm_model,
+        [df_model, df_impute, _] = self._run_regression(
+            df_model=df_model,
             df_impute=df_impute,
             model_vars=model_vars,
             formula=fb.formula,
             regmodel=regmodel,
-            df_pmm_leave_out=df_pmm_leave_out,
         )
 
-        if df_pmm_leave_out is not None:
-            df_impute = df_impute.sort(self.index)
-
-            # self._pmm_adjust_leave_out(df_impute=df_impute,
-            #                            p_pmm_model=df_impute.select("___prediction"),
-            #                            p_pmm_leave_out=df_pmm_leave_out.select("___prediction"),
-            #                            p_col="___prediction")
-            df_model = concat_wrapper([df_pmm_model, df_pmm_leave_out], how="diagonal")
-        else:
-            df_model = df_pmm_model
+        if group_levels:
+            #   Persist this iteration's freshly re-estimated group
+            #       intercept back into the working df - "just another
+            #       variable to keep and append", the same way
+            #       donate_list values ride along, so next iteration's
+            #       call to this same variable reads it back in via
+            #       keep_vars above instead of starting over from 0.
+            #       Every row _run_regression touched (donors AND
+            #       recipients) gets a fresh value; anything outside this
+            #       variable's Where-restricted sample this iteration
+            #       (never in df_model/df_impute) simply keeps whatever
+            #       it already had.
+            df_group_intercepts = concat_wrapper(
+                [
+                    nw.from_native(df_model)
+                    .select(self.index + [group_intercept_col])
+                    .to_native(),
+                    nw.from_native(df_impute)
+                    .select(self.index + [group_intercept_col])
+                    .to_native(),
+                ],
+                how="vertical",
+            )
+            #   df isn't necessarily polars-native here (any narwhals-
+            #       supported backend), so drop the prior iteration's copy
+            #       (if any) via narwhals directly rather than
+            #       drop_if_exists, which expects a native .lazy() to
+            #       already exist on whatever's passed in.
+            nw_df = nw.from_native(df)
+            if group_intercept_col in nw_df.lazy().collect_schema().names():
+                df = nw_df.drop(group_intercept_col).to_native()
+            df = join_list([df, df_group_intercepts], on=self.index, how="left")
 
         #   ___prediction is computed now - safe to swap back to the true
-        #   (un-winsorized) value before _regression_draw_errors's pmm branch
-        #   uses df_model as the donor pool.
+        #   (un-winsorized) value before _regression_draw_errors's pmm/leaf
+        #   branches use df_model as the donor pool.
         df_model = self._pmm_restore_true_value(df_model, b_winsorized)
 
         df_impute = self._regression_draw_errors(
@@ -607,7 +605,7 @@ class Impute:
         )
 
         donate_vars = None
-        if errordraw == Parameters.ErrorDraw.pmm:
+        if errordraw in (Parameters.ErrorDraw.pmm, Parameters.ErrorDraw.leaf):
             donate_vars = [self.variable.impute_var]
             if "donate_list" in self.variable.parameters:
                 if len(self.variable.parameters["donate_list"]) > 0:
@@ -772,12 +770,20 @@ class Impute:
         #   Done - return the dataframe
         return df
 
-    def nearestneighbor(self, df: IntoFrameT | None = None) -> IntoFrameT:
+    def multinomial(self, df: IntoFrameT | None = None) -> IntoFrameT:
         """
-        Perform nearest neighbor imputation.
+        Perform multinomial (unordered categorical, 3+ levels) imputation.
 
-        Directly matches on specified variables using k-nearest neighbors
-        without intermediate regression step.
+        Fits a RandomForestClassifier, then imputes by donor matching on
+        leaf co-occurrence: for each recipient, pool the donors sharing a
+        leaf with it across every tree, draw one uniformly at random -
+        the same donor-selection mechanism mice's rf method uses (pool
+        with mice.impute.rf's `unlist(...)` then `sample(..., 1)`; here
+        via a streaming weighted-reservoir sample instead of materializing
+        the pool - see utilities/leaf_donor_matching.py). Genuinely
+        different machinery from regression()/RandomForest() etc. - this
+        is classification with donor selection driven by tree structure,
+        not a scalar yhat with PMM/knearest matching.
 
         Parameters
         ----------
@@ -787,46 +793,499 @@ class Impute:
         Returns
         -------
         IntoFrameT
-            Dataframe with nearest neighbor imputed values
+            Dataframe with multinomial-imputed values
         """
-
         if df is None:
             df = self.df
 
-        self.logging.info("     Imputation by  matching directly on X")
+        self.logging.info("     Imputation using Multinomial")
 
-        df_impute = self.df_impute(df=df)
-        df_model = self.df_model(df=df)
+        #   Predictors can be either form of model= - a plain column list
+        #       (used raw/untouched, so any categorical predictor needs to
+        #       already be numeric-coded/one-hot encoded, same restriction
+        #       as RandomForest()) or an R-style formula string (its
+        #       C(...)/factor-dtype terms already get one-hot-encoded into
+        #       numeric dummy columns by _build_model_matrix's ModelSpec
+        #       branch, same as every other model that reuses it). Nothing
+        #       about RandomForestClassifier needs the list form
+        #       specifically - it just needs a numeric matrix, exactly
+        #       like RandomForestRegressor already gets via either form.
+        [fb, _, model_vars] = self.variable.process_model(df)
+        keep_vars = list(model_vars) + self.index
+
+        donate_vars = [self.variable.impute_var]
+        donate_list = self.variable.parameters.get("donate_list", [])
+        if len(donate_list) > 0:
+            donate_vars.extend(donate_list)
+
+        donate_by = self.variable.parameters.get("donate_by", [])
+
+        for vari in donate_vars + donate_by:
+            if vari not in keep_vars:
+                keep_vars.append(vari)
+
+        if self.weight != "" and self.weight not in keep_vars:
+            keep_vars.append(self.weight)
+
+        #   self.weight (used for sample_weight, above) and
+        #       self.original_variable.weight (the Variable's own
+        #       declared weight, read only by _post_impute_statistics's
+        #       descriptive display below) are DIFFERENT columns whenever
+        #       bootstrap is enabled - see regression()'s identical
+        #       distinction. Both need to already be present, or
+        #       _post_impute_statistics fails looking for a column that
+        #       was never fetched.
+        if (
+            self.original_variable.weight != ""
+            and self.original_variable.weight not in keep_vars
+        ):
+            keep_vars.append(self.original_variable.weight)
+
+        df_model = self.df_model(df=df, keep_vars=keep_vars)
+        df_impute = self.df_impute(df=df, keep_vars=keep_vars)
 
         if safe_height(df_impute) == 0:
             self.logging.info("No rows to impute")
             return df
 
-        match_to = self.variable.parameters["match_to"]
-        knearest = self.variable.parameters["knearest"]
-        donate_vars = [self.variable.impute_var]
+        nw_model_type = NarwhalsType(df_model)
+        nw_impute_type = NarwhalsType(df_impute)
+        df_model_pl = nw_model_type.to_polars().lazy().collect()
+        df_impute_pl = nw_impute_type.to_polars().lazy().collect()
 
-        if "donate_list" in self.variable.parameters:
-            if len(self.variable.parameters["donate_list"]) > 0:
-                donate_vars.extend(self.variable.parameters["donate_list"])
+        random_share = self.variable.parameters.get("random_share", 1.0)
+        if random_share < 1:
+            self.logging.info(f"     Using a {random_share} subsample")
+            df_model_pl = df_model_pl.sample(fraction=random_share, seed=generate_seed())
 
-        df_impute = self._find_nearest_neighbor_by(
-            df_model=df_model,
-            df_impute=df_impute,
-            knearest=knearest,
-            match_on=match_to,
-            donate_vars=donate_vars,
-            donate_by=self.variable.parameters["donate_by"],
+        df_model_mm, df_impute_mm, vars_rhs = self._build_model_matrix(
+            df_model=df_model_pl,
+            df_impute=df_impute_pl,
+            formula=fb.formula,
         )
+
+        #   Row position 0..n-1, assigned AFTER any random_share subsample
+        #       above (not before) so it stays aligned with X_model/
+        #       donor_leaves below, which are built from this same,
+        #       possibly-subsampled frame. df_model_mm/df_impute_mm's rows
+        #       stay in the same order as df_model_pl/df_impute_pl's -
+        #       _build_model_matrix only selects/transforms columns.
+        df_model_pl = df_model_pl.with_row_index(name="___row_pos___")
+        df_impute_pl = df_impute_pl.with_row_index(name="___row_pos___")
+
+        X_model = df_model_mm.to_numpy()
+        y_model = df_model_pl[self.variable.impute_var].to_numpy()
+        X_impute = df_impute_mm.to_numpy()
+
+        parameters = self.variable.parameters.get("parameters") or {}
+
+        #   Imported here, not at module level - sklearn's ensemble import
+        #       costs real time and only Multinomial/RandomForest/etc.
+        #       need it.
+        from sklearn.ensemble import RandomForestClassifier
+
+        model = RandomForestClassifier(**parameters)
+
+        fit_kwargs = {}
+        if self.weight != "":
+            fit_kwargs["sample_weight"] = df_model_pl[self.weight].to_numpy()
+
+        model.fit(X_model, y_model, **fit_kwargs)
+
+        self.logging.info(
+            f"     Extracting leaf indices ({model.get_params()['n_estimators']} trees)"
+        )
+        donor_leaves = model.apply(X_model).astype(np.int32)
+        recipient_leaves = model.apply(X_impute).astype(np.int32)
+
+        matched_donor_idx = self._leaf_match_donor_positions(
+            donor_leaves=donor_leaves,
+            recipient_leaves=recipient_leaves,
+            df_model_pl=df_model_pl,
+            df_impute_pl=df_impute_pl,
+            donate_by=donate_by,
+        )
+
+        df_donated = self._leaf_gather_donations(
+            df_model_pl=df_model_pl,
+            matched_donor_idx=matched_donor_idx,
+            donate_vars=donate_vars,
+        )
+
+        #   _post_impute_statistics (below) mutates its own donate_vars
+        #       argument in place to append self.original_variable.weight
+        #       (the Variable's own declared weight, untouched by
+        #       bootstrap - see regression()'s identical distinction from
+        #       self.weight, the bootstrap-or-declared column used for
+        #       sample_weight during fitting, which diverges from
+        #       original_variable.weight whenever bootstrap is enabled)
+        #       when a weight variable is set, then .select()s that same
+        #       (now-mutated) list from BOTH df_model and df_impute - so
+        #       both need the weight column already present, and
+        #       merge_list further down (which reuses this same
+        #       donate_vars list, now also carrying weight) needs
+        #       df_impute_matched to already carry a legitimate value for
+        #       it too. Carry the RECIPIENT's own weight through (not the
+        #       donor's) - _merge_imputes_to_df would otherwise overwrite
+        #       each recipient's weight with whatever ends up in
+        #       df_impute_matched for it.
+        impute_extra_cols = (
+            [self.original_variable.weight]
+            if self.original_variable.weight != ""
+            else []
+        )
+        df_impute_matched = pl.concat(
+            [df_impute_pl.select(self.index + impute_extra_cols), df_donated],
+            how="horizontal",
+        )
+
+        stats_model_cols = list(donate_vars) + self.index
+        if (
+            self.original_variable.weight != ""
+            and self.original_variable.weight not in stats_model_cols
+        ):
+            stats_model_cols.append(self.original_variable.weight)
 
         self._post_impute_statistics(
-            df_model=df_model, df_impute=df_impute, donate_vars=donate_vars
+            df_model=nw_model_type.from_polars(df_model_pl.select(stats_model_cols)),
+            df_impute=nw_impute_type.from_polars(df_impute_matched),
+            donate_vars=donate_vars,
         )
+
         df = self._merge_imputes_to_df(
-            df_imputed=df_impute, df=df, merge_list=donate_vars
+            df_imputed=nw_impute_type.from_polars(df_impute_matched),
+            df=df,
+            merge_list=donate_vars,
         )
 
         return df
+
+    def ordered_categorical(self, df: IntoFrameT | None = None) -> IntoFrameT:
+        """
+        Perform ordered-categorical imputation.
+
+        Unlike multinomial() (unordered, classification), this fits a
+        mean-regression estimator (default RandomForestRegressor, or any
+        factory supplied via Parameters.OrderedCategorical()) against an
+        integer rank encoding of the declared category order, then
+        donates the REAL observed category from a matched donor - never
+        the numeric rank, and never a category that wasn't actually
+        observed (same guarantee multinomial() gives). Donor matching is
+        either pmm (knearest on the predicted rank, via
+        _find_nearest_neighbor_by - the same mechanism plain
+        Regression()/RandomForest() use) or leaf (tree leaf
+        co-occurrence, via the same _leaf_match_donor_positions/
+        _leaf_gather_donations helpers multinomial() and
+        _regression_draw_errors's leaf branch use).
+
+        Parameters
+        ----------
+        df : IntoFrameT | None, optional
+            Input dataframe, uses self.df if None
+
+        Returns
+        -------
+        IntoFrameT
+            Dataframe with ordered-categorical-imputed values
+        """
+        if df is None:
+            df = self.df
+
+        self.logging.info("     Imputation using OrderedCategorical")
+
+        categories = self.variable.parameters["categories"]
+        category_rank = {cati: float(i) for i, cati in enumerate(categories)}
+
+        [fb, _, model_vars] = self.variable.process_model(df)
+        keep_vars = list(model_vars) + self.index
+
+        donate_vars = [self.variable.impute_var]
+        donate_list = self.variable.parameters.get("donate_list", [])
+        if len(donate_list) > 0:
+            donate_vars.extend(donate_list)
+
+        donate_by = self.variable.parameters.get("donate_by", [])
+
+        for vari in donate_vars + donate_by:
+            if vari not in keep_vars:
+                keep_vars.append(vari)
+
+        categorical_feature = self.variable.parameters.get("categorical_feature")
+        if categorical_feature:
+            for vari in categorical_feature:
+                if vari not in keep_vars:
+                    keep_vars.append(vari)
+
+        if self.weight != "" and self.weight not in keep_vars:
+            keep_vars.append(self.weight)
+
+        #   self.weight (used for sample_weight, below) and
+        #       self.original_variable.weight (the Variable's own
+        #       declared weight, read only by _post_impute_statistics's
+        #       descriptive display) are DIFFERENT columns whenever
+        #       bootstrap is enabled - see regression()'s identical
+        #       distinction.
+        if (
+            self.original_variable.weight != ""
+            and self.original_variable.weight not in keep_vars
+        ):
+            keep_vars.append(self.original_variable.weight)
+
+        df_model = self.df_model(df=df, keep_vars=keep_vars)
+        df_impute = self.df_impute(df=df, keep_vars=keep_vars)
+
+        if safe_height(df_impute) == 0:
+            self.logging.info("No rows to impute")
+            return df
+
+        nw_model_type = NarwhalsType(df_model)
+        nw_impute_type = NarwhalsType(df_impute)
+        df_model_pl = nw_model_type.to_polars().lazy().collect()
+        df_impute_pl = nw_impute_type.to_polars().lazy().collect()
+
+        observed = set(
+            df_model_pl[self.variable.impute_var].drop_nulls().unique().to_list()
+        )
+        unknown = observed - set(categories)
+        if unknown:
+            message = (
+                f"{self.variable.impute_var}: OrderedCategorical's "
+                f"categories={categories} doesn't cover observed "
+                f"value(s) {sorted(unknown, key=str)} - every observed "
+                f"category must appear in categories (lowest/coarsest to "
+                f"highest/finest)."
+            )
+            self.logging.error(message)
+            raise ValueError(message)
+
+        random_share = self.variable.parameters.get("random_share", 1.0)
+        if random_share < 1:
+            self.logging.info(f"     Using a {random_share} subsample")
+            df_model_pl = df_model_pl.sample(fraction=random_share, seed=generate_seed())
+
+        #   The numeric rank proxy is what the regression estimator
+        #       actually fits against/predicts - the real category
+        #       column (still present, untouched) is what donation
+        #       copies below, so the imputed value is always a genuinely
+        #       observed category, never an interpolated rank.
+        rank_col = "___ordinal_rank___"
+        df_model_pl = df_model_pl.with_columns(
+            pl.col(self.variable.impute_var)
+            .replace_strict(category_rank, return_dtype=pl.Float64)
+            .alias(rank_col)
+        )
+
+        df_model_mm, df_impute_mm, vars_rhs = self._build_model_matrix(
+            df_model=df_model_pl,
+            df_impute=df_impute_pl,
+            formula=fb.formula,
+        )
+
+        prepare_data = self.variable.parameters.get("estimator_prepare_data")
+        if prepare_data is not None:
+            df_model_mm, df_impute_mm = prepare_data(df_model_mm, df_impute_mm)
+
+        model_factory = self.variable.parameters["estimator"]
+        model = model_factory()
+
+        fit_kwargs = {}
+        if self.weight != "":
+            fit_kwargs["sample_weight"] = df_model_pl[self.weight]
+
+        model.fit(X=df_model_mm, y=df_model_pl.select(rank_col), **fit_kwargs)
+
+        predict_rank_model = model.predict(df_model_mm)
+        predict_rank_impute = model.predict(df_impute_mm)
+
+        errordraw = self.variable.parameters.get("error", Parameters.ErrorDraw.pmm)
+
+        if errordraw == Parameters.ErrorDraw.leaf:
+            self.logging.info(
+                "     Extracting leaf indices for leaf-based donor matching"
+            )
+            donor_leaves = extract_leaf_indices(model, df_model_mm)
+            recipient_leaves = extract_leaf_indices(model, df_impute_mm)
+
+            matched_donor_idx = self._leaf_match_donor_positions(
+                donor_leaves=donor_leaves,
+                recipient_leaves=recipient_leaves,
+                df_model_pl=df_model_pl,
+                df_impute_pl=df_impute_pl,
+                donate_by=donate_by,
+            )
+            df_donated = self._leaf_gather_donations(
+                df_model_pl=df_model_pl,
+                matched_donor_idx=matched_donor_idx,
+                donate_vars=donate_vars,
+            )
+            impute_extra_cols = (
+                [self.original_variable.weight]
+                if self.original_variable.weight != ""
+                else []
+            )
+            df_impute_matched = pl.concat(
+                [df_impute_pl.select(self.index + impute_extra_cols), df_donated],
+                how="horizontal",
+            )
+        else:
+            #   pmm - knearest on the predicted rank, the same mechanism
+            #       plain Regression()/RandomForest() use, just matched
+            #       on the rank proxy instead of impute_var directly.
+            knearest = self.variable.parameters.get("knearest", 10)
+            df_model_pl = df_model_pl.with_columns(
+                pl.Series("___prediction", predict_rank_model)
+            )
+            df_impute_pl = df_impute_pl.with_columns(
+                pl.Series("___prediction", predict_rank_impute)
+            )
+            df_impute_matched = self._find_nearest_neighbor_by(
+                df_model=nw_model_type.from_polars(df_model_pl),
+                df_impute=nw_impute_type.from_polars(df_impute_pl),
+                knearest=knearest,
+                match_on=["___prediction"],
+                donate_vars=donate_vars,
+                donate_by=donate_by,
+            )
+            df_impute_matched = (
+                NarwhalsType(df_impute_matched).to_polars().lazy().collect()
+            )
+
+        stats_model_cols = list(donate_vars) + self.index
+        if (
+            self.original_variable.weight != ""
+            and self.original_variable.weight not in stats_model_cols
+        ):
+            stats_model_cols.append(self.original_variable.weight)
+
+        #   _post_impute_statistics's default stats (mean/std/quantiles)
+        #       assume a numeric column - impute_var here is a category
+        #       label (often a string), which breaks that machinery (a
+        #       pre-existing gap in the generic stats path, not specific
+        #       to OrderedCategorical - it's just the first modeltype
+        #       that reliably hits it, since Multinomial()'s own tests
+        #       happen to use an Int64-coded category). Substitute the
+        #       already-known integer rank for STATS DISPLAY ONLY, under
+        #       the same column name - the actual donated/merged value
+        #       below is untouched, still the real observed category.
+        rank_expr = pl.col(self.variable.impute_var).replace_strict(
+            category_rank, return_dtype=pl.Float64
+        )
+        df_model_stats = df_model_pl.select(stats_model_cols).with_columns(
+            rank_expr.alias(self.variable.impute_var)
+        )
+        df_impute_stats = df_impute_matched.with_columns(
+            rank_expr.alias(self.variable.impute_var)
+        )
+
+        self._post_impute_statistics(
+            df_model=nw_model_type.from_polars(df_model_stats),
+            df_impute=nw_impute_type.from_polars(df_impute_stats),
+            donate_vars=donate_vars,
+        )
+
+        df = self._merge_imputes_to_df(
+            df_imputed=nw_impute_type.from_polars(df_impute_matched),
+            df=df,
+            merge_list=donate_vars,
+        )
+
+        return df
+
+    def _leaf_match_donor_positions(
+        self,
+        donor_leaves: np.ndarray,
+        recipient_leaves: np.ndarray,
+        df_model_pl: pl.DataFrame,
+        df_impute_pl: pl.DataFrame,
+        donate_by: list[str],
+    ) -> np.ndarray:
+        """
+        Shared leaf-co-occurrence donor-position matching, used by both
+        multinomial() (RandomForestClassifier) and
+        _regression_draw_errors's leaf branch (RandomForest()/XGBoost()/
+        CatBoost()/SklearnModel() mean-regression) - the model choice
+        differs, but "pool donors sharing a leaf with each recipient
+        across every tree, optionally restricted within donate_by groups"
+        is identical either way. donor_leaves/recipient_leaves must
+        already be row-aligned with df_model_pl/df_impute_pl (same order,
+        same row count).
+
+        Returns an int64 array of matched donor row-positions into
+        donor_leaves/df_model_pl, one per recipient row, or -1 for a
+        recipient that shared no leaf with any donor (in its donate_by
+        group, if set).
+        """
+        n_impute = recipient_leaves.shape[0]
+        matched_donor_idx = np.full(n_impute, -1, dtype=np.int64)
+        rng = RandomNumberGenerator()
+
+        if donate_by:
+            self.logging.info(f"     Matching donors within groups: {donate_by}")
+            model_pos_df = df_model_pl.select(donate_by).with_row_index(
+                name="___row_pos___"
+            )
+            impute_pos_df = df_impute_pl.select(donate_by).with_row_index(
+                name="___row_pos___"
+            )
+            model_groups = model_pos_df.partition_by(donate_by, as_dict=True)
+            impute_groups = impute_pos_df.partition_by(donate_by, as_dict=True)
+            for keyi, impute_part in impute_groups.items():
+                impute_pos = impute_part["___row_pos___"].to_numpy()
+                if keyi not in model_groups:
+                    #   No donors at all in this recipient's group - left
+                    #       as -1 (unmatched), same as leaf_cooccurrence_match's
+                    #       own convention for "no shared leaf anywhere".
+                    continue
+                model_part = model_groups[keyi]
+                model_pos = model_part["___row_pos___"].to_numpy()
+                group_result = leaf_cooccurrence_match(
+                    donor_leaves[model_pos], recipient_leaves[impute_pos], rng
+                )
+                valid = group_result != -1
+                matched_donor_idx[impute_pos[valid]] = model_pos[group_result[valid]]
+        else:
+            matched_donor_idx = leaf_cooccurrence_match(
+                donor_leaves, recipient_leaves, rng
+            )
+
+        n_unmatched = int((matched_donor_idx == -1).sum())
+        if n_unmatched > 0:
+            self.logging.info(
+                f"     {n_unmatched} recipient(s) shared no leaf with any "
+                f"donor (in their donate_by group, if set) - left null."
+            )
+
+        return matched_donor_idx
+
+    def _leaf_gather_donations(
+        self,
+        df_model_pl: pl.DataFrame,
+        matched_donor_idx: np.ndarray,
+        donate_vars: list[str],
+    ) -> pl.DataFrame:
+        """
+        Gather donate_vars from each recipient's matched donor row (see
+        _leaf_match_donor_positions) - shared by multinomial() and
+        _regression_draw_errors's leaf branch. Unmatched recipients
+        (matched_donor_idx == -1) come back null in every donate_vars
+        column rather than an arbitrary donor's value.
+        """
+        n_unmatched = int((matched_donor_idx == -1).sum())
+
+        #   Placeholder 0 for unmatched rows (gather needs a valid
+        #       position) - nulled out below via the mask.
+        gather_pos = np.where(matched_donor_idx == -1, 0, matched_donor_idx)
+        df_donated = df_model_pl.select(donate_vars).__getitem__(gather_pos)
+        if n_unmatched > 0:
+            unmatched_mask = pl.Series("___unmatched___", matched_donor_idx == -1)
+            df_donated = df_donated.with_columns(
+                [
+                    pl.when(unmatched_mask).then(None).otherwise(pl.col(c)).alias(c)
+                    for c in donate_vars
+                ]
+            )
+
+        return df_donated
 
     ##########################################################
     ##########################################################
@@ -1059,7 +1518,6 @@ class Impute:
         )
 
         del lgbm_model
-        gc.collect()
         return df
 
     def _lightgbm_quantiles(
@@ -1077,6 +1535,13 @@ class Impute:
         predict_model = None
 
         df_impute = nw.from_native(df_impute).sort(self.index).to_native()
+
+        #   df_impute, the formula, and the other inputs to formula processing
+        #       are the same for every quantile below (only alpha/the trained
+        #       model change) - process it once here rather than re-parsing
+        #       the formula/rebuilding the model matrix on every iteration.
+        df_impute_processed = lgbm_model.process_predict_frame(df_impute)
+
         #   Run LightGBM for each quantile
         quantiles = self.variable.parameters["quantiles"]
         for qi in quantiles:
@@ -1087,7 +1552,9 @@ class Impute:
             lgbm_model.train(show_eval=False)
 
             #   Get the predictions
-            p_impute = lgbm_model.predict(df_predict=df_impute, name=f"___p{qi}")
+            p_impute = lgbm_model.predict(
+                df_predict_processed=df_impute_processed, name=f"___p{qi}"
+            )
 
             p_model = lgbm_model.predict(name=f"___p{qi}")
 
@@ -1189,18 +1656,7 @@ class Impute:
                 "Running LightGBM for the mean for estimating the marginal distribution"
             )
 
-            (df_pmm_model, df_pmm_leave_out) = self._pmm_leave_out(df_model=df_model)
-
-            if df_pmm_leave_out is not None:
-                lgbm_model_pmm = kit_lightgbm(
-                    df=df_pmm_model,
-                    y=self.variable.impute_var,
-                    formula=self.variable.model,
-                    weight=self.weight,
-                    parameters=self.variable.parameters["parameters"],
-                )
-            else:
-                lgbm_model_pmm = lgbm_model
+            lgbm_model_pmm = lgbm_model
 
             if "alpha" in lgbm_model_pmm.parameters.keys():
                 del lgbm_model_pmm.parameters["alpha"]
@@ -1284,22 +1740,44 @@ class Impute:
             del stats_impute
             del df_importance
 
-            if df_pmm_leave_out is not None:
-                p_model = lgbm_model_pmm.predict(df_predict=df_model, name="___yhat")
+            cv_folds = self.variable.parameters.get("cv_folds", 0)
+            if cv_folds and cv_folds > 1:
+                #   Donor pool prediction via cv_folds-way cross-validation
+                #       instead of the in-sample fit - see
+                #       Parameters._tabular_ml_params's cv_folds
+                #       docstring. p_impute (above) still comes
+                #       from lgbm_model_pmm fit on all of df_model -
+                #       recipients are already genuinely out-of-sample, so
+                #       they don't need CV treatment.
+                df_model_cv = NarwhalsType(df_model).to_polars().lazy().collect()
 
-                p_pmm_model = lgbm_model_pmm.predict(
-                    df_predict=df_pmm_model, name="___yhat"
-                )
-                p_pmm_leave_out = lgbm_model_pmm.predict(
-                    df_predict=df_pmm_leave_out, name="___yhat"
-                )
+                def _fit_predict_fold(is_holdout):
+                    train_mask = ~is_holdout
+                    fold_lgbm = kit_lightgbm(
+                        df=df_model_cv.filter(train_mask),
+                        y=self.variable.impute_var,
+                        formula=self.variable.model,
+                        weight=self.weight,
+                        parameters=lgbm_model_pmm.parameters,
+                    )
+                    fold_lgbm.parameters["seed"] = generate_seed()
+                    fold_lgbm.train(show_eval=False)
+                    pred = fold_lgbm.predict(
+                        df_predict=df_model_cv.filter(is_holdout), name="___yhat"
+                    )
+                    return (
+                        nw.from_native(pred).lazy().collect()["___yhat"].to_numpy()
+                    )
 
-                # df_impute = self._pmm_adjust_leave_out(
-                #     df_impute=df_impute,
-                #     p_pmm_model=p_pmm_model,
-                #     p_pmm_leave_out=p_pmm_leave_out,
-                #     p_col="___yhat"
-                # )
+                p_model = pl.DataFrame(
+                    {
+                        "___yhat": self._pmm_cv_out_of_fold_predictions(
+                            n_rows=safe_height(df_model_cv),
+                            cv_folds=cv_folds,
+                            fit_predict_fold=_fit_predict_fold,
+                        )
+                    }
+                )
             else:
                 p_model = lgbm_model_pmm.predict(name="___yhat")
 
@@ -1385,28 +1863,66 @@ class Impute:
                 donate_by=self.variable.parameters["donate_by"],
             )
 
-            df_impute = (
-                nw.from_native(
-                    concat_wrapper(
-                        [
-                            (
-                                nw.from_native(df_impute)
-                                .drop(donate_vars)
-                                .sort("___y_draw")
-                                .to_native()
-                            ),
-                            (
-                                nw.from_native(df_marginal)
-                                .drop(self.index)
-                                .sort(self.variable.impute_var)
-                            ),
-                        ],
-                        how="horizontal",
+            #   Rank-align recipients (sorted by their quantile-draw rank,
+            #       ___y_draw) against the PMM-matched donors (sorted by the
+            #       donated value) by pairing them positionally - this is
+            #       what actually assigns which real donor value each
+            #       recipient gets. donate_by groups must stay separate
+            #       through this step: doing it globally would pair a
+            #       recipient's rank against a donor value that was matched
+            #       within a DIFFERENT donate_by group, silently mixing
+            #       donor pools across strata even though
+            #       _find_nearest_neighbor_by matched correctly within-group
+            #       moments earlier.
+            donate_by = self.variable.parameters["donate_by"]
+
+            def _rank_align_donors(df_impute_part, df_marginal_part):
+                marginal_drop = self.index + (list(donate_by) if donate_by else [])
+                return (
+                    nw.from_native(
+                        concat_wrapper(
+                            [
+                                (
+                                    nw.from_native(df_impute_part)
+                                    .drop(donate_vars)
+                                    .sort("___y_draw")
+                                    .to_native()
+                                ),
+                                (
+                                    nw.from_native(df_marginal_part)
+                                    .drop(marginal_drop)
+                                    .sort(self.variable.impute_var)
+                                    .to_native()
+                                ),
+                            ],
+                            how="horizontal",
+                        )
                     )
+                    .drop(["___yhat", "___y_draw"])
+                    .to_native()
                 )
-                .drop(["___yhat", "___y_draw"])
-                .to_native()
-            )
+
+            if donate_by:
+                df_impute_collected = nw.from_native(df_impute).lazy().collect().to_native()
+                df_marginal_collected = (
+                    nw.from_native(df_marginal).lazy().collect().to_native()
+                )
+                d_impute_by = NarwhalsType(df_impute_collected).to_polars().partition_by(
+                    donate_by, as_dict=True, include_key=True
+                )
+                d_marginal_by = NarwhalsType(
+                    df_marginal_collected
+                ).to_polars().partition_by(donate_by, as_dict=True, include_key=True)
+
+                df_impute = concat_wrapper(
+                    [
+                        _rank_align_donors(d_impute_by[keyi], d_marginal_by[keyi])
+                        for keyi in d_impute_by.keys()
+                    ],
+                    how="diagonal",
+                )
+            else:
+                df_impute = _rank_align_donors(df_impute, df_marginal)
 
             if safe_height(df_impute_missing) > 0:
                 df_impute = concat_wrapper(
@@ -1414,7 +1930,6 @@ class Impute:
                 )
 
             del lgbm_model_pmm
-            gc.collect()
         elif errordraw == Parameters.ErrorDraw.Random:
             #   Interpolate values from the quantile predictions
             [_, predict_impute_values] = self._draw_interpolated_percentiles(
@@ -1530,7 +2045,6 @@ class Impute:
         )
 
         del lgbm_model
-        gc.collect()
         return df
 
     ##########################################################
@@ -1586,7 +2100,17 @@ class Impute:
                     )
                     .to_native()
                 )
-            elif regmodel == Parameters.RegressionModel.OLS:
+            elif regmodel in (Parameters.RegressionModel.OLS, None):
+                #   None means a tree/ensemble estimator (RandomForest()/
+                #       XGBoost()/CatBoost()/SklearnModel()) - regmodel is
+                #       only ever set at all for the plain OLS/Logit
+                #       RegressionModel enum (see _run_regression's own
+                #       regmodel=None fallback comment). None of what
+                #       follows reads anything OLS-specific though - just
+                #       ___prediction and impute_var, both already generic
+                #       to any model that reaches here - so it works
+                #       identically well for a tree/ensemble estimator's
+                #       continuous ___prediction.
                 #   Get the sd of the errors in the model data set
                 df_std = calculate_by(
                     df=(
@@ -1647,49 +2171,93 @@ class Impute:
                 donate_by=self.variable.parameters["donate_by"],
             )
 
+        elif errordraw == Parameters.ErrorDraw.leaf:
+            #   Donor matching by tree leaf co-occurrence instead of
+            #       PMM's knearest-on-scalar-yhat - RandomForest()/
+            #       XGBoost()/CatBoost()/SklearnModel() only (see
+            #       ErrorDraw.leaf's docstring). ___leaf_ids___ was
+            #       persisted by _run_regression right after fitting -
+            #       see its comment there for why it has to happen
+            #       there, not here.
+            donate_vars = [self.variable.impute_var]
+            if "donate_list" in self.variable.parameters:
+                if len(self.variable.parameters["donate_list"]) > 0:
+                    donate_vars.extend(self.variable.parameters["donate_list"])
+
+            leaf_col = "___leaf_ids___"
+            nw_model_type = NarwhalsType(df_model)
+            nw_impute_type = NarwhalsType(df_impute)
+            df_model_pl = nw_model_type.to_polars().lazy().collect()
+            df_impute_pl = nw_impute_type.to_polars().lazy().collect()
+
+            if leaf_col not in df_model_pl.columns or leaf_col not in df_impute_pl.columns:
+                message = (
+                    f"error=ErrorDraw.leaf needs _run_regression to have "
+                    f"persisted '{leaf_col}', but it's missing here - the "
+                    f"fitted estimator likely doesn't expose leaf indices "
+                    f"(see utilities/leaf_donor_matching.extract_leaf_indices)."
+                )
+                self.logging.error(message)
+                raise RuntimeError(message)
+
+            donor_leaves = df_model_pl[leaf_col].to_numpy()
+            recipient_leaves = df_impute_pl[leaf_col].to_numpy()
+
+            matched_donor_idx = self._leaf_match_donor_positions(
+                donor_leaves=donor_leaves,
+                recipient_leaves=recipient_leaves,
+                df_model_pl=df_model_pl,
+                df_impute_pl=df_impute_pl,
+                donate_by=self.variable.parameters["donate_by"],
+            )
+
+            df_donated = self._leaf_gather_donations(
+                df_model_pl=df_model_pl,
+                matched_donor_idx=matched_donor_idx,
+                donate_vars=donate_vars,
+            )
+
+            df_impute_pl = df_impute_pl.with_columns(
+                [df_donated[c].alias(c) for c in donate_vars]
+            )
+            df_impute = nw_impute_type.from_polars(df_impute_pl)
+
         return df_impute
 
-    def _run_regression(
+    def _build_model_matrix(
         self,
         df_model: IntoFrameT,
         df_impute: IntoFrameT,
-        model_vars: list,
         formula: str,
-        regmodel: Parameters.RegressionModel | None = None,
-        df_pmm_leave_out: IntoFrameT | None = None,
         min_n_x_var: int = 0,
-    ) -> tuple[IntoFrameT, IntoFrameT, IntoFrameT | None]:
-        nw_model = NarwhalsType(df_model)
-        nw_impute = NarwhalsType(df_impute)
+    ) -> tuple[IntoFrameT, IntoFrameT, list[str]]:
+        """
+        Build the numeric predictor model matrix (df_model_mm/df_impute_mm)
+        from either form of model= - a plain column list (raw columns,
+        untouched) or an R-style formula string (via ModelSpec, which
+        one-hot-encodes any factor/categorical predictor term into
+        numeric dummy columns regardless of which model ultimately
+        consumes the result). Also applies min_n_x_var (drop sparse
+        predictors) and, when set, categorical_feature (add those columns
+        in raw, for whichever model choice's own estimator_prepare_data
+        hook - see Parameters._categorical_enum_prepare_data - to cast to
+        a native categorical dtype afterward).
 
-        df_model = nw_model.to_polars().lazy().collect()
-        df_impute = nw_impute.to_polars().lazy().collect()
+        Shared by _run_regression() (OLS/Logit/RandomForest/XGBoost/
+        CatBoost/SklearnModel) and multinomial()
+        (RandomForestClassifier) - nothing about which model consumes
+        df_model_mm/df_impute_mm affects how this is built; every one of
+        them just needs a numeric matrix, whether from formula/C(...)
+        encoding or the list form's untouched raw columns.
 
-        if df_pmm_leave_out is not None:
-            nw_leave_out = NarwhalsType(df_pmm_leave_out)
-            df_pmm_leave_out = nw_leave_out.to_polars().lazy().collect()
-
-        if regmodel is None:
-            regmodel = self.variable.parameters["model"]
-
-        if "random_share" in self.variable.parameters.keys():
-            random_share = self.variable.parameters["random_share"]
-        else:
-            random_share = 1
-        if random_share < 1:
-            self.logging.info(f"     Using a {random_share} subsample")
-            df_model = df_model.sample(fraction=random_share, seed=generate_seed())
-
+        df_model/df_impute must already be eager polars DataFrames (both
+        callers collect via NarwhalsType before this).
+        """
         if type(self.variable.model) is list:
             fb = FormulaBuilder(df=df_model, formula=formula)
             vars_rhs = fb.columns_rhs
-            df_model_mm = df_model.select(vars_rhs + [self.variable.impute_var])
-            df_impute_mm = df_impute.select(vars_rhs + [self.variable.impute_var])
-
-            if df_pmm_leave_out is not None:
-                df_pmm_leave_out_mm = df_pmm_leave_out.select(
-                    vars_rhs + [self.variable.impute_var]
-                )
+            df_model_mm = df_model.select(vars_rhs)
+            df_impute_mm = df_impute.select(vars_rhs)
         else:
             f = FormulaBuilder(formula=formula)
             f.remove_constant()
@@ -1701,13 +2269,11 @@ class Impute:
             #   Fit the spec against the union of every frame it'll be
             #   reapplied to (with null_dummy=True) so a companion
             #   null-indicator column gets allocated for any predictor
-            #   that's null in df_impute/df_pmm_leave_out even if it has
-            #   no nulls in df_model - otherwise a null showing up only at
-            #   reapply time raises (no companion column was allocated for
-            #   it when the spec's structure was fixed at fit time).
+            #   that's null in df_impute even if it has no nulls in
+            #   df_model - otherwise a null showing up only at reapply time
+            #   raises (no companion column was allocated for it when the
+            #   spec's structure was fixed at fit time).
             frames_to_fit = [df_model.select(vars_rhs), df_impute.select(vars_rhs)]
-            if df_pmm_leave_out is not None:
-                frames_to_fit.append(df_pmm_leave_out.select(vars_rhs))
             df_fit_union = pl.concat(frames_to_fit, how="diagonal")
 
             #   ModelSpec.from_formula() parses with survey_kit_formula's own
@@ -1718,9 +2284,6 @@ class Impute:
             )
             df_model_mm = model_spec.get_model_frame(df_model)
             df_impute_mm = model_spec.get_model_frame(df_impute)
-
-            if df_pmm_leave_out is not None:
-                df_pmm_leave_out_mm = model_spec.get_model_frame(df_pmm_leave_out)
 
         if min_n_x_var:
             self.logging.info(
@@ -1749,35 +2312,172 @@ class Impute:
             df_model_mm = df_model_mm.select(vars_rhs)
             df_impute_mm = df_impute_mm.select(vars_rhs)
 
-        if regmodel == Parameters.RegressionModel.OLS:
-            from sklearn.linear_model import LinearRegression
+        #   categorical_feature columns not referenced in the formula at
+        #       all never reach df_model_mm/df_impute_mm through
+        #       model_spec (only in the formula branch - the list branch
+        #       above already selected them in as ordinary raw
+        #       predictors), so add them in here as plain untouched
+        #       columns, ready for estimator_prepare_data (below) to cast
+        #       to a native categorical dtype. One that IS referenced
+        #       (Variable._validate_estimator_available only allows this
+        #       for a numeric-dtype column) already made it through as a
+        #       plain passthrough term under its own name - skip it here,
+        #       concatenating it again would raise on the duplicate name.
+        categorical_feature = self.variable.parameters.get("categorical_feature")
+        if categorical_feature and type(self.variable.model) is not list:
+            missing_categorical = [
+                c for c in categorical_feature if c not in df_model_mm.columns
+            ]
+            if missing_categorical:
+                df_model_mm = pl.concat(
+                    [df_model_mm, df_model.select(missing_categorical)],
+                    how="horizontal",
+                )
+                df_impute_mm = pl.concat(
+                    [df_impute_mm, df_impute.select(missing_categorical)],
+                    how="horizontal",
+                )
 
-            model = LinearRegression()
-        elif regmodel == Parameters.RegressionModel.Logit:
-            from sklearn.linear_model import LogisticRegression
+        return df_model_mm, df_impute_mm, vars_rhs
 
-            model = LogisticRegression()
-        # elif regmodel == Parameters.RegressionModel.Probit:
+    def _run_regression(
+        self,
+        df_model: IntoFrameT,
+        df_impute: IntoFrameT,
+        model_vars: list,
+        formula: str,
+        regmodel: Parameters.RegressionModel | None = None,
+        min_n_x_var: int = 0,
+    ) -> tuple[IntoFrameT, IntoFrameT, IntoFrameT]:
+        nw_model = NarwhalsType(df_model)
+        nw_impute = NarwhalsType(df_impute)
+
+        df_model = nw_model.to_polars().lazy().collect()
+        df_impute = nw_impute.to_polars().lazy().collect()
+
+        if regmodel is None:
+            #   .get(), not ["model"] - RandomForest()/XGBoost()/CatBoost()/
+            #       SklearnModel() don't set "model" at all (they set
+            #       "estimator" instead, checked below), so this can
+            #       legitimately stay None here without being a missing-key
+            #       error.
+            regmodel = self.variable.parameters.get("model")
+
+        if "random_share" in self.variable.parameters.keys():
+            random_share = self.variable.parameters["random_share"]
+        else:
+            random_share = 1
+        if random_share < 1:
+            self.logging.info(f"     Using a {random_share} subsample")
+            df_model = df_model.sample(fraction=random_share, seed=generate_seed())
+
+        df_model_mm, df_impute_mm, vars_rhs = self._build_model_matrix(
+            df_model=df_model,
+            df_impute=df_impute,
+            formula=formula,
+            min_n_x_var=min_n_x_var,
+        )
+
+        #   Set by Parameters.RandomForest()/XGBoost()/CatBoost()/
+        #       SklearnModel() - a hook the model choice itself owns for
+        #       whatever data prep IT needs (e.g. XGBoost/CatBoost casting
+        #       their declared categorical columns to a fixed-category
+        #       dtype) - _run_regression stays agnostic to what, if
+        #       anything, actually happens here. Identity/no-op for
+        #       OLS/Logit (no adapter at all) and for models that don't
+        #       need any special prep.
+        prepare_data = self.variable.parameters.get("estimator_prepare_data")
+        if prepare_data is not None:
+            df_model_mm, df_impute_mm = prepare_data(df_model_mm, df_impute_mm)
+
+        #   Set by Parameters.RandomForest()/XGBoost()/CatBoost()/
+        #       SklearnModel() - always a zero-arg factory already, not a
+        #       preset name to resolve. Kept as a factory (not just one
+        #       instance) so the CV-fold code below can build fresh
+        #       instances that keep whatever hyperparameters the factory
+        #       bakes in, rather than reconstructing with type(model)()
+        #       and silently losing them.
+        model_factory = self.variable.parameters.get("estimator")
+        if model_factory is None:
+            if regmodel == Parameters.RegressionModel.OLS:
+                from sklearn.linear_model import LinearRegression
+
+                model_factory = LinearRegression
+            elif regmodel == Parameters.RegressionModel.Logit:
+                from sklearn.linear_model import LogisticRegression
+
+                model_factory = LogisticRegression
+            # elif regmodel == Parameters.RegressionModel.Probit:
+
+        model = model_factory()
 
         d_extra_model_args = {}
         if self.weight != "":
             d_extra_model_args["sample_weight"] = df_model[self.weight]
 
+        #   Set by Parameters.Regression()/RandomForest()/XGBoost()/
+        #       CatBoost()/SklearnModel() - a cheap, shrinkage-heuristic
+        #       stand-in for a nested random-intercept term (e.g. state ->
+        #       county -> hhid), not a real mixed model - see
+        #       _nested_group_shrinkage's docstring. y_for_fit is the
+        #       target net of the PRIOR iteration's group-intercept
+        #       estimate (0 on the first iteration, before one exists);
+        #       the model then only has to explain what that didn't
+        #       already, and the group intercept itself gets re-estimated
+        #       below from THIS fit's residuals, ready for next iteration.
+        errordraw = self.variable.parameters.get("error")
+        group_levels = self.variable.parameters.get("group_levels", [])
+        prior_intercept_col = f"___group_intercept_{self.variable.impute_var}___"
+        if group_levels:
+            prior_intercept_model = (
+                df_model[prior_intercept_col].to_numpy()
+                if prior_intercept_col in df_model.columns
+                else np.zeros(safe_height(df_model))
+            )
+            y_for_fit = pl.DataFrame(
+                {
+                    self.variable.impute_var: (
+                        df_model[self.variable.impute_var].to_numpy()
+                        - prior_intercept_model
+                    )
+                }
+            )
+        else:
+            y_for_fit = df_model.select(self.variable.impute_var)
+
         model.fit(
             X=df_model_mm,
-            y=df_model.select(self.variable.impute_var),
+            y=y_for_fit,
             **d_extra_model_args,
         )
 
-        df_betas = pl.DataFrame(
-            dict(
-                Variable=safe_columns(df_model_mm) + ["_Intercept_"],
-                Beta=[
-                    float(vali)
-                    for vali in list(model.coef_[0]) + [float(model.intercept_)]
-                ],
+        #   Linear models (OLS/Logit) expose coef_/intercept_ - report
+        #       those as before. Tree/ensemble estimators don't have
+        #       linear coefficients but usually expose
+        #       feature_importances_ instead; fall back to that, or an
+        #       empty table if the estimator exposes neither.
+        if hasattr(model, "coef_"):
+            coef = model.coef_[0] if np.ndim(model.coef_) > 1 else model.coef_
+            intercept = (
+                model.intercept_[0]
+                if np.ndim(model.intercept_) > 0
+                else model.intercept_
             )
-        )
+            df_betas = pl.DataFrame(
+                dict(
+                    Variable=safe_columns(df_model_mm) + ["_Intercept_"],
+                    Beta=[float(vali) for vali in list(coef) + [float(intercept)]],
+                )
+            )
+        elif hasattr(model, "feature_importances_"):
+            df_betas = pl.DataFrame(
+                dict(
+                    Variable=safe_columns(df_model_mm),
+                    Beta=[float(vali) for vali in model.feature_importances_],
+                )
+            )
+        else:
+            df_betas = pl.DataFrame(dict(Variable=[], Beta=[]))
 
         #   For Logit, model.predict() returns the hard 0/1 class label, not a
         #   probability - PMM matching and the "Random" error draw both need the
@@ -1793,15 +2493,127 @@ class Impute:
             def _predict(X):
                 return model.predict(X)
 
-        predict_model = pl.DataFrame(
-            _predict(df_model_mm), schema=dict(___prediction=pl.Float64)
-        )
+        cv_folds = self.variable.parameters.get("cv_folds", 0)
+        if cv_folds and cv_folds > 1:
+            #   Donor pool prediction via cv_folds-way cross-validation
+            #       instead of the in-sample fit - see
+            #       Parameters._tabular_ml_params's cv_folds docstring.
+            #       The final model (fit on all of
+            #       df_model, above) still supplies df_betas/df_impute's
+            #       prediction - recipients are already genuinely
+            #       out-of-sample, so they don't need CV treatment.
+            def _fit_predict_fold(is_holdout):
+                train_mask = ~is_holdout
+                fold_model = model_factory()
+                fold_extra_args = {}
+                if self.weight != "":
+                    fold_extra_args["sample_weight"] = df_model.filter(train_mask)[
+                        self.weight
+                    ]
+                fold_model.fit(
+                    X=df_model_mm.filter(train_mask),
+                    #   y_for_fit, not df_model.select(impute_var) - stays
+                    #       net of the prior group intercept, same as the
+                    #       main fit above, so cv_folds and group_levels
+                    #       combine consistently.
+                    y=y_for_fit.filter(train_mask),
+                    **fold_extra_args,
+                )
+                X_holdout = df_model_mm.filter(is_holdout)
+                if regmodel == Parameters.RegressionModel.Logit:
+                    return fold_model.predict_proba(X_holdout)[:, 1]
+                else:
+                    #   y was fit as a 1-column DataFrame (2D), so
+                    #       LinearRegression.predict() returns shape
+                    #       (n, 1) here - ravel to 1D to match what
+                    #       _pmm_cv_out_of_fold_predictions expects.
+                    return fold_model.predict(X_holdout).ravel()
+
+            predict_model = pl.DataFrame(
+                self._pmm_cv_out_of_fold_predictions(
+                    n_rows=safe_height(df_model),
+                    cv_folds=cv_folds,
+                    fit_predict_fold=_fit_predict_fold,
+                ),
+                schema=dict(___prediction=pl.Float64),
+            )
+        else:
+            predict_model = pl.DataFrame(
+                _predict(df_model_mm), schema=dict(___prediction=pl.Float64)
+            )
         predict_impute = pl.DataFrame(
             _predict(df_impute_mm), schema=dict(___prediction=pl.Float64)
         )
 
+        #   error=ErrorDraw.leaf (RandomForest()/XGBoost()/CatBoost()/
+        #       SklearnModel() only - see ErrorDraw.leaf's docstring)
+        #       donates by tree leaf co-occurrence instead of PMM's
+        #       knearest-on-scalar-yhat. The leaf ids only make sense
+        #       from THIS fitted model against THIS model matrix, both
+        #       still in scope here (and about to be deleted below), so
+        #       extract them now and persist as a plain column - the
+        #       same "just another variable to carry along" pattern
+        #       group_levels' prior_intercept_col already uses -
+        #       _regression_draw_errors's leaf branch reads it back out
+        #       after _run_regression returns.
+        if errordraw == Parameters.ErrorDraw.leaf:
+            self.logging.info("     Extracting leaf indices for leaf-based donor matching")
+            leaf_model = extract_leaf_indices(model, df_model_mm)
+            leaf_impute = extract_leaf_indices(model, df_impute_mm)
+            df_model = df_model.with_columns(pl.Series("___leaf_ids___", leaf_model))
+            df_impute = df_impute.with_columns(pl.Series("___leaf_ids___", leaf_impute))
+
         del df_model_mm
         del df_impute_mm
+
+        if group_levels:
+            #   Residual of THIS fit (whatever produced predict_model -
+            #       in-sample or cv_folds, doesn't matter which) against
+            #       the same residualized target the model was fit to -
+            #       what's left over is what the group levels get a shot
+            #       at explaining.
+            fit_residual = (
+                y_for_fit[self.variable.impute_var].to_numpy()
+                - predict_model["___prediction"].to_numpy()
+            )
+            intercept_model, intercept_impute = self._nested_group_shrinkage(
+                df_model=df_model.with_columns(
+                    pl.Series("___group_fit_residual___", fit_residual)
+                ),
+                df_impute=df_impute,
+                group_levels=group_levels,
+                residual_col="___group_fit_residual___",
+                k=self.variable.parameters.get("group_shrinkage_k", 10.0),
+                #   Same weight the model fit itself already used for
+                #       sample_weight - see _nested_group_shrinkage's
+                #       weight docstring for why this matters for
+                #       consistency, not just correctness.
+                weight=(
+                    df_model[self.weight].to_numpy() if self.weight != "" else None
+                ),
+            )
+            predict_model = predict_model.with_columns(
+                (pl.col("___prediction") + pl.Series(intercept_model)).alias(
+                    "___prediction"
+                )
+            )
+            predict_impute = predict_impute.with_columns(
+                (pl.col("___prediction") + pl.Series(intercept_impute)).alias(
+                    "___prediction"
+                )
+            )
+            #   Carried through in df_model/df_impute (drop_if_exists,
+            #       not with_columns, in case a prior iteration's copy of
+            #       this column is already present from being selected in
+            #       upstream) so regression() can persist it back into the
+            #       working df for next iteration to read as
+            #       prior_intercept_model above.
+            df_model = drop_if_exists(df_model, prior_intercept_col).with_columns(
+                pl.Series(prior_intercept_col, intercept_model)
+            )
+            df_impute = drop_if_exists(df_impute, prior_intercept_col).with_columns(
+                pl.Series(prior_intercept_col, intercept_impute)
+            )
 
         df_model = pl.concat([df_model, predict_model], how="horizontal")
         df_impute = pl.concat([df_impute, predict_impute], how="horizontal")
@@ -1816,23 +2628,11 @@ class Impute:
         self.logging.info(f"R2 = {r_2:0.4f}")
         print_longer_table(drb_round_table(df_betas), logging=self.logging)
 
-        if df_pmm_leave_out is not None:
-            predict_leave_out = pl.DataFrame(
-                _predict(df_pmm_leave_out_mm),
-                schema=dict(___prediction=pl.Float64),
-            )
-
-            df_pmm_leave_out = pl.concat(
-                [df_pmm_leave_out, predict_leave_out], how="horizontal"
-            )
-
-            df_pmm_leave_out = nw_leave_out.from_polars(df_pmm_leave_out)
-
         df_model = nw_model.from_polars(df_model)
         df_impute = nw_impute.from_polars(df_impute)
         df_betas = nw_model.from_polars(df_betas)
 
-        return (df_model, df_impute, df_betas, df_pmm_leave_out)
+        return (df_model, df_impute, df_betas)
 
     ##########################################################
     ##########################################################
@@ -2265,111 +3065,191 @@ class Impute:
             .to_native()
         )
 
-    def _pmm_leave_out(self, df_model: IntoFrameT) -> (IntoFrameT, IntoFrameT):
-        if self.variable.parameters["share_leave_out"] > 0:
-            share_leave_out = self.variable.parameters["share_leave_out"]
-            col_leave_out = "___pmm_leave_out___"
-            rng = RandomNumberGenerator()
+    def _pmm_cv_out_of_fold_predictions(
+        self,
+        n_rows: int,
+        cv_folds: int,
+        fit_predict_fold,
+    ) -> np.ndarray:
+        """
+        Split n_rows into cv_folds random folds and return an array of
+        out-of-fold predictions covering every row, in original row order.
 
-            nw_type = NarwhalsType(df_model)
-            df_model = concat_wrapper(
-                [
-                    df_model,
-                    nw_type.from_polars(
-                        pl.DataFrame(
-                            {
-                                col_leave_out: rng.uniform(
-                                    low=0, high=1, size=safe_height(df_model)
-                                )
-                            }
-                        )
-                    ),
-                ],
-                how="horizontal",
+        Used so the donor pool's matching prediction comes from a fit that
+        never saw that donor's own y, instead of the in-sample fit's
+        prediction - see Parameters._tabular_ml_params's cv_folds
+        docstring for why that matters.
+
+        Parameters
+        ----------
+        n_rows : int
+            Number of rows in the donor pool to fold over.
+        cv_folds : int
+            Number of folds (must be > 1 to actually cross-validate).
+        fit_predict_fold : Callable[[np.ndarray], np.ndarray]
+            Given a boolean mask marking the held-out fold (True = held
+            out), fits on the complement and returns predictions for the
+            held-out rows, in their relative order within that mask.
+
+        Returns
+        -------
+        np.ndarray
+            Out-of-fold predictions, one per row, in original row order.
+        """
+        rng = RandomNumberGenerator()
+        fold_assignment = rng.integers(0, cv_folds, size=n_rows)
+
+        predictions = np.empty(n_rows, dtype=float)
+        for foldi in range(cv_folds):
+            is_holdout = fold_assignment == foldi
+            predictions[is_holdout] = fit_predict_fold(is_holdout)
+
+        return predictions
+
+    def _nested_group_shrinkage(
+        self,
+        df_model: pl.DataFrame,
+        df_impute: pl.DataFrame,
+        group_levels: list[str],
+        residual_col: str,
+        k: float,
+        weight: np.ndarray | None = None,
+    ) -> tuple[np.ndarray, np.ndarray]:
+        """
+        A cheap, shrinkage-heuristic stand-in for a random-intercept term
+        (state/county/hhid-style nested clustering) - not a real mixed
+        model (no joint variance-component estimation, no Gibbs sampling),
+        just an empirical-Bayes-style shrunk group mean, applied one
+        nested level at a time, coarsest first.
+
+        At each level, the group mean of what's left of the residual is
+        shrunk toward 0 (residuals are already centered, so "shrink
+        toward 0" is "shrink toward no group effect") by
+        n_group / (n_group + k) - a small/noisy group gets pulled close
+        to 0, a large group keeps close to its own raw mean. That shrunk
+        value is subtracted out before moving to the next (finer) level,
+        so a two-level (state, county) pass decomposes the residual into
+        a state effect plus a county effect *within* what the state
+        didn't already explain, rather than double-counting.
+
+        This intentionally never estimates more than one number per row
+        per level (no covariance matrix, no per-cluster slopes) - seat
+        with the design discussion this implements: get most of what a
+        random intercept buys you (shrinkage for small/noisy clusters, a
+        cluster-level baseline) without any of a real mixed model's
+        estimation cost. Meant to be re-run every SRMI iteration, each
+        time on that iteration's fresh residuals (see _run_regression),
+        so it improves alongside everything else SRMI already refits
+        iteration to iteration rather than needing its own inner
+        convergence loop.
+
+        Parameters
+        ----------
+        df_model : pl.DataFrame
+            Donor pool - must contain group_levels and residual_col.
+        df_impute : pl.DataFrame
+            Recipients - must contain group_levels (not residual_col - a
+            recipient's shrunk intercept comes entirely from the donor
+            pool's group statistics). A recipient in a group never seen
+            in df_model gets 0 at that level (and, for a group seen at a
+            coarser level but not this finer one, whatever the coarser
+            level(s) already contributed).
+        group_levels : list[str]
+            Column names, ordered COARSEST to FINEST (e.g.
+            ["state", "county", "hhid"]) - order matters, since each
+            level only sees what the coarser ones left behind.
+        residual_col : str
+            Column in df_model holding the fixed-effect model's residual
+            (actual - predicted) to decompose.
+        k : float
+            Shrinkage constant - a group needs roughly this many
+            (weighted, if weight is set) observations before its own mean
+            starts to dominate over being pulled toward 0.
+        weight : np.ndarray | None, optional
+            Row weight for df_model's rows (self.weight - the bootstrap or
+            declared weight, same one the model fit itself already used
+            for sample_weight), by default None (every row counts equally,
+            same as before this was added). When set, both the group mean
+            and the "how much data do we have" measure become weighted -
+            a weighted mean instead of a plain one, and sum-of-weight
+            instead of row-count in the n/(n+k) shrinkage factor - so a
+            few high-weight rows can outweigh many low-weight ones, the
+            same way they already do in the model fit. Rescaled internally
+            so weights average to 1 across df_model, regardless of the
+            original weight's scale (a declared survey weight often sums
+            to a population total, not row count) - keeps k's units
+            comparable to "roughly this many observations", the same
+            meaning it has when weight is None.
+
+        Returns
+        -------
+        tuple[np.ndarray, np.ndarray]
+            (total shrunk intercept for df_model's rows, same for
+            df_impute's rows) - the sum of every level's contribution,
+            one float per row, in each frame's original row order.
+        """
+        resid = df_model[residual_col].to_numpy().astype(float).copy()
+        total_model = np.zeros(len(df_model))
+        total_impute = np.zeros(len(df_impute))
+
+        if weight is not None:
+            weight = weight.astype(float)
+            weight = weight * (len(weight) / weight.sum())
+
+        for level in group_levels:
+            if weight is None:
+                stats = (
+                    df_model.select(level)
+                    .with_columns(pl.Series("___resid___", resid))
+                    .group_by(level)
+                    .agg(
+                        pl.col("___resid___").mean().alias("___mean___"),
+                        pl.col("___resid___").len().alias("___n___"),
+                    )
+                )
+            else:
+                stats = (
+                    df_model.select(level)
+                    .with_columns(
+                        pl.Series("___resid___", resid),
+                        pl.Series("___weight___", weight),
+                    )
+                    .group_by(level)
+                    .agg(
+                        (
+                            (pl.col("___resid___") * pl.col("___weight___")).sum()
+                            / pl.col("___weight___").sum()
+                        ).alias("___mean___"),
+                        pl.col("___weight___").sum().alias("___n___"),
+                    )
+                )
+
+            stats = stats.with_columns(
+                (
+                    pl.col("___mean___")
+                    * pl.col("___n___")
+                    / (pl.col("___n___") + k)
+                ).alias("___shrunk___")
+            ).select([level, "___shrunk___"])
+
+            model_shrunk = (
+                df_model.select(level)
+                .join(stats, on=level, how="left")["___shrunk___"]
+                .fill_null(0.0)
+                .to_numpy()
+            )
+            impute_shrunk = (
+                df_impute.select(level)
+                .join(stats, on=level, how="left")["___shrunk___"]
+                .fill_null(0.0)
+                .to_numpy()
             )
 
-            df_model = (
-                nw.from_native(df_model)
-                .with_columns(nw.col(col_leave_out) <= share_leave_out)
-                .to_native()
-            )
+            total_model += model_shrunk
+            total_impute += impute_shrunk
+            resid = resid - model_shrunk
 
-            nw_type = NarwhalsType(df_model)
-            df_model_bool = nw_type.to_polars()
-
-            #   Filter directly on the boolean column rather than partition_by,
-            #   which only returns the groups that actually occur - a lopsided
-            #   random draw (all True or all False) would otherwise leave only
-            #   one partition and an out-of-range index below.
-            df_pmm_leave_out = df_model_bool.filter(pl.col(col_leave_out)).drop(
-                col_leave_out
-            )
-            df_model = df_model_bool.filter(~pl.col(col_leave_out)).drop(col_leave_out)
-
-            return (
-                nw_type.from_polars(df_model),
-                nw_type.from_polars(df_pmm_leave_out),
-            )
-        else:
-            #   No subsetting, just return the data
-            return (df_model, None)
-
-    # def _pmm_adjust_leave_out(self,
-    #                           df_impute:IntoFrameT,
-    #                           p_pmm_model:IntoFrameT,
-    #                           p_pmm_leave_out:IntoFrameT,
-    #                           p_col:str):
-    #     qlist = [f"q{qi*5}" for qi in range(1,20)]
-    #     qs_pmm_model = StatCalculator(df=p_pmm_model,
-    #                                   statistics=Statistics(stats=qlist,
-    #                                                         columns=p_col),
-    #                                   display=False)
-    #     qs_pmm_leave_out = StatCalculator(df=p_pmm_leave_out,
-    #                                       statistics=Statistics(stats=qlist,
-    #                                                             columns=p_col),
-    #                                       display=False)
-
-    #     qs_adjustment = qs_pmm_leave_out.compare(qs_pmm_model,
-    #                                              display=False)
-
-    #     df_adjustment = qs_adjustment["ratio"].df_estimates
-    #     df_adjustment = df_adjustment.rename({coli:coli[1:] for coli in df_adjustment.columns})
-
-    #     col_ptile = "___pmm_ptile___"
-    #     col_adjustment = "___pmm_adjustment___"
-    #     df_adjustment = (df_adjustment.transpose(include_header=True).filter(pl.col("column") != "ariable")
-    #                                   .with_columns([(pl.col("column").cast(pl.Float32)/100).alias(col_ptile),
-    #                                                  (1+pl.col("column_0").cast(pl.Float64)).alias(col_adjustment)])
-    #                                   .drop(cs.starts_with("column")))
-
-    #     self.logging.info("PMM leave-out adjustment")
-    #     with pl.Config(fmt_str_lengths=50) as cfg:
-    #         #   Basic formatting
-    #         cfg.set_tbl_cell_alignment("RIGHT")
-    #         cfg.set_tbl_hide_column_data_types(True)
-    #         cfg.set_tbl_hide_dataframe_shape(True)
-    #         cfg.set_thousands_separator(True)
-    #         cfg.set_tbl_width_chars(600)
-    #         cfg.set_tbl_cols(len(df_adjustment.columns))
-    #         cfg.set_fmt_float("mixed")
-    #         cfg.set_tbl_rows(safe_height(df_adjustment))
-
-    #         self.logging.info(drb_round_table(df_adjustment))
-
-    #     df_impute = (df_impute.sort(p_col).with_columns((pl.lit(1)/safe_height(df_impute)).alias(col_ptile))
-    #                                       .with_columns(pl.cum_sum(col_ptile)))
-
-    #     df_impute = AppendList([df_impute, df_adjustment],
-    #                            quietly=True)
-    #     df_impute = (df_impute.sort(col_ptile)
-    #                           .with_columns(pl.col(col_adjustment).interpolate("linear"))
-    #                           .with_columns(pl.col(col_adjustment).fill_null(strategy="forward").fill_null(strategy="backward"))
-    #                           .with_columns((pl.col(p_col)*pl.col("___pmm_adjustment___")).alias(p_col))
-    #                           .filter(pl.col(p_col).is_not_missing())
-    #                           .drop(cs.starts_with("___pmm_"))
-    #                           .sort(self.index))
-
-    #     return df_impute
+        return total_model, total_impute
 
     ##########################################################
     ##########################################################
@@ -2439,6 +3319,7 @@ class Impute:
                         knearest=knearest,
                         match_on=match_on,
                         donate_vars=donate_vars,
+                        extra_keep_vars=donate_by,
                     )
                 )
                 self.logging.info(f"Matching on {donate_vars}:{keyi} - END")
@@ -2452,6 +3333,7 @@ class Impute:
         knearest: int,
         match_on: list[str],
         donate_vars: list[str],
+        extra_keep_vars: list[str] | None = None,
     ) -> IntoFrameT:
         self.logging.info(f"     Finding {knearest} nearest neighbors on {match_on}")
 
@@ -2539,26 +3421,43 @@ class Impute:
         #   Merge the neighbors to the random draw
         df_randoms = pl.concat([df_randoms, df_matches], how="horizontal")
         #   Get the index of the selected neighbor
-        df_randoms = df_randoms.with_columns(
-            pl.col("___possiblematches")
-            .arr.get(pl.col("___matched"))
-            .alias("___selectedmatch")
-        ).select("___selectedmatch")
+        df_randoms = (
+            df_randoms.with_columns(
+                pl.col("___possiblematches")
+                .arr.get(pl.col("___matched"))
+                .alias("___selectedmatch")
+            )
+            .select("___selectedmatch")
+            #   Tag the original recipient row order explicitly before the
+            #       join below - polars' own docs disclaim relying on a
+            #       join's output row order without maintain_order, and the
+            #       result here gets paired with df_impute purely by row
+            #       position a few lines below (in the caller), so losing
+            #       that order would silently pair recipients with the
+            #       wrong donated value.
+            .with_row_index(name="___orig_row_order")
+        )
 
         #   Get the donate variable values from df_model
-        df_matched = join_list(
-            [
-                df_randoms,
-                (
-                    df_model.lazy()
-                    .collect()
-                    .select(donate_vars + self.index)
-                    .with_row_index(name="___selectedmatch")
-                ),
-            ],
-            on=["___selectedmatch"],
-            how="left",
-        ).drop("___selectedmatch")
+        df_matched = (
+            join_list(
+                [
+                    df_randoms,
+                    (
+                        df_model.lazy()
+                        .collect()
+                        .select(donate_vars + self.index)
+                        .with_row_index(name="___selectedmatch")
+                    ),
+                ],
+                on=["___selectedmatch"],
+                how="left",
+            )
+            #   Restore the original recipient row order regardless of what
+            #       the join itself did internally.
+            .sort("___orig_row_order")
+            .drop(["___selectedmatch", "___orig_row_order"])
+        )
 
         #   Most common matches
         self.logging.info("     Most common matches: ")
@@ -2582,8 +3481,30 @@ class Impute:
         self.logging.info(df_matchcount.head(5).lazy().collect())
 
         self.logging.info("\n\n")
+        #   extra_keep_vars carries the donate_by group key(s) through when
+        #       called from _find_nearest_neighbor_by, so the group identity
+        #       survives into the combined multi-group result and downstream
+        #       rank-alignment can stay within-group instead of mixing donor
+        #       values across donate_by strata.
+        keep_vars = self.index + (extra_keep_vars if extra_keep_vars else [])
+        #   self.original_variable.weight (the Variable's own declared
+        #       weight - _post_impute_statistics reads it, not self.weight,
+        #       for its descriptive display) needs to survive this narrowing
+        #       too, or that call fails looking for a column that got
+        #       dropped here even though an upstream caller fetched it.
+        #       Only added if the caller already fetched it (checked via
+        #       schema, not blindly appended) - not every caller of this
+        #       method does, and this is a read-only narrowing step, not
+        #       the place to go fetch a column nobody asked for.
+        if (
+            self.original_variable.weight != ""
+            and self.original_variable.weight not in keep_vars
+            and self.original_variable.weight
+            in nw.from_native(df_impute).lazy().collect_schema().names()
+        ):
+            keep_vars.append(self.original_variable.weight)
         df_matched = concat_wrapper(
-            [df_impute.select(self.index), df_matched.select(donate_vars)],
+            [df_impute.select(keep_vars), df_matched.select(donate_vars)],
             how="horizontal",
         )
 
@@ -2629,6 +3550,12 @@ class Impute:
             "n",
             "n|notmissing",
             "mean",
+            #   Plain (not |not0) - unlike the |not0 variants below, this
+            #       is safe to use as-is for a variable where 0 is a
+            #       genuine value (e.g. Variable.two_part()'s semicontinuous
+            #       output) - SRMI.convergence() relies on this one, not
+            #       std|not0, for chainVar (see convergence.py).
+            "std",
             "mean|not0",
             "std|not0",
             "q10|not0",
@@ -2648,6 +3575,46 @@ class Impute:
         append: bool = True,
         show_by: bool = True,
     ):
+        #   SRMI.convergence()'s chainMean/chainVar equivalent - the
+        #       mean/std of JUST this variable's own newly-imputed
+        #       values this call (unweighted, matching mice's own
+        #       chainMean/chainVar, which are also unweighted).
+        #       Independent of donate_vars (which may carry unrelated
+        #       donate_list extras) and independent of the descriptive-
+        #       stats table built below (which is display-oriented -
+        #       "Variable" is blanked past each call's first row for
+        #       print-friendliness, so a caller can't reliably re-
+        #       identify which row is impute_var's own afterward when
+        #       there's more than one donate_var). None for a non-
+        #       numeric/boolean target (e.g. Multinomial()/
+        #       OrderedCategorical()'s category labels, or a string-
+        #       valued HotDeck/StatMatch donate) - no meaningful
+        #       mean/std there, and no convergence tracking for it.
+        self.chain_mean = None
+        self.chain_std = None
+        numeric_impute_cols = (
+            nw.from_native(df_impute)
+            .lazy()
+            .select(cs.numeric(), cs.boolean())
+            .collect_schema()
+            .names()
+        )
+        if self.variable.impute_var in numeric_impute_cols:
+            imputed_values = (
+                nw.from_native(df_impute)
+                .lazy()
+                .select(nw.col(self.variable.impute_var).cast(nw.Float64))
+                .collect()[self.variable.impute_var]
+                .to_numpy()
+            )
+            if imputed_values.size > 0:
+                self.chain_mean = float(np.nanmean(imputed_values))
+                self.chain_std = (
+                    float(np.nanstd(imputed_values, ddof=1))
+                    if imputed_values.size > 1
+                    else float("nan")
+                )
+
         #   TODO? Hot dec/stat match stats on samples weighted by
         #       share of recipients in each cell?
         if donate_vars is None:
@@ -2675,16 +3642,45 @@ class Impute:
             how="diagonal",
         )
 
+        self.logging.info(f"Post-imputation statistics for {donate_vars}")
+        self.logging.info(f"    Where:          {self.variable.Where}")
+        self.logging.info(f"    Where (impute): {self.variable.Where_impute}")
+
+        #   Statistics' default stat list (mean/std/quantiles) is numeric/
+        #       boolean only - it silently drops any other-dtype column
+        #       from consideration (Statistics._resolve_summary_df's
+        #       cs.numeric()/cs.boolean() select), which is fine when
+        #       donate_vars is a mix (the non-numeric ones just don't
+        #       appear in the table) but crashes downstream
+        #       ("No items to concatenate") if EVERY donate_vars column
+        #       ends up dropped - e.g. a category label (Multinomial(),
+        #       OrderedCategorical(), or a string-valued HotDeck/
+        #       StatMatch donate_vars). Skip the stats computation
+        #       entirely in that case rather than let it crash - there's
+        #       nothing numeric to summarize.
+        has_summarizable_dtype = (
+            len(
+                nw.from_native(df_summary)
+                .lazy()
+                .select(cs.numeric(), cs.boolean())
+                .collect_schema()
+                .names()
+            )
+            > 0
+        )
+        if not has_summarizable_dtype:
+            self.logging.info(
+                f"    (descriptive stats skipped - {donate_vars} has no "
+                f"numeric/boolean column to summarize)"
+            )
+            return
+
         if self.parent.imputation_stats is not None:
             stats_to_calculate = self.parent.imputation_stats
         else:
             stats_to_calculate = Impute._post_impute_statistics_items()
         statistics = Statistics(stats=stats_to_calculate, columns=donate_vars)
         summarize_by = {"All": [], "impute": ["Imputed"]}
-
-        self.logging.info(f"Post-imputation statistics for {donate_vars}")
-        self.logging.info(f"    Where:          {self.variable.Where}")
-        self.logging.info(f"    Where (impute): {self.variable.Where_impute}")
 
         stats_post = StatCalculator(
             df=df_summary,
@@ -2729,7 +3725,7 @@ class Impute:
             keep_vars = safe_columns(df)
 
         return (
-            nw.from_native(self.variable.df_impute_where(df=df))
+            nw.from_native(self.variable.df_impute_where(df=df, keep_vars=keep_vars))
             .select(keep_vars)
             .lazy()
             .collect()
@@ -2742,8 +3738,21 @@ class Impute:
         if keep_vars is None:
             keep_vars = nw.from_native(df).lazy().collect_schema().names()
 
+        #   df_predict_where's result gets filtered on impute_var nullness
+        #       right below - make sure impute_var survives the keep_vars
+        #       projection inside df_predict_where even if the caller didn't
+        #       ask for it, then narrow back to keep_vars via the .select()
+        #       below (unchanged from before this projection was added).
+        where_keep_vars = keep_vars
+        if self.variable.impute_var not in keep_vars:
+            where_keep_vars = keep_vars + [self.variable.impute_var]
+
         df = (
-            nw.from_native(self.variable.df_predict_where(df=df))
+            nw.from_native(
+                self.variable.df_predict_where(
+                    df=df, drop_imputed=drop_imputed, keep_vars=where_keep_vars
+                )
+            )
             .filter(~nw.col(self.variable.impute_var).is_null())
             .select(keep_vars)
             .lazy()

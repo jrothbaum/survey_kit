@@ -545,7 +545,7 @@ def column_stats_builder(
 
             if coli_add in column_stats:
                 if stati not in column_stats[coli_add]:
-                    column_stats[coli].append(stati)
+                    column_stats[coli_add].append(stati)
             else:
                 column_stats[coli_add] = [stati]
 

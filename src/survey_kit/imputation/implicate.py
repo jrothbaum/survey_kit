@@ -95,6 +95,16 @@ class Implicate(Serializable):
         #   Statistics for each iteration
         self.df_summary_stats = {}
 
+        #   SRMI.convergence()'s chainMean/chainVar equivalent - mean/std
+        #       of THIS implicate's own newly-imputed values, keyed
+        #       [impute_var][iteration] -> float | None. See
+        #       Impute._post_impute_statistics's identical comment for
+        #       why this is a dedicated side-channel rather than parsed
+        #       out of df_summary_stats (which is display-oriented and
+        #       doesn't reliably support that).
+        self.chain_mean = {}
+        self.chain_std = {}
+
         #   Status variables - current iteration, variable, and variable_by
         #       subgroup models
         self.status_iteration = 0
@@ -234,6 +244,24 @@ class Implicate(Serializable):
                         self.complete = True
 
             if self.complete:
+                #   post_finalize - the mirror image of
+                #       preFunctions_initialize_implicate: runs exactly
+                #       once per implicate, here (not on a later resumed
+                #       run that finds self.complete already True on
+                #       entry - that hits the OTHER `if self.complete:`
+                #       branch above, which never reaches this code at
+                #       all), in variable order for a deterministic,
+                #       predictable teardown sequence. Same pre/post
+                #       calling convention (df in, df out) as
+                #       preFunctions/postFunctions - unlike
+                #       preFunctions_initialize_implicate, it doesn't need
+                #       the whole Implicate, just self.df.
+                for vari in self.parent.variables:
+                    if len(vari.postFunctions_finalize_implicate):
+                        self._call_pre_post_functions(
+                            vari.postFunctions_finalize_implicate
+                        )
+
                 self.df_full_summary_stats(print_table=True)
 
             if did_anything:
@@ -242,6 +270,22 @@ class Implicate(Serializable):
     def _run_one_iteration(
         self, iterationi: int, variable_start: int = 0, variable_end: int = 0
     ):
+        #   This iteration was already fully completed by a PRIOR call -
+        #       e.g. resuming/extending an already-finished implicate to
+        #       a higher n_iterations, where the outer loop in run()
+        #       always starts back at iteration 1 and relies on inner
+        #       guards (this one, and the per-variable
+        #       status_variable <= variable_index check below) to skip
+        #       what's already done. Checked BEFORE
+        #       status_iteration_complete gets reset below - once reset,
+        #       there'd be no way left to tell "already finished" apart
+        #       from "genuinely in progress" (a real crash-recovery
+        #       resume), since both leave status_variable sitting at the
+        #       last variable's own index, and the per-variable guard
+        #       alone can't distinguish those two cases at that boundary.
+        if self.status_iteration == iterationi and self.status_iteration_complete:
+            return False
+
         self.status_iteration_complete = False
 
         #   New iteration?
@@ -346,12 +390,20 @@ class Implicate(Serializable):
                 )
                 self.logging.info("\n\n\n\n\n\n\n\n\n\n")
 
+                #   Skip the per-variable save at the last variable of an
+                #   iteration when save_every_iteration is on - the
+                #   iteration-boundary save below (or run()'s final save, for
+                #   the last iteration) already covers it.
                 if self.parent.storage.save_every_variable and not (
                     self.parent.storage.save_every_iteration
-                    and variable_index != (len(self.parent.variables) - 1)
+                    and variable_index == len(self.parent.variables)
                 ):
-                    self.status_variable = variable_index + 1
-
+                    #   status_variable is already variable_index (set above) -
+                    #   do not advance it further here: the guard at the top of
+                    #   this loop (a couple dozen lines up) requires
+                    #   status_variable == variable_index - 1 before starting the
+                    #   next variable, so bumping it ahead here breaks that check
+                    #   on the very next pass through the loop.
                     self.status_iteration_complete = (
                         len(self.parent.variables) == variable_index
                     )
@@ -436,6 +488,14 @@ class Implicate(Serializable):
                 prefix="bbweight__",
                 n_replicates=1,
                 sum_to=safe_height(self.df),
+                #   Finally wired up - SRMI.Bootstrap.index has documented
+                #       "resample by household, not person" as its intent
+                #       since it was added, but nothing ever read it until
+                #       bayes_bootstrap_weights grew a cluster= parameter
+                #       to actually do that (draw one replicate weight per
+                #       cluster, broadcast to every row in it, instead of
+                #       independently per row).
+                cluster=self.parent.bootstrap.index,
             )
             weight = "bbweight__1"
         else:
@@ -453,6 +513,12 @@ class Implicate(Serializable):
         )
 
         self.df = impute.run()
+
+        if variable.impute_var not in self.chain_mean:
+            self.chain_mean[variable.impute_var] = {}
+            self.chain_std[variable.impute_var] = {}
+        self.chain_mean[variable.impute_var][iteration] = impute.chain_mean
+        self.chain_std[variable.impute_var][iteration] = impute.chain_std
 
         df_post_impute_statistics = impute.df_post_impute_statistics
 
@@ -676,7 +742,28 @@ class Implicate(Serializable):
 
     def _iteration_summary_stats(self, iterationi: int):
         #   Get the final summary stats for each variable
-        var_list = (
+        #
+        #   Two DIFFERENT Variables can legitimately report stats for
+        #       the SAME underlying column in the same iteration (e.g.
+        #       Variable.two_part()'s yn variable donating impute_var
+        #       itself alongside yn, via donate_list, on top of value's
+        #       own separate stats call for that same column) - "Variable"
+        #       must still end up listed exactly once (Statistics(
+        #       columns=var_list) below does a literal df.select(var_list),
+        #       which errors on a repeated name), positioned at that
+        #       column's own spot - the index of the Variable
+        #       in self.parent.variables whose OWN impute_var it is -
+        #       not wherever some other Variable's donate_list happened
+        #       to mention it first (which, for two_part(), is exactly
+        #       backwards: yn always runs before value, so sorting by
+        #       "first mentioned" would sort value's own column into
+        #       yn's position).
+        with_variable_number = {
+            vari.impute_var: idx
+            for idx, vari in enumerate(self.parent.variables, start=1)
+        }
+
+        df_stats = (
             nw.from_native(self.df_summary_stats[iterationi])
             .lazy()
             .collect()
@@ -687,10 +774,14 @@ class Implicate(Serializable):
                 ~nw.col("Variable").is_null()
                 & (nw.col("ignore_min_#") == nw.col("ignore_#"))
             )
-            .select("ignore_min_#", "Variable")
-            .unique()
-            .sort("ignore_min_#")["Variable"]
-            .to_list()
+        )
+        var_list = sorted(
+            set(df_stats.select("Variable")["Variable"].to_list()),
+            #   Falls back to 0 (sorts first) for a donate_list entry
+            #       that isn't itself any Variable's own impute_var -
+            #       e.g. an already-fully-observed correlated column
+            #       just riding along, never independently imputed.
+            key=lambda vari: with_variable_number.get(vari, 0),
         )
 
         if self.parent.imputation_stats is not None:
@@ -698,35 +789,77 @@ class Implicate(Serializable):
         else:
             stats_to_calculate = Impute._post_impute_statistics_items()
 
-        statistics = Statistics(stats=stats_to_calculate, columns=var_list)
-        stats_final_iteration = StatCalculator(
-            df=self.df, statistics=statistics, display=False, round_output=False
+        #   Statistics' default stat list (mean/std/quantiles) is numeric/
+        #       boolean only - it silently drops any other-dtype column
+        #       (Statistics._resolve_summary_df's cs.numeric()/
+        #       cs.boolean() select), which crashes downstream
+        #       ("No items to concatenate") if var_list ends up empty
+        #       after that filter - e.g. an iteration where every
+        #       variable imputed so far is a category label
+        #       (Multinomial()/OrderedCategorical()). Pre-filter here so
+        #       only genuinely summarizable variables reach Statistics -
+        #       see _post_impute_statistics's identical guard.
+        var_list_numeric = (
+            nw.from_native(self.df)
+            .lazy()
+            .select(cs.numeric(), cs.boolean())
+            .collect_schema()
+            .names()
         )
+        var_list_summarizable = [vari for vari in var_list if vari in var_list_numeric]
 
-        n_ignorej = (
-            nw.from_native(self.df_summary_stats[iterationi])
-            .select(nw.col("ignore_#").max())
-            .lazy()
-            .collect()
-            .item(0, 0)
-        )
-        df_stats_final = (
-            nw.from_native(stats_final_iteration.df_estimates)
-            .lazy()
-            .collect()
-            .with_row_index(name="ignore_#")
-            .with_columns(nw.col("ignore_#") + n_ignorej)
-            .with_columns(
-                [
-                    nw.lit(True).alias("ignore_final"),
-                    nw.col("Variable").alias("ignore_Variable"),
-                ]
+        if var_list_summarizable:
+            statistics = Statistics(stats=stats_to_calculate, columns=var_list_summarizable)
+            stats_final_iteration = StatCalculator(
+                df=self.df, statistics=statistics, display=False, round_output=False
             )
-        )
 
-        self.df_summary_stats[iterationi] = concat_wrapper(
-            [self.df_summary_stats[iterationi], df_stats_final], how="diagonal"
-        )
+            n_ignorej = (
+                nw.from_native(self.df_summary_stats[iterationi])
+                .select(nw.col("ignore_#").max())
+                .lazy()
+                .collect()
+                .item(0, 0)
+            )
+            df_stats_final = (
+                nw.from_native(stats_final_iteration.df_estimates)
+                .lazy()
+                .collect()
+                .with_row_index(name="ignore_#")
+                .with_columns(nw.col("ignore_#") + n_ignorej)
+                .with_columns(
+                    [
+                        nw.lit(True).alias("ignore_final"),
+                        nw.col("Variable").alias("ignore_Variable"),
+                    ]
+                )
+            )
+
+            self.df_summary_stats[iterationi] = concat_wrapper(
+                [self.df_summary_stats[iterationi], df_stats_final], how="diagonal"
+            )
+        else:
+            #   Nothing numeric/boolean to summarize this iteration (e.g.
+            #       every variable imputed so far is a category label) -
+            #       still merge in a zero-row, correctly-typed
+            #       "ignore_final" column so it stays a real column
+            #       across the whole implicate's accumulated history
+            #       (df_full_summary_stats reads
+            #       nw.col("ignore_final") == 1 unconditionally, which
+            #       raises ColumnNotFoundError if the column never once
+            #       appears anywhere in df_summary_stats) rather than
+            #       being entirely absent whenever no iteration ever had
+            #       a numeric variable to report a "final" row for.
+            self.df_summary_stats[iterationi] = concat_wrapper(
+                [
+                    self.df_summary_stats[iterationi],
+                    nw.from_native(self.df_summary_stats[iterationi])
+                    .head(0)
+                    .with_columns(nw.lit(True).alias("ignore_final"))
+                    .to_native(),
+                ],
+                how="diagonal",
+            )
 
         #   For displaying, put it in the StatCalculator (for rounding and printing)
         stats_calc = StatCalculator(round_output=True)

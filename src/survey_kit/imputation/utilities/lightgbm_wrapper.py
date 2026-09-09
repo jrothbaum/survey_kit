@@ -14,7 +14,6 @@ import polars.selectors as pl_cs
 from enum import Enum
 import pickle
 import random
-import gc
 
 #   lightgbm/optuna/sklearn are all imported lazily at their points of use
 #   below (not here) - their base imports cost roughly a second combined,
@@ -110,9 +109,6 @@ class Survey_kit_Lightgbm:
             self.train_y = None
         if self.test_y is not None:
             self.test_y = None
-
-        if gc is not None:
-            gc.collect()
 
     @property
     def formula(self):
@@ -584,36 +580,64 @@ class Survey_kit_Lightgbm:
         else:
             return None
 
+    def process_predict_frame(self, df_predict: IntoFrameT) -> IntoFrameT:
+        """
+        Run the same formula processing predict() applies to df_predict, and
+        return the resulting processed dataframe on its own - lets a caller
+        that will call predict() repeatedly against the same df_predict (e.g.
+        once per quantile in a quantile-regression loop, where only the
+        trained model changes between calls) do that processing once and
+        reuse it via predict(df_predict_processed=...) instead of paying for
+        formula parsing/model-matrix construction on every call.
+        """
+        temp_lgbm = Survey_kit_Lightgbm(
+            df=df_predict,
+            y=self.y,
+            x=self.x,
+            weight=self.weight,
+            formula=self.formula,
+            parameters=self.parameters,
+            formula_exclude_interactions=self.formula_exclude_interactions,
+            formula_remove_factor=self.formula_remove_factor,
+            formula_remove_scale=self.formula_remove_scale,
+        )
+
+        temp_lgbm.process_formula()
+
+        return temp_lgbm.df
+
     def predict(
         self,
         df_predict: IntoFrameT | None = None,
+        df_predict_processed: IntoFrameT | None = None,
         name: str = "___prediction",
         merged_to_input: bool = False,
     ) -> IntoFrameT:
-        if df_predict is not None:
-            #   Predict on new data
-            nw_type = NarwhalsType(df_predict)
+        if df_predict is not None or df_predict_processed is not None:
+            if df_predict_processed is not None and merged_to_input and df_predict is None:
+                message = (
+                    "predict(): merged_to_input=True needs the original df_predict "
+                    "(to merge onto) - passing only df_predict_processed isn't enough."
+                )
+                logger.error(message)
+                raise Exception(message)
 
-            temp_lgbm = Survey_kit_Lightgbm(
-                df=df_predict,
-                y=self.y,
-                x=self.x,
-                weight=self.weight,
-                formula=self.formula,
-                parameters=self.parameters,
-                formula_exclude_interactions=self.formula_exclude_interactions,
-                formula_remove_factor=self.formula_remove_factor,
-                formula_remove_scale=self.formula_remove_scale,
+            #   Predict on new data
+            nw_type = NarwhalsType(
+                df_predict if df_predict is not None else df_predict_processed
             )
 
-            temp_lgbm.process_formula()
+            if df_predict_processed is not None:
+                processed_df = df_predict_processed
+            else:
+                processed_df = self.process_predict_frame(df_predict)
 
             df_prediction = lazy_backend(
                 nw.Series.from_numpy(
                     name=name,
                     values=self.model.predict(
                         data=(
-                            nw.from_native(temp_lgbm.df)
+                            nw.from_native(processed_df)
                             .select(self.train_data.get_data().schema.names)
                             .with_columns(cs.boolean().cast(nw.Int8))
                             .lazy()

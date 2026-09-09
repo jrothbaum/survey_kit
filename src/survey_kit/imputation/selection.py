@@ -532,28 +532,34 @@ class Selection(Serializable):
 
         fb = FormulaBuilder(df=df)
         fb.formula = formula
-        for coli in fb.columns:
-            if coli != y:
-                n_missing = safe_height(
-                    nw.from_native(df)
-                    .select(coli)
-                    .filter(nw.col(coli).is_null())
-                    .to_native()
-                )
+        cols_to_check = [coli for coli in fb.columns if coli != y]
 
-                if n_missing > 0:
-                    missing_dummies.append(
-                        nw.when(nw.col(coli).is_null())
-                        .then(nw.lit(True))
-                        .otherwise(nw.lit(False))
-                        .alias(f"___missing___dummy___{coli}")
-                    )
-                    missing_recodes.append(
-                        nw.when(nw.col(coli).is_null())
-                        .then(nw.lit(0))
-                        .otherwise(nw.col(coli))
-                        .alias(coli)
-                    )
+        #   One pass to find which columns have any missing values, instead
+        #       of a separate filter/materialize per column.
+        any_missing = {}
+        if len(cols_to_check) > 0:
+            any_missing = list(
+                nw.from_native(df)
+                .select([nw.col(coli).is_null().any().alias(coli) for coli in cols_to_check])
+                .lazy()
+                .collect()
+                .iter_rows(named=True)
+            )[0]
+
+        for coli in cols_to_check:
+            if any_missing.get(coli, False):
+                missing_dummies.append(
+                    nw.when(nw.col(coli).is_null())
+                    .then(nw.lit(True))
+                    .otherwise(nw.lit(False))
+                    .alias(f"___missing___dummy___{coli}")
+                )
+                missing_recodes.append(
+                    nw.when(nw.col(coli).is_null())
+                    .then(nw.lit(0))
+                    .otherwise(nw.col(coli))
+                    .alias(coli)
+                )
 
         if len(missing_dummies) > 0:
             df = (

@@ -11,3 +11,7 @@ wheels/
 
 
 .scratch/
+
+# CatBoost training artifacts (auto-created wherever catboost is run from)
+catboost_info/
+**/catboost_info/

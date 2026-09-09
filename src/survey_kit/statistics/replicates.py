@@ -230,13 +230,13 @@ class ReplicateStats(Serializable):
             nw.from_native(self.df_estimates)
             .lazy()
             .drop(join_on)
-            .select(cs.nw.numeric())
+            .select(cs.numeric())
             .collect_schema()
             .names()
         )
 
         with_cis = [nw.col(coli) * ci_multiple for coli in cols_stats]
-        return self.df_ses.with_columns(with_cis)
+        return nw.from_native(self.df_ses).with_columns(with_cis).to_native()
 
     def filter(self, filter_expr: nw.Expr) -> ReplicateStats:
         #   Don't edit the underlying object
@@ -958,7 +958,7 @@ def ses_from_replicates(
 
 
 def apply_as_attribute(obj, df_name: str, nw_expr, nw_method: str):
-    dfi = nw.from_native(getattr(obj, df_name))
+    dfi = getattr(obj, df_name)
 
     if dfi is not None:
         df_nw = nw.from_native(dfi)

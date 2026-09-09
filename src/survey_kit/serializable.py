@@ -119,6 +119,31 @@ class Serializable:
 
         #   logger.info(folder_path)
 
+        #   Save the data
+        dfs = d_save["__serialized_dfs__"]
+
+        #   Materialize any LazyFrame BEFORE the existing directory gets
+        #       wiped below. A LazyFrame here can be a scan straight from
+        #       a parquet file INSIDE folder_path itself - e.g. after
+        #       SRMI.load(path)/Implicate.load(), whose dataframes are
+        #       lazily scanned from their own just-loaded files, not
+        #       eagerly read. Deleting folder_path first, then later
+        #       trying to sink_parquet a lazy scan of a file that's now
+        #       gone, crashes with FileNotFoundError - confirmed: a bare
+        #       SRMI.load(path) followed immediately by .save() with no
+        #       other changes hits this every time. Collecting here,
+        #       once, before the delete, makes the whole save() call
+        #       correct regardless of whether the source was lazily
+        #       loaded from this exact path - at the cost of no longer
+        #       streaming a reload-then-resave through sink_parquet's
+        #       lower memory footprint (a freshly-computed, still-eager
+        #       frame - the common case, e.g. right after Impute.run() -
+        #       is entirely unaffected, since there's nothing to collect).
+        for valuei in dfs.values():
+            dfi_nw = nw.from_native(valuei["df"])
+            if isinstance(dfi_nw, nw.LazyFrame):
+                valuei["df"] = dfi_nw.collect().to_native()
+
         if os.path.isdir(folder_path):
             logger.info("Removing existing directory " + folder_path)
             shutil.rmtree(folder_path)
@@ -126,9 +151,6 @@ class Serializable:
         #   Make the path to save everything
         create_folders_if_needed([folder_path])
         #   os.makedirs(folder_path)
-
-        #   Save the data
-        dfs = d_save["__serialized_dfs__"]
         if len(dfs):
             self._save_dfs(folder_path=folder_path, dfs=dfs, quietly=quietly)
 

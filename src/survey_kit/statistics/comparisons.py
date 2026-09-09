@@ -311,7 +311,7 @@ def _compare_one_implicate(
         bootstrap1 = replicate1.replicates.bootstrap
     if hasattr(replicate2, "bootstrap"):
         bootstrap2 = replicate2.bootstrap
-    elif hasattr(replicate1, "replicates"):
+    elif hasattr(replicate2, "replicates"):
         bootstrap2 = replicate2.replicates.bootstrap
 
     n_replicates1 = (

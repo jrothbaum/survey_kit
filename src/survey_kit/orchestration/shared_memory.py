@@ -58,9 +58,9 @@ class SharedMemoryUtility:
             if backend != "":
                 df = nw.scan_parquet(df, backend=backend)
             else:
-                df = nw.scan_parquet(df)
+                df = nw.scan_parquet(df, backend=pl)
 
-            df_a = df.collect()
+            df_a = df.collect().to_arrow()
         else:
             df_a = nw.from_native(df).lazy().collect().to_arrow()
 

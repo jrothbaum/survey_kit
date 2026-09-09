@@ -146,7 +146,7 @@ v_reg2 = Variable(
     model=f_model.formula,
     #   Default parameters
     parameters=Parameters.Regression(),
-    hooks=Variable.Hooks(
+    transforms=Variable.Transforms(
         post=(
             nw.when(nw.col("var_reg1"))
             .then(nw.col("var_reg2"))

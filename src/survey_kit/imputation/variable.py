@@ -18,6 +18,7 @@ from ..utilities.compress import compress_df
 
 #   SRMI modules
 from .selection import Selection
+from .parameters import Parameters
 
 from ..serializable import Serializable
 from .. import logger
@@ -39,8 +40,8 @@ class Variable(Serializable):
     sample : Variable.Sample - which rows this variable's imputation applies to
         (Where / Where_impute / Where_predict / Where_predict_only_when_not_imputed /
         bimpute_if_missing)
-    hooks : Variable.Hooks - pre/post-imputation operations
-        (pre / post / pre_initialize)
+    transforms : Variable.Transforms - pre/post-imputation operations
+        (pre / post / pre_initialize / post_finalize)
     predictors : Variable.Predictors - predictor inclusion/exclusion control
         (exclude / exclude_first_iteration / require / joint)
 
@@ -50,7 +51,11 @@ class Variable(Serializable):
     """
 
     class ModelType(Enum):
-        #   Predicted mean matching
+        #   Predicted mean matching - Parameters.pmm()'s own fixed
+        #       model/error choice. Routes through the same
+        #       Impute.regression() every other regression-shaped
+        #       modeltype below does (no separate impute.py method of
+        #       its own).
         pmm = 0
 
         #   Predict y with lightgbm, then impute according to passed parameters
@@ -70,9 +75,47 @@ class Variable(Serializable):
         #   rifreg = 7
         #   quantile_spacing = 8
 
-        #   Find nearest neighbor on x directly without reducing
-        #       to a single index (yhat) from regression or lightgbm
-        NearestNeighbor = 9
+        #   NearestNeighbor = 9 - removed. Matching directly on raw x
+        #       values (no fitted model) turned out not to earn its own
+        #       modeltype/impute.py method - it's superseded by
+        #       Regression with Parameters.NearestNeighbor(), which fits
+        #       an OLS on the same predictors and PMM-matches on that
+        #       prediction instead of raw distance - see that function's
+        #       docstring for why that's the better default.
+
+        #   Predict y with a mean-regression sklearn-compatible estimator
+        #       (RandomForestRegressor/XGBRegressor/CatBoostRegressor/your
+        #       own), then impute the same way Regression does - see
+        #       Parameters.RandomForest()/XGBoost()/CatBoost()/SklearnModel()
+        RandomForest = 10
+        XGBoost = 11
+        CatBoost = 12
+        SklearnModel = 13
+
+        #   Predict an unordered categorical y (3+ levels) with a
+        #       RandomForestClassifier, then impute by donor matching on
+        #       leaf co-occurrence: pool the donors sharing a leaf with
+        #       the recipient across every tree, draw one uniformly at
+        #       random - the same donor-selection mechanism mice's rf
+        #       method uses (see
+        #       imputation/utilities/leaf_donor_matching.py). Unlike
+        #       RandomForest/XGBoost/CatBoost/SklearnModel above, this is
+        #       classification, not mean regression - it doesn't reuse
+        #       _run_regression at all. See Parameters.Multinomial().
+        Multinomial = 14
+
+        #   Predict an ORDERED categorical y (e.g. education level, a
+        #       Likert scale) by fitting a mean-regression estimator
+        #       (default RandomForestRegressor, or your own factory)
+        #       against an integer rank encoding of the declared
+        #       category order, then donating the REAL observed category
+        #       from a matched donor - never the numeric rank, and never
+        #       a category that wasn't actually observed (same guarantee
+        #       Multinomial() gives). Donor matching is PMM (knearest on
+        #       the predicted rank) or leaf (tree leaf co-occurrence -
+        #       see ErrorDraw.leaf and utilities/leaf_donor_matching.py).
+        #       See Parameters.OrderedCategorical().
+        OrderedCategorical = 15
 
     class PrePost:
         """
@@ -244,10 +287,15 @@ class Variable(Serializable):
         def with_bimpute_if_missing(self, value: bool) -> Variable.Sample:
             return self._with(bimpute_if_missing=value)
 
-    class Hooks(Serializable):
-        """Operations to run before/after this variable's imputation each iteration."""
+    class Transforms(Serializable):
+        """
+        Operations to run before/after this variable's imputation each
+        iteration (pre/post), plus once-only bookends around the whole
+        implicate (pre_initialize before the first iteration,
+        post_finalize after the last).
+        """
 
-        _save_suffix = "variable.hooks"
+        _save_suffix = "variable.transforms"
 
         def __init__(
             self,
@@ -272,6 +320,13 @@ class Variable(Serializable):
             | Variable.PrePost.NarwhalsExpression
             | nw.Expr
             | None = None,
+            post_finalize: list[
+                Variable.PrePost.Function | Variable.PrePost.NarwhalsExpression | nw.Expr
+            ]
+            | Variable.PrePost.Function
+            | Variable.PrePost.NarwhalsExpression
+            | nw.Expr
+            | None = None,
         ):
             """
             Parameters
@@ -286,22 +341,43 @@ class Variable(Serializable):
                 Any operations to run before this imputation ONLY ONCE before running
                 the first implicate. If it's a function, it will expect the implicate
                 to be passed in. The default is None.
+            post_finalize : list, optional
+                Any operations to run ONLY ONCE, after the implicate's LAST
+                iteration completes (the mirror image of pre_initialize -
+                once at the end instead of once at the start). Unlike
+                pre_initialize, these use the same calling convention as
+                pre/post: a function receives/returns df, not the
+                implicate. Runs once per implicate (not once across the
+                whole SRMI run), in variable order, so it's a deterministic
+                place to do one-time cleanup a variable's own imputation
+                needed but that shouldn't be repeated every iteration or
+                show up in the final output - e.g. dropping a scaffolding
+                column another variable's pre/pre_initialize created only
+                to drive that variable's own donor matching. Not called
+                again on a resumed run that finds the implicate already
+                complete. The default is None.
             """
             self.pre = Variable._parse_pre_post_function_inputs(pre)
             self.post = Variable._parse_pre_post_function_inputs(post)
+            self.post_finalize = Variable._parse_pre_post_function_inputs(post_finalize)
             self.pre_initialize = Variable._parse_pre_post_function_inputs(
                 pre_initialize
             )
 
-        def with_pre(self, value) -> Variable.Hooks:
+        def with_pre(self, value) -> Variable.Transforms:
             return self._with(pre=Variable._parse_pre_post_function_inputs(value))
 
-        def with_post(self, value) -> Variable.Hooks:
+        def with_post(self, value) -> Variable.Transforms:
             return self._with(post=Variable._parse_pre_post_function_inputs(value))
 
-        def with_pre_initialize(self, value) -> Variable.Hooks:
+        def with_pre_initialize(self, value) -> Variable.Transforms:
             return self._with(
                 pre_initialize=Variable._parse_pre_post_function_inputs(value)
+            )
+
+        def with_post_finalize(self, value) -> Variable.Transforms:
+            return self._with(
+                post_finalize=Variable._parse_pre_post_function_inputs(value)
             )
 
     class Predictors(Serializable):
@@ -366,7 +442,7 @@ class Variable(Serializable):
         preselection: Selection = None,
         By: list = None,
         sample: Variable.Sample = None,
-        hooks: Variable.Hooks = None,
+        transforms: Variable.Transforms = None,
         predictors: Variable.Predictors = None,
     ):
         """
@@ -406,8 +482,8 @@ class Variable(Serializable):
             Variable list for by groups
         sample : Variable.Sample, optional
             Which rows this variable's imputation applies to. The default is Variable.Sample().
-        hooks : Variable.Hooks, optional
-            Pre/post-imputation operations. The default is Variable.Hooks().
+        transforms : Variable.Transforms, optional
+            Pre/post-imputation operations. The default is Variable.Transforms().
         predictors : Variable.Predictors, optional
             Predictor inclusion/exclusion control. The default is Variable.Predictors().
 
@@ -421,7 +497,7 @@ class Variable(Serializable):
         self.header = header
 
         self.sample = sample if sample is not None else Variable.Sample()
-        self.hooks = hooks if hooks is not None else Variable.Hooks()
+        self.transforms = transforms if transforms is not None else Variable.Transforms()
         self.predictors = predictors if predictors is not None else Variable.Predictors()
 
         self.weight = weight
@@ -487,7 +563,7 @@ class Variable(Serializable):
         Construct a Variable from the pre-refactor flat-kwarg signature.
 
         Migration aid only - new code should pass sample=Variable.Sample(...),
-        hooks=Variable.Hooks(...), predictors=Variable.Predictors(...) directly
+        transforms=Variable.Transforms(...), predictors=Variable.Predictors(...) directly
         to Variable() instead.
         """
         return cls(
@@ -508,7 +584,7 @@ class Variable(Serializable):
                 Where_predict_only_when_not_imputed=Where_predict_only_when_not_imputed,
                 bimpute_if_missing=bimpute_if_missing,
             ),
-            hooks=Variable.Hooks(
+            transforms=Variable.Transforms(
                 pre=preFunctions,
                 post=postFunctions,
                 pre_initialize=preFunctions_initialize_implicate,
@@ -521,12 +597,434 @@ class Variable(Serializable):
             ),
         )
 
+    @classmethod
+    def two_part(
+        cls,
+        df: IntoFrameT,
+        impute_var: str,
+        model: list[str] | str,
+        modeltype: Variable.ModelType = ModelType.Regression,
+        parameters: dict | None = None,
+        yn_model: list[str] | str | None = None,
+        yn_modeltype: Variable.ModelType | None = None,
+        yn_parameters: dict | None = None,
+        yn_var: str | None = None,
+        yn_missing: nw.Expr | None = None,
+        value_if_no: float | None = 0,
+        weight: str = "",
+        By: list[str] | str | None = None,
+    ) -> tuple[IntoFrameT, list[Variable]]:
+        """
+        Shortcut for semicontinuous (point mass at zero + continuous)
+        two-part imputation: a binary y/n ("is impute_var nonzero")
+        variable, imputed first, then impute_var itself, restricted to
+        the y/n==True population - the standard two-part/hurdle approach
+        (as opposed to just PMM/leaf-matching the raw variable directly,
+        which reproduces the point mass for free but assumes a single
+        model/predictor set explains both the participation and
+        intensity margins - see the two_part design discussion this
+        wraps up).
+
+        Takes df (needed to derive the y/n column - see below) and
+        returns (df, variables): df with the y/n column added, and a
+        plain list, always safe to `variables.extend(...)` or loop over
+        - normally `[yn_variable, value_variable]` (order matters: yn
+        must precede value in your SRMI variables list, so value sees
+        this iteration's fresh yn draw, not last iteration's), but
+        sometimes shorter - see yn_var and the HotDeck/StatMatch note
+        below. Use the RETURNED df (not your original) to construct
+        SRMI - SRMI.__init__ needs every impute_var to already exist as
+        a real column up front, even the y/n one, so it can't be created
+        lazily via a hook the way the per-iteration consistency fixups
+        below are.
+
+        Mechanics (mostly via existing Variable.Transforms hooks, no
+        per-call special-casing in impute.py):
+          - If creating y/n (yn_var not given): the column is derived
+            once, right here, straight into the returned df (not via
+            pre_initialize - the derivation is a fixed function of df's
+            own observed values, identical for every implicate, so
+            there's nothing to recompute per-implicate): null wherever
+            impute_var is null (or, if yn_missing is given, ALSO
+            wherever that expression is true - additive, never
+            narrower, since a null impute_var can never tell us whether
+            y/n was really True or False), else impute_var != 0.
+          - If yn_var IS given but still has missing values of its own:
+            value_variable's Where (below) would otherwise silently
+            exclude those rows from ever being touched at all (a null
+            never satisfies a boolean filter) - so a real yn_variable
+            still gets built for it, using the same modeltype/
+            parameters derivation as the create-our-own case, just
+            reading/imputing the caller's own column in place rather
+            than deriving it, and never dropping it at the end (not
+            ours to clean up). If yn_var has no missing values at all,
+            none of this applies - value_variable alone is returned.
+          - Whenever a real yn_variable is built (either case above)
+            and its own donation is genuine (pmm/leaf, or HotDeck/
+            StatMatch - always donation-based), impute_var itself rides
+            along in its donate_list - so a row whose y/n was just
+            resolved gets its value from that SAME matched donor,
+            rather than from a possibly different one value_variable's
+            own later pass would find. A harmless no-op when yn's error
+            draw is Random instead, which never donates anything.
+          - value_variable.sample.Where restricts value's donor pool AND
+            recipients to yn==True rows.
+          - value_variable.transforms.pre runs every iteration, before
+            value's own fit/donation: wherever yn is currently True but
+            value == 0 (stale from a prior iteration when yn was False),
+            null it out (so it's a genuine recipient again this
+            iteration); wherever yn is currently False, force value to
+            value_if_no.
+          - yn_variable.transforms.post_finalize drops the scratch y/n
+            column once, after the implicate's last iteration - only
+            when this function created it (see yn_var).
+
+        Parameters
+        ----------
+        df : IntoFrameT
+            Source data - read to derive the y/n column, and to return
+            the augmented copy you should actually build SRMI from.
+        impute_var : str
+            The semicontinuous target.
+        model : list[str] | str
+            Predictors for impute_var (value). Also yn's predictors,
+            unless yn_model overrides them.
+        modeltype : Variable.ModelType, optional
+            value's modeltype. Supported: Regression, pmm, LightGBM
+            (fit a real Logit/binary-objective variant for yn);
+            RandomForest, XGBoost, CatBoost, SklearnModel (yn reuses the
+            SAME estimator factory via ModelType.OrderedCategorical
+            with categories=[False, True] - no regressor/classifier
+            estimator swap, which isn't generically possible: sklearn/
+            XGBoost/CatBoost each have model-family-specific
+            hyperparameters, like criterion/objective/loss_function,
+            that don't transfer across that boundary, and there's no
+            way to do it at all for SklearnModel's arbitrary factory);
+            HotDeck, StatMatch (donation doesn't care about target
+            dtype, no swap needed - see the collapse behavior below).
+            Anything else (Multinomial, OrderedCategorical) raises -
+            not semicontinuous-shaped as value's own type. By default
+            Variable.ModelType.Regression.
+        parameters : dict, optional
+            value's parameters (e.g. Parameters.RandomForest(...)). By
+            default None ({}).
+        yn_model : list[str] | str | None, optional
+            Predictors for yn, if they should differ from model - the
+            participation and intensity margins often don't share
+            predictors/mechanism. By default None (same as model).
+        yn_modeltype : Variable.ModelType | None, optional
+            Explicit override for yn's modeltype - pass together with
+            yn_parameters for full manual control. By default None
+            (derived from modeltype per the modeltype docstring above).
+        yn_parameters : dict | None, optional
+            Explicit override for yn's parameters. If given without
+            yn_modeltype, yn_modeltype defaults to modeltype (or
+            OrderedCategorical, if modeltype is one of the four that
+            reuse it) rather than being derived further - if you're
+            supplying parameters yourself, supply the modeltype too if
+            it's not that default. By default None (derived).
+        yn_var : str | None, optional
+            Reuse an existing y/n column instead of deriving one from
+            impute_var. If it's already fully observed, this function
+            builds ONLY value_variable (a 1-item list), restricted to
+            yn_var==True. If it still has missing values of its own,
+            this function ALSO builds a yn_variable to resolve them
+            (using the same modeltype/yn_modeltype/yn_parameters
+            derivation as the create-our-own case - see the mechanics
+            note above), so the returned list is still
+            [yn_variable, value_variable] in that case - it's only
+            "your own concern" when there's genuinely nothing left for
+            it to do. Never dropped at the end either way - it's your
+            column. By default None (create one, named
+            f"___{impute_var}_yn___").
+        yn_missing : nw.Expr | None, optional
+            Only meaningful when yn_var is not given. Rows where this is
+            true are ALSO treated as yn-missing, on top of
+            impute_var.is_null() (additive, not a replacement - see the
+            mechanics note above for why). By default None.
+        value_if_no : float | None, optional
+            What value becomes on yn==False rows, every iteration. By
+            default 0 (pass None to leave it null instead).
+        weight : str, optional
+            Applied identically to both variables. By default "".
+        By : list[str] | str | None, optional
+            Applied identically to both variables. By default None.
+
+        Returns
+        -------
+        tuple[IntoFrameT, list[Variable]]
+            (df, variables) - df augmented with the y/n column (only
+            when this function created one - unchanged otherwise);
+            variables is [yn_variable, value_variable] normally,
+            [value_variable] alone only when either (a) yn_var was given
+            and is already fully observed (nothing left for a
+            yn_variable to do), or (b) modeltype is HotDeck/StatMatch
+            and there's no signal at all (no yn_var, yn_missing,
+            yn_model, yn_modeltype, or yn_parameters) that the two
+            margins should be modeled differently - a single donation
+            pass on value, unrestricted, already reproduces the point
+            mass for free in that case, so a redundant yn model is
+            skipped (with a warning).
+        """
+        direct_swap = (
+            Variable.ModelType.Regression,
+            Variable.ModelType.pmm,
+            Variable.ModelType.LightGBM,
+        )
+        ordered_categorical_reuse = (
+            Variable.ModelType.RandomForest,
+            Variable.ModelType.XGBoost,
+            Variable.ModelType.CatBoost,
+            Variable.ModelType.SklearnModel,
+        )
+        trivial_reuse = (Variable.ModelType.HotDeck, Variable.ModelType.StatMatch)
+        supported = direct_swap + ordered_categorical_reuse + trivial_reuse
+
+        if modeltype not in supported:
+            message = (
+                f"Variable.two_part(): modeltype={modeltype} isn't a "
+                f"semicontinuous-shaped mean-regression/donation "
+                f"modeltype - supported: {[m.name for m in supported]}."
+            )
+            logger.error(message)
+            raise ValueError(message)
+
+        if parameters is None:
+            parameters = {}
+
+        no_yn_signal = (
+            yn_var is None
+            and yn_missing is None
+            and yn_model is None
+            and yn_modeltype is None
+            and yn_parameters is None
+        )
+
+        if modeltype in trivial_reuse and no_yn_signal:
+            message = (
+                f"{impute_var}: two_part() with modeltype={modeltype.name} "
+                f"and no yn_var/yn_missing/yn_model/yn_modeltype/"
+                f"yn_parameters given - there's no signal that the y/n and "
+                f"value margins should be modeled differently, and "
+                f"donation-based matching (HotDeck/StatMatch) doesn't care "
+                f"about the target's dtype either way, so a separate y/n "
+                f"model would be redundant here. Imputing value directly, "
+                f"unrestricted, instead."
+            )
+            logger.warning(message)
+            return (
+                df,
+                [
+                    Variable(
+                        impute_var=impute_var,
+                        model=model,
+                        weight=weight,
+                        By=By,
+                        modeltype=modeltype,
+                        parameters=parameters,
+                    )
+                ],
+            )
+
+        #   yn_col/creating: yn_var given means the CALLER'S OWN column -
+        #       we never overwrite its values with the derived formula,
+        #       and never drop it. But it might still have missing
+        #       values of its own (not yet resolved) - Where=nw.col(...)
+        #       below excludes a null row entirely (from both value's
+        #       donor pool AND recipients), so if we did nothing further
+        #       those rows would silently never get EITHER yn or value
+        #       filled in. So: if yn_var has its own missingness, we
+        #       still need a real yn_variable (using yn_modeltype/
+        #       yn_parameters, same derivation as the "create our own"
+        #       case below) to resolve it - just without the derive-it-
+        #       from-value formula and without post_finalize (it's not
+        #       ours to clean up). If yn_var is already fully observed,
+        #       none of that is needed - value_variable alone suffices,
+        #       same as before.
+        creating = yn_var is None
+        yn_col = yn_var if yn_var is not None else f"___{impute_var}_yn___"
+        yn_predictors = yn_model if yn_model is not None else model
+
+        if not creating:
+            yn_still_missing = (
+                nw.from_native(df)
+                .lazy()
+                .select(nw.col(yn_col).is_null().sum())
+                .collect()
+                .item(0, 0)
+                > 0
+            )
+        else:
+            yn_still_missing = True
+
+        value_variable = Variable(
+            impute_var=impute_var,
+            model=model,
+            weight=weight,
+            By=By,
+            modeltype=modeltype,
+            parameters=parameters,
+            sample=Variable.Sample(Where=nw.col(yn_col)),
+            transforms=Variable.Transforms(
+                pre=Variable.PrePost.Function(
+                    _two_part_value_consistency,
+                    parameters={
+                        "yn_var": yn_col,
+                        "value_var": impute_var,
+                        "value_if_no": value_if_no,
+                    },
+                )
+            ),
+        )
+
+        if not yn_still_missing:
+            #   yn_var was given and is already fully observed - nothing
+            #       for a yn_variable to do, df is unchanged.
+            return (df, [value_variable])
+
+        if yn_parameters is not None:
+            if yn_modeltype is None:
+                yn_modeltype = (
+                    Variable.ModelType.OrderedCategorical
+                    if modeltype in ordered_categorical_reuse
+                    else modeltype
+                )
+        elif yn_modeltype is not None:
+            message = (
+                f"{impute_var}: two_part() got yn_modeltype without "
+                f"yn_parameters - can't auto-derive parameters for a "
+                f"modeltype different from value's own; pass "
+                f"yn_parameters too."
+            )
+            logger.error(message)
+            raise ValueError(message)
+        elif modeltype in direct_swap:
+            yn_modeltype = modeltype
+            yn_parameters = deepcopy(parameters)
+            #   donate_list means "when you find a donor for THIS
+            #       target, also carry these other variables from that
+            #       same donor" - copied verbatim from value's own
+            #       parameters, it would make yn's own (independent,
+            #       generally different-donor) match ALSO donate those
+            #       variables, only to have value's own pass silently
+            #       overwrite that donation right after (value runs
+            #       second) - wasted work at best, a confusing
+            #       intermediate state at worst. donate_by (a shared
+            #       grouping/restriction, not something donated) is
+            #       fine to share and stays untouched. impute_var
+            #       itself, though, DOES belong in yn's donate_list (see
+            #       this function's own docstring on why) - when yn's
+            #       own donation mechanism is real (pmm/leaf), this
+            #       pulls value from the SAME matched donor as yn,
+            #       right when yn itself is resolved, rather than value
+            #       getting a possibly-different donor later from its
+            #       own separate match; a no-op, harmlessly ignored, if
+            #       yn ends up drawing via error=Random instead (which
+            #       never donates anything at all).
+            yn_parameters["donate_list"] = [impute_var]
+            if modeltype == Variable.ModelType.LightGBM:
+                yn_parameters["parameters"] = deepcopy(
+                    yn_parameters.get("parameters") or {}
+                )
+                yn_parameters["parameters"]["objective"] = "binary"
+            else:
+                #   Regression/pmm both carry a plain "model" key
+                #       (RegressionModel enum) regardless of which of
+                #       the two built the dict.
+                yn_parameters["model"] = Parameters.RegressionModel.Logit
+        elif modeltype in ordered_categorical_reuse:
+            yn_modeltype = Variable.ModelType.OrderedCategorical
+            #   Same estimator factory, unmodified - no regressor/
+            #       classifier swap (see this function's own docstring
+            #       for why that's not generically possible). error only
+            #       carries over if leaf - OrderedCategorical has no
+            #       Random branch, and leaf is the only donation
+            #       mechanism unaffected by ___prediction being a fitted
+            #       rank rather than value's own scale. donate_list is
+            #       [impute_var], not copied from value's own - see the
+            #       direct_swap branch's comment above for why.
+            value_error = parameters.get("error")
+            yn_parameters = Parameters.OrderedCategorical(
+                categories=[False, True],
+                estimator=parameters.get("estimator"),
+                categorical_feature=parameters.get("categorical_feature"),
+                estimator_prepare_data=parameters.get("estimator_prepare_data"),
+                donate_list=[impute_var],
+                donate_by=parameters.get("donate_by"),
+                knearest=parameters.get("knearest", 10),
+                error=(
+                    value_error
+                    if value_error == Parameters.ErrorDraw.leaf
+                    else Parameters.ErrorDraw.pmm
+                ),
+            )
+        else:
+            #   trivial_reuse (HotDeck/StatMatch), and at least one
+            #       yn_* signal was given, or yn_var's own missingness
+            #       needs resolving - donation doesn't care about
+            #       target dtype, so parameters copy over unchanged
+            #       (EXCEPT donate_list, which becomes [impute_var] -
+            #       see the direct_swap branch's comment above for why)
+            #       UNLESS yn_model demands a different matching-cell
+            #       spec, which lives inside parameters["model_list"]
+            #       for these two, not Variable.model - rebuild it via
+            #       Parameters.HotDeck() rather than trying to hand-edit
+            #       the built dict. (Parameters.StatMatch() is just
+            #       Parameters.HotDeck() under its own name, so this is
+            #       correct either way.) HotDeck/StatMatch always
+            #       genuinely donate (no error=Random escape hatch), so
+            #       this is never a no-op here the way it can be for
+            #       direct_swap.
+            yn_modeltype = modeltype
+            if yn_model is not None:
+                yn_parameters = Parameters.HotDeck(
+                    model_list=yn_model, donate_list=[impute_var]
+                )
+            else:
+                yn_parameters = deepcopy(parameters)
+                yn_parameters["donate_list"] = [impute_var]
+
+        if creating:
+            missing_expr = nw.col(impute_var).is_null()
+            if yn_missing is not None:
+                missing_expr = missing_expr | yn_missing
+
+            yn_expr = (
+                nw.when(missing_expr)
+                .then(None)
+                .otherwise(nw.col(impute_var) != 0)
+                .alias(yn_col)
+            )
+            df = nw.from_native(df).with_columns(yn_expr).to_native()
+
+        yn_transforms = (
+            Variable.Transforms(
+                post_finalize=Variable.PrePost.Function(
+                    _two_part_drop_yn, parameters={"yn_var": yn_col}
+                ),
+            )
+            if creating
+            else None
+        )
+
+        yn_variable = Variable(
+            impute_var=yn_col,
+            model=yn_predictors,
+            weight=weight,
+            By=By,
+            modeltype=yn_modeltype,
+            parameters=yn_parameters,
+            transforms=yn_transforms,
+        )
+
+        return (df, [yn_variable, value_variable])
+
     #####################################################
     #   Flat-attribute compatibility properties - BEGIN
     #       Where/preFunctions/predictors_exclude/etc. are read (and in some
     #       cases mutated) throughout this file plus implicate.py and impute.py.
     #       These properties redirect that existing behavior onto the new
-    #       self.sample/self.hooks/self.predictors objects so none of those
+    #       self.sample/self.transforms/self.predictors objects so none of those
     #       call sites needed to change - only construction did.
     #####################################################
     @property
@@ -579,27 +1077,35 @@ class Variable(Serializable):
 
     @property
     def preFunctions(self):
-        return self.hooks.pre
+        return self.transforms.pre
 
     @preFunctions.setter
     def preFunctions(self, value):
-        self.hooks.pre = value
+        self.transforms.pre = value
 
     @property
     def postFunctions(self):
-        return self.hooks.post
+        return self.transforms.post
 
     @postFunctions.setter
     def postFunctions(self, value):
-        self.hooks.post = value
+        self.transforms.post = value
 
     @property
     def preFunctions_initialize_implicate(self):
-        return self.hooks.pre_initialize
+        return self.transforms.pre_initialize
 
     @preFunctions_initialize_implicate.setter
     def preFunctions_initialize_implicate(self, value):
-        self.hooks.pre_initialize = value
+        self.transforms.pre_initialize = value
+
+    @property
+    def postFunctions_finalize_implicate(self):
+        return self.transforms.post_finalize
+
+    @postFunctions_finalize_implicate.setter
+    def postFunctions_finalize_implicate(self, value):
+        self.transforms.post_finalize = value
 
     @property
     def predictors_exclude(self):
@@ -748,7 +1254,7 @@ class Variable(Serializable):
             model_vars = fb.columns
         return (fb, fb_rhs, model_vars)
 
-    def validate_inputs(self, df: IntoFrameT):
+    def validate_inputs(self, df: IntoFrameT, bootstrap_enabled: bool = True):
         # """
         # Try to catch some variable specification errors upfront rather than
         #     finding out later that things don't work'
@@ -768,6 +1274,14 @@ class Variable(Serializable):
         #       down the line and throw an error now to save time
         self._validate_reserved_names()
 
+        #   A variable can't be both forced into the model and excluded from it
+        self._validate_require_exclude_overlap()
+
+        #   Fail before the run starts (not partway through, after some
+        #       variables/iterations already succeeded) if an estimator
+        #       preset's package isn't installed.
+        self._validate_estimator_available(df=df)
+
         if self.modeltype == Variable.ModelType.LightGBM:
             #   If impute_var is a dummy variable, can't run quantile gbm
             self._validate_lightgbm_boolean_quantile(df=df)
@@ -780,9 +1294,167 @@ class Variable(Serializable):
             #       You'll be left with missing values at the end
             self._validate_hot_deck_problematic_donate_missing(df=df)
 
+        #   HotDeck/StatMatch donor selection is entirely unweighted -
+        #       unlike pmm/Regression()/RandomForest()/XGBoost()/
+        #       CatBoost()/SklearnModel()/LightGBM()/Multinomial, neither
+        #       reads the weight column at all (checked: zero weight-
+        #       related references anywhere in statmatch()/hotdeck() or
+        #       their helpers), so both a declared survey weight AND the
+        #       Bayesian bootstrap's per-implicate weight perturbation -
+        #       one of the main sources of proper between-implicate MI
+        #       variance - are silently ignored for these two. Warn
+        #       once here (not every iteration/implicate, which is where
+        #       this would otherwise actually fire) rather than fixing
+        #       it: efficient weighted sampling isn't trivial for
+        #       StatMatch, and HotDeck's sequential donor-carry design has
+        #       no natural notion of weighting at all.
+        if self.modeltype in (
+            Variable.ModelType.HotDeck,
+            Variable.ModelType.StatMatch,
+        ) and (self.weight != "" or bootstrap_enabled):
+            reason = (
+                "HotDeck's sequential donor-carry design has no natural "
+                "notion of weighting"
+                if self.modeltype == Variable.ModelType.HotDeck
+                else "weighted donor sampling isn't implemented for it"
+            )
+            message = (
+                f"{self.impute_var}: {self.modeltype.name} donor selection "
+                f"is unweighted - {reason}. "
+            )
+            if self.weight != "":
+                message += f"The declared weight ({self.weight!r}) is ignored here. "
+            if bootstrap_enabled:
+                message += (
+                    "The Bayesian bootstrap's per-implicate weight "
+                    "perturbation is also ignored, so between-implicate "
+                    "variance for this variable comes only from random "
+                    "donor tie-breaking, not from the bootstrap."
+                )
+            logger.warning(message)
+
             #   Donate vars shouldn't be in model
             #       Remove them and note it
             self._validate_hot_deck_remove_donates()
+
+    def _validate_require_exclude_overlap(self):
+        """
+        A variable can't be both forced into the model (predictors_require)
+        and excluded from it (predictors_exclude) - that's a contradictory
+        configuration, so fail loudly here rather than silently picking one.
+
+        Raises
+        ------
+        Exception
+            predictors_require and predictors_exclude overlap.
+
+        Returns
+        -------
+        None.
+
+        """
+        if not self.predictors_require:
+            return
+
+        overlap = set(self.predictors_require).intersection(self.predictors_exclude)
+        if len(overlap):
+            message = (
+                f"{self.impute_var}: predictors_require and predictors_exclude "
+                f"overlap on {sorted(overlap)} - a variable can't be both "
+                f"required and excluded."
+            )
+            logger.error(message)
+            raise Exception(message)
+
+    def _validate_estimator_available(self, df: IntoFrameT):
+        """
+        If this variable declares categorical_feature (via
+        Parameters.XGBoost()/CatBoost()/SklearnModel()), and model= is an
+        R-style formula string, confirm any categorical_feature column
+        referenced there is only ever passed through as a plain numeric
+        term - catch this now, before the SRMI run starts, rather than
+        mid-run.
+
+        categorical_feature works by keeping those columns raw and casting
+        them to a fixed-category dtype right before fitting. A bare
+        reference to a string/categorical/enum/bool-dtype column still
+        gets auto one-hot-encoded by dtype (regardless of C(...) - see
+        survey_kit_formula's classify.py), which would leave no raw column
+        behind for the categorical-dtype cast to apply to - so that
+        combination is rejected. A numeric-dtype column stays untouched by
+        the formula either way (it's a plain passthrough term), so it's
+        fine for it to appear there too - _run_regression's model matrix
+        already carries it through under its own name, ready for the
+        categorical-dtype cast. A categorical_feature column can also
+        simply be left out of the formula entirely, in which case
+        _run_regression adds it into the model matrix as a plain untouched
+        column alongside whatever the formula produces.
+
+        Returns
+        -------
+        None.
+
+        """
+        if self.parameters is None:
+            return
+
+        categorical_feature = self.parameters.get("categorical_feature")
+        if categorical_feature and type(self.model) is not list:
+            formula_columns = set(FormulaBuilder.columns_from_formula(formula=self.model))
+            referenced = [c for c in categorical_feature if c in formula_columns]
+            if not referenced:
+                return
+
+            schema = nw.from_native(df).lazy().collect_schema()
+            non_numeric_dtypes = (nw.String, nw.Categorical, nw.Enum, nw.Boolean)
+            not_continuous = [
+                c for c in referenced if schema[c] in non_numeric_dtypes
+            ]
+            if not_continuous:
+                message = (
+                    f"{self.impute_var}: categorical_feature columns "
+                    f"{not_continuous} are referenced in model= (a formula) "
+                    f"with a non-numeric dtype - a bare reference there "
+                    f"still gets auto one-hot-encoded by dtype, leaving no "
+                    f"raw column for categorical_feature's native-categorical "
+                    f"casting to apply to. Either leave these columns out of "
+                    f"the formula entirely, or pass a numeric-coded version "
+                    f"of the column if it needs to appear there as a plain "
+                    f"continuous term too."
+                )
+                logger.error(message)
+                raise Exception(message)
+
+    def union_required_predictors(self, formula: str) -> str:
+        """
+        Add any predictors_require variables not already present in formula.
+
+        Used after variable selection (LASSO/stepwise) replaces the model
+        formula, to guarantee required predictors survive selection - the
+        selection methods themselves never see predictors_require (they
+        don't receive the Variable object), so this has to happen here,
+        in the caller, once selection has returned.
+
+        Parameters
+        ----------
+        formula : str
+            A model formula, typically the one returned by
+            Selection.run()/lasso()/stepwise().
+
+        Returns
+        -------
+        str
+            formula, with any missing required predictors added.
+        """
+        if not self.predictors_require or formula == "":
+            return formula
+
+        fb = FormulaBuilder(formula=formula)
+        existing = fb.columns_rhs
+        for vari in self.predictors_require:
+            if vari not in existing:
+                fb.add_to_formula(vari)
+        return fb.formula
 
     def _validate_reserved_names(self):
         """
@@ -923,7 +1595,14 @@ class Variable(Serializable):
 
                 df_bad = nw.from_native(df).select(with_bad_donates).to_native()
                 if safe_height(
-                    nw.from_native(df_bad).filter(nw.any_horizontal(df_bad.columns))
+                    nw.from_native(df_bad).filter(
+                        #   with_bad_donates' columns are all plain
+                        #       booleans (is_null()/~is_null() never
+                        #       produce null themselves) - ignore_nulls
+                        #       is required by newer narwhals but has no
+                        #       actual effect here.
+                        nw.any_horizontal(df_bad.columns, ignore_nulls=True)
+                    )
                 ):
                     message = f"Cannot have missing values in donate_vars ({additional_donates} with non-missing value in '{self.impute_var}').  It will result in missings at the end of the imputation"
                     logger.error(message)
@@ -947,11 +1626,14 @@ class Variable(Serializable):
         else:
             self.Where_impute = (self.Where_impute) & nw.col(flag)
 
-    def df_where(self, df: IntoFrameT) -> IntoFrameT:
-        return self._df_where_list(df, [self.Where])
+    def df_where(self, df: IntoFrameT, keep_vars: list | None = None) -> IntoFrameT:
+        return self._df_where_list(df, [self.Where], keep_vars=keep_vars)
 
     def df_predict_where(
-        self, df: IntoFrameT, drop_imputed: bool = False
+        self,
+        df: IntoFrameT,
+        drop_imputed: bool = False,
+        keep_vars: list | None = None,
     ) -> IntoFrameT:
         if drop_imputed:
             where_list = [self.Where, self.Where_predict, self.Where_impute]
@@ -960,14 +1642,33 @@ class Variable(Serializable):
             where_list = [self.Where, self.Where_predict]
             negate_list = None
 
-        df = self._df_where_list(df=df, where_list=where_list, negate_list=negate_list)
+        #   The imputation_flag filter below runs after _df_where_list returns,
+        #       so if we're projecting down to keep_vars inside _df_where_list,
+        #       imputation_flag needs to survive that projection too.
+        where_keep_vars = keep_vars
+        if (
+            keep_vars is not None
+            and self.Where_predict_only_when_not_imputed
+            and self.imputation_flag != ""
+            and self.imputation_flag not in keep_vars
+        ):
+            where_keep_vars = keep_vars + [self.imputation_flag]
+
+        df = self._df_where_list(
+            df=df,
+            where_list=where_list,
+            negate_list=negate_list,
+            keep_vars=where_keep_vars,
+        )
 
         if self.Where_predict_only_when_not_imputed and self.imputation_flag != "":
             df = nw.from_native(df).filter(~nw.col(self.imputation_flag)).to_native()
+            if where_keep_vars is not keep_vars:
+                df = nw.from_native(df).select(keep_vars).to_native()
         return df
 
-    def df_impute_where(self, df: IntoFrameT) -> IntoFrameT:
-        return self._df_where_list(df, [self.Where, self.Where_impute])
+    def df_impute_where(self, df: IntoFrameT, keep_vars: list | None = None) -> IntoFrameT:
+        return self._df_where_list(df, [self.Where, self.Where_impute], keep_vars=keep_vars)
 
     def df_impute_original_where(self, df: IntoFrameT) -> IntoFrameT:
         return self._df_where_list(df, [self.Where, self.Where_impute_original])
@@ -977,6 +1678,7 @@ class Variable(Serializable):
         df: IntoFrameT,
         where_list: list[str | None | nw.Expr],
         negate_list: list[bool] | None = None,
+        keep_vars: list | None = None,
     ) -> IntoFrameT:
         # if self.b_where_strings:
         #     #   Each where is a string (or None)
@@ -1022,4 +1724,45 @@ class Variable(Serializable):
 
             where_index += 1
 
-        return lazy_backend(nw.from_native(df).lazy().collect(), nw_type).to_native()
+        df_lazy = nw.from_native(df).lazy()
+        if keep_vars is not None:
+            #   Project down to keep_vars before the single collect() below,
+            #       while everything is still lazy - the filters above still
+            #       see every column they need (the query optimizer pushes
+            #       this projection past them), but the eventual materialized
+            #       result only computes/reads keep_vars instead of every
+            #       column in the input dataframe.
+            df_lazy = df_lazy.select(keep_vars)
+
+        return lazy_backend(df_lazy.collect(), nw_type).to_native()
+
+
+#   ##########################################################
+#   Variable.two_part() hooks - module-level (not nested closures),
+#       matching the self-contained-function convention every other
+#       pre/post/pre_initialize hook in this codebase already follows
+#       (see tests/main/srmi.py's square_var/recalculate_interaction) -
+#       column names and other per-call values ride along via
+#       Variable.PrePost.Function's own `parameters=`, not a closure.
+#       Only two hooks, not three - the y/n column itself is derived
+#       once, directly into the returned df inside two_part() (see its
+#       docstring for why), not via a pre_initialize hook.
+#   ##########################################################
+def _two_part_value_consistency(df, yn_var: str, value_var: str, value_if_no):
+    import narwhals as nw
+
+    fixed = (
+        nw.when(nw.col(yn_var) & (nw.col(value_var) == 0))
+        .then(None)
+        .when(~nw.col(yn_var))
+        .then(value_if_no)
+        .otherwise(nw.col(value_var))
+        .alias(value_var)
+    )
+    return nw.from_native(df).with_columns(fixed).to_native()
+
+
+def _two_part_drop_yn(df, yn_var: str):
+    import narwhals as nw
+
+    return nw.from_native(df).drop(yn_var).to_native()

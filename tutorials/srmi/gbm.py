@@ -245,7 +245,7 @@ v_gbm2 = Variable(
     model=["var_*", "var4", "var3", "var5", "unrelated_*", "repeat_*"],
     modeltype=Variable.ModelType.LightGBM,
     parameters=parameters_lgbm2,
-    hooks=Variable.Hooks(
+    transforms=Variable.Transforms(
         post=[
             (
                 nw.when(nw.col("var_gbm1"))
@@ -299,7 +299,7 @@ v_gbm3 = Variable(
     model=["var_*", "var4", "var3", "var5", "unrelated_*", "repeat_*"],
     modeltype=Variable.ModelType.LightGBM,
     parameters=parameters_lgbm3,
-    hooks=Variable.Hooks(
+    transforms=Variable.Transforms(
         post=[
             (
                 nw.when(nw.col("var_gbm1"))

@@ -139,7 +139,7 @@ v_hd2 = Variable(
     By=["year", "month"],
     modeltype=Variable.ModelType.HotDeck,
     parameters=Parameters.HotDeck(model_list=["var2", "var3", "var5"]),
-    hooks=Variable.Hooks(
+    transforms=Variable.Transforms(
         post=(
             nw.when(nw.col("var_hd1"))
             .then(nw.col("var_hd2"))

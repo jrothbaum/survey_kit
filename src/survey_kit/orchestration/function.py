@@ -1061,6 +1061,7 @@ class Function(Serializable):
 
             self.call_status._full_log = fullresults
         elif self.run:
+            fullresults = ""
             fullresults += "\n\n" + "BEGIN CALL FOR " + self.name + "\n"
             fullresults += self.call_code(save_serialize_params=False)
             fullresults += "END CALL\n\n"

@@ -52,6 +52,9 @@ dev = [
     "jupyter>=1.1.1",
     "jupytext>=1.18.1",
     "survey-kit-data",
+    "xgboost>=2.1.4",
+    "catboost>=1.2.10",
+    "plotly>=6.0.0",
 ]
 
 [build-system]
