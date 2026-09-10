@@ -551,6 +551,149 @@ class SRMI(Serializable):
             ),
         )
 
+    @classmethod
+    def simple_model(
+        cls,
+        df: IntoFrameT,
+        index: list[str] | str | None = None,
+        variables_to_impute: list[str] | None = None,
+        classes: dict[str, Variable.Class] | None = None,
+        auto_binary: bool = True,
+        ordered_categories: dict[str, list] | None = None,
+        model: dict[Variable.Class, Variable.ModelType | tuple] | None = None,
+        yn_pairs: dict[str, str] | None = None,
+        exclude: dict[str, list[str]] | None = None,
+        exclude_global: list[str] | None = None,
+        categorical_predictors: list[str] | None = None,
+        group_levels: list[str] | str | None = None,
+        replication: SRMI.Replication = None,
+        parallel: SRMI.Parallel = None,
+        storage: SRMI.Storage = None,
+        bootstrap: SRMI.Bootstrap = None,
+    ) -> SRMI:
+        """
+        survey_kit's equivalent of mice's `mice(data, m=5)` one-liner
+        on-ramp - point it at a dataframe and get back a ready-to-.run()
+        SRMI with sensible per-variable defaults picked for you, that
+        you can inspect/tweak on .variables before calling .run()
+        yourself. This is a thin wrapper: all the actual defaulting
+        logic (which columns need imputing, binary vs. continuous,
+        ModelType/Parameters per Class, categorical-predictor handling,
+        yn_pairs via Variable.two_part()) lives in
+        utilities/auto_detect.py's build_simple_model_variables() - see
+        its own docstring and this module's docstring for the full
+        design rationale. Nothing here does anything Variable/
+        Parameters/SRMI couldn't already do by hand - for anything this
+        doesn't cover, hand-build a Variable and pass it via
+        SRMI(variables=[...]) directly instead.
+
+        Parameters
+        ----------
+        df : IntoFrameT
+            The data to impute.
+        index : list[str] | str | None, optional
+            Same columns you'd pass to SRMI(index=...) directly (a row
+            identifier is auto-generated if you don't give one, same as
+            SRMI's own default) - also auto-excluded from every
+            variable's predictor list here. By default None.
+        variables_to_impute : list[str] | None, optional
+            Exactly which columns to impute - if given, no auto-
+            discovery happens beyond this list (nothing else is scanned
+            for missingness). If None (the default), every column
+            (other than `index`) with any missing values is imputed.
+        classes : dict[str, Variable.Class] | None, optional
+            {var_name: Variable.Class} - declares a variable's
+            statistical type explicitly. Any imputed variable NOT
+            listed here gets auto-classified as binary (boolean dtype,
+            or numeric with only 0/1 values present) or continuous
+            (auto_binary) - NEVER categorical; a variable that's really
+            ordered_categorical or unordered_categorical always needs
+            an explicit entry here, since category order (or "this
+            numeric-looking column is actually a category code") can't
+            be inferred from the data alone. By default None.
+        auto_binary : bool, optional
+            Whether an unclassified variable gets checked for binary-ness
+            at all (see `classes`) - if False, every unclassified
+            variable defaults straight to continuous. By default True.
+        ordered_categories : dict[str, list] | None, optional
+            {var_name: [ordered levels]} - required for any variable
+            classes declares ordered_categorical; raises a clear error
+            if missing. By default None.
+        model : dict[Variable.Class, Variable.ModelType | tuple] | None, optional
+            Per-Class model override. A value can be a bare
+            Variable.ModelType (uses a built-in sensible default
+            Parameters for it) or a (ModelType, parameters_dict) tuple
+            (uses your parameters exactly). Unlisted classes use the
+            built-in defaults: LightGBM for binary/continuous,
+            RandomForest-backed (Multinomial/OrderedCategorical's own
+            default estimator) for both categorical classes. By default
+            None.
+        yn_pairs : dict[str, str] | None, optional
+            {value_var: yn_var} - route this variable through
+            Variable.two_part() (semicontinuous/hurdle imputation)
+            instead of a plain single Variable; yn_var must already
+            exist as a column in df. Processed regardless of whether
+            variables_to_impute would otherwise have included
+            value_var/yn_var. By default None.
+        exclude : dict[str, list[str]] | None, optional
+            {impute_var: [vars]} - predictor columns to exclude for
+            just that one variable. By default None.
+        exclude_global : list[str] | None, optional
+            Columns never used as a predictor for ANY variable built
+            here. By default None.
+        categorical_predictors : list[str] | None, optional
+            Predictor columns that must be treated as categorical
+            wherever they're used - passed as categorical_feature=...
+            for a native-categorical modeltype (LightGBM/XGBoost/
+            CatBoost), or one-hot-encoded via a C(...) formula term
+            otherwise (RandomForest/Multinomial/OrderedCategorical's
+            default estimator/SklearnModel have no native categorical
+            handling). By default None.
+        group_levels : list[str] | str | None, optional
+            Passed as group_levels=[...] to every built variable whose
+            modeltype supports it (Regression/RandomForest/XGBoost/
+            CatBoost/SklearnModel - NOT the binary/continuous default
+            of LightGBM, nor Multinomial/OrderedCategorical - a variable
+            using one of those logs that group_levels was ignored for
+            it). Also auto-folded into exclude_global, so it's never
+            also used as an ordinary predictor. By default None.
+        replication, parallel, storage, bootstrap : SRMI.Replication | SRMI.Parallel | SRMI.Storage | SRMI.Bootstrap, optional
+            Same as passing these directly to SRMI(...) - unrelated to
+            the auto-detection above. By default None (each group's own
+            defaults).
+
+        Returns
+        -------
+        SRMI
+            Constructed, not yet .run().
+        """
+        from .utilities.auto_detect import build_simple_model_variables
+
+        df, variables = build_simple_model_variables(
+            df=df,
+            index=index,
+            variables_to_impute=variables_to_impute,
+            classes=classes,
+            auto_binary=auto_binary,
+            ordered_categories=ordered_categories,
+            model=model,
+            yn_pairs=yn_pairs,
+            exclude=exclude,
+            exclude_global=exclude_global,
+            categorical_predictors=categorical_predictors,
+            group_levels=group_levels,
+        )
+
+        return cls(
+            df=df,
+            variables=variables,
+            index=index,
+            replication=replication,
+            parallel=parallel,
+            storage=storage,
+            bootstrap=bootstrap,
+        )
+
     def AddVariable(self, variable: Variable) -> None:
         """
         Add a variable to the imputation model.

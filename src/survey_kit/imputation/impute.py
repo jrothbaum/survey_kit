@@ -3651,17 +3651,27 @@ class Impute:
         #       from consideration (Statistics._resolve_summary_df's
         #       cs.numeric()/cs.boolean() select), which is fine when
         #       donate_vars is a mix (the non-numeric ones just don't
-        #       appear in the table) but crashes downstream
-        #       ("No items to concatenate") if EVERY donate_vars column
-        #       ends up dropped - e.g. a category label (Multinomial(),
-        #       OrderedCategorical(), or a string-valued HotDeck/
-        #       StatMatch donate_vars). Skip the stats computation
-        #       entirely in that case rather than let it crash - there's
-        #       nothing numeric to summarize.
+        #       appear in the table) but crashes downstream if EVERY
+        #       donate_vars column ends up dropped - e.g. a category
+        #       label (Multinomial(), OrderedCategorical(), or a
+        #       string-valued HotDeck/StatMatch donate_vars). Skip the
+        #       stats computation entirely in that case rather than let
+        #       it crash - there's nothing numeric to summarize.
+        #       IMPORTANT: check donate_vars specifically, not all of
+        #       df_summary - df_summary always ALSO carries the numeric
+        #       "Imputed" grouping flag (set just above), so checking
+        #       df_summary broadly is always true and never actually
+        #       catches this case; when it doesn't, column_stats ends up
+        #       {} for every real column and calculate_by()/
+        #       _batched_quantiles() is left grouping by "Imputed" with
+        #       nothing to aggregate, which raises narwhals'
+        #       "group_by keys contained duplicate output name 'Imputed'"
+        #       instead of the intended clean skip.
         has_summarizable_dtype = (
             len(
                 nw.from_native(df_summary)
                 .lazy()
+                .select(donate_vars)
                 .select(cs.numeric(), cs.boolean())
                 .collect_schema()
                 .names()

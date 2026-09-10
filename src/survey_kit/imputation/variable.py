@@ -117,6 +117,25 @@ class Variable(Serializable):
         #       See Parameters.OrderedCategorical().
         OrderedCategorical = 15
 
+    class Class(Enum):
+        """
+        A variable's statistical TYPE (separate from ModelType, which
+        picks - a specific fitting algorithm for that type). Used by
+        SRMI.simple_model()/utilities/auto_detect.py to pick a sensible
+        default ModelType per variable: binary/continuous can be told
+        apart automatically (dtype/0-1-only check); ordered_categorical
+        and unordered_categorical can never be inferred from the data
+        alone (there's no way to know intended category order, or that
+        a numeric-looking column is really a category code, without
+        being told) - a variable of either categorical kind always
+        needs an explicit Class declaration.
+        """
+
+        binary = 1
+        continuous = 2
+        ordered_categorical = 3
+        unordered_categorical = 4
+
     class PrePost:
         """
         Namespace within Variable class for handling pre and post
@@ -1751,10 +1770,20 @@ class Variable(Serializable):
 def _two_part_value_consistency(df, yn_var: str, value_var: str, value_if_no):
     import narwhals as nw
 
+    #   yn_var isn't guaranteed to be boolean-dtype - a caller-given
+    #       column (or an auto-built one) is just as likely to be an
+    #       int-coded 0/1 flag, extremely common in raw survey data.
+    #       ~nw.col(yn_var) on a non-boolean column is BITWISE NOT, not
+    #       logical negation - ~1 == -2 and ~0 == -1 in two's complement,
+    #       both truthy, so the "yn is false" branch below would
+    #       silently match EVERY row (not just the false ones),
+    #       overwriting every yn=True/value!=0 row with value_if_no.
+    #       Cast to boolean explicitly so ~ means what it looks like.
+    yn_bool = nw.col(yn_var).cast(nw.Boolean)
     fixed = (
-        nw.when(nw.col(yn_var) & (nw.col(value_var) == 0))
+        nw.when(yn_bool & (nw.col(value_var) == 0))
         .then(None)
-        .when(~nw.col(yn_var))
+        .when(~yn_bool)
         .then(value_if_no)
         .otherwise(nw.col(value_var))
         .alias(value_var)

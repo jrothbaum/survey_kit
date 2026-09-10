@@ -1366,3 +1366,321 @@ fig_prop_cat_binned = srmi_prop_cat.plot_propensity(kind="binned_mean", n_bins=4
 assert len(fig_prop_cat_binned.data) == 3, f"expected 3 traces, got {len(fig_prop_cat_binned.data)}"
 
 logger.info("srmi.py: plot_propensity checks passed")
+
+
+#   ============================================================
+#   SRMI.simple_model() - survey_kit's mice(data, m=5)-equivalent
+#       one-liner on-ramp. Covers: auto-detected continuous/binary,
+#       explicitly-declared ordered_categorical/unordered_categorical
+#       (with required ordered_categories), categorical_predictors
+#       (native categorical_feature for LightGBM, C(...) formula for
+#       Multinomial/OrderedCategorical's default RandomForest
+#       estimator - neither has native categorical support), auto-
+#       folding a declared class into categorical_predictors when used
+#       as someone else's predictor, group_levels (applied where
+#       supported, logged+ignored where not, auto-excluded as an
+#       ordinary predictor either way), per-variable exclude, yn_pairs
+#       via Variable.two_part(), and variables_to_impute's "exact list,
+#       no auto-scan" semantics. This end-to-end run is also the
+#       permanent regression coverage for three real, pre-existing bugs
+#       found while building it: _two_part_value_consistency's bitwise-
+#       NOT-on-a-non-boolean-column data corruption (variable.py),
+#       LightGBM's list-form categorical_feature crash on raw string
+#       predictors plus train/predict code-consistency (lightgbm_wrapper.py),
+#       and the post-impute-stats has_summarizable_dtype guard checking
+#       the wrong scope (impute.py).
+#   ============================================================
+
+rng_simple = np.random.default_rng(20260911)
+n_simple = 1500
+
+x1_simple = rng_simple.normal(size=n_simple)
+x2_simple = rng_simple.normal(size=n_simple)
+cat_pred_levels_simple = {"a": 0.0, "b": 2.0, "c": -1.5}
+cat_pred_simple = rng_simple.choice(list(cat_pred_levels_simple.keys()), size=n_simple)
+cat_pred_effect_simple = np.array([cat_pred_levels_simple[c] for c in cat_pred_simple])
+state_simple = rng_simple.choice(["ca", "tx", "ny", "fl"], size=n_simple)
+state_effect_simple = {"ca": 1.0, "tx": -0.5, "ny": 0.5, "fl": -1.0}
+group_effect_simple = np.array([state_effect_simple[s] for s in state_simple])
+
+y_cont_simple = (
+    2.0 * x1_simple
+    - 1.0 * x2_simple
+    + cat_pred_effect_simple
+    + group_effect_simple
+    + rng_simple.normal(scale=0.5, size=n_simple)
+)
+y_bin_latent_simple = (
+    1.0 * x1_simple + 0.5 * cat_pred_effect_simple + rng_simple.normal(scale=1.0, size=n_simple)
+)
+y_bin_simple = (y_bin_latent_simple > np.median(y_bin_latent_simple)).astype(int)
+
+ordinal_levels_simple = ["low", "mid", "high"]
+ordinal_score_simple = 0.8 * x2_simple + rng_simple.normal(scale=1.0, size=n_simple)
+ordinal_idx_simple = np.clip(
+    (ordinal_score_simple - ordinal_score_simple.min()) / np.ptp(ordinal_score_simple) * 3,
+    0,
+    2.999,
+).astype(int)
+y_ordinal_simple = [ordinal_levels_simple[i] for i in ordinal_idx_simple]
+
+unordered_levels_simple = ["red", "green", "blue", "yellow"]
+y_unordered_simple = rng_simple.choice(unordered_levels_simple, size=n_simple)
+
+#   Int-coded (0/1), not boolean - the exact dtype that triggered the
+#       _two_part_value_consistency bitwise-NOT bug.
+hours_yn_simple = (rng_simple.random(n_simple) < 0.8).astype(int)
+hours_value_simple = np.where(
+    hours_yn_simple == 1,
+    30 + 5 * x1_simple + rng_simple.normal(scale=3, size=n_simple),
+    0.0,
+)
+
+df_simple = pl.DataFrame(
+    dict(
+        idx_simple=range(n_simple),
+        x1_simple=x1_simple,
+        x2_simple=x2_simple,
+        cat_pred_simple=cat_pred_simple,
+        state_simple=state_simple,
+        y_cont_simple=y_cont_simple,
+        y_bin_simple=y_bin_simple,
+        y_ordinal_simple=y_ordinal_simple,
+        y_unordered_simple=y_unordered_simple,
+        hours_yn_simple=hours_yn_simple,
+        hours_value_simple=hours_value_simple,
+        #   Near-perfect proxy for y_cont_simple - should never show up
+        #       as a predictor for it once explicitly excluded below.
+        downstream_only_simple=y_cont_simple * 2 + 1,
+    )
+)
+
+miss_mask_simple = {}
+for _col, _share in [
+    ("y_cont_simple", 0.2),
+    ("y_bin_simple", 0.2),
+    ("y_ordinal_simple", 0.2),
+    ("y_unordered_simple", 0.2),
+    ("hours_value_simple", 0.15),
+]:
+    miss_mask_simple[_col] = rng_simple.random(n_simple) < _share
+
+df_simple = df_simple.with_columns(
+    [
+        pl.when(pl.Series(miss_mask_simple[_col]))
+        .then(None)
+        .otherwise(pl.col(_col))
+        .alias(_col)
+        for _col in miss_mask_simple
+    ]
+)
+
+logger.info("simple_model: fully auto plus explicit overrides")
+srmi_simple = SRMI.simple_model(
+    df=df_simple,
+    index="idx_simple",
+    classes={
+        "y_ordinal_simple": Variable.Class.ordered_categorical,
+        "y_unordered_simple": Variable.Class.unordered_categorical,
+    },
+    ordered_categories={"y_ordinal_simple": ordinal_levels_simple},
+    categorical_predictors=["cat_pred_simple"],
+    group_levels="state_simple",
+    exclude={"y_cont_simple": ["downstream_only_simple"]},
+    yn_pairs={"hours_value_simple": "hours_yn_simple"},
+    replication=SRMI.Replication(n_implicates=2, n_iterations=2),
+    parallel=SRMI.Parallel(enabled=False),
+    bootstrap=SRMI.Bootstrap(enabled=True),
+    storage=SRMI.Storage(
+        path_model=f"{path_scratch}/py_srmi_test_simple_model", force_start=True
+    ),
+)
+
+impute_vars_built_simple = {v.impute_var for v in srmi_simple.variables}
+assert "y_cont_simple" in impute_vars_built_simple
+assert "y_bin_simple" in impute_vars_built_simple
+assert "y_ordinal_simple" in impute_vars_built_simple
+assert "y_unordered_simple" in impute_vars_built_simple
+assert "hours_value_simple" in impute_vars_built_simple
+#   hours_yn_simple has no missingness by construction - two_part()
+#       correctly builds no Variable for it (nothing to impute).
+assert "hours_yn_simple" not in impute_vars_built_simple
+
+v_ycont_simple = next(
+    v for v in srmi_simple.variables if v.impute_var == "y_cont_simple"
+)
+assert v_ycont_simple.modeltype == Variable.ModelType.LightGBM
+assert "downstream_only_simple" not in v_ycont_simple.model, (
+    f"per-variable exclude not applied: {v_ycont_simple.model}"
+)
+assert "cat_pred_simple" in v_ycont_simple.model
+assert "state_simple" not in v_ycont_simple.model, (
+    "group_levels var should be excluded as an ordinary predictor"
+)
+assert set(v_ycont_simple.parameters["parameters"].get("categorical_feature", [])) == {
+    "cat_pred_simple",
+    "y_ordinal_simple",
+    "y_unordered_simple",
+}, v_ycont_simple.parameters
+
+v_ybin_simple = next(v for v in srmi_simple.variables if v.impute_var == "y_bin_simple")
+assert v_ybin_simple.modeltype == Variable.ModelType.LightGBM
+
+v_ord_simple = next(
+    v for v in srmi_simple.variables if v.impute_var == "y_ordinal_simple"
+)
+assert v_ord_simple.modeltype == Variable.ModelType.OrderedCategorical
+
+v_unord_simple = next(
+    v for v in srmi_simple.variables if v.impute_var == "y_unordered_simple"
+)
+assert v_unord_simple.modeltype == Variable.ModelType.Multinomial
+#   Multinomial has no native categorical support -> C(...) formula.
+assert "C(cat_pred_simple)" in v_unord_simple.model, v_unord_simple.model
+
+logger.info("simple_model: running end to end (locks in the three bug fixes above)")
+srmi_simple.run()
+logger.info("simple_model: run() completed OK")
+
+logger.info("simple_model: variables_to_impute gives an exact list, no auto-scan")
+srmi_simple2 = SRMI.simple_model(
+    df=df_simple,
+    index="idx_simple",
+    variables_to_impute=["y_cont_simple"],
+    categorical_predictors=["cat_pred_simple"],
+    replication=SRMI.Replication(n_implicates=2, n_iterations=1),
+    parallel=SRMI.Parallel(enabled=False),
+    bootstrap=SRMI.Bootstrap(enabled=True),
+    storage=SRMI.Storage(
+        path_model=f"{path_scratch}/py_srmi_test_simple_model2", force_start=True
+    ),
+)
+assert [v.impute_var for v in srmi_simple2.variables] == ["y_cont_simple"]
+
+logger.info("simple_model: ordered_categorical without ordered_categories raises")
+try:
+    SRMI.simple_model(
+        df=df_simple,
+        index="idx_simple",
+        classes={"y_ordinal_simple": Variable.Class.ordered_categorical},
+        storage=SRMI.Storage(
+            path_model=f"{path_scratch}/py_srmi_test_simple_model3", force_start=True
+        ),
+    )
+    raise AssertionError("expected missing ordered_categories to raise")
+except AssertionError:
+    raise
+except ValueError as e:
+    logger.info(f"Correctly rejected: {e}")
+
+logger.info("simple_model: bad variables_to_impute entry raises a clear error")
+try:
+    SRMI.simple_model(
+        df=df_simple,
+        index="idx_simple",
+        variables_to_impute=["bogus_col_simple"],
+        storage=SRMI.Storage(
+            path_model=f"{path_scratch}/py_srmi_test_simple_model4", force_start=True
+        ),
+    )
+    raise AssertionError("expected a bogus variables_to_impute entry to raise")
+except AssertionError:
+    raise
+except ValueError as e:
+    logger.info(f"Correctly rejected: {e}")
+
+logger.info("simple_model: model= override, bare ModelType - RandomForest for continuous")
+srmi_simple_model_override = SRMI.simple_model(
+    df=df_simple,
+    index="idx_simple",
+    variables_to_impute=["y_cont_simple"],
+    model={Variable.Class.continuous: Variable.ModelType.RandomForest},
+    group_levels="state_simple",
+    replication=SRMI.Replication(n_implicates=1, n_iterations=1),
+    storage=SRMI.Storage(
+        path_model=f"{path_scratch}/py_srmi_test_simple_model5", force_start=True
+    ),
+)
+v_override = srmi_simple_model_override.variables[0]
+assert v_override.modeltype == Variable.ModelType.RandomForest
+#   RandomForest supports group_levels (unlike the LightGBM default) -
+#       should actually be threaded through this time, not just logged
+#       and ignored.
+assert v_override.parameters.get("group_levels") == ["state_simple"], v_override.parameters
+assert "state_simple" not in v_override.model, (
+    "group_levels var should still be excluded as an ordinary predictor"
+)
+
+logger.info("simple_model: model= override, (ModelType, parameters) tuple - exact parameters used")
+custom_xgb_parameters = Parameters.XGBoost(
+    categorical_feature=["cat_pred_simple"], error=Parameters.ErrorDraw.pmm
+)
+srmi_simple_tuple_override = SRMI.simple_model(
+    df=df_simple,
+    index="idx_simple",
+    variables_to_impute=["y_cont_simple"],
+    model={
+        Variable.Class.continuous: (Variable.ModelType.XGBoost, custom_xgb_parameters)
+    },
+    replication=SRMI.Replication(n_implicates=1, n_iterations=1),
+    storage=SRMI.Storage(
+        path_model=f"{path_scratch}/py_srmi_test_simple_model6", force_start=True
+    ),
+)
+v_tuple_override = srmi_simple_tuple_override.variables[0]
+assert v_tuple_override.modeltype == Variable.ModelType.XGBoost
+assert v_tuple_override.parameters["categorical_feature"] == ["cat_pred_simple"]
+
+logger.info("simple_model: exclude_global applies to every built variable, not just one")
+srmi_simple_exclude_global = SRMI.simple_model(
+    df=df_simple,
+    index="idx_simple",
+    variables_to_impute=["y_cont_simple", "y_bin_simple"],
+    exclude_global=["downstream_only_simple"],
+    replication=SRMI.Replication(n_implicates=1, n_iterations=1),
+    storage=SRMI.Storage(
+        path_model=f"{path_scratch}/py_srmi_test_simple_model7", force_start=True
+    ),
+)
+for v in srmi_simple_exclude_global.variables:
+    assert "downstream_only_simple" not in v.model, (
+        f"{v.impute_var}: exclude_global not applied, model={v.model}"
+    )
+
+logger.info("simple_model: auto_binary=False forces continuous even for a 0/1 column")
+srmi_simple_no_auto_binary = SRMI.simple_model(
+    df=df_simple,
+    index="idx_simple",
+    variables_to_impute=["y_bin_simple"],
+    auto_binary=False,
+    model={Variable.Class.continuous: Variable.ModelType.RandomForest},
+    replication=SRMI.Replication(n_implicates=1, n_iterations=1),
+    storage=SRMI.Storage(
+        path_model=f"{path_scratch}/py_srmi_test_simple_model8", force_start=True
+    ),
+)
+#   y_bin_simple is 0/1 - with auto_binary defaulted True it would
+#       resolve to Class.binary (LightGBM default, untouched by the
+#       continuous-only override above); with it off, it must resolve
+#       to Class.continuous instead, picking up the override.
+assert srmi_simple_no_auto_binary.variables[0].modeltype == Variable.ModelType.RandomForest
+
+logger.info("simple_model: index accepts a multi-column list")
+df_simple_multi_index = df_simple.with_columns(
+    pl.Series("idx2_simple", [f"r{i}" for i in range(df_simple.height)])
+)
+srmi_simple_multi_index = SRMI.simple_model(
+    df=df_simple_multi_index,
+    index=["idx_simple", "idx2_simple"],
+    variables_to_impute=["y_cont_simple"],
+    replication=SRMI.Replication(n_implicates=1, n_iterations=1),
+    storage=SRMI.Storage(
+        path_model=f"{path_scratch}/py_srmi_test_simple_model9", force_start=True
+    ),
+)
+assert srmi_simple_multi_index.index == ["idx_simple", "idx2_simple"]
+v_multi_index = srmi_simple_multi_index.variables[0]
+assert "idx_simple" not in v_multi_index.model
+assert "idx2_simple" not in v_multi_index.model
+
+logger.info("srmi.py: simple_model checks passed")

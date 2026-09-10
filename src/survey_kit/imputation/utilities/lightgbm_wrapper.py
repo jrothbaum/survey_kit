@@ -9,6 +9,7 @@ import numpy as np
 import narwhals as nw
 import narwhals.selectors as cs
 from narwhals.typing import IntoFrameT
+import polars as pl
 import polars.selectors as pl_cs
 
 from enum import Enum
@@ -87,6 +88,16 @@ class Survey_kit_Lightgbm:
         self.categorical_feature = []
         self.num_boost_round = 0
         self.categoricals_by_name = []
+        #   {column: pl.Enum(categories)} - fixed at training time (see
+        #       _process_formula_list) from the training data's own
+        #       category values, then reused as-is by
+        #       process_predict_frame() so a later predict() call
+        #       recodes df_predict's raw categorical columns to the
+        #       SAME integer codes training used (an independent local
+        #       recast per call could assign different codes to the
+        #       same category label, silently scrambling predictions -
+        #       not just a crash risk).
+        self._categorical_enum_dtypes = {}
 
         #   Set in _prepare_test_train
         self._test_train_prepared = False
@@ -292,6 +303,54 @@ class Survey_kit_Lightgbm:
         if len(categorical_feature):
             self.parameters["categorical_feature"] = categorical_feature
             self.categoricals_by_name = categorical_feature
+
+            #   Unlike the string-formula/R-model-matrix path (which
+            #       auto one-hot-encodes), this list-form path does no
+            #       categorical recoding of its own - lightgbm's own
+            #       pyarrow ingestion rejects anything but integer/float
+            #       dtypes outright, so a raw string/categorical column
+            #       declared here would otherwise crash training. Recode
+            #       to plain integer category codes (skipping any column
+            #       that's already numeric - e.g. a pre-coded category
+            #       id - so its original encoding isn't scrambled) via a
+            #       FIXED pl.Enum built from this (training) data's own
+            #       category values and stored on self - a later
+            #       predict() call (process_predict_frame) reuses the
+            #       same Enum so the same category always gets the same
+            #       code, rather than each call assigning codes
+            #       independently (which could silently scramble which
+            #       physical group a code represents between calls).
+            #       categorical_feature above still tells lightgbm to
+            #       split on the resulting codes natively (by subset,
+            #       not by threshold) rather than as ordered numbers.
+            nw_type = NarwhalsType(self.df)
+            df_pl = nw_type.to_polars()
+            if isinstance(df_pl, pl.LazyFrame):
+                df_pl = df_pl.collect()
+            recode_cols = [
+                coli
+                for coli in categorical_feature
+                if not df_pl.schema[coli].is_numeric()
+            ]
+            if recode_cols:
+                for coli in recode_cols:
+                    if coli not in self._categorical_enum_dtypes:
+                        categories = sorted(
+                            str(vali)
+                            for vali in df_pl[coli].drop_nulls().unique().to_list()
+                        )
+                        self._categorical_enum_dtypes[coli] = pl.Enum(categories)
+                df_pl = df_pl.with_columns(
+                    [
+                        pl.col(coli)
+                        .cast(pl.String)
+                        .cast(self._categorical_enum_dtypes[coli], strict=False)
+                        .to_physical()
+                        .alias(coli)
+                        for coli in recode_cols
+                    ]
+                )
+                self.df = nw_type.from_polars(df_pl)
 
     def _rename_for_lgb(self):
         rename = {}
@@ -603,6 +662,41 @@ class Survey_kit_Lightgbm:
         )
 
         temp_lgbm.process_formula()
+
+        if self.categoricals_by_name and self._categorical_enum_dtypes:
+            #   temp_lgbm's own _process_formula_list() can't redo this
+            #       recoding itself - self.parameters["categorical_feature"]
+            #       was already consumed (converted to index form in
+            #       self.categorical_feature) and deleted by THIS
+            #       (trained) instance's own _prepare_params(), so
+            #       temp_lgbm (built from self.parameters) never sees
+            #       it. Reapply it here directly, reusing the SAME
+            #       pl.Enum training fixed per column (see
+            #       _process_formula_list) so df_predict's categories
+            #       get the identical codes training used - not a fresh,
+            #       independently-assigned set that could scramble which
+            #       physical group a code represents.
+            nw_type = NarwhalsType(temp_lgbm.df)
+            df_pl = nw_type.to_polars()
+            if isinstance(df_pl, pl.LazyFrame):
+                df_pl = df_pl.collect()
+            recode_cols = [
+                coli
+                for coli in self.categoricals_by_name
+                if coli in self._categorical_enum_dtypes and coli in df_pl.columns
+            ]
+            if recode_cols:
+                df_pl = df_pl.with_columns(
+                    [
+                        pl.col(coli)
+                        .cast(pl.String)
+                        .cast(self._categorical_enum_dtypes[coli], strict=False)
+                        .to_physical()
+                        .alias(coli)
+                        for coli in recode_cols
+                    ]
+                )
+                temp_lgbm.df = nw_type.from_polars(df_pl)
 
         return temp_lgbm.df
 
