@@ -40,6 +40,7 @@ from ..utilities.rounding import drb_round_table, first_digit_position
 
 from .utilities.draw_from_quantiles import DrawFromQuantileVectors
 from .utilities.lightgbm_wrapper import Survey_kit_Lightgbm as kit_lightgbm
+from .utilities.tuning import load_tuned_params
 from .utilities.leaf_donor_matching import leaf_cooccurrence_match, extract_leaf_indices
 from .variable import Variable
 from .parameters import Parameters
@@ -329,44 +330,25 @@ class Impute:
                     model=modeli,
                 )
 
-                #   Share matched
-                nMatched = safe_height(df_matched)
-                shareMatched = nMatched / nToMatch
-                self.logging.info("     Matches")
-                self.logging.info(f"          obs =   {nMatched:,.0f}")
-                self.logging.info(f"          share = {shareMatched:.4f}")
+                df = self._apply_hotdeck_statmatch_result(
+                    df=df,
+                    df_donors=df_donors,
+                    df_matched=df_matched,
+                    donate_vars=donate_vars,
+                    nToMatch=nToMatch,
+                )
 
-                if nMatched > 0:
-                    #   Stats on the donors and recipients
-                    self._post_impute_statistics(
-                        df_model=df_donors,
-                        df_impute=df_matched,
-                        donate_vars=donate_vars,
-                    )
-
-                    #   Merge results onto main file
-                    df = self._merge_imputes_to_df(
-                        df_imputed=df_matched, df=df, merge_list=donate_vars
-                    )
-
-                    #   Most common matches
-                    self.logging.info("     Most common matches: ")
-                    index_renamed = [f"donor_{vari}" for vari in self.index]
-                    df_matchcount = nw.from_native(
-                        calculate_by(
-                            df=(
-                                nw.from_native(df_matched).with_columns(
-                                    nw.lit(1).alias("nDonors")
-                                )
-                            ),
-                            column_stats={"nDonors": ["count"]},
-                            by=index_renamed,
-                            no_suffix=True,
-                        )
-                    ).sort(["nDonors"], descending=True)
-
-                    self.logging.info(nw.from_native(df_matchcount).head(5).to_native())
-                self.logging.info("\n\n")
+        #   Whoever's still unmatched after every model_list level (including
+        #       every dropped-down sequential_drop level) gets matched fully
+        #       at random, with a warning, instead of staying unmatched.
+        df = self._match_remaining_at_random(
+            df=df,
+            df_donors=df_donors,
+            df_recipients=df_recipients,
+            donate_vars=donate_vars,
+            nToMatch=nToMatch,
+            match_fn=self._statmatch_merge,
+        )
 
         #   Done - return the dataframe
         return df
@@ -720,52 +702,25 @@ class Impute:
                     self.logging.error("*********************************************")
                     self.logging.error("*********************************************")
 
-                #   Share matched
-                nMatched = safe_height(df_matched)
-                shareMatched = nMatched / nToMatch
-                self.logging.info("     Matches")
-                self.logging.info(f"          obs =   {nMatched:,.0f}")
-                self.logging.info(f"          share = {shareMatched:.4f}")
+                df = self._apply_hotdeck_statmatch_result(
+                    df=df,
+                    df_donors=df_donors,
+                    df_matched=df_matched,
+                    donate_vars=donate_vars,
+                    nToMatch=nToMatch,
+                )
 
-                #   Merge results onto main file
-                if nMatched > 0:
-                    self._post_impute_statistics(
-                        df_model=df_donors,
-                        df_impute=df_matched,
-                        donate_vars=donate_vars,
-                    )
-
-                    df = self._merge_imputes_to_df(
-                        df_imputed=df_matched, df=df, merge_list=donate_vars
-                    )
-
-                    #   Most common matches
-                    self.logging.info("     Most common matches: ")
-                    index_renamed = [f"donor_{vari}" for vari in self.index]
-                    df_matchcount = (
-                        nw.from_native(
-                            calculate_by(
-                                df=(
-                                    nw.from_native(df_matched)
-                                    .with_columns(nw.lit(1).alias("nDonors"))
-                                    .to_native()
-                                ),
-                                column_stats={"nDonors": ["count"]},
-                                by=index_renamed,
-                                no_suffix=True,
-                            )
-                        )
-                        .sort(["nDonors"], descending=True)
-                        .to_native()
-                    )
-                    self.logging.info(
-                        nw.from_native(df_matchcount)
-                        .head(5)
-                        .lazy()
-                        .collect()
-                        .to_native()
-                    )
-                self.logging.info("\n\n")
+        #   Whoever's still unmatched after every model_list level (including
+        #       every dropped-down sequential_drop level) gets matched fully
+        #       at random, with a warning, instead of staying unmatched.
+        df = self._match_remaining_at_random(
+            df=df,
+            df_donors=df_donors,
+            df_recipients=df_recipients,
+            donate_vars=donate_vars,
+            nToMatch=nToMatch,
+            match_fn=self._hotdeck_random,
+        )
 
         #   Done - return the dataframe
         return df
@@ -1421,7 +1376,53 @@ class Impute:
         #   Get the predictions
         predict_impute = lgbm_model.predict(df_predict=df_impute, name="___prediction")
 
-        predict_model = lgbm_model.predict(name="___prediction")
+        cv_folds = self.variable.parameters.get("cv_folds", 0)
+        if cv_folds and cv_folds > 1:
+            #   Donor pool prediction via cv_folds-way cross-validation
+            #       instead of the in-sample fit - see
+            #       Parameters._tabular_ml_params's cv_folds docstring
+            #       (same pattern _lightgbm_quantiles's own pmm branch and
+            #       _run_regression already use - this plain/non-quantile
+            #       path had been missing it entirely, silently ignoring
+            #       cv_folds whenever it was set here). predict_impute
+            #       (above) still comes from lgbm_model fit on all of
+            #       df_model - recipients are already genuinely
+            #       out-of-sample, so they don't need CV treatment.
+            self.logging.info(
+                f"     cv_folds={cv_folds}: donor pool prediction via "
+                f"{cv_folds}-fold cross-validation, not the in-sample fit"
+            )
+            df_model_cv = NarwhalsType(df_model).to_polars().lazy().collect()
+
+            def _fit_predict_fold(is_holdout):
+                train_mask = ~is_holdout
+                fold_lgbm = kit_lightgbm(
+                    df=df_model_cv.filter(train_mask),
+                    y=self.variable.impute_var,
+                    formula=self.variable.model,
+                    weight=self.weight,
+                    parameters=lgbm_model.parameters,
+                )
+                fold_lgbm.parameters["seed"] = generate_seed()
+                fold_lgbm.train(show_eval=False)
+                pred = fold_lgbm.predict(
+                    df_predict=df_model_cv.filter(is_holdout), name="___prediction"
+                )
+                return (
+                    nw.from_native(pred).lazy().collect()["___prediction"].to_numpy()
+                )
+
+            predict_model = pl.DataFrame(
+                {
+                    "___prediction": self._pmm_cv_out_of_fold_predictions(
+                        n_rows=safe_height(df_model_cv),
+                        cv_folds=cv_folds,
+                        fit_predict_fold=_fit_predict_fold,
+                    )
+                }
+            )
+        else:
+            predict_model = lgbm_model.predict(name="___prediction")
 
         df_model = concat_wrapper([df_model, predict_model], how="horizontal")
 
@@ -1749,6 +1750,10 @@ class Impute:
                 #       from lgbm_model_pmm fit on all of df_model -
                 #       recipients are already genuinely out-of-sample, so
                 #       they don't need CV treatment.
+                self.logging.info(
+                    f"     cv_folds={cv_folds}: donor pool prediction via "
+                    f"{cv_folds}-fold cross-validation, not the in-sample fit"
+                )
                 df_model_cv = NarwhalsType(df_model).to_polars().lazy().collect()
 
                 def _fit_predict_fold(is_holdout):
@@ -2070,6 +2075,10 @@ class Impute:
                 errordraw = self.variable.parameters["error"]
 
         if errordraw == Parameters.ErrorDraw.Random:
+            self.logging.info(
+                "     error=Random: drawing a residual for each imputed value "
+                "(not donating an observed value)"
+            )
             rng = RandomNumberGenerator()
 
             #   Probit isn't an implemented RegressionModel option (see
@@ -2161,6 +2170,16 @@ class Impute:
             if "donate_list" in self.variable.parameters:
                 if len(self.variable.parameters["donate_list"]) > 0:
                     donate_vars.extend(self.variable.parameters["donate_list"])
+
+            self.logging.info(
+                f"     error=pmm: donating observed value(s) {donate_vars} from "
+                f"{knearest}-nearest matched donors"
+                + (
+                    f", within donate_by={self.variable.parameters['donate_by']} groups"
+                    if self.variable.parameters.get("donate_by")
+                    else ""
+                )
+            )
 
             df_impute = self._find_nearest_neighbor_by(
                 df_model=df_model,
@@ -2340,6 +2359,101 @@ class Impute:
 
         return df_model_mm, df_impute_mm, vars_rhs
 
+    def _prepare_tuning_data(
+        self, df: IntoFrameT | None = None
+    ) -> tuple[pl.DataFrame, np.ndarray, np.ndarray | None]:
+        """
+        Build (X, y, sample_weight) ready for Tuner.run_estimator() - the
+        same formula/model-matrix/categorical-dtype preparation
+        _run_regression uses at actual fit time (process_model -> df_model
+        -> _build_model_matrix -> estimator_prepare_data), so a tuning pass
+        searches against data shaped exactly like what the real fit will
+        see. Used only by SRMI's _preprocess_tune, once, before any
+        implicate/iteration runs - not part of the regular per-iteration
+        imputation path (that's _run_regression itself).
+
+        X is returned as a polars DataFrame, NOT a numpy array - XGBoost's/
+        CatBoost's native categorical handling (Parameters.XGBoost()/
+        CatBoost()'s categorical_feature -> estimator_prepare_data's fixed-
+        category dtype cast, applied just above) needs that dtype to
+        survive all the way into .fit() - a bare .to_numpy() would coerce
+        it away and crash (confirmed: XGBoost raises "could not convert
+        string to float" if X is flattened to numpy first). tune_estimator()
+        already established this same "keep X as a dataframe" pattern for
+        exactly this reason.
+        """
+        if df is None:
+            df = self.df
+
+        [fb, _, model_vars] = self.variable.process_model(df)
+        keep_vars = list(model_vars) + self.index
+
+        if self.weight != "" and self.weight not in keep_vars:
+            keep_vars.append(self.weight)
+
+        categorical_feature = self.variable.parameters.get("categorical_feature")
+        if categorical_feature:
+            for vari in categorical_feature:
+                if vari not in keep_vars:
+                    keep_vars.append(vari)
+
+        df_model = self.df_model(df=df, keep_vars=keep_vars)
+        df_model_pl = NarwhalsType(df_model).to_polars().lazy().collect()
+
+        #   _build_model_matrix only needs a SECOND frame shaped the same
+        #       way (its own docstring: "nothing about which model
+        #       consumes df_model_mm/df_impute_mm affects how this is
+        #       built") - reuse df_model_pl itself, there's no separate
+        #       recipient frame at tuning time.
+        df_model_mm, _, _ = self._build_model_matrix(
+            df_model=df_model_pl, df_impute=df_model_pl, formula=fb.formula
+        )
+
+        prepare_data = self.variable.parameters.get("estimator_prepare_data")
+        if prepare_data is not None:
+            df_model_mm, _ = prepare_data(df_model_mm, df_model_mm)
+
+        y = df_model_pl[self.variable.impute_var].to_numpy()
+        sample_weight = (
+            df_model_pl[self.weight].to_numpy() if self.weight != "" else None
+        )
+        return df_model_mm, y, sample_weight
+
+    def _tuned_model_factory(self, model_factory):
+        """
+        Wrap model_factory (a zero-arg callable returning a fresh, unfitted
+        sklearn-compatible estimator - see Parameters.RandomForest()/
+        XGBoost()/CatBoost()/SklearnModel()) so every instance it produces
+        gets this variable's own tuned hyperparameters applied, via
+        .set_params(), on top of whatever model_factory already bakes in.
+        No-op (returns model_factory unchanged) if this variable was never
+        tuned (tune_hyperparameter_path unset, or nothing has been tuned
+        there yet).
+
+        Re-reads the tuned-parameters file from disk on every call (not
+        just once/cached) - same reasoning as Survey_kit_Lightgbm's own
+        load_tuned_parameters(): self.variable is a deepcopy (see
+        Impute.__init__), so nothing set on a Tuner object elsewhere would
+        survive here anyway, and re-reading works identically whether this
+        runs in-process or in a parallel worker.
+        """
+        tune_hyperparameter_path = self.variable.parameters.get(
+            "tune_hyperparameter_path", ""
+        )
+        if tune_hyperparameter_path == "":
+            return model_factory
+
+        path_save = f"{tune_hyperparameter_path}/{self.variable.impute_var}.pickle"
+
+        def _wrapped():
+            model = model_factory()
+            tuned_params = load_tuned_params(path_save)
+            if tuned_params:
+                model.set_params(**tuned_params)
+            return model
+
+        return _wrapped
+
     def _run_regression(
         self,
         df_model: IntoFrameT,
@@ -2408,6 +2522,14 @@ class Impute:
 
                 model_factory = LogisticRegression
             # elif regmodel == Parameters.RegressionModel.Probit:
+
+        #   Set by Parameters.RandomForest()/XGBoost()/CatBoost()/
+        #       SklearnModel() when tune=True - wraps model_factory so
+        #       every instance it produces (both here and the cv_folds
+        #       loop below, which closes over this same model_factory)
+        #       gets this variable's own tuned hyperparameters applied.
+        #       No-op if this variable was never tuned.
+        model_factory = self._tuned_model_factory(model_factory)
 
         model = model_factory()
 
@@ -2502,6 +2624,11 @@ class Impute:
             #       df_model, above) still supplies df_betas/df_impute's
             #       prediction - recipients are already genuinely
             #       out-of-sample, so they don't need CV treatment.
+            self.logging.info(
+                f"     cv_folds={cv_folds}: donor pool prediction via "
+                f"{cv_folds}-fold cross-validation, not the in-sample fit"
+            )
+
             def _fit_predict_fold(is_holdout):
                 train_mask = ~is_holdout
                 fold_model = model_factory()
@@ -2645,6 +2772,145 @@ class Impute:
     #   HELPERS - Hot Deck/Stat Match - START
     ##########################################################
     ##########################################################
+
+    #   A dummy constant column substituted in for a genuinely empty match
+    #       key (see _substitute_empty_match_key) - not a real variable
+    #       name a caller could plausibly collide with.
+    _NO_MATCH_KEY_COL = "___no_match_key___"
+
+    def _substitute_empty_match_key(
+        self, df_donors: pl.DataFrame, df_recipients: pl.DataFrame, model: list[str]
+    ) -> tuple[pl.DataFrame, pl.DataFrame, list[str]]:
+        """
+        An empty match-key list means "no real match criteria at all" -
+        hotdeck()/statmatch() dispatch here (with model=[]) once every
+        recipient that COULD find a donor via model_list (including every
+        dropped-down sequential_drop level) already has one, for whoever's
+        still left over, so they get "just find ANY donor, fully at random"
+        instead of staying unmatched forever. The existing group_by()/
+        join()-on-model machinery in _hotdeck_random/_statmatch_merge
+        doesn't handle an empty `model` correctly on its own (an empty
+        group_by() key loses donor identity, and _statmatch_merge's own
+        model[-1] lookup crashes outright) - substitute a constant dummy
+        column instead, so that machinery runs completely unchanged, just
+        grouping everyone into one pool. Warns every time this actually
+        gets used, since every recipient matched this way got a donor with
+        no similarity guarantee at all - it's a guaranteed-to-succeed last
+        resort, not something to reach for routinely.
+
+        A non-empty model is returned unchanged (a no-op for the normal
+        case) - callers should always route `model` through this before
+        using it, rather than only calling it conditionally.
+        """
+        if len(model) > 0:
+            return df_donors, df_recipients, model
+
+        self.logging.warning(
+            f"     Matching {self.variable.impute_var} with NO match key at "
+            f"all - donor(s) will be picked fully at random, with no "
+            f"similarity guarantee. This is the intended last-resort "
+            f"fallback (Parameters.HotDeck's sequential_drop, or an "
+            f"explicitly empty model_list entry) - if you weren't expecting "
+            f"to reach it, check your match variables."
+        )
+        df_donors = df_donors.with_columns(pl.lit(1).alias(self._NO_MATCH_KEY_COL))
+        df_recipients = df_recipients.with_columns(
+            pl.lit(1).alias(self._NO_MATCH_KEY_COL)
+        )
+        return df_donors, df_recipients, [self._NO_MATCH_KEY_COL]
+
+    def _apply_hotdeck_statmatch_result(
+        self,
+        df: IntoFrameT,
+        df_donors: IntoFrameT,
+        df_matched: IntoFrameT,
+        donate_vars: list[str],
+        nToMatch: int,
+    ) -> IntoFrameT:
+        """
+        Shared HotDeck/StatMatch post-processing after one matching pass
+        (a single _hotdeck_random/_statmatch_merge call, for one model
+        level, or for the final fully-random fallback) - logs the match
+        share, merges donated values onto df, and logs the most common
+        donors. Returns df unchanged if nothing matched this pass.
+        """
+        nMatched = safe_height(df_matched)
+        shareMatched = nMatched / nToMatch
+        self.logging.info("     Matches")
+        self.logging.info(f"          obs =   {nMatched:,.0f}")
+        self.logging.info(f"          share = {shareMatched:.4f}")
+
+        if nMatched > 0:
+            self._post_impute_statistics(
+                df_model=df_donors,
+                df_impute=df_matched,
+                donate_vars=donate_vars,
+            )
+
+            df = self._merge_imputes_to_df(
+                df_imputed=df_matched, df=df, merge_list=donate_vars
+            )
+
+            self.logging.info("     Most common matches: ")
+            index_renamed = [f"donor_{vari}" for vari in self.index]
+            df_matchcount = (
+                nw.from_native(
+                    calculate_by(
+                        df=(
+                            nw.from_native(df_matched)
+                            .with_columns(nw.lit(1).alias("nDonors"))
+                            .to_native()
+                        ),
+                        column_stats={"nDonors": ["count"]},
+                        by=index_renamed,
+                        no_suffix=True,
+                    )
+                )
+                .sort(["nDonors"], descending=True)
+                .to_native()
+            )
+            self.logging.info(
+                nw.from_native(df_matchcount).head(5).lazy().collect().to_native()
+            )
+        self.logging.info("\n\n")
+        return df
+
+    def _match_remaining_at_random(
+        self,
+        df: IntoFrameT,
+        df_donors: IntoFrameT,
+        df_recipients: IntoFrameT,
+        donate_vars: list[str],
+        nToMatch: int,
+        match_fn,
+    ) -> IntoFrameT:
+        """
+        Called after hotdeck()/statmatch() have tried every level of
+        model_list (every dropped-down sequential_drop level included) -
+        if any recipients are STILL unmatched at that point, dispatch them
+        to a fully random match (via match_fn, with model=[]; see
+        _substitute_empty_match_key) rather than leaving them unmatched.
+        No-op if df_recipients is already empty.
+        """
+        if safe_height(df_recipients) == 0:
+            return df
+
+        self.current_by = []
+        self.logging.info("     Matching on: [] (fully random fallback)")
+        [df_matched, df_recipients] = match_fn(
+            df_donors=df_donors,
+            df_recipients=df_recipients,
+            donate_vars=donate_vars,
+            model=[],
+        )
+        return self._apply_hotdeck_statmatch_result(
+            df=df,
+            df_donors=df_donors,
+            df_matched=df_matched,
+            donate_vars=donate_vars,
+            nToMatch=nToMatch,
+        )
+
     def _hotdeck_random(
         self,
         df_donors: IntoFrameT,
@@ -2656,6 +2922,10 @@ class Impute:
         nw_recipients = NarwhalsType(df_recipients)
         df_donors = nw_donors.to_polars().lazy().collect()
         df_recipients = nw_recipients.to_polars().lazy().collect()
+
+        df_donors, df_recipients, model = self._substitute_empty_match_key(
+            df_donors, df_recipients, model
+        )
 
         rng = RandomNumberGenerator()
         sort_by = model.copy() + ["___random_sort"]
@@ -2862,6 +3132,9 @@ class Impute:
             .drop(drop_list_donor_arrays)
         )
 
+        df_matched = drop_if_exists(df_matched, self._NO_MATCH_KEY_COL)
+        df_unmatched = drop_if_exists(df_unmatched, self._NO_MATCH_KEY_COL)
+
         return (nw_donors.from_polars(df_matched), nw_donors.from_polars(df_unmatched))
 
     def _statmatch_merge(
@@ -2898,6 +3171,10 @@ class Impute:
         nw_recipients = NarwhalsType(df_recipients)
         df_donors = nw_donors.to_polars().lazy().collect()
         df_recipients = nw_recipients.to_polars().lazy().collect()
+
+        df_donors, df_recipients, model = self._substitute_empty_match_key(
+            df_donors, df_recipients, model
+        )
 
         rng = RandomNumberGenerator()
 
@@ -2994,6 +3271,9 @@ class Impute:
             .rename(d_index_rename)
             .drop(["___donornumber", "___nInGroup"])
         )
+
+        df_matched = drop_if_exists(df_matched, self._NO_MATCH_KEY_COL)
+        df_unmatched = drop_if_exists(df_unmatched, self._NO_MATCH_KEY_COL)
 
         return (nw_donors.from_polars(df_matched), nw_donors.from_polars(df_unmatched))
 

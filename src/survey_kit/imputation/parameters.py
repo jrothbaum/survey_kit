@@ -145,10 +145,8 @@ class Parameters:
     @staticmethod
     def LightGBM(
         tune: bool = False,
-        tune_overwrite: bool = False,
         parameters: dict | None = None,
         tuner=None,
-        tune_hyperparameter_path: str = "",
         quantiles: list = None,
         error: Parameters.ErrorDraw = ErrorDraw.pmm,
         cv_folds: int = 0,
@@ -160,15 +158,16 @@ class Parameters:
         Parameters
         ----------
         tune : bool, optional
-            Whether to tune hyperparameters, by default False
-        tune_overwrite : bool, optional
-            Overwrite existing tuned parameters, by default False
+            Whether to tune hyperparameters for this run, by default False.
+            No effect if `tuner` is None.
         parameters : dict | None, optional
             LightGBM model parameters, by default None
         tuner : Tuner, optional
-            Hyperparameter tuner object, by default None
-        tune_hyperparameter_path : str, optional
-            Path for saving/loading tuned parameters, by default ""
+            Hyperparameter tuner - also owns whether/where tuned parameters
+            get cached to disk (Tuner's own path_save_dir/overwrite, since
+            the same tuner is typically reused across several variables,
+            even across different modeltypes - see utilities.tuning.Tuner /
+            HyperparameterSpace), by default None
         quantiles : list, optional
             Quantiles for quantile regression, by default None
         error : Parameters.ErrorDraw, optional
@@ -207,10 +206,6 @@ class Parameters:
             logger.error(message)
             raise Exception(message)
 
-        if tuner is None:
-            #   Can't tune without a tuner!
-            tune = False
-
         return Parameters._tabular_ml_params(
             method_name="LightGBM",
             error=error,
@@ -222,12 +217,10 @@ class Parameters:
             random_share=1.0,
             cv_folds=cv_folds,
             parameters_pmm=parameters_pmm,
+            tune=tune,
+            tuner=tuner,
             extra={
-                "tune": tune,
-                "tune_overwrite": tune_overwrite,
                 "parameters": parameters,
-                "tuner": tuner,
-                "tune_hyperparameter_path": tune_hyperparameter_path,
                 "quantiles": quantiles,
             },
             #   LightGBM's own fit path never winsorizes impute_var (see
@@ -265,6 +258,13 @@ class Parameters:
                 If model_list is a list of strings (one model), should we
                 sequentially drop the last variable until all recipients find
                 a donor?  Makes it easier to set the hot deck/stat match up.
+                Whatever recipients are STILL unmatched after every model in
+                model_list (including every dropped-down level of this
+                cascade) has been tried get matched fully at random instead,
+                with a logged warning, rather than being left unmatched
+                forever - see impute.py's hotdeck()/statmatch(), the
+                guaranteed-to-succeed last resort applies regardless of
+                sequential_drop or what model_list contains.
 
         Returns
         -------
@@ -286,7 +286,10 @@ class Parameters:
             #   model_list is a single model (list of variable names) - impute.py's
             #   statmatch()/hotdeck() always expect a list of models (list of lists)
             if sequential_drop:
-                #   Create a list of models that sequentially drops the last item
+                #   Create a list of models that sequentially drops the last item -
+                #       impute.py's hotdeck()/statmatch() try each level in turn,
+                #       then fall back to a fully random match (with a warning)
+                #       for anyone still unmatched after the shortest level.
                 seq_list = []
                 for endi in range(len(model_list), 0, -1):
                     if len(model_list[0:endi]) > 0:
@@ -295,6 +298,12 @@ class Parameters:
                 arguments["model_list"] = seq_list
             else:
                 arguments["model_list"] = [model_list]
+
+        #   Only shapes model_list above, at construction time - nothing
+        #       downstream (hotdeck()/statmatch()) ever reads it back out
+        #       of the stored parameter dict, so keeping it there would
+        #       just be an inert, misleading echo of the input.
+        del arguments["sequential_drop"]
 
         return arguments
 
@@ -511,14 +520,26 @@ class Parameters:
         parameters_pmm: dict | None,
         extra: dict | None = None,
         reserved: tuple[str, ...] = (),
+        tune: bool = False,
+        tuner=None,
     ) -> dict:
         """
         Shared parameter-dict assembly for every tabular-ML imputation
         method - LightGBM()/RandomForest()/XGBoost()/CatBoost()/
         SklearnModel() all route their error/random_share/cv_folds/
-        parameters_pmm handling through here, so cv_folds is one
-        consistently-named, consistently-behaved kwarg across all five
-        instead of each function reinventing it.
+        parameters_pmm/tune/tuner handling through here, so cv_folds (and
+        the tune-before-run mechanism) is one consistently-named,
+        consistently-behaved kwarg across all five instead of each function
+        reinventing it.
+
+        tune/tuner : see utilities.tuning.Tuner. Also derives
+        "tune_overwrite"/"tune_hyperparameter_path" from tuner's own
+        overwrite/path_save_dir (rather than exposing them as separate
+        XXX() kwargs) - the same tuner is typically reused across several
+        variables (even across different modeltypes), so this stays
+        consistent automatically instead of needing to be repeated on
+        every single Parameters.XXX() call. `tune` is forced to False if
+        `tuner` is None (can't tune without a tuner).
 
         cv_folds is deliberately scoped to these tabular-ML methods only -
         Parameters.pmm()/Regression() (plain OLS/Logit) don't expose it at
@@ -555,9 +576,9 @@ class Parameters:
             Parameters.pmm() when error is pmm.
         extra : dict | None, optional
             Caller-specific keys (e.g. "estimator"/"categorical_feature"
-            for the sklearn-style models, "tune"/"parameters"/"quantiles"
-            for LightGBM) merged into the result alongside
-            error/random_share/cv_folds, by default None.
+            for the sklearn-style models, "parameters"/"quantiles" for
+            LightGBM) merged into the result alongside
+            error/random_share/cv_folds/tune/tuner, by default None.
         reserved : tuple[str, ...], optional
             Extra parameters_pmm keys to exclude from the merge, beyond
             "model"/"error"/"random_share"/"cv_folds" (always excluded) -
@@ -583,10 +604,20 @@ class Parameters:
                 else {}
             )
 
+        if tuner is None:
+            #   Can't tune without a tuner!
+            tune = False
+
         params = {
             "error": error,
             "random_share": random_share,
             "cv_folds": cv_folds,
+            "tune": tune,
+            "tuner": tuner,
+            "tune_overwrite": tuner.overwrite if tuner is not None else False,
+            "tune_hyperparameter_path": (
+                tuner.path_save_dir if tuner is not None else ""
+            ),
         }
         if extra:
             params.update(extra)
@@ -614,6 +645,8 @@ class Parameters:
         prepare_data: Callable[[object, object], tuple[object, object]] | None = None,
         group_levels: list[str] | None = None,
         group_shrinkage_k: float = 10.0,
+        tune: bool = False,
+        tuner=None,
     ) -> dict:
         """
         Shared parameter-dict assembly for RandomForest()/XGBoost()/
@@ -630,6 +663,10 @@ class Parameters:
         its own fit path). prepare_data, if any, is owned entirely by the
         model choice itself - _run_regression just calls it, generically,
         without knowing what it does.
+
+        tune/tuner : see _tabular_ml_params - SRMI runs a Tuner.run_estimator()
+        pass (using model_factory() as the template estimator) before the
+        SRMI run starts, the same way it does for LightGBM's tune=True.
         """
         if categorical_feature is None:
             categorical_feature = []
@@ -645,6 +682,8 @@ class Parameters:
             random_share=random_share,
             cv_folds=cv_folds,
             parameters_pmm=parameters_pmm,
+            tune=tune,
+            tuner=tuner,
             extra={
                 "estimator": model_factory,
                 "categorical_feature": categorical_feature,
@@ -670,6 +709,8 @@ class Parameters:
         group_levels: list[str] | None = None,
         group_shrinkage_k: float = 10.0,
         parameters_pmm: dict = None,
+        tune: bool = False,
+        tuner=None,
     ) -> dict:
         """
         Parameters for RandomForestRegressor-based imputation (mean
@@ -704,6 +745,17 @@ class Parameters:
             See Regression()'s group_shrinkage_k docstring, by default 10.0.
         parameters_pmm : dict, optional
             PMM parameters if using PMM error drawing, by default None.
+        tune : bool, optional
+            Whether to tune hyperparameters for this run, by default False.
+            No effect if `tuner` is None. See utilities.tuning.Tuner -
+            SRMI runs a Tuner.run_estimator() pass (over `tuner`'s own
+            HyperparameterSpace, against RandomForestRegressor(**parameters)
+            as the template estimator) before the SRMI run starts.
+        tuner : Tuner, optional
+            Hyperparameter tuner - also owns whether/where tuned parameters
+            get cached to disk (Tuner's own path_save_dir/overwrite, since
+            the same tuner is typically reused across several variables,
+            even across different modeltypes), by default None.
 
         Returns
         -------
@@ -728,6 +780,8 @@ class Parameters:
             parameters_pmm=parameters_pmm,
             group_levels=group_levels,
             group_shrinkage_k=group_shrinkage_k,
+            tune=tune,
+            tuner=tuner,
         )
 
     @staticmethod
@@ -740,6 +794,8 @@ class Parameters:
         group_levels: list[str] | None = None,
         group_shrinkage_k: float = 10.0,
         parameters_pmm: dict = None,
+        tune: bool = False,
+        tuner=None,
     ) -> dict:
         """
         Parameters for XGBoost-based imputation (mean regression only -
@@ -784,6 +840,17 @@ class Parameters:
             See Regression()'s group_shrinkage_k docstring, by default 10.0.
         parameters_pmm : dict, optional
             PMM parameters if using PMM error drawing, by default None.
+        tune : bool, optional
+            Whether to tune hyperparameters for this run, by default False.
+            No effect if `tuner` is None. See utilities.tuning.Tuner -
+            SRMI runs a Tuner.run_estimator() pass (over `tuner`'s own
+            HyperparameterSpace, against the constructed XGBRegressor as
+            the template estimator) before the SRMI run starts.
+        tuner : Tuner, optional
+            Hyperparameter tuner - also owns whether/where tuned parameters
+            get cached to disk (Tuner's own path_save_dir/overwrite, since
+            the same tuner is typically reused across several variables,
+            even across different modeltypes), by default None.
 
         Returns
         -------
@@ -822,6 +889,8 @@ class Parameters:
             ),
             group_levels=group_levels,
             group_shrinkage_k=group_shrinkage_k,
+            tune=tune,
+            tuner=tuner,
         )
 
     @staticmethod
@@ -834,6 +903,8 @@ class Parameters:
         group_levels: list[str] | None = None,
         group_shrinkage_k: float = 10.0,
         parameters_pmm: dict = None,
+        tune: bool = False,
+        tuner=None,
     ) -> dict:
         """
         Parameters for CatBoost-based imputation (mean regression only).
@@ -870,6 +941,17 @@ class Parameters:
             See Regression()'s group_shrinkage_k docstring, by default 10.0.
         parameters_pmm : dict, optional
             PMM parameters if using PMM error drawing, by default None.
+        tune : bool, optional
+            Whether to tune hyperparameters for this run, by default False.
+            No effect if `tuner` is None. See utilities.tuning.Tuner -
+            SRMI runs a Tuner.run_estimator() pass (over `tuner`'s own
+            HyperparameterSpace, against the constructed CatBoostRegressor
+            as the template estimator) before the SRMI run starts.
+        tuner : Tuner, optional
+            Hyperparameter tuner - also owns whether/where tuned parameters
+            get cached to disk (Tuner's own path_save_dir/overwrite, since
+            the same tuner is typically reused across several variables,
+            even across different modeltypes), by default None.
 
         Returns
         -------
@@ -910,6 +992,8 @@ class Parameters:
             ),
             group_levels=group_levels,
             group_shrinkage_k=group_shrinkage_k,
+            tune=tune,
+            tuner=tuner,
         )
 
     @staticmethod
@@ -923,6 +1007,8 @@ class Parameters:
         group_levels: list[str] | None = None,
         group_shrinkage_k: float = 10.0,
         parameters_pmm: dict = None,
+        tune: bool = False,
+        tuner=None,
     ) -> dict:
         """
         Parameters for imputation using any sklearn-compatible estimator
@@ -973,6 +1059,20 @@ class Parameters:
             See Regression()'s group_shrinkage_k docstring, by default 10.0.
         parameters_pmm : dict, optional
             PMM parameters if using PMM error drawing, by default None.
+        tune : bool, optional
+            Whether to tune hyperparameters for this run, by default False.
+            No effect if `tuner` is None. See utilities.tuning.Tuner - SRMI
+            runs a Tuner.run_estimator() pass (over `tuner`'s own
+            HyperparameterSpace, against factory() as the template
+            estimator) before the SRMI run starts. Your estimator needs a
+            real sklearn .set_params()/.get_params() (true of anything
+            built on sklearn.base.BaseEstimator) for the tuned
+            hyperparameters to actually apply.
+        tuner : Tuner, optional
+            Hyperparameter tuner - also owns whether/where tuned parameters
+            get cached to disk (Tuner's own path_save_dir/overwrite, since
+            the same tuner is typically reused across several variables,
+            even across different modeltypes), by default None.
 
         Returns
         -------
@@ -1008,6 +1108,8 @@ class Parameters:
             prepare_data=prepare_data,
             group_levels=group_levels,
             group_shrinkage_k=group_shrinkage_k,
+            tune=tune,
+            tuner=tuner,
         )
 
     @staticmethod

@@ -14,7 +14,8 @@ from survey_kit.imputation.parameters import Parameters
 from survey_kit.imputation.srmi import SRMI
 from survey_kit.imputation.selection import Selection
 import survey_kit.imputation.utilities.lightgbm_wrapper as rep_lgbm
-from survey_kit.imputation.utilities.lightgbm_wrapper import Tuner_optuna
+from survey_kit.imputation.utilities.lightgbm_wrapper import Tuner, Objective
+from survey_kit.imputation.utilities.tuning import HyperparameterSpace, IntRange, FloatRange
 
 from survey_kit import logger, config
 from survey_kit.utilities.dataframe import summary, columns_from_list
@@ -152,20 +153,20 @@ def recalculate_interaction(df, var1: str, var2: str, name: str):
 
 # %%
 logger.info("Set up hyperparameter tuning")
-tuner = Tuner_optuna(
-    n_trials=50, objective=rep_lgbm.Tuner.Objectives.mae, test_size=0.25
+tuner = Tuner(
+    space=HyperparameterSpace(
+        num_leaves=IntRange(2, 256),
+        max_depth=IntRange(2, 256),
+        min_data_in_leaf=IntRange(10, 250),
+        num_iterations=IntRange(25, 200),
+        bagging_fraction=FloatRange(0.5, 1.0),
+        bagging_freq=IntRange(1, 5),
+    ),
+    objective=Objective.mae,
+    n_trials=50,
+    path_save_dir=f"{config.data_root}/tuner_outputs",
+    overwrite=True,
 )
-
-logger.info("   Set the tuner parameters to the defaults")
-tuner.parameters()
-
-logger.info("   Then specify ranges to check between as follow")
-tuner.hyperparameters["num_leaves"] = [2, 256]
-tuner.hyperparameters["max_depth"] = [2, 256]
-tuner.hyperparameters["min_data_in_leaf"] = [10, 250]
-tuner.hyperparameters["num_iterations"] = [25, 200]
-tuner.hyperparameters["bagging_fraction"] = [0.5, 1]
-tuner.hyperparameters["bagging_freq"] = [1, 5]
 
 
 vars_impute = []
@@ -178,15 +179,13 @@ logger.info("   (you can pass a formula, but you don't need to)")
 
 logger.info("First, set up the lightgbm parameters")
 logger.info("   This says, do hyperparameter tuning first (tune)")
-logger.info("   Redo it at each run (tune_overwrite)")
+logger.info("   Redo it at each run (the tuner's own overwrite=True)")
 logger.info(
     "   And sets the lightgbm parameter defaults (parameters) that the tuning can overwrite"
 )
 parameters_lgbm1 = Parameters.LightGBM(
     tune=True,
-    tune_hyperparameter_path=f"{config.data_root}/tuner_outputs",
     tuner=tuner,
-    tune_overwrite=True,
     parameters={
         "objective": "binary",
         "num_leaves": 32,
@@ -219,9 +218,7 @@ logger.info("   and some other random post-processing")
 logger.info("Different parameters for the continuous variable")
 parameters_lgbm2 = Parameters.LightGBM(
     tune=True,
-    tune_hyperparameter_path=f"{config.data_root}/tuner_outputs",
     tuner=tuner,
-    tune_overwrite=True,
     parameters={
         "objective": "regression",
         "num_leaves": 32,
@@ -272,9 +269,7 @@ logger.info("Now do one with the quantile-regression lightgbm")
 logger.info("   To do this, pass quantiles and set objective='quantile'")
 parameters_lgbm3 = Parameters.LightGBM(
     tune=True,
-    tune_hyperparameter_path=f"{config.data_root}/tuner_outputs",
     tuner=tuner,
-    tune_overwrite=True,
     quantiles=[0.25, 0.5, 0.75],
     parameters={
         "objective": "quantile",

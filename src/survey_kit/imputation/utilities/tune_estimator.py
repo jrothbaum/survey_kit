@@ -6,8 +6,8 @@ import numpy as np
 import narwhals as nw
 from narwhals.typing import IntoFrameT
 
-from ...utilities.random import generate_seed
-from ... import logger
+from .tuning import Categorical, FloatRange, HyperparameterSpace, IntRange, Tuner
+from ...utilities.random import generate_seed, set_seed, RandomNumberGenerator
 
 
 def tune_estimator(
@@ -113,10 +113,9 @@ def tune_estimator(
         The best trial's hyperparameters (study.best_params) - a plain
         dict of keyword arguments for model_factory.
     """
-    #   Imported here, not at module level - optuna's base import costs
+    #   Imported here, not at module level - sklearn's base import costs
     #       real time and this is the only place in the module that needs
     #       it.
-    import optuna
     from sklearn.metrics import get_scorer
 
     if seed == 0:
@@ -152,29 +151,26 @@ def tune_estimator(
         w_arr = df_collected.select(weight).to_numpy().ravel()
 
     #   Same fold assignment for every trial, so score differences
-    #       reflect hyperparameter differences, not fold-split noise.
-    rng = np.random.default_rng(seed)
+    #       reflect hyperparameter differences, not fold-split noise. Same
+    #       idiom as everywhere else this codebase draws a seeded random
+    #       generator (see RandomData.__init__) - set_seed(seed) then
+    #       RandomNumberGenerator(), not a bare np.random.default_rng().
+    #       set_seed() here IS appropriate (unlike Tuner.run_estimator's own
+    #       identical-looking fold draw, which deliberately does NOT call
+    #       set_seed()) - this function is a standalone, top-level, user-
+    #       invoked call (see its own docstring: "not run automatically
+    #       inside SRMI"), never nested inside an already-running,
+    #       already-seeded SRMI.run(), so there's no surrounding sequence
+    #       for it to clobber.
+    if seed > 0:
+        set_seed(seed)
+    rng = RandomNumberGenerator()
     fold_assignment = rng.integers(0, cv_folds, size=n_rows)
 
     scorer = get_scorer(scoring)
+    space = _space_from_param_space(param_space)
 
-    def _suggest(trial, name, spec):
-        if isinstance(spec, (list, tuple)) and len(spec) == 3 and spec[2] == "log":
-            return trial.suggest_float(name, spec[0], spec[1], log=True)
-        if isinstance(spec, (list, tuple)) and len(spec) == 2:
-            low, high = spec
-            if isinstance(low, int) and isinstance(high, int):
-                return trial.suggest_int(name, low, high)
-            return trial.suggest_float(name, low, high)
-        #   Anything else (a plain list/tuple of any other length) ->
-        #       categorical choices.
-        return trial.suggest_categorical(name, list(spec))
-
-    def _objective(trial):
-        params = {
-            name: _suggest(trial, name, spec) for name, spec in param_space.items()
-        }
-
+    def _score(params: dict) -> float:
         scores = []
         for foldi in range(cv_folds):
             is_holdout = fold_assignment == foldi
@@ -190,13 +186,30 @@ def tune_estimator(
 
         return float(np.mean(scores))
 
-    optuna.logging.set_verbosity(optuna.logging.WARNING)
-    study = optuna.create_study(
-        direction=direction, sampler=optuna.samplers.TPESampler(seed=seed)
-    )
-    study.optimize(_objective, n_trials=n_trials)
+    tuner = Tuner(space=space, n_trials=n_trials, direction=direction, seed=seed)
+    return tuner.run(_score)
 
-    logger.info(f"tune_estimator: best {scoring} = {study.best_value:.5f}")
-    logger.info(f"tune_estimator: best params = {study.best_params}")
 
-    return study.best_params
+def _space_from_param_space(param_space: dict) -> HyperparameterSpace:
+    """
+    Adapt tune_estimator()'s loose param_space dict convention - a
+    (low, high), (low, high, "log"), or plain list/tuple of choices per
+    parameter - into a typed HyperparameterSpace, so this function's public
+    signature can stay unchanged while sharing Tuner's engine
+    internally.
+    """
+    fields = {}
+    for name, spec in param_space.items():
+        if isinstance(spec, (list, tuple)) and len(spec) == 3 and spec[2] == "log":
+            fields[name] = FloatRange(spec[0], spec[1], log=True)
+        elif isinstance(spec, (list, tuple)) and len(spec) == 2:
+            low, high = spec
+            if isinstance(low, int) and isinstance(high, int):
+                fields[name] = IntRange(low, high)
+            else:
+                fields[name] = FloatRange(low, high)
+        else:
+            #   Anything else (a plain list/tuple of any other length) ->
+            #       categorical choices.
+            fields[name] = Categorical(list(spec))
+    return HyperparameterSpace(**fields)

@@ -13,13 +13,13 @@ from survey_kit.utilities.dataframe import summary
 from survey_kit.utilities.formula_builder import FormulaBuilder
 from survey_kit.imputation.utilities.lasso import Lasso
 import survey_kit.imputation.utilities.lightgbm_wrapper as kit_lgbm
-from survey_kit.imputation.utilities.lightgbm_wrapper import Tuner_optuna
+from survey_kit.imputation.utilities.lightgbm_wrapper import Tuner, Objective
+from survey_kit.imputation.utilities.tuning import HyperparameterSpace, IntRange, FloatRange
 
 from survey_kit.imputation.variable import Variable
 from survey_kit.imputation.parameters import Parameters
 from survey_kit.imputation.selection import Selection
 from survey_kit.imputation.srmi import SRMI
-from survey_kit.orchestration.config import Config
 
 from survey_kit import logger, config
 from survey_kit.utilities.dataframe import summary, columns_from_list
@@ -228,26 +228,26 @@ v_reg2 = Variable(
 vars_impute.append(v_reg2)
 
 
-tuner = Tuner_optuna(
-    n_trials=50, objective=kit_lgbm.Tuner.Objectives.mae, test_size=0.25
+tuner = Tuner(
+    space=HyperparameterSpace(
+        num_leaves=IntRange(2, 256),
+        max_depth=IntRange(2, 256),
+        min_data_in_leaf=IntRange(10, 250),
+        num_iterations=IntRange(25, 200),
+        bagging_fraction=FloatRange(0.5, 1.0),
+        bagging_freq=IntRange(1, 5),
+    ),
+    objective=Objective.mae,
+    n_trials=50,
+    path_save_dir=f"{config.path_temp_files}/tuner_outputs",
+    overwrite=False,
 )
-
-#   Set the tuner parameters to the defaults
-tuner.parameters()
-
-#   Set the ranges of values as follows
-tuner.hyperparameters["num_leaves"] = [2, 256]
-tuner.hyperparameters["max_depth"] = [2, 256]
-tuner.hyperparameters["min_data_in_leaf"] = [10, 250]
-tuner.hyperparameters["num_iterations"] = [25, 200]
-tuner.hyperparameters["bagging_fraction"] = [0.5, 1]
-tuner.hyperparameters["bagging_freq"] = [1, 5]
 
 
 #   Impute a continuous variable with lgbm
 #   Set the lightgbm parameters, note that the tuner won't be run if
-#       there's already a saved version in tune_hyperparameter_path + variable name
-#       unless tune_overwrite=True
+#       there's already a saved version in the tuner's own path_save_dir +
+#       variable name, unless the tuner's own overwrite=True
 #   Parameters set here are the defaults, but they are overwritten by
 #       tuner parameters if that is passed (as it is here)
 #   This is doing series of quantile regressions to determine your predicted
@@ -256,9 +256,7 @@ tuner.hyperparameters["bagging_freq"] = [1, 5]
 
 parameters_lgbm = Parameters.LightGBM(
     tune=True,
-    tune_hyperparameter_path=f"{Config().path_temp_files}/tuner_outputs",
     tuner=tuner,
-    tune_overwrite=False,
     quantiles=[0.1, 0.5, 0.9],
     #  quantiles=[0.25,0.5,0.75],
     parameters={
@@ -323,13 +321,9 @@ vars_impute.append(v_lgbm1)
 
 #   Impute a binary variable with lgbm, note that objective != quantile for a binary variable
 #       This isn't working well and I wouldn't use it if I got these kinds of results
-#       This tuner is set to run at the beginning (tune_overwrite=True) even if
-#           a file already exists in the path
 parameters_lgbm2 = Parameters.LightGBM(
     tune=True,
-    tune_hyperparameter_path=f"{config.data_root}/tuner_outputs",
     tuner=tuner,
-    tune_overwrite=False,
     # quantiles=[0.25,0.5,0.75],
     parameters={
         "objective": "binary",
@@ -1684,3 +1678,88 @@ assert "idx_simple" not in v_multi_index.model
 assert "idx2_simple" not in v_multi_index.model
 
 logger.info("srmi.py: simple_model checks passed")
+
+
+#   ============================================================
+#   _lightgbm_simple's cv_folds bug: the plain (non-quantile)
+#       LightGBM path computed its PMM donor-pool prediction purely
+#       in-sample, never checking self.variable.parameters["cv_folds"]
+#       at all - _lightgbm_quantiles's own pmm branch and
+#       _run_regression (RandomForest/XGBoost/CatBoost/SklearnModel)
+#       both did this correctly; _lightgbm_simple silently ignored
+#       cv_folds entirely. A plain "does it crash" test can't catch
+#       this (the in-sample path doesn't crash either) - assert the
+#       donor-pool prediction (and therefore the imputed values
+#       themselves) actually CHANGES between cv_folds=0 and
+#       cv_folds=5, using a deliberately overfittable model
+#       (unregularized, many leaves relative to n) where in-sample vs.
+#       out-of-fold predictions are guaranteed to diverge.
+#   ============================================================
+
+rng_cv = np.random.default_rng(20260910)
+n_cv = 1500
+x1_cv = rng_cv.normal(size=n_cv)
+y_cv_data = 2.0 * x1_cv + rng_cv.normal(scale=3.0, size=n_cv)
+
+df_cv = pl.DataFrame(dict(idx_cv=range(n_cv), x1_cv=x1_cv, y_cv=y_cv_data))
+miss_cv = rng_cv.random(n_cv) < 0.2
+df_cv = df_cv.with_columns(
+    pl.when(pl.Series(miss_cv)).then(None).otherwise(pl.col("y_cv")).alias("y_cv")
+)
+
+overfit_lgbm_parameters = {
+    "num_leaves": 200,
+    "num_iterations": 300,
+    "learning_rate": 0.3,
+    "min_data_in_leaf": 1,
+    "verbose": -1,
+}
+
+
+def _build_and_run_cv_folds_srmi(cv_folds, path_suffix):
+    v = Variable(
+        impute_var="y_cv",
+        model=["x1_cv"],
+        modeltype=Variable.ModelType.LightGBM,
+        parameters=Parameters.LightGBM(
+            parameters=dict(overfit_lgbm_parameters),
+            error=Parameters.ErrorDraw.pmm,
+            cv_folds=cv_folds,
+        ),
+    )
+    srmi_built = SRMI(
+        df=df_cv,
+        variables=[v],
+        index=["idx_cv"],
+        replication=SRMI.Replication(n_implicates=1, n_iterations=1),
+        parallel=SRMI.Parallel(enabled=False),
+        bootstrap=SRMI.Bootstrap(enabled=False),
+        storage=SRMI.Storage(
+            path_model=f"{path_scratch}/py_srmi_test_lgbm_cv_folds_{path_suffix}",
+            force_start=True,
+        ),
+    )
+    srmi_built.run()
+    return srmi_built
+
+
+logger.info("_lightgbm_simple: cv_folds=0 (in-sample donor pool)")
+srmi_cv_off = _build_and_run_cv_folds_srmi(cv_folds=0, path_suffix="off")
+
+logger.info("_lightgbm_simple: cv_folds=5 (out-of-fold donor pool)")
+srmi_cv_on = _build_and_run_cv_folds_srmi(cv_folds=5, path_suffix="on")
+
+y_cv_off = nw.from_native(srmi_cv_off.implicates[0].df).lazy().collect()["y_cv"]
+y_cv_on = nw.from_native(srmi_cv_on.implicates[0].df).lazy().collect()["y_cv"]
+
+n_diff_cv = (
+    pl.DataFrame({"off": y_cv_off, "on": y_cv_on}).filter(pl.col("off") != pl.col("on")).height
+)
+logger.info(f"Rows where the imputed value differs between cv_folds=0 and cv_folds=5: {n_diff_cv}")
+assert n_diff_cv > 0, (
+    "cv_folds=5 produced identical imputed values to cv_folds=0 for a plain "
+    "LightGBM variable - _lightgbm_simple's donor-pool prediction isn't actually "
+    "using cv_folds (regression of the fix)"
+)
+
+logger.info("srmi.py: _lightgbm_simple cv_folds checks passed")

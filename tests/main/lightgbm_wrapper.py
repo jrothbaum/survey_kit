@@ -7,8 +7,9 @@ from survey_kit.utilities.formula_builder import FormulaBuilder
 from survey_kit.imputation.utilities.lightgbm_wrapper import (
     Survey_kit_Lightgbm as lightgbm_kit,
     Tuner,
-    Tuner_optuna,
+    Objective,
 )
+from survey_kit.imputation.utilities.tuning import HyperparameterSpace, IntRange
 
 
 n_rows = 100_000
@@ -89,12 +90,16 @@ fb.simple_interaction(columns=["x_1", "x_2"])
 print(fb.formula)
 
 
-tuner = Tuner_optuna(n_trials=5, objective=Tuner.Objectives.sse)
-tuner.parameters()
-tuner.hyperparameters["num_leaves"] = [2, 256]
-tuner.hyperparameters["max_depth"] = [2, 256]
-# tuner.hyperparameters["min_data_in_leaf"] = [10,250]
-tuner.hyperparameters["num_iterations"] = [25, 500]
+tuner = Tuner(
+    space=HyperparameterSpace(
+        num_leaves=IntRange(2, 256),
+        max_depth=IntRange(2, 256),
+        # min_data_in_leaf=IntRange(10, 250),
+        num_iterations=IntRange(25, 500),
+    ),
+    objective=Objective.sse,
+    n_trials=5,
+)
 
 if as_formula:
     if with_tuning:

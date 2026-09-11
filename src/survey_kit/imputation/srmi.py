@@ -31,6 +31,7 @@ from ..orchestration.from_python import FunctionFromPython
 from ..orchestration.callers import run_function_list
 
 from .utilities.lightgbm_wrapper import Survey_kit_Lightgbm as kit_lightgbm
+from .utilities.tuning import load_tuned_params
 from .utilities.convergence_diagnostics import convergence_table, convergence_long_table
 from .utilities.quality_diagnostics import (
     observed_vs_imputed_long_table,
@@ -46,6 +47,7 @@ from .utilities.propensity_diagnostics import (
 from .variable import Variable
 from .selection import Selection
 from .implicate import Implicate
+from .impute import Impute
 
 from ..serializable import Serializable
 from .. import logger
@@ -1009,6 +1011,12 @@ class SRMI(Serializable):
             tune_hyperparameter_path = variable.parameters["tune_hyperparameter_path"]
             tuner = variable.parameters["tuner"]
 
+            #   tune_hyperparameter_path is a directory (the same tuner -
+            #       and so the same directory, mirrored into the parameter
+            #       dict by Parameters.LightGBM() - is typically reused
+            #       across several variables, e.g. via SRMI.Defaults) -
+            #       compute THIS variable's own file path from it, into the
+            #       tuner's own (inherited) path_save.
             if tune_hyperparameter_path != "":
                 tuner.path_save = (
                     f"{tune_hyperparameter_path}/{variable.impute_var}.pickle"
@@ -1042,6 +1050,77 @@ class SRMI(Serializable):
                     #       and update the parameters in the lgbm object
                     lgbm.tune()
                     logger.info("TUNING COMPLETE")
+
+        elif variable.modeltype in (
+            Variable.ModelType.RandomForest,
+            Variable.ModelType.XGBoost,
+            Variable.ModelType.CatBoost,
+            Variable.ModelType.SklearnModel,
+        ):
+            self._preprocess_tune_estimator(variable)
+
+    def _preprocess_tune_estimator(self, variable: Variable):
+        """
+        RandomForest()/XGBoost()/CatBoost()/SklearnModel()'s own tune=True
+        counterpart to LightGBM's branch above - runs a Tuner.run_estimator()
+        pass (once, before the SRMI run itself starts) against
+        variable.parameters["estimator"]() as the template estimator, and
+        saves the result to tuner.path_save (via Tuner.run() itself).
+        Deliberately does NOT mutate variable.parameters["estimator"] with
+        the tuned result in place - Impute._tuned_model_factory re-reads
+        the saved file fresh, at actual fit time, every iteration (same
+        "always re-read from disk" reasoning as LightGBM's own
+        load_tuned_parameters - safe across the deepcopy(variable) every
+        Impute instance makes, and across parallel worker processes).
+        """
+        tune = variable.parameters["tune"]
+        tune_overwrite = variable.parameters["tune_overwrite"]
+        tune_hyperparameter_path = variable.parameters["tune_hyperparameter_path"]
+        tuner = variable.parameters["tuner"]
+
+        if tuner is None:
+            return
+
+        path_save = ""
+        if tune_hyperparameter_path != "":
+            path_save = f"{tune_hyperparameter_path}/{variable.impute_var}.pickle"
+            tuner.path_save = path_save
+
+        if path_save != "" and not (tune_overwrite and tune):
+            if load_tuned_params(path_save) is not None:
+                tune = False
+
+        if tune:
+            df_tune = (
+                nw.from_native(self.df)
+                .filter(~nw.col(variable.impute_var).is_null())
+                .to_native()
+            )
+            df_tune = variable.df_where(df_tune)
+
+            impute = Impute(
+                df=df_tune,
+                parent=self,
+                variable=variable,
+                index=self.index,
+                variable_number=0,
+                implicate_number=0,
+                weight=self.defaults.weight,
+            )
+            X, y, sample_weight = impute._prepare_tuning_data()
+
+            model_factory = variable.parameters["estimator"]
+            fit_params = (
+                {"sample_weight": sample_weight} if sample_weight is not None else None
+            )
+
+            #   Run the tuning - Tuner.run()/run_estimator() itself saves
+            #       the result to tuner.path_save (if set); nothing further
+            #       to persist here.
+            tuner.run_estimator(
+                estimator=model_factory(), X=X, y=y, fit_params=fit_params
+            )
+            logger.info("TUNING COMPLETE")
 
     @classmethod
     def load_to_continue_prior(

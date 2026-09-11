@@ -12,7 +12,6 @@ from narwhals.typing import IntoFrameT
 import polars as pl
 import polars.selectors as pl_cs
 
-from enum import Enum
 import pickle
 import random
 
@@ -27,7 +26,6 @@ from copy import deepcopy
 
 
 from ...utilities.formula_builder import FormulaBuilder, get_model_frame
-from ...utilities.inputs import create_folders_if_needed
 from ...utilities.dataframe import (
     columns_from_list,
     concat_wrapper,
@@ -35,6 +33,7 @@ from ...utilities.dataframe import (
     lazy_backend,
 )
 from ...utilities.random import set_seed, generate_seed
+from .tuning import HyperparameterSpace, Tuner, Objective
 
 from ... import logger
 
@@ -47,7 +46,7 @@ class Survey_kit_Lightgbm:
         x: list | str | None = None,
         weight: str = "",
         formula: str = "",
-        tuner=None,
+        tuner: Tuner | None = None,
         parameters: dict | None = None,
         formula_exclude_interactions: bool = True,
         formula_remove_factor: bool = True,
@@ -584,7 +583,7 @@ class Survey_kit_Lightgbm:
 
     def tune(self) -> dict:
         if self.tuner is None:
-            message = "Must pass a 'tuner' class"
+            message = "Must pass a 'tuner' (Tuner) instance"
             raise Exception(message)
 
         #   Parse/process the input parameters, if needed
@@ -601,43 +600,25 @@ class Survey_kit_Lightgbm:
         if "early_stopping_round" in self.parameters.keys():
             del self.parameters["early_stopping_round"]
 
-        if type(self.tuner) is Tuner_optuna:
-            if "seed" not in self.tuner.params.keys():
-                self.tuner.params["seed"] = random.randint(1, 2**32 - 1)
+        best_trial_params = self.tuner.run_lightgbm(
+            train_data=self.train_data,
+            test_data=self.test_data,
+            base_params=self.parameters,
+        )
 
-            objective = self.tuner.get_objective(
-                self.train_data, self.test_data, params_lgbm=self.parameters
-            )
+        #   The full final list of lightgbm parameters
+        full_params = deepcopy(self.parameters)
+        full_params.update(best_trial_params)
 
-            self.tuner.study.optimize(objective, n_trials=self.tuner.n_trials)
-            logger.info(f"Number of finished trials: {len(self.tuner.study.trials)}")
-            logger.info(f"Best trial: {self.tuner.study.best_trial.value}")
+        #   Items that arent "real" parameters, but should
+        #       be set on the actual run
+        drop_params = ["seed", "num_threads", "verbose"]
+        for itemi in drop_params:
+            if itemi in full_params.keys():
+                del full_params[itemi]
 
-            for keyi, valuei in self.tuner.study.best_trial.params.items():
-                logger.info(f"{keyi}: {valuei}")
-
-            #   The full final list of lightgbm parameters
-            full_params = deepcopy(self.parameters)
-            full_params.update(self.tuner.study.best_trial.params)
-            print("", flush=True)
-
-            #   Items that arent "real" parameters, but should
-            #       be set on the actual run
-            drop_params = ["seed", "num_threads", "verbose"]
-            for itemi in drop_params:
-                if itemi in full_params.keys():
-                    del full_params[itemi]
-
-            if self.tuner.path_save != "":
-                create_folders_if_needed(
-                    [os.path.dirname(self.tuner.path_save)], quietly=True
-                )
-                with open(self.tuner.path_save, "wb") as f:
-                    pickle.dump(full_params, f)
-
-            self.parameters = full_params
-        else:
-            return None
+        self.parameters = full_params
+        return full_params
 
     def process_predict_frame(self, df_predict: IntoFrameT) -> IntoFrameT:
         """
@@ -950,197 +931,9 @@ class Survey_kit_Lightgbm:
         return params
 
 
-class Tuner:
-    def __init__(self):
-        pass
-
-    class Objectives(Enum):
-        #   Values must NOT be plain functions - Enum silently treats
-        #   function-valued (or otherwise descriptor-like, e.g. functools.partial
-        #   on newer Python) class attributes as methods rather than registering
-        #   them as real members, so string values are used here instead and the
-        #   actual scoring function is looked up via _OBJECTIVE_SCORERS below.
-        binary_accuracy = "binary_accuracy"
-        #   Same Sum/Mean squared error
-        sse = "sse"
-        mse = "mse"
-        mae = "mae"
-
-        def __call__(self, *args, **kwargs):
-            return _objective_scorers()[self](*args, **kwargs)
-
-
-#   Built lazily (not at module level) so importing this module doesn't
-#   require sklearn just to define the Objectives enum.
-_OBJECTIVE_SCORERS = None
-
-
-def _objective_scorers() -> dict:
-    global _OBJECTIVE_SCORERS
-    if _OBJECTIVE_SCORERS is None:
-        from sklearn.metrics import (
-            accuracy_score,
-            mean_squared_error,
-            mean_absolute_error,
-        )
-
-        _OBJECTIVE_SCORERS = {
-            Tuner.Objectives.binary_accuracy: accuracy_score,
-            Tuner.Objectives.sse: mean_squared_error,
-            Tuner.Objectives.mse: mean_squared_error,
-            Tuner.Objectives.mae: mean_absolute_error,
-        }
-    return _OBJECTIVE_SCORERS
-
-
-class Tuner_optuna:
-    def __init__(
-        self,
-        n_trials: int = 10,
-        params: dict | None = None,
-        hyperparameters: dict | None = None,
-        study: optuna.study = None,
-        objective: Tuner.Objectives = Tuner.Objectives.sse,
-        path_save: str = "",
-        test_size: float = 0.5,
-        nfold: int = 3,
-    ):
-        if params is None:
-            params = {}
-        if hyperparameters is None:
-            hyperparameters = {}
-
-        self.n_trials = n_trials
-        self.params = params
-        self.hyperparameters = hyperparameters
-        self.objective = objective
-        self.study = study
-        self.path_save = path_save
-        self.test_size = test_size
-        self.nfold = nfold
-
-    def parameters(
-        self,
-        study: optuna.study | None = None,
-        sampler: optuna.sampler | None = None,
-        #   Pass the callbacks
-        callbacks: list | None = None,
-        seed: int = 0,
-        #   Or pass callback items
-        n_early_stopping: int | None = None,
-        n_log_evaluation: int | None = None,
-    ):
-        import optuna
-        from lightgbm import log_evaluation, early_stopping
-
-        if seed == 0:
-            seed = random.randint(1, 2**32 - 1)
-
-        bDefaultSampler = False
-        if sampler is None:
-            sampler = optuna.samplers.TPESampler(seed=seed)
-
-            bDefaultSampler = True
-
-        if self.study is None:
-            if bDefaultSampler:
-                logger.info("Setting default optuna sampler: TPESampler")
-
-            if self.objective == Tuner.Objectives.binary_accuracy:
-                direction = "maximize"
-            else:
-                direction = "minimize"
-            self.study = optuna.create_study(sampler=sampler, direction=direction)
-        if callbacks is None:
-            callbacks = []
-
-            if n_early_stopping is not None:
-                callbacks.append(early_stopping(n_early_stopping))
-
-            if n_log_evaluation is not None:
-                callbacks.append(log_evaluation(n_log_evaluation))
-
-        if len(callbacks) > 0:
-            self.params["callbacks"] = callbacks
-        if seed > 0:
-            self.params["optuna_seed"] = seed
-
-    def _ranges(trial=None, params: dict = None):
-        if params is None:
-            params = {}
-        else:
-            params = deepcopy(params)
-
-        valid_options = Survey_kit_Lightgbm._feature_characteristics(tunable_only=True)
-
-        invalid_passed = list(
-            set(list(params.keys())).difference(list(valid_options.keys()))
-        )
-
-        if len(invalid_passed) > 0:
-            message = f"Invalid option(s) passed: {', '.join(invalid_passed)}\n"
-            message += (
-                f"               Acceptable options include: {', '.join(valid_options)}"
-            )
-
-            raise Exception(message)
-
-        message = ""
-        for key, value in params.items():
-            [typei, _] = valid_options[key]
-
-            if typei is int:
-                if type(value[0]) is not int or type(value[1]) is not int:
-                    message += f"               Invalid value passed for {key}: passed [{value[0]},{value[1]}] but expects {typei}\n"
-                else:
-                    params[key] = trial.suggest_int(key, value[0], value[1])
-            if typei is float:
-                if (type(value[0]) is not int and type(value[0]) is not float) or (
-                    type(value[1]) is not int and type(value[1]) is not float
-                ):
-                    message += f"               Invalid value passed for {key}: passed [{value[0]},{value[1]}] but expects {typei}\n"
-                else:
-                    if len(value) > 2:
-                        params[key] = trial.suggest_float(
-                            key, value[0], value[1], log=value[2]
-                        )
-                    else:
-                        params[key] = trial.suggest_float(key, value[0], value[1])
-
-        if message != "":
-            message = f"Invalid hyperparameter range input:\n{message}"
-            raise Exception(message)
-
-        return params
-
-    def get_objective(
-        self,
-        d_train: lgb.basic.Dataset,
-        d_test: lgb.basic.Dataset,
-        params_lgbm: dict = None,
-    ):
-        import lightgbm as lgb
-
-        params = deepcopy(params_lgbm)
-
-        def _objective(trial):
-            trial_hyperparams = Tuner_optuna._ranges(trial, self.hyperparameters)
-            for keyi, valuei in trial_hyperparams.items():
-                params[keyi] = trial_hyperparams[keyi]
-
-            if "num_iterations" in params.keys():
-                num_boost_round = params["num_iterations"]
-                del params["num_iterations"]
-            else:
-                num_boost_round = 100
-
-            gbm_model = lgb.train(
-                params=params, train_set=d_train, num_boost_round=num_boost_round
-            )
-
-            preds = gbm_model.predict(d_test.data)
-
-            return self.objective(d_test.label, preds)
-
-        return _objective
+#   Tuner/Objective (imported at the top of this file, from tuning.py) are
+#       intentionally still reachable as lightgbm_wrapper.Tuner/.Objective -
+#       LightGBM used to be the only tunable model, so existing callers may
+#       still import tuning types from here rather than from tuning.py
+#       directly; no need to duplicate their definitions to keep that working.
 
