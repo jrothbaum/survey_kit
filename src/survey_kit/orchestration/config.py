@@ -57,6 +57,13 @@ class Config:
         Number of CPUs to use for parallel operations. Automatically sets
         thread limits for Polars, OpenBLAS, MKL, etc. when changed.
         Set via `_survey_kit_n_cpus_` or directly. Default is os.cpu_count().
+        The underlying thread-limit env vars (POLARS_MAX_THREADS,
+        OMP_NUM_THREADS, etc.) are only synced at import time and whenever
+        `cpus` is set in code — setting one of them directly with
+        `os.environ[...]` after survey_kit has already been imported will
+        not propagate. To configure from outside the process, set the env
+        var before the Python process starts; from inside code, use
+        `config.cpus = N`.
     path_temp_files : str
         Directory for temporary files. Set via `_survey_kit_path_temp_files_`
         or directly. Default is {data_root}/temp_files.
@@ -136,11 +143,43 @@ class Config:
     code_root = TypedEnvVar(_code_root_key, default="", convert=str)
     data_root = TypedEnvVar(_data_root_key, default="", convert=str)
     versions = TypedEnvVar(_version_key, default=[], convert=list)
-    _cpus = TypedEnvVar(_cpus_key, os.cpu_count(), int)
+    
     _path_temp_files = TypedEnvVar(_path_temp_files_key, "", str)
+    _cpus = TypedEnvVar(_cpus_key, None, int)
     ram = TypedEnvVar(_ram_key, psutil.virtual_memory().total)
     parameter_files = TypedEnvVar(_parameter_files_key, {}, convert=dict)
     pbs_log_path = TypedEnvVar(_pbs_log_path_key, "", str)
+
+    _cpu_env_vars = [
+        "POLARS_MAX_THREADS",
+        "OMP_NUM_THREADS",
+        "NUMEXPR_NUM_THREADS",
+        "MKL_NUM_THREADS",
+        "OPENBLAS_NUM_THREADS",
+    ]
+
+    def _cpus_default(self) -> int:
+        _cpus_to_set = 0
+        for vari in self._cpu_env_vars:
+
+            if _cpus_to_set == 0:
+                env_value = os.getenv(vari)
+                if env_value is not None:
+                    try:
+                        _cpus_to_set = int(env_value)
+                        from .. import logger
+                        logger.info(f"Setting survey-kit cpus from env var {vari}={_cpus_to_set}")
+
+                    except ValueError:
+                        # Ignore invalid values and continue
+                        pass
+
+        if _cpus_to_set > 0:
+            self.cpus = _cpus_to_set
+        else:
+            self.cpus = os.cpu_count()
+
+        return self.cpus
 
     @property
     def latest_version(self) -> str:
@@ -162,9 +201,14 @@ class Config:
 
         return output
 
+    
+
     @property
     def cpus(self) -> int:
-        return self._cpus
+        value = self._cpus
+        if value is None:
+            return self._cpus_default()
+        return value
 
     @cpus.setter
     def cpus(self, value: int):
@@ -193,15 +237,8 @@ class Config:
     def _set_thread_limits(self):
         n_cpus = self.cpus
 
-        cpu_limits = [
-            "POLARS_MAX_THREADS",
-            "OMP_NUM_THREADS",
-            "NUMEXPR_NUM_THREADS",
-            "MKL_NUM_THREADS",
-            "OPENBLAS_NUM_THREADS",
-        ]
-        for limiti in cpu_limits:
-            os.environ[limiti] = str(n_cpus)
+        for vari in Config._cpu_env_vars:
+            os.environ[vari] = str(n_cpus)
 
     @property
     def mem_in_gb(self) -> int:

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import polars as pl
 import narwhals as nw
 import narwhals.selectors as cs
 from narwhals.typing import IntoFrameT
@@ -157,10 +158,6 @@ class Variable(Serializable):
                 ----------
                 expression:list[nw.Expr] | nw.Expr
                     A narwhals with_columns expression or list of expressions
-                df_variable : str, optional
-                    parameters[df_variable] to pass into the function.
-                    The assumption is that anything that needs to happen pre/post
-                    imputation needs the data.  The default is "df".
 
                 Returns
                 -------
@@ -169,6 +166,8 @@ class Variable(Serializable):
                 """
 
                 self.expression = expression
+
+        
 
             def call(self, df: IntoFrameT) -> IntoFrameT:
                 # """
@@ -185,6 +184,55 @@ class Variable(Serializable):
 
                 # """
                 return nw.from_native(df).with_columns(self.expression).to_native()
+        class PolarsExpression(Serializable):
+            def __init__(self, expression: list[pl.Expr] | pl.Expr):
+                """
+                Pass the call information to call before or after an imputation step
+
+                Parameters
+                ----------
+                expression:list[pl.Expr] | pl.Expr
+                    A polars with_columns expression or list of expressions
+
+                Returns
+                -------
+                None.
+
+                """
+
+                self.expression = expression
+
+        
+
+            def call(self, df: IntoFrameT) -> IntoFrameT:
+                # """
+                # Call the specific pre-post function.
+
+                # Parameters
+                # ----------
+                # df : IntoFrameT
+                #     The current implicate data.
+
+                # Returns
+                # -------
+                # IntoFrameT (data) to return as updated implicate data
+
+                # """
+
+                if isinstance(df, (pl.DataFrame, pl.LazyFrame)):
+                    return df.with_columns(self.expression)
+                else:
+                    nw_type = NarwhalsType(df)
+                    df = (
+                        nw_type.to_polars()
+                        .with_columns(self.expression)
+                        .lazy()
+                        .collect()
+                    )
+                    return nw_type.from_polars(df)
+                
+
+                return df.with_columns(self.expression)
 
         class Function:
             def __init__(
@@ -319,32 +367,34 @@ class Variable(Serializable):
         def __init__(
             self,
             pre: list[
-                Variable.PrePost.Function | Variable.PrePost.NarwhalsExpression | nw.Expr
+                Variable.PrePost.Function | Variable.PrePost.NarwhalsExpression | Variable.PrePost.PolarsExpression | nw.Expr | pl.Expr
             ]
             | Variable.PrePost.Function
             | Variable.PrePost.NarwhalsExpression
             | nw.Expr
             | None = None,
             post: list[
-                Variable.PrePost.Function | Variable.PrePost.NarwhalsExpression | nw.Expr
+                Variable.PrePost.Function | Variable.PrePost.NarwhalsExpression | Variable.PrePost.PolarsExpression | nw.Expr | pl.Expr
             ]
             | Variable.PrePost.Function
             | Variable.PrePost.NarwhalsExpression
             | nw.Expr
             | None = None,
             pre_initialize: list[
-                Variable.PrePost.Function | Variable.PrePost.NarwhalsExpression | nw.Expr
+                Variable.PrePost.Function | Variable.PrePost.NarwhalsExpression | Variable.PrePost.PolarsExpression | nw.Expr | pl.Expr
             ]
             | Variable.PrePost.Function
             | Variable.PrePost.NarwhalsExpression
             | nw.Expr
             | None = None,
             post_finalize: list[
-                Variable.PrePost.Function | Variable.PrePost.NarwhalsExpression | nw.Expr
+                Variable.PrePost.Function | Variable.PrePost.NarwhalsExpression | Variable.PrePost.PolarsExpression | nw.Expr | pl.Expr
             ]
             | Variable.PrePost.Function
             | Variable.PrePost.NarwhalsExpression
+            | Variable.PrePost.PolarsExpression
             | nw.Expr
+            | pl.Expr
             | None = None,
         ):
             """
@@ -1167,14 +1217,18 @@ class Variable(Serializable):
         functions: list[
             Variable.PrePost.Function
             | Variable.PrePost.NarwhalsExpression
+            | Variable.PrePost.PolarsExpression
             | nw.Expr
+            | pl.Expr
             | list[nw.Expr]
         ]
         | Variable.PrePost.Function
         | Variable.PrePost.NarwhalsExpression
+        | Variable.PrePost.PolarsExpression
         | nw.Expr
+        | pl.Expr
         | None = None,
-    ) -> list[Variable.PrePost.Function | Variable.PrePost.NarwhalsExpression]:
+    ) -> list[Variable.PrePost.Function | Variable.PrePost.NarwhalsExpression | Variable.PrePost.PolarsExpression]:
         if functions is None:
             functions = []
         if type(functions) is not list:
@@ -1182,8 +1236,18 @@ class Variable(Serializable):
 
         final_functions = []
         for fi in functions:
-            if type(fi) == nw.Expr or type(fi) == list:
+            if type(fi) == nw.Expr:
                 final_functions.append(Variable.PrePost.NarwhalsExpression(fi))
+            elif type(fi) == pl.Expr:
+                final_functions.append(Variable.PrePost.PolarsExpression(fi))
+            elif type(fi) is list:
+                for fi_sub in fi:
+                    if type(fi_sub) == nw.Expr:
+                        final_functions.append(Variable.PrePost.NarwhalsExpression(fi_sub))
+                    elif type(fi_sub) == pl.Expr:
+                        final_functions.append(Variable.PrePost.PolarsExpression(fi_sub))
+                    else:
+                        final_functions.append(fi_sub)
             else:
                 final_functions.append(fi)
         return final_functions

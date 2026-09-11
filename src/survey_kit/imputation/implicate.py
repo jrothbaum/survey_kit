@@ -584,7 +584,9 @@ class Implicate(Serializable):
     def _call_pre_post_functions(
         self,
         function_list: list[
-            Variable.PrePost.Function | Variable.PrePost.NarwhalsExpression
+            Variable.PrePost.Function
+            | Variable.PrePost.NarwhalsExpression
+            | Variable.PrePost.PolarsExpression
         ]
         | None = None,
         initialize: bool = False,
@@ -603,6 +605,25 @@ class Implicate(Serializable):
                         f"Updating data according to narwhals expression: {fi.expression}"
                     )
                     self.df = fi.call(self.df)
+                elif type(fi) is Variable.PrePost.PolarsExpression:
+                    logger.info(
+                        f"Updating data according to polars expression: {fi.expression}"
+                    )
+                    self.df = fi.call(self.df)
+                else:
+                    #   Anything else here is a caller mistake, not a
+                    #       silently-do-nothing case - fail loudly rather
+                    #       than skip the transform unnoticed (this exact
+                    #       failure mode - PolarsExpression added to
+                    #       Variable.PrePost without a matching branch here
+                    #       - already happened once: no error, no effect).
+                    message = (
+                        f"Variable.PrePost list contains an unrecognized type "
+                        f"{type(fi)} - expected Variable.PrePost.Function, "
+                        f"NarwhalsExpression, or PolarsExpression."
+                    )
+                    logger.error(message)
+                    raise TypeError(message)
 
     def df_full(
         self, drop_flags: bool = False, with_appended_cols: bool = False
