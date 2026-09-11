@@ -7510,7 +7510,7 @@ a.anchor-link {
 </style>
 <!-- End of mermaid configuration --></head>
 <body class="jp-Notebook" data-jp-theme-light="true" data-jp-theme-name="JupyterLab Light">
-<main><div class="jp-Cell jp-CodeCell jp-Notebook-cell jp-mod-noOutputs" id="cell-id=f6637621">
+<main><div class="jp-Cell jp-CodeCell jp-Notebook-cell jp-mod-noOutputs" id="cell-id=69e92566">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -7541,7 +7541,7 @@ a.anchor-link {
 </div>
 </div>
 </div>
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=9183daf4">
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=b7b3931f">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -7685,7 +7685,7 @@ a.anchor-link {
 </div>
 </div>
 </div>
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=5d7023ce">
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=0b179bd3">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -7716,15 +7716,17 @@ a.anchor-link {
 
 <span class="n">v_hd2</span> <span class="o">=</span> <span class="n">Variable</span><span class="p">(</span>
     <span class="n">impute_var</span><span class="o">=</span><span class="s2">"var_hd2"</span><span class="p">,</span>
-    <span class="n">Where</span><span class="o">=</span><span class="n">nw</span><span class="o">.</span><span class="n">col</span><span class="p">(</span><span class="s2">"var_hd1"</span><span class="p">),</span>
+    <span class="n">sample</span><span class="o">=</span><span class="n">Variable</span><span class="o">.</span><span class="n">Sample</span><span class="p">(</span><span class="n">Where</span><span class="o">=</span><span class="n">nw</span><span class="o">.</span><span class="n">col</span><span class="p">(</span><span class="s2">"var_hd1"</span><span class="p">)),</span>
     <span class="n">By</span><span class="o">=</span><span class="p">[</span><span class="s2">"year"</span><span class="p">,</span> <span class="s2">"month"</span><span class="p">],</span>
     <span class="n">modeltype</span><span class="o">=</span><span class="n">Variable</span><span class="o">.</span><span class="n">ModelType</span><span class="o">.</span><span class="n">HotDeck</span><span class="p">,</span>
     <span class="n">parameters</span><span class="o">=</span><span class="n">Parameters</span><span class="o">.</span><span class="n">HotDeck</span><span class="p">(</span><span class="n">model_list</span><span class="o">=</span><span class="p">[</span><span class="s2">"var2"</span><span class="p">,</span> <span class="s2">"var3"</span><span class="p">,</span> <span class="s2">"var5"</span><span class="p">]),</span>
-    <span class="n">postFunctions</span><span class="o">=</span><span class="p">(</span>
-        <span class="n">nw</span><span class="o">.</span><span class="n">when</span><span class="p">(</span><span class="n">nw</span><span class="o">.</span><span class="n">col</span><span class="p">(</span><span class="s2">"var_hd1"</span><span class="p">))</span>
-        <span class="o">.</span><span class="n">then</span><span class="p">(</span><span class="n">nw</span><span class="o">.</span><span class="n">col</span><span class="p">(</span><span class="s2">"var_hd2"</span><span class="p">))</span>
-        <span class="o">.</span><span class="n">otherwise</span><span class="p">(</span><span class="n">nw</span><span class="o">.</span><span class="n">lit</span><span class="p">(</span><span class="mi">0</span><span class="p">))</span>
-        <span class="o">.</span><span class="n">alias</span><span class="p">(</span><span class="s2">"var_hd2"</span><span class="p">)</span>
+    <span class="n">transforms</span><span class="o">=</span><span class="n">Variable</span><span class="o">.</span><span class="n">Transforms</span><span class="p">(</span>
+        <span class="n">post</span><span class="o">=</span><span class="p">(</span>
+            <span class="n">nw</span><span class="o">.</span><span class="n">when</span><span class="p">(</span><span class="n">nw</span><span class="o">.</span><span class="n">col</span><span class="p">(</span><span class="s2">"var_hd1"</span><span class="p">))</span>
+            <span class="o">.</span><span class="n">then</span><span class="p">(</span><span class="n">nw</span><span class="o">.</span><span class="n">col</span><span class="p">(</span><span class="s2">"var_hd2"</span><span class="p">))</span>
+            <span class="o">.</span><span class="n">otherwise</span><span class="p">(</span><span class="n">nw</span><span class="o">.</span><span class="n">lit</span><span class="p">(</span><span class="mi">0</span><span class="p">))</span>
+            <span class="o">.</span><span class="n">alias</span><span class="p">(</span><span class="s2">"var_hd2"</span><span class="p">)</span>
+        <span class="p">)</span>
     <span class="p">),</span>
 <span class="p">)</span>
 <span class="n">vars_impute</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">v_hd2</span><span class="p">)</span>
@@ -7802,7 +7804,7 @@ a.anchor-link {
 </div>
 </div>
 </div>
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=c67ff01b">
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=ecaeea77">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -7814,13 +7816,12 @@ a.anchor-link {
 <span class="n">srmi</span> <span class="o">=</span> <span class="n">SRMI</span><span class="p">(</span>
     <span class="n">df</span><span class="o">=</span><span class="n">df</span><span class="p">,</span>
     <span class="n">variables</span><span class="o">=</span><span class="n">vars_impute</span><span class="p">,</span>
-    <span class="n">n_implicates</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span>
-    <span class="n">n_iterations</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
-    <span class="n">parallel</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
-    <span class="n">bayesian_bootstrap</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
-    <span class="n">parallel_testing</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
-    <span class="n">path_model</span><span class="o">=</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">config</span><span class="o">.</span><span class="n">path_temp_files</span><span class="si">}</span><span class="s2">/py_srmi_test_hd"</span><span class="p">,</span>
-    <span class="n">force_start</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+    <span class="n">replication</span><span class="o">=</span><span class="n">SRMI</span><span class="o">.</span><span class="n">Replication</span><span class="p">(</span><span class="n">n_implicates</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">n_iterations</span><span class="o">=</span><span class="mi">1</span><span class="p">),</span>
+    <span class="n">parallel</span><span class="o">=</span><span class="n">SRMI</span><span class="o">.</span><span class="n">Parallel</span><span class="p">(</span><span class="n">enabled</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">testing</span><span class="o">=</span><span class="kc">False</span><span class="p">),</span>
+    <span class="n">bootstrap</span><span class="o">=</span><span class="n">SRMI</span><span class="o">.</span><span class="n">Bootstrap</span><span class="p">(</span><span class="n">enabled</span><span class="o">=</span><span class="kc">True</span><span class="p">),</span>
+    <span class="n">storage</span><span class="o">=</span><span class="n">SRMI</span><span class="o">.</span><span class="n">Storage</span><span class="p">(</span>
+        <span class="n">path_model</span><span class="o">=</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">config</span><span class="o">.</span><span class="n">path_temp_files</span><span class="si">}</span><span class="s2">/py_srmi_test_hd"</span><span class="p">,</span> <span class="n">force_start</span><span class="o">=</span><span class="kc">True</span>
+    <span class="p">),</span>
 <span class="p">)</span>
 </pre></div>
 </div>
@@ -7845,9 +7846,23 @@ a.anchor-link {
 </pre>
 </div>
 </div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>   WARNING:		var_hd1: StatMatch donor selection is unweighted - weighted donor sampling isn't implemented for it. The Bayesian bootstrap's per-implicate weight perturbation is also ignored, so between-implicate variance for this variable comes only from random donor tie-breaking, not from the bootstrap.
+</pre>
 </div>
 </div>
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=b5ba883a">
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>   WARNING:		var_hd2: HotDeck donor selection is unweighted - HotDeck's sequential donor-carry design has no natural notion of weighting. The Bayesian bootstrap's per-implicate weight perturbation is also ignored, so between-implicate variance for this variable comes only from random donor tie-breaking, not from the bootstrap.
+</pre>
+</div>
+</div>
+</div>
+</div>
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=3aadace1">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -7981,13 +7996,13 @@ a.anchor-link {
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>┌──────────┬─────────┬──────┬──────────────┬────────┬──────────────┬─────────────┬─────────────┬─────────────┬─────────────┬─────────────┬─────────────┬─────────────┬─────────────┐
-│ Variable ┆ Imputed ┆    n ┆ n (not null) ┆   mean ┆ mean (not 0) ┆ std (not 0) ┆ q10 (not 0) ┆ q25 (not 0) ┆ q50 (not 0) ┆ q75 (not 0) ┆ q90 (not 0) ┆ min (not 0) ┆ max (not 0) │
-╞══════════╪═════════╪══════╪══════════════╪════════╪══════════════╪═════════════╪═════════════╪═════════════╪═════════════╪═════════════╪═════════════╪═════════════╪═════════════╡
-│  var_hd1 ┆         ┆ 9997 ┆         9997 ┆ 0.5246 ┆            1 ┆           0 ┆           1 ┆           1 ┆           1 ┆           1 ┆           1 ┆           1 ┆           1 │
-│  var_hd1 ┆       0 ┆ 7514 ┆         7514 ┆ 0.5301 ┆            1 ┆           0 ┆           1 ┆           1 ┆           1 ┆           1 ┆           1 ┆           1 ┆           1 │
-│  var_hd1 ┆       1 ┆ 2483 ┆         2483 ┆ 0.5079 ┆            1 ┆           0 ┆           1 ┆           1 ┆           1 ┆           1 ┆           1 ┆           1 ┆           1 │
-└──────────┴─────────┴──────┴──────────────┴────────┴──────────────┴─────────────┴─────────────┴─────────────┴─────────────┴─────────────┴─────────────┴─────────────┴─────────────┘
+<pre>┌──────────┬─────────┬──────┬──────────────┬────────┬────────┬──────────────┬─────────────┬─────────────┬─────────────┬─────────────┬─────────────┬─────────────┬─────────────┬─────────────┐
+│ Variable ┆ Imputed ┆    n ┆ n (not null) ┆   mean ┆    std ┆ mean (not 0) ┆ std (not 0) ┆ q10 (not 0) ┆ q25 (not 0) ┆ q50 (not 0) ┆ q75 (not 0) ┆ q90 (not 0) ┆ min (not 0) ┆ max (not 0) │
+╞══════════╪═════════╪══════╪══════════════╪════════╪════════╪══════════════╪═════════════╪═════════════╪═════════════╪═════════════╪═════════════╪═════════════╪═════════════╪═════════════╡
+│  var_hd1 ┆         ┆ 9997 ┆         9997 ┆ 0.5246 ┆ 0.4994 ┆            1 ┆           0 ┆           1 ┆           1 ┆           1 ┆           1 ┆           1 ┆           1 ┆           1 │
+│  var_hd1 ┆       0 ┆ 7514 ┆         7514 ┆ 0.5301 ┆ 0.4991 ┆            1 ┆           0 ┆           1 ┆           1 ┆           1 ┆           1 ┆           1 ┆           1 ┆           1 │
+│  var_hd1 ┆       1 ┆ 2483 ┆         2483 ┆ 0.5079 ┆    0.5 ┆            1 ┆           0 ┆           1 ┆           1 ┆           1 ┆           1 ┆           1 ┆           1 ┆           1 │
+└──────────┴─────────┴──────┴──────────────┴────────┴────────┴──────────────┴─────────────┴─────────────┴─────────────┴─────────────┴─────────────┴─────────────┴─────────────┴─────────────┘
 </pre>
 </div>
 </div>
@@ -8077,13 +8092,13 @@ a.anchor-link {
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>┌──────────┬─────────┬──────┬──────────────┬────────┬──────────────┬─────────────┬─────────────┬─────────────┬─────────────┬─────────────┬─────────────┬─────────────┬─────────────┐
-│ Variable ┆ Imputed ┆    n ┆ n (not null) ┆   mean ┆ mean (not 0) ┆ std (not 0) ┆ q10 (not 0) ┆ q25 (not 0) ┆ q50 (not 0) ┆ q75 (not 0) ┆ q90 (not 0) ┆ min (not 0) ┆ max (not 0) │
-╞══════════╪═════════╪══════╪══════════════╪════════╪══════════════╪═════════════╪═════════════╪═════════════╪═════════════╪═════════════╪═════════════╪═════════════╪═════════════╡
-│  var_hd1 ┆         ┆ 7517 ┆         7517 ┆ 0.5301 ┆            1 ┆           0 ┆           1 ┆           1 ┆           1 ┆           1 ┆           1 ┆           1 ┆           1 │
-│  var_hd1 ┆       0 ┆ 7514 ┆         7514 ┆ 0.5301 ┆            1 ┆           0 ┆           1 ┆           1 ┆           1 ┆           1 ┆           1 ┆           1 ┆           1 │
-│  var_hd1 ┆       1 ┆    3 ┆            3 ┆ 0.6667 ┆            1 ┆           0 ┆           1 ┆           1 ┆           1 ┆           1 ┆           1 ┆           1 ┆           1 │
-└──────────┴─────────┴──────┴──────────────┴────────┴──────────────┴─────────────┴─────────────┴─────────────┴─────────────┴─────────────┴─────────────┴─────────────┴─────────────┘
+<pre>┌──────────┬─────────┬──────┬──────────────┬────────┬────────┬──────────────┬─────────────┬─────────────┬─────────────┬─────────────┬─────────────┬─────────────┬─────────────┬─────────────┐
+│ Variable ┆ Imputed ┆    n ┆ n (not null) ┆   mean ┆    std ┆ mean (not 0) ┆ std (not 0) ┆ q10 (not 0) ┆ q25 (not 0) ┆ q50 (not 0) ┆ q75 (not 0) ┆ q90 (not 0) ┆ min (not 0) ┆ max (not 0) │
+╞══════════╪═════════╪══════╪══════════════╪════════╪════════╪══════════════╪═════════════╪═════════════╪═════════════╪═════════════╪═════════════╪═════════════╪═════════════╪═════════════╡
+│  var_hd1 ┆         ┆ 7517 ┆         7517 ┆ 0.5301 ┆ 0.4991 ┆            1 ┆           0 ┆           1 ┆           1 ┆           1 ┆           1 ┆           1 ┆           1 ┆           1 │
+│  var_hd1 ┆       0 ┆ 7514 ┆         7514 ┆ 0.5301 ┆ 0.4991 ┆            1 ┆           0 ┆           1 ┆           1 ┆           1 ┆           1 ┆           1 ┆           1 ┆           1 │
+│  var_hd1 ┆       1 ┆    3 ┆            3 ┆ 0.6667 ┆ 0.5774 ┆            1 ┆           0 ┆           1 ┆           1 ┆           1 ┆           1 ┆           1 ┆           1 ┆           1 │
+└──────────┴─────────┴──────┴──────────────┴────────┴────────┴──────────────┴─────────────┴─────────────┴─────────────┴─────────────┴─────────────┴─────────────┴─────────────┴─────────────┘
 </pre>
 </div>
 </div>
@@ -8177,13 +8192,13 @@ a.anchor-link {
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>┌──────────┬─────────┬──────┬──────────────┬────────┬──────────────┬─────────────┬─────────────┬─────────────┬─────────────┬─────────────┬─────────────┬─────────────┬─────────────┐
-│ Variable ┆ Imputed ┆    n ┆ n (not null) ┆   mean ┆ mean (not 0) ┆ std (not 0) ┆ q10 (not 0) ┆ q25 (not 0) ┆ q50 (not 0) ┆ q75 (not 0) ┆ q90 (not 0) ┆ min (not 0) ┆ max (not 0) │
-╞══════════╪═════════╪══════╪══════════════╪════════╪══════════════╪═════════════╪═════════════╪═════════════╪═════════════╪═════════════╪═════════════╪═════════════╪═════════════╡
-│  var_hd2 ┆         ┆ 4111 ┆         4111 ┆ -4.328 ┆       -4.438 ┆       13.86 ┆      -24.58 ┆      -12.52 ┆      -2.066 ┆        5.95 ┆       11.36 ┆      -51.05 ┆       26.73 │
-│  var_hd2 ┆       0 ┆ 3987 ┆         3987 ┆ -4.354 ┆       -4.465 ┆       13.91 ┆      -24.71 ┆      -12.59 ┆      -2.081 ┆        5.95 ┆       11.37 ┆      -51.05 ┆       26.73 │
-│  var_hd2 ┆       1 ┆  124 ┆          124 ┆ -3.483 ┆        -3.57 ┆       12.22 ┆      -21.59 ┆       -10.1 ┆      -1.894 ┆       5.919 ┆       9.335 ┆      -42.77 ┆       19.35 │
-└──────────┴─────────┴──────┴──────────────┴────────┴──────────────┴─────────────┴─────────────┴─────────────┴─────────────┴─────────────┴─────────────┴─────────────┴─────────────┘
+<pre>┌──────────┬─────────┬──────┬──────────────┬────────┬───────┬──────────────┬─────────────┬─────────────┬─────────────┬─────────────┬─────────────┬─────────────┬─────────────┬─────────────┐
+│ Variable ┆ Imputed ┆    n ┆ n (not null) ┆   mean ┆   std ┆ mean (not 0) ┆ std (not 0) ┆ q10 (not 0) ┆ q25 (not 0) ┆ q50 (not 0) ┆ q75 (not 0) ┆ q90 (not 0) ┆ min (not 0) ┆ max (not 0) │
+╞══════════╪═════════╪══════╪══════════════╪════════╪═══════╪══════════════╪═════════════╪═════════════╪═════════════╪═════════════╪═════════════╪═════════════╪═════════════╪═════════════╡
+│  var_hd2 ┆         ┆ 4111 ┆         4111 ┆ -4.328 ┆ 13.71 ┆       -4.438 ┆       13.86 ┆      -24.58 ┆      -12.52 ┆      -2.066 ┆        5.95 ┆       11.36 ┆      -51.05 ┆       26.73 │
+│  var_hd2 ┆       0 ┆ 3987 ┆         3987 ┆ -4.354 ┆ 13.76 ┆       -4.465 ┆       13.91 ┆      -24.71 ┆      -12.59 ┆      -2.081 ┆        5.95 ┆       11.37 ┆      -51.05 ┆       26.73 │
+│  var_hd2 ┆       1 ┆  124 ┆          124 ┆ -3.483 ┆ 12.08 ┆        -3.57 ┆       12.22 ┆      -21.59 ┆       -10.1 ┆      -1.894 ┆       5.919 ┆       9.335 ┆      -42.77 ┆       19.35 │
+└──────────┴─────────┴──────┴──────────────┴────────┴───────┴──────────────┴─────────────┴─────────────┴─────────────┴─────────────┴─────────────┴─────────────┴─────────────┴─────────────┘
 </pre>
 </div>
 </div>
@@ -8273,13 +8288,13 @@ a.anchor-link {
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>┌──────────┬─────────┬──────┬──────────────┬────────┬──────────────┬─────────────┬─────────────┬─────────────┬─────────────┬─────────────┬─────────────┬─────────────┬─────────────┐
-│ Variable ┆ Imputed ┆    n ┆ n (not null) ┆   mean ┆ mean (not 0) ┆ std (not 0) ┆ q10 (not 0) ┆ q25 (not 0) ┆ q50 (not 0) ┆ q75 (not 0) ┆ q90 (not 0) ┆ min (not 0) ┆ max (not 0) │
-╞══════════╪═════════╪══════╪══════════════╪════════╪══════════════╪═════════════╪═════════════╪═════════════╪═════════════╪═════════════╪═════════════╪═════════════╪═════════════╡
-│  var_hd2 ┆         ┆ 4019 ┆         4019 ┆ -4.366 ┆       -4.476 ┆       13.95 ┆      -24.77 ┆      -12.66 ┆      -2.078 ┆       5.973 ┆       11.38 ┆      -51.05 ┆       26.73 │
-│  var_hd2 ┆       0 ┆ 3987 ┆         3987 ┆ -4.354 ┆       -4.465 ┆       13.91 ┆      -24.71 ┆      -12.59 ┆      -2.081 ┆        5.95 ┆       11.37 ┆      -51.05 ┆       26.73 │
-│  var_hd2 ┆       1 ┆   32 ┆           32 ┆ -5.842 ┆       -5.842 ┆       18.36 ┆      -32.72 ┆      -23.21 ┆      -1.415 ┆       8.435 ┆       12.76 ┆      -47.12 ┆       18.04 │
-└──────────┴─────────┴──────┴──────────────┴────────┴──────────────┴─────────────┴─────────────┴─────────────┴─────────────┴─────────────┴─────────────┴─────────────┴─────────────┘
+<pre>┌──────────┬─────────┬──────┬──────────────┬────────┬───────┬──────────────┬─────────────┬─────────────┬─────────────┬─────────────┬─────────────┬─────────────┬─────────────┬─────────────┐
+│ Variable ┆ Imputed ┆    n ┆ n (not null) ┆   mean ┆   std ┆ mean (not 0) ┆ std (not 0) ┆ q10 (not 0) ┆ q25 (not 0) ┆ q50 (not 0) ┆ q75 (not 0) ┆ q90 (not 0) ┆ min (not 0) ┆ max (not 0) │
+╞══════════╪═════════╪══════╪══════════════╪════════╪═══════╪══════════════╪═════════════╪═════════════╪═════════════╪═════════════╪═════════════╪═════════════╪═════════════╪═════════════╡
+│  var_hd2 ┆         ┆ 4019 ┆         4019 ┆ -4.366 ┆  13.8 ┆       -4.476 ┆       13.95 ┆      -24.77 ┆      -12.66 ┆      -2.078 ┆       5.973 ┆       11.38 ┆      -51.05 ┆       26.73 │
+│  var_hd2 ┆       0 ┆ 3987 ┆         3987 ┆ -4.354 ┆ 13.76 ┆       -4.465 ┆       13.91 ┆      -24.71 ┆      -12.59 ┆      -2.081 ┆        5.95 ┆       11.37 ┆      -51.05 ┆       26.73 │
+│  var_hd2 ┆       1 ┆   32 ┆           32 ┆ -5.842 ┆ 18.36 ┆       -5.842 ┆       18.36 ┆      -32.72 ┆      -23.21 ┆      -1.415 ┆       8.435 ┆       12.76 ┆      -47.12 ┆       18.04 │
+└──────────┴─────────┴──────┴──────────────┴────────┴───────┴──────────────┴─────────────┴─────────────┴─────────────┴─────────────┴─────────────┴─────────────┴─────────────┴─────────────┘
 </pre>
 </div>
 </div>
@@ -8369,13 +8384,13 @@ a.anchor-link {
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>┌──────────┬─────────┬──────┬──────────────┬────────┬──────────────┬─────────────┬─────────────┬─────────────┬─────────────┬─────────────┬─────────────┬─────────────┬─────────────┐
-│ Variable ┆ Imputed ┆    n ┆ n (not null) ┆   mean ┆ mean (not 0) ┆ std (not 0) ┆ q10 (not 0) ┆ q25 (not 0) ┆ q50 (not 0) ┆ q75 (not 0) ┆ q90 (not 0) ┆ min (not 0) ┆ max (not 0) │
-╞══════════╪═════════╪══════╪══════════════╪════════╪══════════════╪═════════════╪═════════════╪═════════════╪═════════════╪═════════════╪═════════════╪═════════════╪═════════════╡
-│  var_hd2 ┆         ┆ 5090 ┆         5090 ┆ -4.433 ┆       -4.542 ┆       13.94 ┆      -24.87 ┆      -12.98 ┆      -2.087 ┆       5.982 ┆       11.26 ┆      -51.05 ┆       26.73 │
-│  var_hd2 ┆       0 ┆ 3987 ┆         3987 ┆ -4.354 ┆       -4.465 ┆       13.91 ┆      -24.71 ┆      -12.59 ┆      -2.081 ┆        5.95 ┆       11.37 ┆      -51.05 ┆       26.73 │
-│  var_hd2 ┆       1 ┆ 1103 ┆         1103 ┆ -4.721 ┆       -4.822 ┆       14.02 ┆      -25.31 ┆      -14.26 ┆       -2.14 ┆       6.099 ┆       10.79 ┆      -51.05 ┆       26.73 │
-└──────────┴─────────┴──────┴──────────────┴────────┴──────────────┴─────────────┴─────────────┴─────────────┴─────────────┴─────────────┴─────────────┴─────────────┴─────────────┘
+<pre>┌──────────┬─────────┬──────┬──────────────┬────────┬───────┬──────────────┬─────────────┬─────────────┬─────────────┬─────────────┬─────────────┬─────────────┬─────────────┬─────────────┐
+│ Variable ┆ Imputed ┆    n ┆ n (not null) ┆   mean ┆   std ┆ mean (not 0) ┆ std (not 0) ┆ q10 (not 0) ┆ q25 (not 0) ┆ q50 (not 0) ┆ q75 (not 0) ┆ q90 (not 0) ┆ min (not 0) ┆ max (not 0) │
+╞══════════╪═════════╪══════╪══════════════╪════════╪═══════╪══════════════╪═════════════╪═════════════╪═════════════╪═════════════╪═════════════╪═════════════╪═════════════╪═════════════╡
+│  var_hd2 ┆         ┆ 5090 ┆         5090 ┆ -4.433 ┆ 13.78 ┆       -4.542 ┆       13.94 ┆      -24.87 ┆      -12.98 ┆      -2.087 ┆       5.982 ┆       11.26 ┆      -51.05 ┆       26.73 │
+│  var_hd2 ┆       0 ┆ 3987 ┆         3987 ┆ -4.354 ┆ 13.76 ┆       -4.465 ┆       13.91 ┆      -24.71 ┆      -12.59 ┆      -2.081 ┆        5.95 ┆       11.37 ┆      -51.05 ┆       26.73 │
+│  var_hd2 ┆       1 ┆ 1103 ┆         1103 ┆ -4.721 ┆ 13.89 ┆       -4.822 ┆       14.02 ┆      -25.31 ┆      -14.26 ┆       -2.14 ┆       6.099 ┆       10.79 ┆      -51.05 ┆       26.73 │
+└──────────┴─────────┴──────┴──────────────┴────────┴───────┴──────────────┴─────────────┴─────────────┴─────────────┴─────────────┴─────────────┴─────────────┴─────────────┴─────────────┘
 </pre>
 </div>
 </div>
@@ -8520,13 +8535,13 @@ Final Estimates by Iteration
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>┌──────────┬─────────┬──────┬──────────────┬────────┬──────────────┬─────────────┬─────────────┬─────────────┬─────────────┬─────────────┬─────────────┬─────────────┬─────────────┐
-│ Variable ┆ Imputed ┆    n ┆ n (not null) ┆   mean ┆ mean (not 0) ┆ std (not 0) ┆ q10 (not 0) ┆ q25 (not 0) ┆ q50 (not 0) ┆ q75 (not 0) ┆ q90 (not 0) ┆ min (not 0) ┆ max (not 0) │
-╞══════════╪═════════╪══════╪══════════════╪════════╪══════════════╪═════════════╪═════════════╪═════════════╪═════════════╪═════════════╪═════════════╪═════════════╪═════════════╡
-│  var_hd1 ┆         ┆ 9997 ┆         9997 ┆  0.526 ┆            1 ┆           0 ┆           1 ┆           1 ┆           1 ┆           1 ┆           1 ┆           1 ┆           1 │
-│  var_hd1 ┆       0 ┆ 7514 ┆         7514 ┆ 0.5301 ┆            1 ┆           0 ┆           1 ┆           1 ┆           1 ┆           1 ┆           1 ┆           1 ┆           1 │
-│  var_hd1 ┆       1 ┆ 2483 ┆         2483 ┆ 0.5135 ┆            1 ┆           0 ┆           1 ┆           1 ┆           1 ┆           1 ┆           1 ┆           1 ┆           1 │
-└──────────┴─────────┴──────┴──────────────┴────────┴──────────────┴─────────────┴─────────────┴─────────────┴─────────────┴─────────────┴─────────────┴─────────────┴─────────────┘
+<pre>┌──────────┬─────────┬──────┬──────────────┬────────┬────────┬──────────────┬─────────────┬─────────────┬─────────────┬─────────────┬─────────────┬─────────────┬─────────────┬─────────────┐
+│ Variable ┆ Imputed ┆    n ┆ n (not null) ┆   mean ┆    std ┆ mean (not 0) ┆ std (not 0) ┆ q10 (not 0) ┆ q25 (not 0) ┆ q50 (not 0) ┆ q75 (not 0) ┆ q90 (not 0) ┆ min (not 0) ┆ max (not 0) │
+╞══════════╪═════════╪══════╪══════════════╪════════╪════════╪══════════════╪═════════════╪═════════════╪═════════════╪═════════════╪═════════════╪═════════════╪═════════════╪═════════════╡
+│  var_hd1 ┆         ┆ 9997 ┆         9997 ┆  0.526 ┆ 0.4994 ┆            1 ┆           0 ┆           1 ┆           1 ┆           1 ┆           1 ┆           1 ┆           1 ┆           1 │
+│  var_hd1 ┆       0 ┆ 7514 ┆         7514 ┆ 0.5301 ┆ 0.4991 ┆            1 ┆           0 ┆           1 ┆           1 ┆           1 ┆           1 ┆           1 ┆           1 ┆           1 │
+│  var_hd1 ┆       1 ┆ 2483 ┆         2483 ┆ 0.5135 ┆ 0.4999 ┆            1 ┆           0 ┆           1 ┆           1 ┆           1 ┆           1 ┆           1 ┆           1 ┆           1 │
+└──────────┴─────────┴──────┴──────────────┴────────┴────────┴──────────────┴─────────────┴─────────────┴─────────────┴─────────────┴─────────────┴─────────────┴─────────────┴─────────────┘
 </pre>
 </div>
 </div>
@@ -8616,13 +8631,13 @@ Final Estimates by Iteration
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>┌──────────┬─────────┬──────┬──────────────┬────────┬──────────────┬─────────────┬─────────────┬─────────────┬─────────────┬─────────────┬─────────────┬─────────────┬─────────────┐
-│ Variable ┆ Imputed ┆    n ┆ n (not null) ┆   mean ┆ mean (not 0) ┆ std (not 0) ┆ q10 (not 0) ┆ q25 (not 0) ┆ q50 (not 0) ┆ q75 (not 0) ┆ q90 (not 0) ┆ min (not 0) ┆ max (not 0) │
-╞══════════╪═════════╪══════╪══════════════╪════════╪══════════════╪═════════════╪═════════════╪═════════════╪═════════════╪═════════════╪═════════════╪═════════════╪═════════════╡
-│  var_hd1 ┆         ┆ 7517 ┆         7517 ┆ 0.5301 ┆            1 ┆           0 ┆           1 ┆           1 ┆           1 ┆           1 ┆           1 ┆           1 ┆           1 │
-│  var_hd1 ┆       0 ┆ 7514 ┆         7514 ┆ 0.5301 ┆            1 ┆           0 ┆           1 ┆           1 ┆           1 ┆           1 ┆           1 ┆           1 ┆           1 │
-│  var_hd1 ┆       1 ┆    3 ┆            3 ┆ 0.6667 ┆            1 ┆           0 ┆           1 ┆           1 ┆           1 ┆           1 ┆           1 ┆           1 ┆           1 │
-└──────────┴─────────┴──────┴──────────────┴────────┴──────────────┴─────────────┴─────────────┴─────────────┴─────────────┴─────────────┴─────────────┴─────────────┴─────────────┘
+<pre>┌──────────┬─────────┬──────┬──────────────┬────────┬────────┬──────────────┬─────────────┬─────────────┬─────────────┬─────────────┬─────────────┬─────────────┬─────────────┬─────────────┐
+│ Variable ┆ Imputed ┆    n ┆ n (not null) ┆   mean ┆    std ┆ mean (not 0) ┆ std (not 0) ┆ q10 (not 0) ┆ q25 (not 0) ┆ q50 (not 0) ┆ q75 (not 0) ┆ q90 (not 0) ┆ min (not 0) ┆ max (not 0) │
+╞══════════╪═════════╪══════╪══════════════╪════════╪════════╪══════════════╪═════════════╪═════════════╪═════════════╪═════════════╪═════════════╪═════════════╪═════════════╪═════════════╡
+│  var_hd1 ┆         ┆ 7517 ┆         7517 ┆ 0.5301 ┆ 0.4991 ┆            1 ┆           0 ┆           1 ┆           1 ┆           1 ┆           1 ┆           1 ┆           1 ┆           1 │
+│  var_hd1 ┆       0 ┆ 7514 ┆         7514 ┆ 0.5301 ┆ 0.4991 ┆            1 ┆           0 ┆           1 ┆           1 ┆           1 ┆           1 ┆           1 ┆           1 ┆           1 │
+│  var_hd1 ┆       1 ┆    3 ┆            3 ┆ 0.6667 ┆ 0.5774 ┆            1 ┆           0 ┆           1 ┆           1 ┆           1 ┆           1 ┆           1 ┆           1 ┆           1 │
+└──────────┴─────────┴──────┴──────────────┴────────┴────────┴──────────────┴─────────────┴─────────────┴─────────────┴─────────────┴─────────────┴─────────────┴─────────────┴─────────────┘
 </pre>
 </div>
 </div>
@@ -8717,13 +8732,13 @@ Final Estimates by Iteration
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>┌──────────┬─────────┬──────┬──────────────┬────────┬──────────────┬─────────────┬─────────────┬─────────────┬─────────────┬─────────────┬─────────────┬─────────────┬─────────────┐
-│ Variable ┆ Imputed ┆    n ┆ n (not null) ┆   mean ┆ mean (not 0) ┆ std (not 0) ┆ q10 (not 0) ┆ q25 (not 0) ┆ q50 (not 0) ┆ q75 (not 0) ┆ q90 (not 0) ┆ min (not 0) ┆ max (not 0) │
-╞══════════╪═════════╪══════╪══════════════╪════════╪══════════════╪═════════════╪═════════════╪═════════════╪═════════════╪═════════════╪═════════════╪═════════════╪═════════════╡
-│  var_hd2 ┆         ┆ 4114 ┆         4114 ┆ -4.359 ┆       -4.466 ┆       13.85 ┆      -24.53 ┆      -12.59 ┆      -2.065 ┆       5.885 ┆       11.35 ┆      -51.05 ┆       26.73 │
-│  var_hd2 ┆       0 ┆ 3991 ┆         3991 ┆ -4.381 ┆       -4.489 ┆        13.9 ┆       -24.7 ┆      -12.66 ┆      -2.078 ┆       5.891 ┆       11.36 ┆      -51.05 ┆       26.73 │
-│  var_hd2 ┆       1 ┆  123 ┆          123 ┆ -3.647 ┆       -3.707 ┆       12.27 ┆      -21.59 ┆      -10.13 ┆      -1.894 ┆       5.632 ┆       9.193 ┆      -42.77 ┆       19.35 │
-└──────────┴─────────┴──────┴──────────────┴────────┴──────────────┴─────────────┴─────────────┴─────────────┴─────────────┴─────────────┴─────────────┴─────────────┴─────────────┘
+<pre>┌──────────┬─────────┬──────┬──────────────┬────────┬───────┬──────────────┬─────────────┬─────────────┬─────────────┬─────────────┬─────────────┬─────────────┬─────────────┬─────────────┐
+│ Variable ┆ Imputed ┆    n ┆ n (not null) ┆   mean ┆   std ┆ mean (not 0) ┆ std (not 0) ┆ q10 (not 0) ┆ q25 (not 0) ┆ q50 (not 0) ┆ q75 (not 0) ┆ q90 (not 0) ┆ min (not 0) ┆ max (not 0) │
+╞══════════╪═════════╪══════╪══════════════╪════════╪═══════╪══════════════╪═════════════╪═════════════╪═════════════╪═════════════╪═════════════╪═════════════╪═════════════╪═════════════╡
+│  var_hd2 ┆         ┆ 4114 ┆         4114 ┆ -4.359 ┆  13.7 ┆       -4.466 ┆       13.85 ┆      -24.53 ┆      -12.59 ┆      -2.065 ┆       5.885 ┆       11.35 ┆      -51.05 ┆       26.73 │
+│  var_hd2 ┆       0 ┆ 3991 ┆         3991 ┆ -4.381 ┆ 13.75 ┆       -4.489 ┆        13.9 ┆       -24.7 ┆      -12.66 ┆      -2.078 ┆       5.891 ┆       11.36 ┆      -51.05 ┆       26.73 │
+│  var_hd2 ┆       1 ┆  123 ┆          123 ┆ -3.647 ┆ 12.18 ┆       -3.707 ┆       12.27 ┆      -21.59 ┆      -10.13 ┆      -1.894 ┆       5.632 ┆       9.193 ┆      -42.77 ┆       19.35 │
+└──────────┴─────────┴──────┴──────────────┴────────┴───────┴──────────────┴─────────────┴─────────────┴─────────────┴─────────────┴─────────────┴─────────────┴─────────────┴─────────────┘
 </pre>
 </div>
 </div>
@@ -8813,13 +8828,13 @@ Final Estimates by Iteration
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>┌──────────┬─────────┬──────┬──────────────┬────────┬──────────────┬─────────────┬─────────────┬─────────────┬─────────────┬─────────────┬─────────────┬─────────────┬─────────────┐
-│ Variable ┆ Imputed ┆    n ┆ n (not null) ┆   mean ┆ mean (not 0) ┆ std (not 0) ┆ q10 (not 0) ┆ q25 (not 0) ┆ q50 (not 0) ┆ q75 (not 0) ┆ q90 (not 0) ┆ min (not 0) ┆ max (not 0) │
-╞══════════╪═════════╪══════╪══════════════╪════════╪══════════════╪═════════════╪═════════════╪═════════════╪═════════════╪═════════════╪═════════════╪═════════════╪═════════════╡
-│  var_hd2 ┆         ┆ 4023 ┆         4023 ┆ -4.393 ┆         -4.5 ┆       13.94 ┆      -24.77 ┆      -12.75 ┆      -2.065 ┆       5.942 ┆       11.37 ┆      -51.05 ┆       26.73 │
-│  var_hd2 ┆       0 ┆ 3991 ┆         3991 ┆ -4.381 ┆       -4.489 ┆        13.9 ┆       -24.7 ┆      -12.66 ┆      -2.078 ┆       5.891 ┆       11.36 ┆      -51.05 ┆       26.73 │
-│  var_hd2 ┆       1 ┆   32 ┆           32 ┆ -5.842 ┆       -5.842 ┆       18.36 ┆      -32.72 ┆      -23.21 ┆      -1.415 ┆       8.435 ┆       12.76 ┆      -47.12 ┆       18.04 │
-└──────────┴─────────┴──────┴──────────────┴────────┴──────────────┴─────────────┴─────────────┴─────────────┴─────────────┴─────────────┴─────────────┴─────────────┴─────────────┘
+<pre>┌──────────┬─────────┬──────┬──────────────┬────────┬───────┬──────────────┬─────────────┬─────────────┬─────────────┬─────────────┬─────────────┬─────────────┬─────────────┬─────────────┐
+│ Variable ┆ Imputed ┆    n ┆ n (not null) ┆   mean ┆   std ┆ mean (not 0) ┆ std (not 0) ┆ q10 (not 0) ┆ q25 (not 0) ┆ q50 (not 0) ┆ q75 (not 0) ┆ q90 (not 0) ┆ min (not 0) ┆ max (not 0) │
+╞══════════╪═════════╪══════╪══════════════╪════════╪═══════╪══════════════╪═════════════╪═════════════╪═════════════╪═════════════╪═════════════╪═════════════╪═════════════╪═════════════╡
+│  var_hd2 ┆         ┆ 4023 ┆         4023 ┆ -4.393 ┆ 13.79 ┆         -4.5 ┆       13.94 ┆      -24.77 ┆      -12.75 ┆      -2.065 ┆       5.942 ┆       11.37 ┆      -51.05 ┆       26.73 │
+│  var_hd2 ┆       0 ┆ 3991 ┆         3991 ┆ -4.381 ┆ 13.75 ┆       -4.489 ┆        13.9 ┆       -24.7 ┆      -12.66 ┆      -2.078 ┆       5.891 ┆       11.36 ┆      -51.05 ┆       26.73 │
+│  var_hd2 ┆       1 ┆   32 ┆           32 ┆ -5.842 ┆ 18.36 ┆       -5.842 ┆       18.36 ┆      -32.72 ┆      -23.21 ┆      -1.415 ┆       8.435 ┆       12.76 ┆      -47.12 ┆       18.04 │
+└──────────┴─────────┴──────┴──────────────┴────────┴───────┴──────────────┴─────────────┴─────────────┴─────────────┴─────────────┴─────────────┴─────────────┴─────────────┴─────────────┘
 </pre>
 </div>
 </div>
@@ -8909,13 +8924,13 @@ Final Estimates by Iteration
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>┌──────────┬─────────┬──────┬──────────────┬────────┬──────────────┬─────────────┬─────────────┬─────────────┬─────────────┬─────────────┬─────────────┬─────────────┬─────────────┐
-│ Variable ┆ Imputed ┆    n ┆ n (not null) ┆   mean ┆ mean (not 0) ┆ std (not 0) ┆ q10 (not 0) ┆ q25 (not 0) ┆ q50 (not 0) ┆ q75 (not 0) ┆ q90 (not 0) ┆ min (not 0) ┆ max (not 0) │
-╞══════════╪═════════╪══════╪══════════════╪════════╪══════════════╪═════════════╪═════════════╪═════════════╪═════════════╪═════════════╪═════════════╪═════════════╪═════════════╡
-│  var_hd2 ┆         ┆ 5105 ┆         5105 ┆ -4.388 ┆       -4.496 ┆       13.96 ┆      -24.87 ┆      -12.86 ┆      -2.081 ┆       6.094 ┆       11.41 ┆      -51.05 ┆       26.73 │
-│  var_hd2 ┆       0 ┆ 3991 ┆         3991 ┆ -4.381 ┆       -4.489 ┆        13.9 ┆       -24.7 ┆      -12.66 ┆      -2.078 ┆       5.891 ┆       11.36 ┆      -51.05 ┆       26.73 │
-│  var_hd2 ┆       1 ┆ 1114 ┆         1114 ┆ -4.413 ┆       -4.518 ┆       14.17 ┆      -25.31 ┆      -13.68 ┆      -2.148 ┆       6.544 ┆       11.67 ┆      -51.05 ┆       24.49 │
-└──────────┴─────────┴──────┴──────────────┴────────┴──────────────┴─────────────┴─────────────┴─────────────┴─────────────┴─────────────┴─────────────┴─────────────┴─────────────┘
+<pre>┌──────────┬─────────┬──────┬──────────────┬────────┬───────┬──────────────┬─────────────┬─────────────┬─────────────┬─────────────┬─────────────┬─────────────┬─────────────┬─────────────┐
+│ Variable ┆ Imputed ┆    n ┆ n (not null) ┆   mean ┆   std ┆ mean (not 0) ┆ std (not 0) ┆ q10 (not 0) ┆ q25 (not 0) ┆ q50 (not 0) ┆ q75 (not 0) ┆ q90 (not 0) ┆ min (not 0) ┆ max (not 0) │
+╞══════════╪═════════╪══════╪══════════════╪════════╪═══════╪══════════════╪═════════════╪═════════════╪═════════════╪═════════════╪═════════════╪═════════════╪═════════════╪═════════════╡
+│  var_hd2 ┆         ┆ 5105 ┆         5105 ┆ -4.388 ┆  13.8 ┆       -4.496 ┆       13.96 ┆      -24.87 ┆      -12.86 ┆      -2.081 ┆       6.094 ┆       11.41 ┆      -51.05 ┆       26.73 │
+│  var_hd2 ┆       0 ┆ 3991 ┆         3991 ┆ -4.381 ┆ 13.75 ┆       -4.489 ┆        13.9 ┆       -24.7 ┆      -12.66 ┆      -2.078 ┆       5.891 ┆       11.36 ┆      -51.05 ┆       26.73 │
+│  var_hd2 ┆       1 ┆ 1114 ┆         1114 ┆ -4.413 ┆ 14.02 ┆       -4.518 ┆       14.17 ┆      -25.31 ┆      -13.68 ┆      -2.148 ┆       6.544 ┆       11.67 ┆      -51.05 ┆       24.49 │
+└──────────┴─────────┴──────┴──────────────┴────────┴───────┴──────────────┴─────────────┴─────────────┴─────────────┴─────────────┴─────────────┴─────────────┴─────────────┴─────────────┘
 </pre>
 </div>
 </div>
@@ -8996,7 +9011,7 @@ Final Estimates by Iteration
 </div>
 </div>
 </div>
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=22c1ddd8">
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=1eb71921">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -9024,7 +9039,7 @@ Final Estimates by Iteration
 </div>
 </div>
 </div>
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=30625eb9">
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=a3f0a097">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -9233,6 +9248,349 @@ Look at the imputes | var_hd1 == 1
 │         var5 ┆ 5,260 ┆           0 ┆     0.155513 ┆     0.362428 ┆        0.0 ┆       1.0 │
 │      var_hd1 ┆ 5,260 ┆           0 ┆          1.0 ┆          0.0 ┆        1.0 ┆       1.0 │
 └──────────────┴───────┴─────────────┴──────────────┴──────────────┴────────────┴───────────┘
+</pre>
+</div>
+</div>
+</div>
+</div>
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=1bf2620e">
+<div class="jp-Cell-inputWrapper" tabindex="0">
+<div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
+</div>
+<div class="jp-InputArea jp-Cell-inputArea">
+<div class="jp-InputPrompt jp-InputArea-prompt">In [8]:</div>
+<div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
+<div class="cm-editor cm-s-jupyter">
+<div class="highlight hl-ipython3"><pre><span></span><span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span>
+    <span class="s2">"sequential_drop and the empty-match-key fallback - what happens when "</span>
+    <span class="s2">"no donor shares a recipient's match key at all"</span>
+<span class="p">)</span>
+<span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span>
+    <span class="s2">"   sequential_drop=True (HotDeck's own default) builds a cascade that "</span>
+    <span class="s2">"progressively drops the LAST match variable - ['var2','var3','var5'] "</span>
+    <span class="s2">"-&gt; ['var2','var3'] -&gt; ['var2'] - trying each level in turn until a "</span>
+    <span class="s2">"recipient finds a donor. Whoever is STILL unmatched after even the "</span>
+    <span class="s2">"shortest level gets matched fully at random instead, with a logged "</span>
+    <span class="s2">"warning, rather than being left unmatched forever - this applies "</span>
+    <span class="s2">"unconditionally (even with sequential_drop=False, or an explicitly "</span>
+    <span class="s2">"empty model_list=[]), not just at the end of a cascade."</span>
+<span class="p">)</span>
+
+<span class="n">v_hd_fallback</span> <span class="o">=</span> <span class="n">Variable</span><span class="p">(</span>
+    <span class="n">impute_var</span><span class="o">=</span><span class="s2">"var_hd1"</span><span class="p">,</span>
+    <span class="n">modeltype</span><span class="o">=</span><span class="n">Variable</span><span class="o">.</span><span class="n">ModelType</span><span class="o">.</span><span class="n">HotDeck</span><span class="p">,</span>
+    <span class="c1">#   sequential_drop=True is the default - spelled out here for clarity</span>
+    <span class="n">parameters</span><span class="o">=</span><span class="n">Parameters</span><span class="o">.</span><span class="n">HotDeck</span><span class="p">(</span><span class="n">model_list</span><span class="o">=</span><span class="p">[</span><span class="s2">"var2"</span><span class="p">,</span> <span class="s2">"var3"</span><span class="p">,</span> <span class="s2">"var5"</span><span class="p">],</span> <span class="n">sequential_drop</span><span class="o">=</span><span class="kc">True</span><span class="p">),</span>
+<span class="p">)</span>
+<span class="n">srmi_fallback</span> <span class="o">=</span> <span class="n">SRMI</span><span class="p">(</span>
+    <span class="n">df</span><span class="o">=</span><span class="n">df</span><span class="p">,</span>
+    <span class="n">variables</span><span class="o">=</span><span class="p">[</span><span class="n">v_hd_fallback</span><span class="p">],</span>
+    <span class="n">replication</span><span class="o">=</span><span class="n">SRMI</span><span class="o">.</span><span class="n">Replication</span><span class="p">(</span><span class="n">n_implicates</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">n_iterations</span><span class="o">=</span><span class="mi">1</span><span class="p">),</span>
+    <span class="n">parallel</span><span class="o">=</span><span class="n">SRMI</span><span class="o">.</span><span class="n">Parallel</span><span class="p">(</span><span class="n">enabled</span><span class="o">=</span><span class="kc">False</span><span class="p">),</span>
+    <span class="n">bootstrap</span><span class="o">=</span><span class="n">SRMI</span><span class="o">.</span><span class="n">Bootstrap</span><span class="p">(</span><span class="n">enabled</span><span class="o">=</span><span class="kc">True</span><span class="p">),</span>
+    <span class="n">storage</span><span class="o">=</span><span class="n">SRMI</span><span class="o">.</span><span class="n">Storage</span><span class="p">(</span>
+        <span class="n">path_model</span><span class="o">=</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">config</span><span class="o">.</span><span class="n">path_temp_files</span><span class="si">}</span><span class="s2">/py_srmi_test_hd_fallback"</span><span class="p">,</span>
+        <span class="n">force_start</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+    <span class="p">),</span>
+<span class="p">)</span>
+<span class="n">srmi_fallback</span><span class="o">.</span><span class="n">run</span><span class="p">()</span>
+<span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span>
+    <span class="s2">"   Look for '     Matching on: [] (fully random fallback)' above (if "</span>
+    <span class="s2">"it appears) - that's the guaranteed-to-succeed last resort actually "</span>
+    <span class="s2">"being reached for whichever recipients no real match level could "</span>
+    <span class="s2">"cover."</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+</div>
+</div>
+</div>
+<div class="jp-Cell-outputWrapper">
+<div class="jp-Collapser jp-OutputCollapser jp-Cell-outputCollapser">
+</div>
+<div class="jp-OutputArea jp-Cell-outputArea">
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>sequential_drop and the empty-match-key fallback - what happens when no donor shares a recipient's match key at all
+</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>   sequential_drop=True (HotDeck's own default) builds a cascade that progressively drops the LAST match variable - ['var2','var3','var5'] -&gt; ['var2','var3'] -&gt; ['var2'] - trying each level in turn until a recipient finds a donor. Whoever is STILL unmatched after even the shortest level gets matched fully at random instead, with a logged warning, rather than being left unmatched forever - this applies unconditionally (even with sequential_drop=False, or an explicitly empty model_list=[]), not just at the end of a cascade.
+</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>Removing existing directory /home/jrothbaum/Coding/claude_code/survey_kit/.scratch/temp_files/py_srmi_test_hd_fallback.srmi
+</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>   WARNING:		var_hd1: HotDeck donor selection is unweighted - HotDeck's sequential donor-carry design has no natural notion of weighting. The Bayesian bootstrap's per-implicate weight perturbation is also ignored, so between-implicate variance for this variable comes only from random donor tie-breaking, not from the bootstrap.
+</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>Variable selection before SRMI run, if necessary
+</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>     var_hd1: Method.No
+</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>Hyperparameter tuning before SRMI run, if necessary
+</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>Removing existing directory /home/jrothbaum/Coding/claude_code/survey_kit/.scratch/temp_files/py_srmi_test_hd_fallback.srmi/1.srmi.implicate
+</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>     Imputation using hot deck
+</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>     Matching on: ['var2', 'var3', 'var5']
+</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>     Matches
+</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>          obs =   2,483
+</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>          share = 0.9988
+</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>Post-imputation statistics for ['var_hd1']
+</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>    Where:          None
+</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>    Where (impute): col(___imp_missing_var_hd1_1)
+</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>┌──────────┬─────────┬──────┬──────────────┬────────┬────────┬──────────────┬─────────────┬─────────────┬─────────────┬─────────────┬─────────────┬─────────────┬─────────────┬─────────────┐
+│ Variable ┆ Imputed ┆    n ┆ n (not null) ┆   mean ┆    std ┆ mean (not 0) ┆ std (not 0) ┆ q10 (not 0) ┆ q25 (not 0) ┆ q50 (not 0) ┆ q75 (not 0) ┆ q90 (not 0) ┆ min (not 0) ┆ max (not 0) │
+╞══════════╪═════════╪══════╪══════════════╪════════╪════════╪══════════════╪═════════════╪═════════════╪═════════════╪═════════════╪═════════════╪═════════════╪═════════════╪═════════════╡
+│  var_hd1 ┆         ┆ 9997 ┆         9997 ┆ 0.5267 ┆ 0.4993 ┆            1 ┆           0 ┆           1 ┆           1 ┆           1 ┆           1 ┆           1 ┆           1 ┆           1 │
+│  var_hd1 ┆       0 ┆ 7514 ┆         7514 ┆ 0.5301 ┆ 0.4991 ┆            1 ┆           0 ┆           1 ┆           1 ┆           1 ┆           1 ┆           1 ┆           1 ┆           1 │
+│  var_hd1 ┆       1 ┆ 2483 ┆         2483 ┆ 0.5163 ┆ 0.4998 ┆            1 ┆           0 ┆           1 ┆           1 ┆           1 ┆           1 ┆           1 ┆           1 ┆           1 │
+└──────────┴─────────┴──────┴──────────────┴────────┴────────┴──────────────┴─────────────┴─────────────┴─────────────┴─────────────┴─────────────┴─────────────┴─────────────┴─────────────┘
+</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>     Most common matches: 
+</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>shape: (5, 2)
+┌────────────────────┬─────────┐
+│ donor____rownumber ┆ nDonors │
+│ ---                ┆ ---     │
+│ i16                ┆ i8      │
+╞════════════════════╪═════════╡
+│ 746                ┆ 5       │
+│ 2709               ┆ 5       │
+│ 2496               ┆ 4       │
+│ 2566               ┆ 4       │
+│ 3687               ┆ 4       │
+└────────────────────┴─────────┘
+</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>
+
+
+</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>     Matching on: ['var2', 'var3']
+</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>     Matches
+</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>          obs =   3
+</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>          share = 0.0012
+</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>Post-imputation statistics for ['var_hd1']
+</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>    Where:          None
+</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>    Where (impute): col(___imp_missing_var_hd1_1)
+</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>┌──────────┬─────────┬──────┬──────────────┬────────┬────────┬──────────────┬─────────────┬─────────────┬─────────────┬─────────────┬─────────────┬─────────────┬─────────────┬─────────────┐
+│ Variable ┆ Imputed ┆    n ┆ n (not null) ┆   mean ┆    std ┆ mean (not 0) ┆ std (not 0) ┆ q10 (not 0) ┆ q25 (not 0) ┆ q50 (not 0) ┆ q75 (not 0) ┆ q90 (not 0) ┆ min (not 0) ┆ max (not 0) │
+╞══════════╪═════════╪══════╪══════════════╪════════╪════════╪══════════════╪═════════════╪═════════════╪═════════════╪═════════════╪═════════════╪═════════════╪═════════════╪═════════════╡
+│  var_hd1 ┆         ┆ 7517 ┆         7517 ┆ 0.5301 ┆ 0.4991 ┆            1 ┆           0 ┆           1 ┆           1 ┆           1 ┆           1 ┆           1 ┆           1 ┆           1 │
+│  var_hd1 ┆       0 ┆ 7514 ┆         7514 ┆ 0.5301 ┆ 0.4991 ┆            1 ┆           0 ┆           1 ┆           1 ┆           1 ┆           1 ┆           1 ┆           1 ┆           1 │
+│  var_hd1 ┆       1 ┆    3 ┆            3 ┆ 0.6667 ┆ 0.5774 ┆            1 ┆           0 ┆           1 ┆           1 ┆           1 ┆           1 ┆           1 ┆           1 ┆           1 │
+└──────────┴─────────┴──────┴──────────────┴────────┴────────┴──────────────┴─────────────┴─────────────┴─────────────┴─────────────┴─────────────┴─────────────┴─────────────┴─────────────┘
+</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>     Most common matches: 
+</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>shape: (3, 2)
+┌────────────────────┬─────────┐
+│ donor____rownumber ┆ nDonors │
+│ ---                ┆ ---     │
+│ i16                ┆ i8      │
+╞════════════════════╪═════════╡
+│ 6576               ┆ 1       │
+│ 6674               ┆ 1       │
+│ 8524               ┆ 1       │
+└────────────────────┴─────────┘
+</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>
+
+
+</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>
+
+var_hd1
+</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>
+
+Final Estimates by Iteration
+</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>Removing existing directory /home/jrothbaum/Coding/claude_code/survey_kit/.scratch/temp_files/py_srmi_test_hd_fallback.srmi/1.srmi.implicate
+</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>   Look for '     Matching on: [] (fully random fallback)' above (if it appears) - that's the guaranteed-to-succeed last resort actually being reached for whichever recipients no real match level could cover.
 </pre>
 </div>
 </div>
