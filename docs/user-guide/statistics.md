@@ -92,8 +92,8 @@ How to get standard errors (SEs) using replicate weights or the bootstrap + mult
         ```
 
     === "Log"
-        [View in separate window](../../tutorials/statistics/basic.html){:target="_blank"}
-        <iframe src="../../tutorials/statistics/basic.html" 
+        [View in separate window](../tutorials/statistics/basic.html){:target="_blank"}
+        <iframe src="../tutorials/statistics/basic.html" 
             style="width: 100%; height: 800px; border: none;">
         </iframe>
 
@@ -106,8 +106,8 @@ How to get standard errors (SEs) using replicate weights or the bootstrap + mult
         ```
 
     === "Log (basic stats)"
-        [View in separate window](../../tutorials/statistics/standard_errors.html){:target="_blank"}
-        <iframe src="../../tutorials/statistics/standard_errors.html" 
+        [View in separate window](../tutorials/statistics/standard_errors.html){:target="_blank"}
+        <iframe src="../tutorials/statistics/standard_errors.html" 
             style="width: 100%; height: 800px; border: none;">
         </iframe>
 
@@ -121,8 +121,8 @@ How to get standard errors (SEs) using replicate weights or the bootstrap + mult
     === "Log (any custom stat)"
         This works with **any function** that takes a dataframe and weight and returns estimates. You get proper variance estimation automatically.
 
-        [View in separate window](../../tutorials/statistics/arbitrary_bootstrap.html){:target="_blank"}
-        <iframe src="../../tutorials/statistics/arbitrary_bootstrap.html" 
+        [View in separate window](../tutorials/statistics/arbitrary_bootstrap.html){:target="_blank"}
+        <iframe src="../tutorials/statistics/arbitrary_bootstrap.html" 
             style="width: 100%; height: 800px; border: none;">
         </iframe>
 
@@ -136,8 +136,8 @@ How to get standard errors (SEs) using replicate weights or the bootstrap + mult
         ```
 
     === "Log (basic stats)"
-        [View in separate window](../../tutorials/statistics/multiple_imputation.html){:target="_blank"}
-        <iframe src="../../tutorials/statistics/multiple_imputation.html" 
+        [View in separate window](../tutorials/statistics/multiple_imputation.html){:target="_blank"}
+        <iframe src="../tutorials/statistics/multiple_imputation.html" 
             style="width: 100%; height: 800px; border: none;">
         </iframe>
 
@@ -151,7 +151,7 @@ How to get standard errors (SEs) using replicate weights or the bootstrap + mult
     === "Log (any custom stat)"
         This works with **any function** that takes a dataframe and weight and returns estimates. You get proper variance estimation (replicate weights + MI) automatically.
         
-        [View in separate window](../../tutorials/statistics/arbitrary_srmi.html){:target="_blank"}
+        [View in separate window](../tutorials/statistics/arbitrary_srmi.html){:target="_blank"}
         <iframe src="../tutorials/statistics/arbitrary_srmi.html" 
             style="width: 100%; height: 800px; border: none;">
         </iframe>
@@ -167,8 +167,8 @@ How to get standard errors (SEs) using replicate weights or the bootstrap + mult
         ```
 
     === "Log (CPS ASEC)"
-        [View in separate window](../../tutorials/survey_data/cps_asec.html){:target="_blank"}
-        <iframe src="../../tutorials/survey_data/cps_asec.html" 
+        [View in separate window](../tutorials/survey_data/cps_asec.html){:target="_blank"}
+        <iframe src="../tutorials/survey_data/cps_asec.html" 
             style="width: 100%; height: 800px; border: none;">
         </iframe>
  
@@ -179,7 +179,7 @@ How to get standard errors (SEs) using replicate weights or the bootstrap + mult
         ```
 
     === "Log (CEX)"
-        [View in separate window](../../tutorials/survey_data/cex.html){:target="_blank"}
-        <iframe src="../../tutorials/survey_data/cex.html" 
+        [View in separate window](../tutorials/survey_data/cex.html){:target="_blank"}
+        <iframe src="../tutorials/survey_data/cex.html" 
             style="width: 100%; height: 800px; border: none;">
         </iframe>

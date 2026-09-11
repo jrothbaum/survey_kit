@@ -231,6 +231,66 @@ vars_impute.append(v_sk)
 
 
 # %%
+logger.info(
+    "tune=True/tuner= - the same tuning idea as tune_estimator() above, but "
+    "built into SRMI itself, for RandomForest()/XGBoost()/CatBoost()/"
+    "SklearnModel() (the same mechanism LightGBM's own tune=True has always "
+    "had - see tutorials/srmi/gbm.py)"
+)
+logger.info(
+    "   Rather than calling tune_estimator() yourself and splicing the "
+    "result into `parameters=` by hand, pass a Tuner directly - SRMI runs "
+    "the search once, automatically, right before the run starts (see "
+    "SRMI._preprocess_tune), and every iteration's actual fit picks up the "
+    "tuned hyperparameters from there. One Tuner instance can be reused "
+    "across several variables (even across different modeltypes) - each "
+    "gets its own independent search and its own saved result, keyed by "
+    "impute_var under path_save_dir."
+)
+from survey_kit.imputation.utilities.tuning import Tuner, HyperparameterSpace, IntRange
+
+tuner_rf = Tuner(
+    space=HyperparameterSpace(
+        n_estimators=IntRange(50, 300),
+        max_depth=IntRange(2, 10),
+    ),
+    n_trials=15,
+    path_save_dir=f"{config.path_temp_files}/py_srmi_test_tabular_ml/tuner_outputs",
+    overwrite=True,
+)
+v_rf_tuned = Variable(
+    impute_var="var_rf",
+    header="var_rf, tuned automatically instead of the fixed parameters= above",
+    model=["x1", "x2"],
+    modeltype=Variable.ModelType.RandomForest,
+    parameters=Parameters.RandomForest(
+        tune=True,
+        tuner=tuner_rf,
+    ),
+)
+srmi_tuned = SRMI(
+    df=df,
+    variables=[v_rf_tuned],
+    index=["index"],
+    replication=SRMI.Replication(n_implicates=1, n_iterations=1),
+    parallel=SRMI.Parallel(enabled=False),
+    bootstrap=SRMI.Bootstrap(enabled=True),
+    storage=SRMI.Storage(
+        path_model=f"{config.path_temp_files}/py_srmi_test_tabular_ml_tuned",
+        force_start=True,
+    ),
+)
+srmi_tuned.run()
+
+from survey_kit.imputation.utilities.tuning import load_tuned_params
+
+logger.info(
+    f"   Tuned hyperparameters actually used for var_rf's fit: "
+    f"{load_tuned_params(f'{tuner_rf.path_save_dir}/var_rf.pickle')}"
+)
+
+
+# %%
 logger.info("Multinomial - unordered categorical imputation via donor matching")
 logger.info(
     "   Fits a RandomForestClassifier, then imputes by donor matching on "

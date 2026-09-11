@@ -62,7 +62,7 @@ uv add survey-kit
 Want to learn more, go to the guides for each tool in the package.  Each guide 
 
 - [Calibration Guide](user-guide/calibration.md) - nonresponse bias
-- [Imputation Guide](user-guide/srmi.md) - missing data
+- [Imputation Guide](user-guide/srmi/index.md) - missing data
 - [Statistics Guide](user-guide/statistics.md) - proper standard errors
 
 ## Repository

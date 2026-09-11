@@ -7,7 +7,12 @@
         heading_level: 2
         show_source: false
         members:
+            - simple_model
             - run
+            - convergence
+            - plot_convergence
+            - plot_imputation_quality
+            - plot_propensity
 
 ::: survey_kit.imputation.variable.Variable
     options:
@@ -26,6 +31,12 @@
 
 
 ::: survey_kit.imputation.selection.Selection
+    options:
+        show_root_heading: true
+        show_root_full_path: false
+        heading_level: 2
+
+::: survey_kit.imputation.utilities.tuning
     options:
         show_root_heading: true
         show_root_full_path: false

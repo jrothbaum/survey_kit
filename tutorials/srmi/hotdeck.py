@@ -184,3 +184,45 @@ _ = df_list.filter(~nw.col("var_hd1")).pipe(summary)
 
 logger.info("\n\nLook at the imputes | var_hd1 == 1")
 _ = df_list.filter(nw.col("var_hd1")).pipe(summary)
+
+
+# %%
+logger.info(
+    "sequential_drop and the empty-match-key fallback - what happens when "
+    "no donor shares a recipient's match key at all"
+)
+logger.info(
+    "   sequential_drop=True (HotDeck's own default) builds a cascade that "
+    "progressively drops the LAST match variable - ['var2','var3','var5'] "
+    "-> ['var2','var3'] -> ['var2'] - trying each level in turn until a "
+    "recipient finds a donor. Whoever is STILL unmatched after even the "
+    "shortest level gets matched fully at random instead, with a logged "
+    "warning, rather than being left unmatched forever - this applies "
+    "unconditionally (even with sequential_drop=False, or an explicitly "
+    "empty model_list=[]), not just at the end of a cascade."
+)
+
+v_hd_fallback = Variable(
+    impute_var="var_hd1",
+    modeltype=Variable.ModelType.HotDeck,
+    #   sequential_drop=True is the default - spelled out here for clarity
+    parameters=Parameters.HotDeck(model_list=["var2", "var3", "var5"], sequential_drop=True),
+)
+srmi_fallback = SRMI(
+    df=df,
+    variables=[v_hd_fallback],
+    replication=SRMI.Replication(n_implicates=1, n_iterations=1),
+    parallel=SRMI.Parallel(enabled=False),
+    bootstrap=SRMI.Bootstrap(enabled=True),
+    storage=SRMI.Storage(
+        path_model=f"{config.path_temp_files}/py_srmi_test_hd_fallback",
+        force_start=True,
+    ),
+)
+srmi_fallback.run()
+logger.info(
+    "   Look for '     Matching on: [] (fully random fallback)' above (if "
+    "it appears) - that's the guaranteed-to-succeed last resort actually "
+    "being reached for whichever recipients no real match level could "
+    "cover."
+)

@@ -7510,7 +7510,7 @@ a.anchor-link {
 </style>
 <!-- End of mermaid configuration --></head>
 <body class="jp-Notebook" data-jp-theme-light="true" data-jp-theme-name="JupyterLab Light">
-<main><div class="jp-Cell jp-CodeCell jp-Notebook-cell jp-mod-noOutputs" id="cell-id=01d2490b">
+<main><div class="jp-Cell jp-CodeCell jp-Notebook-cell jp-mod-noOutputs" id="cell-id=65bb1f44">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -7518,11 +7518,7 @@ a.anchor-link {
 <div class="jp-InputPrompt jp-InputArea-prompt">In [1]:</div>
 <div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
 <div class="cm-editor cm-s-jupyter">
-<div class="highlight hl-ipython3"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">sys</span>
-<span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
-
-<span class="kn">import</span><span class="w"> </span><span class="nn">narwhals</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">nw</span>
+<div class="highlight hl-ipython3"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">narwhals</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">nw</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">polars</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pl</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">polars.selectors</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">cs</span>
 
@@ -7537,20 +7533,12 @@ a.anchor-link {
 <span class="kn">from</span><span class="w"> </span><span class="nn">survey_kit</span><span class="w"> </span><span class="kn">import</span> <span class="n">logger</span><span class="p">,</span> <span class="n">config</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">survey_kit.utilities.dataframe</span><span class="w"> </span><span class="kn">import</span> <span class="n">summary</span><span class="p">,</span> <span class="n">columns_from_list</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">survey_kit.utilities.formula_builder</span><span class="w"> </span><span class="kn">import</span> <span class="n">FormulaBuilder</span>
-
-
-<span class="n">path</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">config</span><span class="o">.</span><span class="n">code_root</span><span class="p">)</span>
-<span class="n">sys</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">normpath</span><span class="p">(</span><span class="n">path</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">parent</span> <span class="o">/</span> <span class="s2">"tests"</span><span class="p">))</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">scratch</span><span class="w"> </span><span class="kn">import</span> <span class="n">path_scratch</span>
-
-
-<span class="n">config</span><span class="o">.</span><span class="n">data_root</span> <span class="o">=</span> <span class="n">path_scratch</span><span class="p">(</span><span class="n">temp_file_suffix</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
 </div>
 </div>
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=3eba31ca">
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=129e2432">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -7604,14 +7592,14 @@ a.anchor-link {
 
 
 <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">"var_reg1 is binary and conditional on other variables"</span><span class="p">)</span>
-<span class="n">c_reg1</span> <span class="o">=</span> <span class="p">((</span><span class="n">c_var2</span> <span class="o">*</span> <span class="mi">2</span> <span class="o">-</span> <span class="n">c_var3</span> <span class="o">*</span> <span class="mi">3</span> <span class="o">*</span> <span class="n">c_var5</span> <span class="o">+</span> <span class="n">c_e_reg1</span><span class="p">)</span>  <span class="o">&gt;</span> <span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">alias</span><span class="p">(</span><span class="s2">"var_reg1"</span><span class="p">)</span>
+<span class="n">c_reg1</span> <span class="o">=</span> <span class="p">((</span><span class="n">c_var2</span> <span class="o">*</span> <span class="mi">2</span> <span class="o">-</span> <span class="n">c_var3</span> <span class="o">*</span> <span class="mi">3</span> <span class="o">*</span> <span class="n">c_var5</span> <span class="o">+</span> <span class="n">c_e_reg1</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">alias</span><span class="p">(</span><span class="s2">"var_reg1"</span><span class="p">)</span>
 
 <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">"var_reg2 is != 0 only if var_reg1 == True"</span><span class="p">)</span>
 <span class="n">c_reg2</span> <span class="o">=</span> <span class="p">(</span>
     <span class="n">pl</span><span class="o">.</span><span class="n">when</span><span class="p">(</span><span class="n">pl</span><span class="o">.</span><span class="n">col</span><span class="p">(</span><span class="s2">"var_reg1"</span><span class="p">))</span>
-      <span class="o">.</span><span class="n">then</span><span class="p">(((</span><span class="n">c_var2</span> <span class="o">*</span> <span class="mf">1.5</span> <span class="o">-</span> <span class="n">c_var3</span> <span class="o">*</span> <span class="mi">1</span> <span class="o">*</span> <span class="n">c_var4</span> <span class="o">+</span> <span class="n">c_e_reg2</span><span class="p">)))</span>
-      <span class="o">.</span><span class="n">otherwise</span><span class="p">(</span><span class="n">pl</span><span class="o">.</span><span class="n">lit</span><span class="p">(</span><span class="mi">0</span><span class="p">))</span>
-      <span class="o">.</span><span class="n">alias</span><span class="p">(</span><span class="s2">"var_reg2"</span><span class="p">)</span>
+    <span class="o">.</span><span class="n">then</span><span class="p">((</span><span class="n">c_var2</span> <span class="o">*</span> <span class="mf">1.5</span> <span class="o">-</span> <span class="n">c_var3</span> <span class="o">*</span> <span class="mi">1</span> <span class="o">*</span> <span class="n">c_var4</span> <span class="o">+</span> <span class="n">c_e_reg2</span><span class="p">))</span>
+    <span class="o">.</span><span class="n">otherwise</span><span class="p">(</span><span class="n">pl</span><span class="o">.</span><span class="n">lit</span><span class="p">(</span><span class="mi">0</span><span class="p">))</span>
+    <span class="o">.</span><span class="n">alias</span><span class="p">(</span><span class="s2">"var_reg2"</span><span class="p">)</span>
 <span class="p">)</span>
 <span class="c1">#   Create a bunch of variables that are functions of the variables created above</span>
 <span class="n">df</span> <span class="o">=</span> <span class="p">(</span>
@@ -7682,15 +7670,15 @@ a.anchor-link {
 │        var2 ┆ 10,000 ┆           0 ┆     4.9782 ┆    3.154508 ┆        0.0 ┆      10.0 │
 │        var3 ┆ 10,000 ┆           0 ┆    25.1084 ┆   14.752302 ┆        0.0 ┆      50.0 │
 │        var4 ┆ 10,000 ┆           0 ┆   0.505666 ┆    0.287861 ┆   0.000027 ┆  0.999997 │
-│        var5 ┆ 10,000 ┆           0 ┆     0.4999 ┆    0.500025 ┆        0.0 ┆       1.0 │
 │ unrelated_1 ┆ 10,000 ┆           0 ┆   0.502449 ┆    0.288359 ┆   0.000119 ┆  0.999997 │
 │ unrelated_2 ┆ 10,000 ┆           0 ┆   0.500105 ┆    0.287638 ┆   0.000049 ┆  0.999539 │
 │ unrelated_3 ┆ 10,000 ┆           0 ┆   0.499175 ┆     0.28876 ┆   0.000129 ┆   0.99994 │
 │ unrelated_4 ┆ 10,000 ┆           0 ┆   0.500655 ┆    0.288698 ┆   0.000133 ┆  0.999972 │
 │ unrelated_5 ┆ 10,000 ┆           0 ┆    0.49876 ┆    0.288979 ┆   0.000071 ┆  0.999867 │
-│    var_reg1 ┆ 10,000 ┆       2,569 ┆   0.523079 ┆    0.499501 ┆        0.0 ┆       1.0 │
 │    var_reg2 ┆ 10,000 ┆       2,476 ┆  -2.353019 ┆   10.232008 ┆ -55.354108 ┆ 26.213084 │
 │    repeat_1 ┆ 10,000 ┆           0 ┆   0.502449 ┆    0.288359 ┆   0.000119 ┆  0.999997 │
+│        var5 ┆ 10,000 ┆           0 ┆     0.4999 ┆    0.500025 ┆        0.0 ┆       1.0 │
+│    var_reg1 ┆ 10,000 ┆       2,569 ┆   0.523079 ┆    0.499501 ┆        0.0 ┆       1.0 │
 └─────────────┴────────┴─────────────┴────────────┴─────────────┴────────────┴───────────┘
 </pre>
 </div>
@@ -7700,12 +7688,12 @@ a.anchor-link {
 <div class="jp-RenderedHTMLCommon jp-RenderedHTML jp-OutputArea-output jp-OutputArea-executeResult" data-mime-type="text/html" tabindex="0">
 <i>naive plan: (run <b>LazyFrame.explain(optimized=True)</b> to see the optimized plan)</i>
 <p></p>
-<div>SELECT [col("Variable"), col("n"), col("n (missing)"), col("mean"), col("std"), col("min"), col("max")]<p></p>  UNION<p></p>    PLAN 0:<p></p>       WITH_COLUMNS:<p></p>       [col("n (missing)").cast(Int16), col("min").strict_cast(Float64), col("max").strict_cast(Float64)] <p></p>        SELECT [col("Variable"), col("n"), col("n (missing)"), col("mean"), col("std"), col("min"), col("max")]<p></p>           WITH_COLUMNS:<p></p>           ["_row_index_".alias("Variable")] <p></p>            SELECT [col("max"), col("n"), col("std"), col("min"), col("mean"), col("n (missing)")]<p></p>              SELECT [col("___index___"), col("_row_index__max").alias("max"), col("_row_index__rawn").alias("n"), col("_row_index__std").alias("std"), col("_row_index__min").alias("min"), col("_row_index__mean").alias("mean"), col("_row_index__rawn_missing").alias("n (missing)")]<p></p>                SELECT [col("___index___"), col("_row_index__max"), col("_row_index__rawn"), col("_row_index__std"), col("_row_index__min"), col("_row_index__mean"), col("_row_index__rawn_missing")]<p></p>                  DF ["___index___", "_row_index__rawn", "_row_index__mean", "_row_index__std", ...]; PROJECT */97 COLUMNS<p></p>    PLAN 1:<p></p>       WITH_COLUMNS:<p></p>       [col("n (missing)").cast(Int16), col("min").strict_cast(Float64), col("max").strict_cast(Float64)] <p></p>        SELECT [col("Variable"), col("n"), col("n (missing)"), col("mean"), col("std"), col("min"), col("max")]<p></p>           WITH_COLUMNS:<p></p>           ["index".alias("Variable")] <p></p>            SELECT [col("max"), col("n"), col("std"), col("min"), col("mean"), col("n (missing)")]<p></p>              SELECT [col("___index___"), col("index_max").alias("max"), col("index_rawn").alias("n"), col("index_std").alias("std"), col("index_min").alias("min"), col("index_mean").alias("mean"), col("index_rawn_missing").alias("n (missing)")]<p></p>                SELECT [col("___index___"), col("index_max"), col("index_rawn"), col("index_std"), col("index_min"), col("index_mean"), col("index_rawn_missing")]<p></p>                  DF ["___index___", "_row_index__rawn", "_row_index__mean", "_row_index__std", ...]; PROJECT */97 COLUMNS<p></p>    PLAN 2:<p></p>       WITH_COLUMNS:<p></p>       [col("n (missing)").cast(Int16), col("min").strict_cast(Float64), col("max").strict_cast(Float64)] <p></p>        SELECT [col("Variable"), col("n"), col("n (missing)"), col("mean"), col("std"), col("min"), col("max")]<p></p>           WITH_COLUMNS:<p></p>           ["year".alias("Variable")] <p></p>            SELECT [col("max"), col("n"), col("std"), col("min"), col("mean"), col("n (missing)")]<p></p>              SELECT [col("___index___"), col("year_max").alias("max"), col("year_rawn").alias("n"), col("year_std").alias("std"), col("year_min").alias("min"), col("year_mean").alias("mean"), col("year_rawn_missing").alias("n (missing)")]<p></p>                SELECT [col("___index___"), col("year_max"), col("year_rawn"), col("year_std"), col("year_min"), col("year_mean"), col("year_rawn_missing")]<p></p>                  DF ["___index___", "_row_index__rawn", "_row_index__mean", "_row_index__std", ...]; PROJECT */97 COLUMNS<p></p>    PLAN 3:<p></p>       WITH_COLUMNS:<p></p>       [col("n (missing)").cast(Int16), col("min").strict_cast(Float64), col("max").strict_cast(Float64)] <p></p>        SELECT [col("Variable"), col("n"), col("n (missing)"), col("mean"), col("std"), col("min"), col("max")]<p></p>           WITH_COLUMNS:<p></p>           ["month".alias("Variable")] <p></p>            SELECT [col("max"), col("n"), col("std"), col("min"), col("mean"), col("n (missing)")]<p></p>              SELECT [col("___index___"), col("month_max").alias("max"), col("month_rawn").alias("n"), col("month_std").alias("std"), col("month_min").alias("min"), col("month_mean").alias("mean"), col("month_rawn_missing").alias("n (missing)")]<p></p>                SELECT [col("___index___"), col("month_max"), col("month_rawn"), col("month_std"), col("month_min"), col("month_mean"), col("month_rawn_missing")]<p></p>                  DF ["___index___", "_row_index__rawn", "_row_index__mean", "_row_index__std", ...]; PROJECT */97 COLUMNS<p></p>    PLAN 4:<p></p>       WITH_COLUMNS:<p></p>       [col("n (missing)").cast(Int16), col("min").strict_cast(Float64), col("max").strict_cast(Float64)] <p></p>        SELECT [col("Variable"), col("n"), col("n (missing)"), col("mean"), col("std"), col("min"), col("max")]<p></p>           WITH_COLUMNS:<p></p>           ["var2".alias("Variable")] <p></p>            SELECT [col("max"), col("n"), col("std"), col("min"), col("mean"), col("n (missing)")]<p></p>              SELECT [col("___index___"), col("var2_max").alias("max"), col("var2_rawn").alias("n"), col("var2_std").alias("std"), col("var2_min").alias("min"), col("var2_mean").alias("mean"), col("var2_rawn_missing").alias("n (missing)")]<p></p>                SELECT [col("___index___"), col("var2_max"), col("var2_rawn"), col("var2_std"), col("var2_min"), col("var2_mean"), col("var2_rawn_missing")]<p></p>                  DF ["___index___", "_row_index__rawn", "_row_index__mean", "_row_index__std", ...]; PROJECT */97 COLUMNS<p></p>    PLAN 5:<p></p>       WITH_COLUMNS:<p></p>       [col("n (missing)").cast(Int16), col("min").strict_cast(Float64), col("max").strict_cast(Float64)] <p></p>        SELECT [col("Variable"), col("n"), col("n (missing)"), col("mean"), col("std"), col("min"), col("max")]<p></p>           WITH_COLUMNS:<p></p>           ["var3".alias("Variable")] <p></p>            SELECT [col("max"), col("n"), col("std"), col("min"), col("mean"), col("n (missing)")]<p></p>              SELECT [col("___index___"), col("var3_max").alias("max"), col("var3_rawn").alias("n"), col("var3_std").alias("std"), col("var3_min").alias("min"), col("var3_mean").alias("mean"), col("var3_rawn_missing").alias("n (missing)")]<p></p>                SELECT [col("___index___"), col("var3_max"), col("var3_rawn"), col("var3_std"), col("var3_min"), col("var3_mean"), col("var3_rawn_missing")]<p></p>                  DF ["___index___", "_row_index__rawn", "_row_index__mean", "_row_index__std", ...]; PROJECT */97 COLUMNS<p></p>    PLAN 6:<p></p>       WITH_COLUMNS:<p></p>       [col("n (missing)").cast(Int16)] <p></p>        SELECT [col("Variable"), col("n"), col("n (missing)"), col("mean"), col("std"), col("min"), col("max")]<p></p>           WITH_COLUMNS:<p></p>           ["var4".alias("Variable")] <p></p>            SELECT [col("max"), col("n"), col("std"), col("min"), col("mean"), col("n (missing)")]<p></p>              SELECT [col("___index___"), col("var4_max").alias("max"), col("var4_rawn").alias("n"), col("var4_std").alias("std"), col("var4_min").alias("min"), col("var4_mean").alias("mean"), col("var4_rawn_missing").alias("n (missing)")]<p></p>                SELECT [col("___index___"), col("var4_max"), col("var4_rawn"), col("var4_std"), col("var4_min"), col("var4_mean"), col("var4_rawn_missing")]<p></p>                  DF ["___index___", "_row_index__rawn", "_row_index__mean", "_row_index__std", ...]; PROJECT */97 COLUMNS<p></p>    PLAN 7:<p></p>       WITH_COLUMNS:<p></p>       [col("n (missing)").cast(Int16), col("min").strict_cast(Float64), col("max").strict_cast(Float64)] <p></p>        SELECT [col("Variable"), col("n"), col("n (missing)"), col("mean"), col("std"), col("min"), col("max")]<p></p>           WITH_COLUMNS:<p></p>           ["var5".alias("Variable")] <p></p>            SELECT [col("max"), col("n"), col("std"), col("min"), col("mean"), col("n (missing)")]<p></p>              SELECT [col("___index___"), col("var5_max").alias("max"), col("var5_rawn").alias("n"), col("var5_std").alias("std"), col("var5_min").alias("min"), col("var5_mean").alias("mean"), col("var5_rawn_missing").alias("n (missing)")]<p></p>                SELECT [col("___index___"), col("var5_max"), col("var5_rawn"), col("var5_std"), col("var5_min"), col("var5_mean"), col("var5_rawn_missing")]<p></p>                  DF ["___index___", "_row_index__rawn", "_row_index__mean", "_row_index__std", ...]; PROJECT */97 COLUMNS<p></p>    PLAN 8:<p></p>       WITH_COLUMNS:<p></p>       [col("n (missing)").cast(Int16)] <p></p>        SELECT [col("Variable"), col("n"), col("n (missing)"), col("mean"), col("std"), col("min"), col("max")]<p></p>           WITH_COLUMNS:<p></p>           ["unrelated_1".alias("Variable")] <p></p>            SELECT [col("max"), col("n"), col("std"), col("min"), col("mean"), col("n (missing)")]<p></p>              SELECT [col("___index___"), col("unrelated_1_max").alias("max"), col("unrelated_1_rawn").alias("n"), col("unrelated_1_std").alias("std"), col("unrelated_1_min").alias("min"), col("unrelated_1_mean").alias("mean"), col("unrelated_1_rawn_missing").alias("n (missing)")]<p></p>                SELECT [col("___index___"), col("unrelated_1_max"), col("unrelated_1_rawn"), col("unrelated_1_std"), col("unrelated_1_min"), col("unrelated_1_mean"), col("unrelated_1_rawn_missing")]<p></p>                  DF ["___index___", "_row_index__rawn", "_row_index__mean", "_row_index__std", ...]; PROJECT */97 COLUMNS<p></p>    PLAN 9:<p></p>       WITH_COLUMNS:<p></p>       [col("n (missing)").cast(Int16)] <p></p>        SELECT [col("Variable"), col("n"), col("n (missing)"), col("mean"), col("std"), col("min"), col("max")]<p></p>           WITH_COLUMNS:<p></p>           ["unrelated_2".alias("Variable")] <p></p>            SELECT [col("max"), col("n"), col("std"), col("min"), col("mean"), col("n (missing)")]<p></p>              SELECT [col("___index___"), col("unrelated_2_max").alias("max"), col("unrelated_2_rawn").alias("n"), col("unrelated_2_std").alias("std"), col("unrelated_2_min").alias("min"), col("unrelated_2_mean").alias("mean"), col("unrelated_2_rawn_missing").alias("n (missing)")]<p></p>                SELECT [col("___index___"), col("unrelated_2_max"), col("unrelated_2_rawn"), col("unrelated_2_std"), col("unrelated_2_min"), col("unrelated_2_mean"), col("unrelated_2_rawn_missing")]<p></p>                  DF ["___index___", "_row_index__rawn", "_row_index__mean", "_row_index__std", ...]; PROJECT */97 COLUMNS<p></p>    PLAN 10:<p></p>       WITH_COLUMNS:<p></p>       [col("n (missing)").cast(Int16)] <p></p>        SELECT [col("Variable"), col("n"), col("n (missing)"), col("mean"), col("std"), col("min"), col("max")]<p></p>           WITH_COLUMNS:<p></p>           ["unrelated_3".alias("Variable")] <p></p>            SELECT [col("max"), col("n"), col("std"), col("min"), col("mean"), col("n (missing)")]<p></p>              SELECT [col("___index___"), col("unrelated_3_max").alias("max"), col("unrelated_3_rawn").alias("n"), col("unrelated_3_std").alias("std"), col("unrelated_3_min").alias("min"), col("unrelated_3_mean").alias("mean"), col("unrelated_3_rawn_missing").alias("n (missing)")]<p></p>                SELECT [col("___index___"), col("unrelated_3_max"), col("unrelated_3_rawn"), col("unrelated_3_std"), col("unrelated_3_min"), col("unrelated_3_mean"), col("unrelated_3_rawn_missing")]<p></p>                  DF ["___index___", "_row_index__rawn", "_row_index__mean", "_row_index__std", ...]; PROJECT */97 COLUMNS<p></p>    PLAN 11:<p></p>       WITH_COLUMNS:<p></p>       [col("n (missing)").cast(Int16)] <p></p>        SELECT [col("Variable"), col("n"), col("n (missing)"), col("mean"), col("std"), col("min"), col("max")]<p></p>           WITH_COLUMNS:<p></p>           ["unrelated_4".alias("Variable")] <p></p>            SELECT [col("max"), col("n"), col("std"), col("min"), col("mean"), col("n (missing)")]<p></p>              SELECT [col("___index___"), col("unrelated_4_max").alias("max"), col("unrelated_4_rawn").alias("n"), col("unrelated_4_std").alias("std"), col("unrelated_4_min").alias("min"), col("unrelated_4_mean").alias("mean"), col("unrelated_4_rawn_missing").alias("n (missing)")]<p></p>                SELECT [col("___index___"), col("unrelated_4_max"), col("unrelated_4_rawn"), col("unrelated_4_std"), col("unrelated_4_min"), col("unrelated_4_mean"), col("unrelated_4_rawn_missing")]<p></p>                  DF ["___index___", "_row_index__rawn", "_row_index__mean", "_row_index__std", ...]; PROJECT */97 COLUMNS<p></p>    PLAN 12:<p></p>       WITH_COLUMNS:<p></p>       [col("n (missing)").cast(Int16)] <p></p>        SELECT [col("Variable"), col("n"), col("n (missing)"), col("mean"), col("std"), col("min"), col("max")]<p></p>           WITH_COLUMNS:<p></p>           ["unrelated_5".alias("Variable")] <p></p>            SELECT [col("max"), col("n"), col("std"), col("min"), col("mean"), col("n (missing)")]<p></p>              SELECT [col("___index___"), col("unrelated_5_max").alias("max"), col("unrelated_5_rawn").alias("n"), col("unrelated_5_std").alias("std"), col("unrelated_5_min").alias("min"), col("unrelated_5_mean").alias("mean"), col("unrelated_5_rawn_missing").alias("n (missing)")]<p></p>                SELECT [col("___index___"), col("unrelated_5_max"), col("unrelated_5_rawn"), col("unrelated_5_std"), col("unrelated_5_min"), col("unrelated_5_mean"), col("unrelated_5_rawn_missing")]<p></p>                  DF ["___index___", "_row_index__rawn", "_row_index__mean", "_row_index__std", ...]; PROJECT */97 COLUMNS<p></p>    PLAN 13:<p></p>       WITH_COLUMNS:<p></p>       [col("min").strict_cast(Float64), col("max").strict_cast(Float64)] <p></p>        SELECT [col("Variable"), col("n"), col("n (missing)"), col("mean"), col("std"), col("min"), col("max")]<p></p>           WITH_COLUMNS:<p></p>           ["var_reg1".alias("Variable")] <p></p>            SELECT [col("max"), col("n"), col("std"), col("min"), col("mean"), col("n (missing)")]<p></p>              SELECT [col("___index___"), col("var_reg1_max").alias("max"), col("var_reg1_rawn").alias("n"), col("var_reg1_std").alias("std"), col("var_reg1_min").alias("min"), col("var_reg1_mean").alias("mean"), col("var_reg1_rawn_missing").alias("n (missing)")]<p></p>                SELECT [col("___index___"), col("var_reg1_max"), col("var_reg1_rawn"), col("var_reg1_std"), col("var_reg1_min"), col("var_reg1_mean"), col("var_reg1_rawn_missing")]<p></p>                  DF ["___index___", "_row_index__rawn", "_row_index__mean", "_row_index__std", ...]; PROJECT */97 COLUMNS<p></p>    PLAN 14:<p></p>      SELECT [col("Variable"), col("n"), col("n (missing)"), col("mean"), col("std"), col("min"), col("max")]<p></p>         WITH_COLUMNS:<p></p>         ["var_reg2".alias("Variable")] <p></p>          SELECT [col("max"), col("n"), col("std"), col("min"), col("mean"), col("n (missing)")]<p></p>            SELECT [col("___index___"), col("var_reg2_max").alias("max"), col("var_reg2_rawn").alias("n"), col("var_reg2_std").alias("std"), col("var_reg2_min").alias("min"), col("var_reg2_mean").alias("mean"), col("var_reg2_rawn_missing").alias("n (missing)")]<p></p>              SELECT [col("___index___"), col("var_reg2_max"), col("var_reg2_rawn"), col("var_reg2_std"), col("var_reg2_min"), col("var_reg2_mean"), col("var_reg2_rawn_missing")]<p></p>                DF ["___index___", "_row_index__rawn", "_row_index__mean", "_row_index__std", ...]; PROJECT */97 COLUMNS<p></p>    PLAN 15:<p></p>       WITH_COLUMNS:<p></p>       [col("n (missing)").cast(Int16)] <p></p>        SELECT [col("Variable"), col("n"), col("n (missing)"), col("mean"), col("std"), col("min"), col("max")]<p></p>           WITH_COLUMNS:<p></p>           ["repeat_1".alias("Variable")] <p></p>            SELECT [col("max"), col("n"), col("std"), col("min"), col("mean"), col("n (missing)")]<p></p>              SELECT [col("___index___"), col("repeat_1_max").alias("max"), col("repeat_1_rawn").alias("n"), col("repeat_1_std").alias("std"), col("repeat_1_min").alias("min"), col("repeat_1_mean").alias("mean"), col("repeat_1_rawn_missing").alias("n (missing)")]<p></p>                SELECT [col("___index___"), col("repeat_1_max"), col("repeat_1_rawn"), col("repeat_1_std"), col("repeat_1_min"), col("repeat_1_mean"), col("repeat_1_rawn_missing")]<p></p>                  DF ["___index___", "_row_index__rawn", "_row_index__mean", "_row_index__std", ...]; PROJECT */97 COLUMNS<p></p>  END UNION</div>
+<div>SELECT [col("Variable"), col("n"), col("n (missing)"), col("mean"), col("std"), col("min"), col("max")]<p></p>  UNION<p></p>    PLAN 0:<p></p>       WITH_COLUMNS:<p></p>       [col("n (missing)").cast(Int16), col("min").strict_cast(Float64), col("max").strict_cast(Float64)] <p></p>        SELECT [col("Variable"), col("n"), col("n (missing)"), col("mean"), col("std"), col("min"), col("max")]<p></p>           WITH_COLUMNS:<p></p>           ["_row_index_".alias("Variable")] <p></p>            SELECT [col("max"), col("min"), col("mean"), col("std"), col("n"), col("n (missing)")]<p></p>              SELECT [col("___index___"), col("_row_index__max").alias("max"), col("_row_index__min").alias("min"), col("_row_index__mean").alias("mean"), col("_row_index__std").alias("std"), col("_row_index__rawn").alias("n"), col("_row_index__rawn_missing").alias("n (missing)")]<p></p>                SELECT [col("___index___"), col("_row_index__max"), col("_row_index__min"), col("_row_index__mean"), col("_row_index__std"), col("_row_index__rawn"), col("_row_index__rawn_missing")]<p></p>                  DF ["___index___", "_row_index__rawn", "_row_index__mean", "_row_index__std", ...]; PROJECT */97 COLUMNS<p></p>    PLAN 1:<p></p>       WITH_COLUMNS:<p></p>       [col("n (missing)").cast(Int16), col("min").strict_cast(Float64), col("max").strict_cast(Float64)] <p></p>        SELECT [col("Variable"), col("n"), col("n (missing)"), col("mean"), col("std"), col("min"), col("max")]<p></p>           WITH_COLUMNS:<p></p>           ["index".alias("Variable")] <p></p>            SELECT [col("max"), col("min"), col("mean"), col("std"), col("n"), col("n (missing)")]<p></p>              SELECT [col("___index___"), col("index_max").alias("max"), col("index_min").alias("min"), col("index_mean").alias("mean"), col("index_std").alias("std"), col("index_rawn").alias("n"), col("index_rawn_missing").alias("n (missing)")]<p></p>                SELECT [col("___index___"), col("index_max"), col("index_min"), col("index_mean"), col("index_std"), col("index_rawn"), col("index_rawn_missing")]<p></p>                  DF ["___index___", "_row_index__rawn", "_row_index__mean", "_row_index__std", ...]; PROJECT */97 COLUMNS<p></p>    PLAN 2:<p></p>       WITH_COLUMNS:<p></p>       [col("n (missing)").cast(Int16), col("min").strict_cast(Float64), col("max").strict_cast(Float64)] <p></p>        SELECT [col("Variable"), col("n"), col("n (missing)"), col("mean"), col("std"), col("min"), col("max")]<p></p>           WITH_COLUMNS:<p></p>           ["year".alias("Variable")] <p></p>            SELECT [col("max"), col("min"), col("mean"), col("std"), col("n"), col("n (missing)")]<p></p>              SELECT [col("___index___"), col("year_max").alias("max"), col("year_min").alias("min"), col("year_mean").alias("mean"), col("year_std").alias("std"), col("year_rawn").alias("n"), col("year_rawn_missing").alias("n (missing)")]<p></p>                SELECT [col("___index___"), col("year_max"), col("year_min"), col("year_mean"), col("year_std"), col("year_rawn"), col("year_rawn_missing")]<p></p>                  DF ["___index___", "_row_index__rawn", "_row_index__mean", "_row_index__std", ...]; PROJECT */97 COLUMNS<p></p>    PLAN 3:<p></p>       WITH_COLUMNS:<p></p>       [col("n (missing)").cast(Int16), col("min").strict_cast(Float64), col("max").strict_cast(Float64)] <p></p>        SELECT [col("Variable"), col("n"), col("n (missing)"), col("mean"), col("std"), col("min"), col("max")]<p></p>           WITH_COLUMNS:<p></p>           ["month".alias("Variable")] <p></p>            SELECT [col("max"), col("min"), col("mean"), col("std"), col("n"), col("n (missing)")]<p></p>              SELECT [col("___index___"), col("month_max").alias("max"), col("month_min").alias("min"), col("month_mean").alias("mean"), col("month_std").alias("std"), col("month_rawn").alias("n"), col("month_rawn_missing").alias("n (missing)")]<p></p>                SELECT [col("___index___"), col("month_max"), col("month_min"), col("month_mean"), col("month_std"), col("month_rawn"), col("month_rawn_missing")]<p></p>                  DF ["___index___", "_row_index__rawn", "_row_index__mean", "_row_index__std", ...]; PROJECT */97 COLUMNS<p></p>    PLAN 4:<p></p>       WITH_COLUMNS:<p></p>       [col("n (missing)").cast(Int16), col("min").strict_cast(Float64), col("max").strict_cast(Float64)] <p></p>        SELECT [col("Variable"), col("n"), col("n (missing)"), col("mean"), col("std"), col("min"), col("max")]<p></p>           WITH_COLUMNS:<p></p>           ["var2".alias("Variable")] <p></p>            SELECT [col("max"), col("min"), col("mean"), col("std"), col("n"), col("n (missing)")]<p></p>              SELECT [col("___index___"), col("var2_max").alias("max"), col("var2_min").alias("min"), col("var2_mean").alias("mean"), col("var2_std").alias("std"), col("var2_rawn").alias("n"), col("var2_rawn_missing").alias("n (missing)")]<p></p>                SELECT [col("___index___"), col("var2_max"), col("var2_min"), col("var2_mean"), col("var2_std"), col("var2_rawn"), col("var2_rawn_missing")]<p></p>                  DF ["___index___", "_row_index__rawn", "_row_index__mean", "_row_index__std", ...]; PROJECT */97 COLUMNS<p></p>    PLAN 5:<p></p>       WITH_COLUMNS:<p></p>       [col("n (missing)").cast(Int16), col("min").strict_cast(Float64), col("max").strict_cast(Float64)] <p></p>        SELECT [col("Variable"), col("n"), col("n (missing)"), col("mean"), col("std"), col("min"), col("max")]<p></p>           WITH_COLUMNS:<p></p>           ["var3".alias("Variable")] <p></p>            SELECT [col("max"), col("min"), col("mean"), col("std"), col("n"), col("n (missing)")]<p></p>              SELECT [col("___index___"), col("var3_max").alias("max"), col("var3_min").alias("min"), col("var3_mean").alias("mean"), col("var3_std").alias("std"), col("var3_rawn").alias("n"), col("var3_rawn_missing").alias("n (missing)")]<p></p>                SELECT [col("___index___"), col("var3_max"), col("var3_min"), col("var3_mean"), col("var3_std"), col("var3_rawn"), col("var3_rawn_missing")]<p></p>                  DF ["___index___", "_row_index__rawn", "_row_index__mean", "_row_index__std", ...]; PROJECT */97 COLUMNS<p></p>    PLAN 6:<p></p>       WITH_COLUMNS:<p></p>       [col("n (missing)").cast(Int16)] <p></p>        SELECT [col("Variable"), col("n"), col("n (missing)"), col("mean"), col("std"), col("min"), col("max")]<p></p>           WITH_COLUMNS:<p></p>           ["var4".alias("Variable")] <p></p>            SELECT [col("max"), col("min"), col("mean"), col("std"), col("n"), col("n (missing)")]<p></p>              SELECT [col("___index___"), col("var4_max").alias("max"), col("var4_min").alias("min"), col("var4_mean").alias("mean"), col("var4_std").alias("std"), col("var4_rawn").alias("n"), col("var4_rawn_missing").alias("n (missing)")]<p></p>                SELECT [col("___index___"), col("var4_max"), col("var4_min"), col("var4_mean"), col("var4_std"), col("var4_rawn"), col("var4_rawn_missing")]<p></p>                  DF ["___index___", "_row_index__rawn", "_row_index__mean", "_row_index__std", ...]; PROJECT */97 COLUMNS<p></p>    PLAN 7:<p></p>       WITH_COLUMNS:<p></p>       [col("n (missing)").cast(Int16)] <p></p>        SELECT [col("Variable"), col("n"), col("n (missing)"), col("mean"), col("std"), col("min"), col("max")]<p></p>           WITH_COLUMNS:<p></p>           ["unrelated_1".alias("Variable")] <p></p>            SELECT [col("max"), col("min"), col("mean"), col("std"), col("n"), col("n (missing)")]<p></p>              SELECT [col("___index___"), col("unrelated_1_max").alias("max"), col("unrelated_1_min").alias("min"), col("unrelated_1_mean").alias("mean"), col("unrelated_1_std").alias("std"), col("unrelated_1_rawn").alias("n"), col("unrelated_1_rawn_missing").alias("n (missing)")]<p></p>                SELECT [col("___index___"), col("unrelated_1_max"), col("unrelated_1_min"), col("unrelated_1_mean"), col("unrelated_1_std"), col("unrelated_1_rawn"), col("unrelated_1_rawn_missing")]<p></p>                  DF ["___index___", "_row_index__rawn", "_row_index__mean", "_row_index__std", ...]; PROJECT */97 COLUMNS<p></p>    PLAN 8:<p></p>       WITH_COLUMNS:<p></p>       [col("n (missing)").cast(Int16)] <p></p>        SELECT [col("Variable"), col("n"), col("n (missing)"), col("mean"), col("std"), col("min"), col("max")]<p></p>           WITH_COLUMNS:<p></p>           ["unrelated_2".alias("Variable")] <p></p>            SELECT [col("max"), col("min"), col("mean"), col("std"), col("n"), col("n (missing)")]<p></p>              SELECT [col("___index___"), col("unrelated_2_max").alias("max"), col("unrelated_2_min").alias("min"), col("unrelated_2_mean").alias("mean"), col("unrelated_2_std").alias("std"), col("unrelated_2_rawn").alias("n"), col("unrelated_2_rawn_missing").alias("n (missing)")]<p></p>                SELECT [col("___index___"), col("unrelated_2_max"), col("unrelated_2_min"), col("unrelated_2_mean"), col("unrelated_2_std"), col("unrelated_2_rawn"), col("unrelated_2_rawn_missing")]<p></p>                  DF ["___index___", "_row_index__rawn", "_row_index__mean", "_row_index__std", ...]; PROJECT */97 COLUMNS<p></p>    PLAN 9:<p></p>       WITH_COLUMNS:<p></p>       [col("n (missing)").cast(Int16)] <p></p>        SELECT [col("Variable"), col("n"), col("n (missing)"), col("mean"), col("std"), col("min"), col("max")]<p></p>           WITH_COLUMNS:<p></p>           ["unrelated_3".alias("Variable")] <p></p>            SELECT [col("max"), col("min"), col("mean"), col("std"), col("n"), col("n (missing)")]<p></p>              SELECT [col("___index___"), col("unrelated_3_max").alias("max"), col("unrelated_3_min").alias("min"), col("unrelated_3_mean").alias("mean"), col("unrelated_3_std").alias("std"), col("unrelated_3_rawn").alias("n"), col("unrelated_3_rawn_missing").alias("n (missing)")]<p></p>                SELECT [col("___index___"), col("unrelated_3_max"), col("unrelated_3_min"), col("unrelated_3_mean"), col("unrelated_3_std"), col("unrelated_3_rawn"), col("unrelated_3_rawn_missing")]<p></p>                  DF ["___index___", "_row_index__rawn", "_row_index__mean", "_row_index__std", ...]; PROJECT */97 COLUMNS<p></p>    PLAN 10:<p></p>       WITH_COLUMNS:<p></p>       [col("n (missing)").cast(Int16)] <p></p>        SELECT [col("Variable"), col("n"), col("n (missing)"), col("mean"), col("std"), col("min"), col("max")]<p></p>           WITH_COLUMNS:<p></p>           ["unrelated_4".alias("Variable")] <p></p>            SELECT [col("max"), col("min"), col("mean"), col("std"), col("n"), col("n (missing)")]<p></p>              SELECT [col("___index___"), col("unrelated_4_max").alias("max"), col("unrelated_4_min").alias("min"), col("unrelated_4_mean").alias("mean"), col("unrelated_4_std").alias("std"), col("unrelated_4_rawn").alias("n"), col("unrelated_4_rawn_missing").alias("n (missing)")]<p></p>                SELECT [col("___index___"), col("unrelated_4_max"), col("unrelated_4_min"), col("unrelated_4_mean"), col("unrelated_4_std"), col("unrelated_4_rawn"), col("unrelated_4_rawn_missing")]<p></p>                  DF ["___index___", "_row_index__rawn", "_row_index__mean", "_row_index__std", ...]; PROJECT */97 COLUMNS<p></p>    PLAN 11:<p></p>       WITH_COLUMNS:<p></p>       [col("n (missing)").cast(Int16)] <p></p>        SELECT [col("Variable"), col("n"), col("n (missing)"), col("mean"), col("std"), col("min"), col("max")]<p></p>           WITH_COLUMNS:<p></p>           ["unrelated_5".alias("Variable")] <p></p>            SELECT [col("max"), col("min"), col("mean"), col("std"), col("n"), col("n (missing)")]<p></p>              SELECT [col("___index___"), col("unrelated_5_max").alias("max"), col("unrelated_5_min").alias("min"), col("unrelated_5_mean").alias("mean"), col("unrelated_5_std").alias("std"), col("unrelated_5_rawn").alias("n"), col("unrelated_5_rawn_missing").alias("n (missing)")]<p></p>                SELECT [col("___index___"), col("unrelated_5_max"), col("unrelated_5_min"), col("unrelated_5_mean"), col("unrelated_5_std"), col("unrelated_5_rawn"), col("unrelated_5_rawn_missing")]<p></p>                  DF ["___index___", "_row_index__rawn", "_row_index__mean", "_row_index__std", ...]; PROJECT */97 COLUMNS<p></p>    PLAN 12:<p></p>      SELECT [col("Variable"), col("n"), col("n (missing)"), col("mean"), col("std"), col("min"), col("max")]<p></p>         WITH_COLUMNS:<p></p>         ["var_reg2".alias("Variable")] <p></p>          SELECT [col("max"), col("min"), col("mean"), col("std"), col("n"), col("n (missing)")]<p></p>            SELECT [col("___index___"), col("var_reg2_max").alias("max"), col("var_reg2_min").alias("min"), col("var_reg2_mean").alias("mean"), col("var_reg2_std").alias("std"), col("var_reg2_rawn").alias("n"), col("var_reg2_rawn_missing").alias("n (missing)")]<p></p>              SELECT [col("___index___"), col("var_reg2_max"), col("var_reg2_min"), col("var_reg2_mean"), col("var_reg2_std"), col("var_reg2_rawn"), col("var_reg2_rawn_missing")]<p></p>                DF ["___index___", "_row_index__rawn", "_row_index__mean", "_row_index__std", ...]; PROJECT */97 COLUMNS<p></p>    PLAN 13:<p></p>       WITH_COLUMNS:<p></p>       [col("n (missing)").cast(Int16)] <p></p>        SELECT [col("Variable"), col("n"), col("n (missing)"), col("mean"), col("std"), col("min"), col("max")]<p></p>           WITH_COLUMNS:<p></p>           ["repeat_1".alias("Variable")] <p></p>            SELECT [col("max"), col("min"), col("mean"), col("std"), col("n"), col("n (missing)")]<p></p>              SELECT [col("___index___"), col("repeat_1_max").alias("max"), col("repeat_1_min").alias("min"), col("repeat_1_mean").alias("mean"), col("repeat_1_std").alias("std"), col("repeat_1_rawn").alias("n"), col("repeat_1_rawn_missing").alias("n (missing)")]<p></p>                SELECT [col("___index___"), col("repeat_1_max"), col("repeat_1_min"), col("repeat_1_mean"), col("repeat_1_std"), col("repeat_1_rawn"), col("repeat_1_rawn_missing")]<p></p>                  DF ["___index___", "_row_index__rawn", "_row_index__mean", "_row_index__std", ...]; PROJECT */97 COLUMNS<p></p>    PLAN 14:<p></p>       WITH_COLUMNS:<p></p>       [col("n (missing)").cast(Int16), col("min").strict_cast(Float64), col("max").strict_cast(Float64)] <p></p>        SELECT [col("Variable"), col("n"), col("n (missing)"), col("mean"), col("std"), col("min"), col("max")]<p></p>           WITH_COLUMNS:<p></p>           ["var5".alias("Variable")] <p></p>            SELECT [col("max"), col("min"), col("mean"), col("std"), col("n"), col("n (missing)")]<p></p>              SELECT [col("___index___"), col("var5_max").alias("max"), col("var5_min").alias("min"), col("var5_mean").alias("mean"), col("var5_std").alias("std"), col("var5_rawn").alias("n"), col("var5_rawn_missing").alias("n (missing)")]<p></p>                SELECT [col("___index___"), col("var5_max"), col("var5_min"), col("var5_mean"), col("var5_std"), col("var5_rawn"), col("var5_rawn_missing")]<p></p>                  DF ["___index___", "_row_index__rawn", "_row_index__mean", "_row_index__std", ...]; PROJECT */97 COLUMNS<p></p>    PLAN 15:<p></p>       WITH_COLUMNS:<p></p>       [col("min").strict_cast(Float64), col("max").strict_cast(Float64)] <p></p>        SELECT [col("Variable"), col("n"), col("n (missing)"), col("mean"), col("std"), col("min"), col("max")]<p></p>           WITH_COLUMNS:<p></p>           ["var_reg1".alias("Variable")] <p></p>            SELECT [col("max"), col("min"), col("mean"), col("std"), col("n"), col("n (missing)")]<p></p>              SELECT [col("___index___"), col("var_reg1_max").alias("max"), col("var_reg1_min").alias("min"), col("var_reg1_mean").alias("mean"), col("var_reg1_std").alias("std"), col("var_reg1_rawn").alias("n"), col("var_reg1_rawn_missing").alias("n (missing)")]<p></p>                SELECT [col("___index___"), col("var_reg1_max"), col("var_reg1_min"), col("var_reg1_mean"), col("var_reg1_std"), col("var_reg1_rawn"), col("var_reg1_rawn_missing")]<p></p>                  DF ["___index___", "_row_index__rawn", "_row_index__mean", "_row_index__std", ...]; PROJECT */97 COLUMNS<p></p>  END UNION</div>
 </div>
 </div>
 </div>
 </div>
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=9957efc5">
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=41935615">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -7713,7 +7701,9 @@ a.anchor-link {
 <div class="jp-InputPrompt jp-InputArea-prompt">In [3]:</div>
 <div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
 <div class="cm-editor cm-s-jupyter">
-<div class="highlight hl-ipython3"><pre><span></span><span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">"Define the regression model (intentionally include some extraneous variables"</span><span class="p">)</span>
+<div class="highlight hl-ipython3"><pre><span></span><span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span>
+    <span class="s2">"Define the regression model (intentionally include some extraneous variables"</span>
+<span class="p">)</span>
 
 <span class="n">f_model</span> <span class="o">=</span> <span class="n">FormulaBuilder</span><span class="p">(</span><span class="n">df</span><span class="o">=</span><span class="n">df</span><span class="p">)</span>
 <span class="n">f_model</span><span class="o">.</span><span class="n">formula_with_varnames_in_brackets</span><span class="p">(</span>
@@ -7745,7 +7735,7 @@ a.anchor-link {
 </div>
 </div>
 </div>
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=3a5e1374">
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=7d8fd8b8">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -7763,7 +7753,7 @@ a.anchor-link {
     <span class="n">impute_var</span><span class="o">=</span><span class="s2">"var_reg1"</span><span class="p">,</span>
     <span class="n">modeltype</span><span class="o">=</span><span class="n">Variable</span><span class="o">.</span><span class="n">ModelType</span><span class="o">.</span><span class="n">pmm</span><span class="p">,</span>
     <span class="n">model</span><span class="o">=</span><span class="n">f_model</span><span class="o">.</span><span class="n">formula</span><span class="p">,</span>
-    <span class="n">parameters</span><span class="o">=</span><span class="n">Parameters</span><span class="o">.</span><span class="n">Regression</span><span class="p">(</span><span class="n">model</span><span class="o">=</span><span class="n">Parameters</span><span class="o">.</span><span class="n">RegressionModel</span><span class="o">.</span><span class="n">Logit</span><span class="p">)</span>
+    <span class="n">parameters</span><span class="o">=</span><span class="n">Parameters</span><span class="o">.</span><span class="n">Regression</span><span class="p">(</span><span class="n">model</span><span class="o">=</span><span class="n">Parameters</span><span class="o">.</span><span class="n">RegressionModel</span><span class="o">.</span><span class="n">Logit</span><span class="p">),</span>
 <span class="p">)</span>
 <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">"Add the variable to the list to be imputed"</span><span class="p">)</span>
 <span class="n">vars_impute</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">v_reg1</span><span class="p">)</span>
@@ -7775,17 +7765,19 @@ a.anchor-link {
 <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">"   as well as a post-processing edit to set var_reg2=0 when var_reg1==0"</span><span class="p">)</span>
 <span class="n">v_reg2</span> <span class="o">=</span> <span class="n">Variable</span><span class="p">(</span>
     <span class="n">impute_var</span><span class="o">=</span><span class="s2">"var_reg2"</span><span class="p">,</span>
-    <span class="n">Where</span><span class="o">=</span><span class="n">nw</span><span class="o">.</span><span class="n">col</span><span class="p">(</span><span class="s2">"var_reg1"</span><span class="p">),</span>
+    <span class="n">sample</span><span class="o">=</span><span class="n">Variable</span><span class="o">.</span><span class="n">Sample</span><span class="p">(</span><span class="n">Where</span><span class="o">=</span><span class="n">nw</span><span class="o">.</span><span class="n">col</span><span class="p">(</span><span class="s2">"var_reg1"</span><span class="p">)),</span>
     <span class="n">modeltype</span><span class="o">=</span><span class="n">Variable</span><span class="o">.</span><span class="n">ModelType</span><span class="o">.</span><span class="n">pmm</span><span class="p">,</span>
     <span class="n">model</span><span class="o">=</span><span class="n">f_model</span><span class="o">.</span><span class="n">formula</span><span class="p">,</span>
     <span class="c1">#   Default parameters</span>
     <span class="n">parameters</span><span class="o">=</span><span class="n">Parameters</span><span class="o">.</span><span class="n">Regression</span><span class="p">(),</span>
-    <span class="n">postFunctions</span><span class="o">=</span><span class="p">(</span>
-        <span class="n">nw</span><span class="o">.</span><span class="n">when</span><span class="p">(</span><span class="n">nw</span><span class="o">.</span><span class="n">col</span><span class="p">(</span><span class="s2">"var_reg1"</span><span class="p">))</span>
-          <span class="o">.</span><span class="n">then</span><span class="p">(</span><span class="n">nw</span><span class="o">.</span><span class="n">col</span><span class="p">(</span><span class="s2">"var_reg2"</span><span class="p">))</span>
-          <span class="o">.</span><span class="n">otherwise</span><span class="p">(</span><span class="n">nw</span><span class="o">.</span><span class="n">lit</span><span class="p">(</span><span class="mi">0</span><span class="p">))</span>
-          <span class="o">.</span><span class="n">alias</span><span class="p">(</span><span class="s2">"var_reg2"</span><span class="p">)</span>
-    <span class="p">)</span>
+    <span class="n">transforms</span><span class="o">=</span><span class="n">Variable</span><span class="o">.</span><span class="n">Transforms</span><span class="p">(</span>
+        <span class="n">post</span><span class="o">=</span><span class="p">(</span>
+            <span class="n">nw</span><span class="o">.</span><span class="n">when</span><span class="p">(</span><span class="n">nw</span><span class="o">.</span><span class="n">col</span><span class="p">(</span><span class="s2">"var_reg1"</span><span class="p">))</span>
+            <span class="o">.</span><span class="n">then</span><span class="p">(</span><span class="n">nw</span><span class="o">.</span><span class="n">col</span><span class="p">(</span><span class="s2">"var_reg2"</span><span class="p">))</span>
+            <span class="o">.</span><span class="n">otherwise</span><span class="p">(</span><span class="n">nw</span><span class="o">.</span><span class="n">lit</span><span class="p">(</span><span class="mi">0</span><span class="p">))</span>
+            <span class="o">.</span><span class="n">alias</span><span class="p">(</span><span class="s2">"var_reg2"</span><span class="p">)</span>
+        <span class="p">)</span>
+    <span class="p">),</span>
 <span class="p">)</span>
 
 <span class="n">vars_impute</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">v_reg2</span><span class="p">)</span>
@@ -7863,7 +7855,7 @@ a.anchor-link {
 </div>
 </div>
 </div>
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=22e49004">
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=2cb03075">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -7876,15 +7868,18 @@ a.anchor-link {
 <span class="n">srmi</span> <span class="o">=</span> <span class="n">SRMI</span><span class="p">(</span>
     <span class="n">df</span><span class="o">=</span><span class="n">df</span><span class="p">,</span>
     <span class="n">variables</span><span class="o">=</span><span class="n">vars_impute</span><span class="p">,</span>
-    <span class="n">n_implicates</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span>
-    <span class="n">n_iterations</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span>
-    <span class="n">parallel</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
-    <span class="n">selection</span><span class="o">=</span><span class="n">Selection</span><span class="p">(</span><span class="n">method</span><span class="o">=</span><span class="n">Selection</span><span class="o">.</span><span class="n">Method</span><span class="o">.</span><span class="n">LASSO</span><span class="p">),</span>
-    <span class="n">modeltype</span><span class="o">=</span><span class="n">Variable</span><span class="o">.</span><span class="n">ModelType</span><span class="o">.</span><span class="n">pmm</span><span class="p">,</span>
-    <span class="n">model</span><span class="o">=</span><span class="n">f_model</span><span class="o">.</span><span class="n">formula</span><span class="p">,</span>
-    <span class="n">bayesian_bootstrap</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
-    <span class="n">path_model</span><span class="o">=</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">path_scratch</span><span class="p">()</span><span class="si">}</span><span class="s2">/py_srmi_test_regression"</span><span class="p">,</span>
-    <span class="n">force_start</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+    <span class="n">replication</span><span class="o">=</span><span class="n">SRMI</span><span class="o">.</span><span class="n">Replication</span><span class="p">(</span><span class="n">n_implicates</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">n_iterations</span><span class="o">=</span><span class="mi">2</span><span class="p">),</span>
+    <span class="n">parallel</span><span class="o">=</span><span class="n">SRMI</span><span class="o">.</span><span class="n">Parallel</span><span class="p">(</span><span class="n">enabled</span><span class="o">=</span><span class="kc">False</span><span class="p">),</span>
+    <span class="n">bootstrap</span><span class="o">=</span><span class="n">SRMI</span><span class="o">.</span><span class="n">Bootstrap</span><span class="p">(</span><span class="n">enabled</span><span class="o">=</span><span class="kc">True</span><span class="p">),</span>
+    <span class="n">defaults</span><span class="o">=</span><span class="n">SRMI</span><span class="o">.</span><span class="n">Defaults</span><span class="p">(</span>
+        <span class="n">selection</span><span class="o">=</span><span class="n">Selection</span><span class="p">(</span><span class="n">method</span><span class="o">=</span><span class="n">Selection</span><span class="o">.</span><span class="n">Method</span><span class="o">.</span><span class="n">LASSO</span><span class="p">),</span>
+        <span class="n">modeltype</span><span class="o">=</span><span class="n">Variable</span><span class="o">.</span><span class="n">ModelType</span><span class="o">.</span><span class="n">pmm</span><span class="p">,</span>
+        <span class="n">model</span><span class="o">=</span><span class="n">f_model</span><span class="o">.</span><span class="n">formula</span><span class="p">,</span>
+    <span class="p">),</span>
+    <span class="n">storage</span><span class="o">=</span><span class="n">SRMI</span><span class="o">.</span><span class="n">Storage</span><span class="p">(</span>
+        <span class="n">path_model</span><span class="o">=</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">config</span><span class="o">.</span><span class="n">path_temp_files</span><span class="si">}</span><span class="s2">/py_srmi_test_regression"</span><span class="p">,</span>
+        <span class="n">force_start</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+    <span class="p">),</span>
 <span class="p">)</span>
 </pre></div>
 </div>
@@ -7912,7 +7907,7 @@ a.anchor-link {
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>Removing existing directory C:\Users\jonro\OneDrive\Documents\Coding\survey_kit\.scratch\temp_files/py_srmi_test_regression.srmi
+<pre>Removing existing directory /home/jrothbaum/Coding/claude_code/survey_kit/.scratch/temp_files/py_srmi_test_regression.srmi
 </pre>
 </div>
 </div>
@@ -7932,7 +7927,7 @@ a.anchor-link {
 </div>
 </div>
 </div>
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=f346f352">
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=d1aaecc5">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -7989,14 +7984,14 @@ a.anchor-link {
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>Removing existing directory C:\Users\jonro\OneDrive\Documents\Coding\survey_kit\.scratch\temp_files/py_srmi_test_regression.srmi/1.srmi.implicate
+<pre>Removing existing directory /home/jrothbaum/Coding/claude_code/survey_kit/.scratch/temp_files/py_srmi_test_regression.srmi/1.srmi.implicate
 </pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>Removing existing directory C:\Users\jonro\OneDrive\Documents\Coding\survey_kit\.scratch\temp_files/py_srmi_test_regression.srmi/2.srmi.implicate
+<pre>Removing existing directory /home/jrothbaum/Coding/claude_code/survey_kit/.scratch/temp_files/py_srmi_test_regression.srmi/2.srmi.implicate
 </pre>
 </div>
 </div>
@@ -8017,56 +8012,47 @@ a.anchor-link {
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>         Selected model: ~0+var2+C(var5)+repeat_1+unrelated_5+unrelated_3+unrelated_1+var3:C(var5)+var4:C(var5)+var4:var3:C(var5)+var3+var4+var4+var3
+<pre>         Selected model: ~0+var2+var4+C(var5)+var4:var3:C(var5)+unrelated_1+unrelated_2+unrelated_3+unrelated_4+unrelated_5+repeat_1+var3
 </pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>     Imputation using Logit regression with PMM matching
+<pre>     Imputation using pmm
 </pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>C:\Users\jonro\OneDrive\Documents\Coding\survey_kit\.venv\Lib\site-packages\sklearn\utils\validation.py:1406: DataConversionWarning: A column-vector y was passed when a 1d array was expected. Please change the shape of y to (n_samples, ), for example using ravel().
+<pre>/home/jrothbaum/Coding/claude_code/survey_kit/.venv/lib/python3.13/site-packages/sklearn/utils/validation.py:1406: DataConversionWarning: A column-vector y was passed when a 1d array was expected. Please change the shape of y to (n_samples, ), for example using ravel().
   y = column_or_1d(y, warn=True)
-C:\Users\jonro\OneDrive\Documents\Coding\survey_kit\.venv\Lib\site-packages\sklearn\linear_model\_logistic.py:473: ConvergenceWarning: lbfgs failed to converge after 100 iteration(s) (status=1):
-STOP: TOTAL NO. OF ITERATIONS REACHED LIMIT
-
-Increase the number of iterations to improve the convergence (max_iter=100).
-You might also want to scale the data as shown in:
-    https://scikit-learn.org/stable/modules/preprocessing.html
-Please also refer to the documentation for alternative solver options:
-    https://scikit-learn.org/stable/modules/linear_model.html#logistic-regression
-  n_iter_i = _check_optimize_result(
-R2 = 0.5353
+R2 = 0.5507
 </pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>┌──────────────────────────┬───────────┐
-│                 Variable ┆      Beta │
-╞══════════════════════════╪═══════════╡
-│                     var2 ┆    0.2183 │
-│           C(var5)[False] ┆      1.85 │
-│            C(var5)[True] ┆    -2.315 │
-│                 repeat_1 ┆   -0.1076 │
-│              unrelated_5 ┆   -0.1383 │
-│              unrelated_3 ┆   0.07106 │
-│              unrelated_1 ┆   -0.1076 │
-│                     var3 ┆  0.000017 │
-│                     var4 ┆   0.08597 │
-│     var3:C(var5)[T.True] ┆ -0.005871 │
-│     var4:C(var5)[T.True] ┆   -0.6536 │
-│ var4:var3:C(var5)[False] ┆ -0.009138 │
-│  var4:var3:C(var5)[True] ┆   0.03426 │
-│              _Intercept_ ┆   -0.4963 │
-└──────────────────────────┴───────────┘
+<pre>┌────────────────────────┬───────────┐
+│               Variable ┆      Beta │
+╞════════════════════════╪═══════════╡
+│                   var2 ┆    0.2176 │
+│                   var4 ┆   -0.3242 │
+│           C(var5)FALSE ┆     2.064 │
+│            C(var5)TRUE ┆     -2.39 │
+│            unrelated_1 ┆   -0.1082 │
+│            unrelated_2 ┆   -0.1339 │
+│            unrelated_3 ┆   0.07617 │
+│            unrelated_4 ┆   -0.2167 │
+│            unrelated_5 ┆   -0.1206 │
+│               repeat_1 ┆   -0.1082 │
+│                   var3 ┆ -0.004198 │
+│ var4:var3:C(var5)FALSE ┆ 0.0009904 │
+│  var4:var3:C(var5)TRUE ┆   0.02909 │
+│            _Intercept_ ┆   -0.3496 │
+└────────────────────────┴───────────┘
 </pre>
 </div>
 </div>
@@ -8100,11 +8086,11 @@ R2 = 0.5353
 │ ---          ┆ ---     │
 │ i16          ┆ i8      │
 ╞══════════════╪═════════╡
-│ 1165         ┆ 4       │
-│ 4847         ┆ 4       │
-│ 6428         ┆ 4       │
-│ 192          ┆ 3       │
-│ 224          ┆ 3       │
+│ 823          ┆ 4       │
+│ 2000         ┆ 4       │
+│ 4710         ┆ 4       │
+│ 5629         ┆ 4       │
+│ 8345         ┆ 4       │
 └──────────────┴─────────┘
 </pre>
 </div>
@@ -8142,13 +8128,13 @@ R2 = 0.5353
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>┌──────────┬─────────┬───────┬──────────────┬────────┬──────────────┬─────────────┬─────────────┬─────────────┬─────────────┬─────────────┬─────────────┬─────────────┬─────────────┐
-│ Variable ┆ Imputed ┆     n ┆ n (not null) ┆   mean ┆ mean (not 0) ┆ std (not 0) ┆ q10 (not 0) ┆ q25 (not 0) ┆ q50 (not 0) ┆ q75 (not 0) ┆ q90 (not 0) ┆ min (not 0) ┆ max (not 0) │
-╞══════════╪═════════╪═══════╪══════════════╪════════╪══════════════╪═════════════╪═════════════╪═════════════╪═════════════╪═════════════╪═════════════╪═════════════╪═════════════╡
-│ var_reg1 ┆         ┆ 10000 ┆        10000 ┆ 0.5283 ┆            1 ┆           0 ┆           1 ┆           1 ┆           1 ┆           1 ┆           1 ┆           1 ┆           1 │
-│ var_reg1 ┆       0 ┆  7431 ┆         7431 ┆ 0.5231 ┆            1 ┆           0 ┆           1 ┆           1 ┆           1 ┆           1 ┆           1 ┆           1 ┆           1 │
-│ var_reg1 ┆       1 ┆  2569 ┆         2569 ┆ 0.5434 ┆            1 ┆           0 ┆           1 ┆           1 ┆           1 ┆           1 ┆           1 ┆           1 ┆           1 │
-└──────────┴─────────┴───────┴──────────────┴────────┴──────────────┴─────────────┴─────────────┴─────────────┴─────────────┴─────────────┴─────────────┴─────────────┴─────────────┘
+<pre>┌──────────┬─────────┬───────┬──────────────┬────────┬────────┬──────────────┬─────────────┬─────────────┬─────────────┬─────────────┬─────────────┬─────────────┬─────────────┬─────────────┐
+│ Variable ┆ Imputed ┆     n ┆ n (not null) ┆   mean ┆    std ┆ mean (not 0) ┆ std (not 0) ┆ q10 (not 0) ┆ q25 (not 0) ┆ q50 (not 0) ┆ q75 (not 0) ┆ q90 (not 0) ┆ min (not 0) ┆ max (not 0) │
+╞══════════╪═════════╪═══════╪══════════════╪════════╪════════╪══════════════╪═════════════╪═════════════╪═════════════╪═════════════╪═════════════╪═════════════╪═════════════╪═════════════╡
+│ var_reg1 ┆         ┆ 10000 ┆        10000 ┆ 0.5235 ┆ 0.4995 ┆            1 ┆           0 ┆           1 ┆           1 ┆           1 ┆           1 ┆           1 ┆           1 ┆           1 │
+│ var_reg1 ┆       0 ┆  7431 ┆         7431 ┆ 0.5231 ┆ 0.4995 ┆            1 ┆           0 ┆           1 ┆           1 ┆           1 ┆           1 ┆           1 ┆           1 ┆           1 │
+│ var_reg1 ┆       1 ┆  2569 ┆         2569 ┆ 0.5247 ┆ 0.4995 ┆            1 ┆           0 ┆           1 ┆           1 ┆           1 ┆           1 ┆           1 ┆           1 ┆           1 │
+└──────────┴─────────┴───────┴──────────────┴────────┴────────┴──────────────┴─────────────┴─────────────┴─────────────┴─────────────┴─────────────┴─────────────┴─────────────┴─────────────┘
 </pre>
 </div>
 </div>
@@ -8173,45 +8159,48 @@ R2 = 0.5353
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>         Selected model: ~0+var2+C(var5)+repeat_1+var_reg1+var4:var3+unrelated_4+unrelated_2+unrelated_1+var3:C(var5)+var4:C(var5)+var4:var3:C(var5)+var4+var3+var3+var4+var4+var3
+<pre>         Selected model: ~0+var_reg1+var2+var4+var3+var4:var3+C(var5)+var4:C(var5)+var3:C(var5)+var4:var3:C(var5)+unrelated_1+unrelated_2+unrelated_3+unrelated_4+unrelated_5+repeat_1
 </pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>     Imputation using OLS regression with PMM matching
+<pre>     Imputation using pmm
 </pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>R2 = 0.8111
+<pre>R2 = 0.8184
 </pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>┌───────────────────────────┬───────────┐
-│                  Variable ┆      Beta │
-╞═══════════════════════════╪═══════════╡
-│                      var2 ┆     1.351 │
-│            C(var5)[False] ┆    0.5782 │
-│             C(var5)[True] ┆   -0.5782 │
-│                  repeat_1 ┆   0.09655 │
-│               unrelated_4 ┆ -0.001992 │
-│               unrelated_2 ┆    0.4366 │
-│               unrelated_1 ┆   0.09655 │
-│                      var4 ┆    0.8138 │
-│                      var3 ┆   0.01687 │
-│                 var4:var3 ┆   -0.9972 │
-│      var3:C(var5)[T.True] ┆  -0.04554 │
-│      var4:C(var5)[T.True] ┆     4.446 │
-│ var4:var3:C(var5)[T.True] ┆   0.04509 │
-│               _Intercept_ ┆   -0.6182 │
-└───────────────────────────┴───────────┘
+<pre>┌───────────────────────┬──────────┐
+│              Variable ┆     Beta │
+╞═══════════════════════╪══════════╡
+│         var_reg1FALSE ┆      0.0 │
+│          var_reg1TRUE ┆     -0.0 │
+│                  var2 ┆    1.383 │
+│                  var4 ┆   0.5671 │
+│                  var3 ┆  0.01675 │
+│           C(var5)TRUE ┆  -0.5774 │
+│           unrelated_1 ┆   0.1543 │
+│           unrelated_2 ┆   0.5426 │
+│           unrelated_3 ┆  -0.1954 │
+│           unrelated_4 ┆  0.05883 │
+│           unrelated_5 ┆  -0.3622 │
+│              repeat_1 ┆   0.1543 │
+│             var4:var3 ┆  -0.9976 │
+│      var4:C(var5)TRUE ┆    3.776 │
+│      var3:C(var5)TRUE ┆ -0.06237 │
+│ var4:var3:C(var5)TRUE ┆  0.06704 │
+│           _Intercept_ ┆  0.06299 │
+└───────────────────────┴──────────┘
 </pre>
 </div>
 </div>
@@ -8245,11 +8234,11 @@ R2 = 0.5353
 │ ---          ┆ ---     │
 │ i16          ┆ i8      │
 ╞══════════════╪═════════╡
-│ 731          ┆ 4       │
-│ 1282         ┆ 4       │
-│ 4331         ┆ 4       │
-│ 51           ┆ 3       │
-│ 474          ┆ 3       │
+│ 4309         ┆ 4       │
+│ 8103         ┆ 4       │
+│ 1446         ┆ 3       │
+│ 2246         ┆ 3       │
+│ 2614         ┆ 3       │
 └──────────────┴─────────┘
 </pre>
 </div>
@@ -8287,13 +8276,13 @@ R2 = 0.5353
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>┌──────────┬─────────┬──────┬──────────────┬────────┬──────────────┬─────────────┬─────────────┬─────────────┬─────────────┬─────────────┬─────────────┬─────────────┬─────────────┐
-│ Variable ┆ Imputed ┆    n ┆ n (not null) ┆   mean ┆ mean (not 0) ┆ std (not 0) ┆ q10 (not 0) ┆ q25 (not 0) ┆ q50 (not 0) ┆ q75 (not 0) ┆ q90 (not 0) ┆ min (not 0) ┆ max (not 0) │
-╞══════════╪═════════╪══════╪══════════════╪════════╪══════════════╪═════════════╪═════════════╪═════════════╪═════════════╪═════════════╪═════════════╪═════════════╪═════════════╡
-│ var_reg2 ┆         ┆ 5283 ┆         5283 ┆ -4.101 ┆       -4.367 ┆       13.72 ┆      -24.14 ┆      -12.96 ┆      -1.938 ┆       6.015 ┆       11.24 ┆      -55.35 ┆       26.21 │
-│ var_reg2 ┆       0 ┆ 3965 ┆         3965 ┆ -4.199 ┆       -4.462 ┆       13.65 ┆      -24.07 ┆      -12.92 ┆      -2.104 ┆       5.767 ┆       11.04 ┆      -55.35 ┆       26.21 │
-│ var_reg2 ┆       1 ┆ 1318 ┆         1318 ┆ -3.805 ┆       -4.081 ┆       13.94 ┆      -24.53 ┆      -13.14 ┆      -1.446 ┆       6.807 ┆       11.51 ┆      -55.35 ┆       24.89 │
-└──────────┴─────────┴──────┴──────────────┴────────┴──────────────┴─────────────┴─────────────┴─────────────┴─────────────┴─────────────┴─────────────┴─────────────┴─────────────┘
+<pre>┌──────────┬─────────┬──────┬──────────────┬────────┬───────┬──────────────┬─────────────┬─────────────┬─────────────┬─────────────┬─────────────┬─────────────┬─────────────┬─────────────┐
+│ Variable ┆ Imputed ┆    n ┆ n (not null) ┆   mean ┆   std ┆ mean (not 0) ┆ std (not 0) ┆ q10 (not 0) ┆ q25 (not 0) ┆ q50 (not 0) ┆ q75 (not 0) ┆ q90 (not 0) ┆ min (not 0) ┆ max (not 0) │
+╞══════════╪═════════╪══════╪══════════════╪════════╪═══════╪══════════════╪═════════════╪═════════════╪═════════════╪═════════════╪═════════════╪═════════════╪═════════════╪═════════════╡
+│ var_reg2 ┆         ┆ 5235 ┆         5235 ┆ -4.208 ┆ 13.55 ┆       -4.406 ┆       13.84 ┆      -24.62 ┆       -13.0 ┆      -1.968 ┆       6.003 ┆       11.35 ┆      -55.35 ┆       26.21 │
+│ var_reg2 ┆       0 ┆ 3923 ┆         3923 ┆ -4.145 ┆ 13.38 ┆       -4.355 ┆       13.68 ┆      -24.04 ┆      -12.75 ┆      -1.984 ┆       5.921 ┆       11.27 ┆      -55.35 ┆       26.21 │
+│ var_reg2 ┆       1 ┆ 1312 ┆         1312 ┆ -4.397 ┆ 14.07 ┆       -4.557 ┆        14.3 ┆       -25.9 ┆       -13.6 ┆       -1.83 ┆       6.257 ┆       11.76 ┆      -55.35 ┆       24.89 │
+└──────────┴─────────┴──────┴──────────────┴────────┴───────┴──────────────┴─────────────┴─────────────┴─────────────┴─────────────┴─────────────┴─────────────┴─────────────┴─────────────┘
 </pre>
 </div>
 </div>
@@ -8317,22 +8306,8 @@ R2 = 0.5353
 </div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="text/plain" tabindex="0">
-<pre>[ 6.73066716e-02 -0.00000000e+00  0.00000000e+00  3.71367698e-01
- -0.00000000e+00 -1.07062599e-03 -0.00000000e+00 -3.72161168e-04
- -0.00000000e+00 -5.38546132e-03 -4.70160709e-07  0.00000000e+00
- -5.77949554e-03  1.71858786e-03  1.74925402e-02]
-[ 2.55784315e+00 -2.60566968e-14  2.55667576e+00  0.00000000e+00
- -0.00000000e+00 -4.58348548e+00  5.69456439e-02  3.94256009e-02
-  0.00000000e+00 -1.51974623e-02  0.00000000e+00  1.40407334e-04
- -9.66030779e+00  2.09934930e+00 -3.24711385e-01  4.41965182e+00]
-</pre>
-</div>
-</div>
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>Removing existing directory C:\Users\jonro\OneDrive\Documents\Coding\survey_kit\.scratch\temp_files/py_srmi_test_regression.srmi/1.srmi.implicate
+<pre>Removing existing directory /home/jrothbaum/Coding/claude_code/survey_kit/.scratch/temp_files/py_srmi_test_regression.srmi/1.srmi.implicate
 </pre>
 </div>
 </div>
@@ -8346,59 +8321,48 @@ R2 = 0.5353
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>         Selected model: ~0+var3+var4+var2+C(var5)+repeat_1+var_reg2+var4:var3+unrelated_5+unrelated_4+unrelated_3+unrelated_2+unrelated_1+var3:C(var5)+var4:C(var5)+var4:var3:C(var5)
+<pre>         Selected model: ~0+var_reg2+var2+var4+var3+var4:var3+C(var5)+var4:var3:C(var5)+unrelated_1+unrelated_2+unrelated_3+unrelated_4+unrelated_5+repeat_1
 </pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>     Imputation using Logit regression with PMM matching
+<pre>     Imputation using pmm
 </pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>C:\Users\jonro\OneDrive\Documents\Coding\survey_kit\.venv\Lib\site-packages\sklearn\utils\validation.py:1406: DataConversionWarning: A column-vector y was passed when a 1d array was expected. Please change the shape of y to (n_samples, ), for example using ravel().
+<pre>/home/jrothbaum/Coding/claude_code/survey_kit/.venv/lib/python3.13/site-packages/sklearn/utils/validation.py:1406: DataConversionWarning: A column-vector y was passed when a 1d array was expected. Please change the shape of y to (n_samples, ), for example using ravel().
   y = column_or_1d(y, warn=True)
-C:\Users\jonro\OneDrive\Documents\Coding\survey_kit\.venv\Lib\site-packages\sklearn\linear_model\_logistic.py:473: ConvergenceWarning: lbfgs failed to converge after 100 iteration(s) (status=1):
-STOP: TOTAL NO. OF ITERATIONS REACHED LIMIT
-
-Increase the number of iterations to improve the convergence (max_iter=100).
-You might also want to scale the data as shown in:
-    https://scikit-learn.org/stable/modules/preprocessing.html
-Please also refer to the documentation for alternative solver options:
-    https://scikit-learn.org/stable/modules/linear_model.html#logistic-regression
-  n_iter_i = _check_optimize_result(
-R2 = 0.6020
+R2 = 0.6237
 </pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>┌───────────────────────────┬──────────┐
-│                  Variable ┆     Beta │
-╞═══════════════════════════╪══════════╡
-│                      var3 ┆ 0.004236 │
-│                      var4 ┆   0.5434 │
-│                      var2 ┆   0.2035 │
-│            C(var5)[False] ┆     2.19 │
-│             C(var5)[True] ┆   -2.078 │
-│                  repeat_1 ┆  -0.0735 │
-│                  var_reg2 ┆  -0.1184 │
-│               unrelated_5 ┆  -0.3512 │
-│               unrelated_4 ┆  -0.1332 │
-│               unrelated_3 ┆  0.02857 │
-│               unrelated_2 ┆  -0.2581 │
-│               unrelated_1 ┆  -0.0735 │
-│                 var4:var3 ┆ -0.09465 │
-│      var3:C(var5)[T.True] ┆ -0.01237 │
-│      var4:C(var5)[T.True] ┆  -0.5246 │
-│ var4:var3:C(var5)[T.True] ┆  0.06802 │
-│               _Intercept_ ┆   0.1145 │
-└───────────────────────────┴──────────┘
+<pre>┌───────────────────────┬───────────┐
+│              Variable ┆      Beta │
+╞═══════════════════════╪═══════════╡
+│              var_reg2 ┆   -0.1309 │
+│                  var2 ┆    0.2904 │
+│                  var4 ┆    -0.176 │
+│                  var3 ┆ -0.003809 │
+│          C(var5)FALSE ┆     2.402 │
+│           C(var5)TRUE ┆    -2.514 │
+│           unrelated_1 ┆   0.01499 │
+│           unrelated_2 ┆      -0.2 │
+│           unrelated_3 ┆  -0.02264 │
+│           unrelated_4 ┆   -0.3057 │
+│           unrelated_5 ┆   -0.3083 │
+│              repeat_1 ┆   0.01499 │
+│             var4:var3 ┆  -0.08421 │
+│ var4:var3:C(var5)TRUE ┆   0.05645 │
+│           _Intercept_ ┆   -0.1227 │
+└───────────────────────┴───────────┘
 </pre>
 </div>
 </div>
@@ -8432,11 +8396,11 @@ R2 = 0.6020
 │ ---          ┆ ---     │
 │ i16          ┆ i8      │
 ╞══════════════╪═════════╡
-│ 4154         ┆ 4       │
-│ 275          ┆ 3       │
-│ 489          ┆ 3       │
-│ 916          ┆ 3       │
-│ 1428         ┆ 3       │
+│ 2232         ┆ 4       │
+│ 2374         ┆ 4       │
+│ 5888         ┆ 4       │
+│ 8933         ┆ 4       │
+│ 9167         ┆ 4       │
 └──────────────┴─────────┘
 </pre>
 </div>
@@ -8474,13 +8438,13 @@ R2 = 0.6020
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>┌──────────┬─────────┬───────┬──────────────┬────────┬──────────────┬─────────────┬─────────────┬─────────────┬─────────────┬─────────────┬─────────────┬─────────────┬─────────────┐
-│ Variable ┆ Imputed ┆     n ┆ n (not null) ┆   mean ┆ mean (not 0) ┆ std (not 0) ┆ q10 (not 0) ┆ q25 (not 0) ┆ q50 (not 0) ┆ q75 (not 0) ┆ q90 (not 0) ┆ min (not 0) ┆ max (not 0) │
-╞══════════╪═════════╪═══════╪══════════════╪════════╪══════════════╪═════════════╪═════════════╪═════════════╪═════════════╪═════════════╪═════════════╪═════════════╪═════════════╡
-│ var_reg1 ┆         ┆ 12569 ┆        12569 ┆ 0.5261 ┆            1 ┆           0 ┆           1 ┆           1 ┆           1 ┆           1 ┆           1 ┆           1 ┆           1 │
-│ var_reg1 ┆       0 ┆ 10000 ┆        10000 ┆ 0.5283 ┆            1 ┆           0 ┆           1 ┆           1 ┆           1 ┆           1 ┆           1 ┆           1 ┆           1 │
-│ var_reg1 ┆       1 ┆  2569 ┆         2569 ┆ 0.5173 ┆            1 ┆           0 ┆           1 ┆           1 ┆           1 ┆           1 ┆           1 ┆           1 ┆           1 │
-└──────────┴─────────┴───────┴──────────────┴────────┴──────────────┴─────────────┴─────────────┴─────────────┴─────────────┴─────────────┴─────────────┴─────────────┴─────────────┘
+<pre>┌──────────┬─────────┬───────┬──────────────┬────────┬────────┬──────────────┬─────────────┬─────────────┬─────────────┬─────────────┬─────────────┬─────────────┬─────────────┬─────────────┐
+│ Variable ┆ Imputed ┆     n ┆ n (not null) ┆   mean ┆    std ┆ mean (not 0) ┆ std (not 0) ┆ q10 (not 0) ┆ q25 (not 0) ┆ q50 (not 0) ┆ q75 (not 0) ┆ q90 (not 0) ┆ min (not 0) ┆ max (not 0) │
+╞══════════╪═════════╪═══════╪══════════════╪════════╪════════╪══════════════╪═════════════╪═════════════╪═════════════╪═════════════╪═════════════╪═════════════╪═════════════╪═════════════╡
+│ var_reg1 ┆         ┆ 12569 ┆        12569 ┆ 0.5211 ┆ 0.4996 ┆            1 ┆           0 ┆           1 ┆           1 ┆           1 ┆           1 ┆           1 ┆           1 ┆           1 │
+│ var_reg1 ┆       0 ┆ 10000 ┆        10000 ┆ 0.5235 ┆ 0.4995 ┆            1 ┆           0 ┆           1 ┆           1 ┆           1 ┆           1 ┆           1 ┆           1 ┆           1 │
+│ var_reg1 ┆       1 ┆  2569 ┆         2569 ┆ 0.5119 ┆    0.5 ┆            1 ┆           0 ┆           1 ┆           1 ┆           1 ┆           1 ┆           1 ┆           1 ┆           1 │
+└──────────┴─────────┴───────┴──────────────┴────────┴────────┴──────────────┴─────────────┴─────────────┴─────────────┴─────────────┴─────────────┴─────────────┴─────────────┴─────────────┘
 </pre>
 </div>
 </div>
@@ -8505,46 +8469,47 @@ R2 = 0.6020
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>         Selected model: ~0+var3+var2+C(var5)+repeat_1+var_reg1+var4:var3+unrelated_5+unrelated_4+unrelated_3+unrelated_1+var3:C(var5)+var4:C(var5)+var4:var3:C(var5)+var4+var4+var4
+<pre>         Selected model: ~0+var_reg1+var2+var3+var4:var3+C(var5)+var4:C(var5)+var3:C(var5)+var4:var3:C(var5)+unrelated_1+unrelated_3+unrelated_4+unrelated_5+repeat_1+var4
 </pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>     Imputation using OLS regression with PMM matching
+<pre>     Imputation using pmm
 </pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>R2 = 0.8037
+<pre>R2 = 0.8247
 </pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>┌───────────────────────────┬──────────┐
-│                  Variable ┆     Beta │
-╞═══════════════════════════╪══════════╡
-│                      var3 ┆  0.03414 │
-│                      var2 ┆    1.378 │
-│            C(var5)[False] ┆   0.3067 │
-│             C(var5)[True] ┆  -0.3067 │
-│                  repeat_1 ┆   0.1819 │
-│               unrelated_5 ┆ 0.003208 │
-│               unrelated_4 ┆  -0.0218 │
-│               unrelated_3 ┆   0.2923 │
-│               unrelated_1 ┆   0.1819 │
-│                      var4 ┆    1.279 │
-│                 var4:var3 ┆   -1.014 │
-│      var3:C(var5)[T.True] ┆  -0.0864 │
-│      var4:C(var5)[T.True] ┆    3.087 │
-│ var4:var3:C(var5)[T.True] ┆   0.1758 │
-│               _Intercept_ ┆  -0.6994 │
-└───────────────────────────┴──────────┘
+<pre>┌───────────────────────┬──────────┐
+│              Variable ┆     Beta │
+╞═══════════════════════╪══════════╡
+│         var_reg1FALSE ┆      0.0 │
+│          var_reg1TRUE ┆      0.0 │
+│                  var2 ┆    1.374 │
+│                  var3 ┆  0.03341 │
+│           C(var5)TRUE ┆  -0.4513 │
+│           unrelated_1 ┆   0.1777 │
+│           unrelated_3 ┆   0.1812 │
+│           unrelated_4 ┆  -0.6366 │
+│           unrelated_5 ┆  -0.3989 │
+│              repeat_1 ┆   0.1777 │
+│                  var4 ┆    1.402 │
+│             var4:var3 ┆   -1.033 │
+│      var4:C(var5)TRUE ┆    2.832 │
+│      var3:C(var5)TRUE ┆ -0.08348 │
+│ var4:var3:C(var5)TRUE ┆    0.138 │
+│           _Intercept_ ┆   0.2334 │
+└───────────────────────┴──────────┘
 </pre>
 </div>
 </div>
@@ -8578,11 +8543,11 @@ R2 = 0.6020
 │ ---          ┆ ---     │
 │ i16          ┆ i8      │
 ╞══════════════╪═════════╡
-│ 903          ┆ 3       │
-│ 1374         ┆ 3       │
-│ 1581         ┆ 3       │
-│ 2288         ┆ 3       │
-│ 3173         ┆ 3       │
+│ 1795         ┆ 3       │
+│ 2017         ┆ 3       │
+│ 2218         ┆ 3       │
+│ 2732         ┆ 3       │
+│ 3047         ┆ 3       │
 └──────────────┴─────────┘
 </pre>
 </div>
@@ -8619,28 +8584,14 @@ R2 = 0.6020
 </div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="text/plain" tabindex="0">
-<pre>[-1.45298426e-01  7.94160626e-02  7.65124658e-03  5.31405328e-03
-  4.05410599e-01 -3.55928686e-16 -3.28522843e-03 -3.08145353e-04
- -2.25157225e-03 -1.13798554e-03 -4.41409458e-03 -3.73075092e-06
- -1.55053474e-01  3.06222340e-03 -2.17534484e-02  1.17422292e-01]
-[ 2.67119698e+00 -3.39673395e-14  2.48291904e+00  0.00000000e+00
- -4.94651969e-02 -4.89330719e+00  2.34282673e-02 -0.00000000e+00
- -1.82999899e-02 -3.46458337e-02 -5.33177612e-02  4.90561207e-04
- -9.50912160e+00  1.72184415e+00 -2.67490420e-01  5.26295423e+00]
-</pre>
-</div>
-</div>
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>┌──────────┬─────────┬──────┬──────────────┬────────┬──────────────┬─────────────┬─────────────┬─────────────┬─────────────┬─────────────┬─────────────┬─────────────┬─────────────┐
-│ Variable ┆ Imputed ┆    n ┆ n (not null) ┆   mean ┆ mean (not 0) ┆ std (not 0) ┆ q10 (not 0) ┆ q25 (not 0) ┆ q50 (not 0) ┆ q75 (not 0) ┆ q90 (not 0) ┆ min (not 0) ┆ max (not 0) │
-╞══════════╪═════════╪══════╪══════════════╪════════╪══════════════╪═════════════╪═════════════╪═════════════╪═════════════╪═════════════╪═════════════╪═════════════╪═════════════╡
-│ var_reg2 ┆         ┆ 6522 ┆         6522 ┆  -4.08 ┆       -4.428 ┆       13.82 ┆      -24.55 ┆      -13.14 ┆      -1.997 ┆       6.061 ┆       11.33 ┆      -55.35 ┆       26.21 │
-│ var_reg2 ┆       0 ┆ 5216 ┆         5216 ┆ -4.046 ┆       -4.382 ┆       13.73 ┆      -24.31 ┆      -12.96 ┆      -1.955 ┆       5.999 ┆       11.27 ┆      -55.35 ┆       26.21 │
-│ var_reg2 ┆       1 ┆ 1306 ┆         1306 ┆ -4.216 ┆       -4.611 ┆       14.16 ┆      -25.21 ┆      -13.72 ┆      -2.414 ┆       6.428 ┆       11.75 ┆      -55.35 ┆       26.21 │
-└──────────┴─────────┴──────┴──────────────┴────────┴──────────────┴─────────────┴─────────────┴─────────────┴─────────────┴─────────────┴─────────────┴─────────────┴─────────────┘
+<pre>┌──────────┬─────────┬──────┬──────────────┬────────┬───────┬──────────────┬─────────────┬─────────────┬─────────────┬─────────────┬─────────────┬─────────────┬─────────────┬─────────────┐
+│ Variable ┆ Imputed ┆    n ┆ n (not null) ┆   mean ┆   std ┆ mean (not 0) ┆ std (not 0) ┆ q10 (not 0) ┆ q25 (not 0) ┆ q50 (not 0) ┆ q75 (not 0) ┆ q90 (not 0) ┆ min (not 0) ┆ max (not 0) │
+╞══════════╪═════════╪══════╪══════════════╪════════╪═══════╪══════════════╪═════════════╪═════════════╪═════════════╪═════════════╪═════════════╪═════════════╪═════════════╪═════════════╡
+│ var_reg2 ┆         ┆ 6504 ┆         6504 ┆ -4.364 ┆  13.6 ┆       -4.617 ┆       13.95 ┆      -25.13 ┆      -13.34 ┆      -2.199 ┆        5.93 ┆       11.35 ┆      -55.35 ┆       26.21 │
+│ var_reg2 ┆       0 ┆ 5202 ┆         5202 ┆ -4.264 ┆  13.5 ┆       -4.527 ┆       13.87 ┆      -24.74 ┆      -13.26 ┆      -2.148 ┆        5.93 ┆       11.32 ┆      -55.35 ┆       26.21 │
+│ var_reg2 ┆       1 ┆ 1302 ┆         1302 ┆ -4.764 ┆ 14.01 ┆       -4.971 ┆       14.28 ┆       -26.2 ┆      -13.59 ┆      -2.488 ┆        5.93 ┆       11.38 ┆      -48.27 ┆       24.31 │
+└──────────┴─────────┴──────┴──────────────┴────────┴───────┴──────────────┴─────────────┴─────────────┴─────────────┴─────────────┴─────────────┴─────────────┴─────────────┴─────────────┘
 </pre>
 </div>
 </div>
@@ -8692,7 +8643,7 @@ Final Estimates by Iteration
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>Removing existing directory C:\Users\jonro\OneDrive\Documents\Coding\survey_kit\.scratch\temp_files/py_srmi_test_regression.srmi/1.srmi.implicate
+<pre>Removing existing directory /home/jrothbaum/Coding/claude_code/survey_kit/.scratch/temp_files/py_srmi_test_regression.srmi/1.srmi.implicate
 </pre>
 </div>
 </div>
@@ -8713,56 +8664,53 @@ Final Estimates by Iteration
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>         Selected model: ~0+var2+C(var5)+repeat_1+unrelated_5+unrelated_3+unrelated_1+var3:C(var5)+var4:C(var5)+var4:var3:C(var5)+var3+var4+var4+var3
+<pre>         Selected model: ~0+var2+C(var5)+var4:C(var5)+var4:var3:C(var5)+unrelated_1+unrelated_2+unrelated_3+unrelated_5+repeat_1+var4+var3
 </pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>     Imputation using Logit regression with PMM matching
+<pre>     Imputation using pmm
 </pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>C:\Users\jonro\OneDrive\Documents\Coding\survey_kit\.venv\Lib\site-packages\sklearn\utils\validation.py:1406: DataConversionWarning: A column-vector y was passed when a 1d array was expected. Please change the shape of y to (n_samples, ), for example using ravel().
+<pre>/home/jrothbaum/Coding/claude_code/survey_kit/.venv/lib/python3.13/site-packages/sklearn/utils/validation.py:1406: DataConversionWarning: A column-vector y was passed when a 1d array was expected. Please change the shape of y to (n_samples, ), for example using ravel().
   y = column_or_1d(y, warn=True)
-C:\Users\jonro\OneDrive\Documents\Coding\survey_kit\.venv\Lib\site-packages\sklearn\linear_model\_logistic.py:473: ConvergenceWarning: lbfgs failed to converge after 100 iteration(s) (status=1):
-STOP: TOTAL NO. OF ITERATIONS REACHED LIMIT
-
-Increase the number of iterations to improve the convergence (max_iter=100).
-You might also want to scale the data as shown in:
-    https://scikit-learn.org/stable/modules/preprocessing.html
-Please also refer to the documentation for alternative solver options:
-    https://scikit-learn.org/stable/modules/linear_model.html#logistic-regression
-  n_iter_i = _check_optimize_result(
-R2 = 0.5358
 </pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>┌──────────────────────────┬───────────┐
-│                 Variable ┆      Beta │
-╞══════════════════════════╪═══════════╡
-│                     var2 ┆    0.1956 │
-│           C(var5)[False] ┆     2.013 │
-│            C(var5)[True] ┆    -2.175 │
-│                 repeat_1 ┆   -0.1157 │
-│              unrelated_5 ┆   -0.4133 │
-│              unrelated_3 ┆   -0.1533 │
-│              unrelated_1 ┆   -0.1157 │
-│                     var3 ┆ -0.003659 │
-│                     var4 ┆   0.08833 │
-│     var3:C(var5)[T.True] ┆ -0.002562 │
-│     var4:C(var5)[T.True] ┆   -0.9745 │
-│ var4:var3:C(var5)[False] ┆ -0.000146 │
-│  var4:var3:C(var5)[True] ┆   0.03792 │
-│              _Intercept_ ┆    -0.176 │
-└──────────────────────────┴───────────┘
+<pre>R2 = 0.5509
+</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>┌────────────────────────┬───────────┐
+│               Variable ┆      Beta │
+╞════════════════════════╪═══════════╡
+│                   var2 ┆    0.1965 │
+│           C(var5)FALSE ┆     2.076 │
+│            C(var5)TRUE ┆    -2.213 │
+│            unrelated_1 ┆    -0.111 │
+│            unrelated_2 ┆  -0.09557 │
+│            unrelated_3 ┆   -0.1429 │
+│            unrelated_5 ┆    -0.408 │
+│               repeat_1 ┆    -0.111 │
+│                   var4 ┆  -0.04577 │
+│                   var3 ┆ -0.005247 │
+│       var4:C(var5)TRUE ┆   -0.7446 │
+│ var4:var3:C(var5)FALSE ┆  0.003528 │
+│  var4:var3:C(var5)TRUE ┆   0.03546 │
+│            _Intercept_ ┆   -0.1482 │
+└────────────────────────┴───────────┘
 </pre>
 </div>
 </div>
@@ -8796,11 +8744,11 @@ R2 = 0.5358
 │ ---          ┆ ---     │
 │ i16          ┆ i8      │
 ╞══════════════╪═════════╡
-│ 1951         ┆ 4       │
-│ 1969         ┆ 4       │
-│ 3986         ┆ 4       │
-│ 5434         ┆ 4       │
-│ 8815         ┆ 4       │
+│ 360          ┆ 4       │
+│ 379          ┆ 4       │
+│ 1046         ┆ 4       │
+│ 3449         ┆ 4       │
+│ 180          ┆ 3       │
 └──────────────┴─────────┘
 </pre>
 </div>
@@ -8838,13 +8786,13 @@ R2 = 0.5358
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>┌──────────┬─────────┬───────┬──────────────┬────────┬──────────────┬─────────────┬─────────────┬─────────────┬─────────────┬─────────────┬─────────────┬─────────────┬─────────────┐
-│ Variable ┆ Imputed ┆     n ┆ n (not null) ┆   mean ┆ mean (not 0) ┆ std (not 0) ┆ q10 (not 0) ┆ q25 (not 0) ┆ q50 (not 0) ┆ q75 (not 0) ┆ q90 (not 0) ┆ min (not 0) ┆ max (not 0) │
-╞══════════╪═════════╪═══════╪══════════════╪════════╪══════════════╪═════════════╪═════════════╪═════════════╪═════════════╪═════════════╪═════════════╪═════════════╪═════════════╡
-│ var_reg1 ┆         ┆ 10000 ┆        10000 ┆ 0.5243 ┆            1 ┆           0 ┆           1 ┆           1 ┆           1 ┆           1 ┆           1 ┆           1 ┆           1 │
-│ var_reg1 ┆       0 ┆  7431 ┆         7431 ┆ 0.5231 ┆            1 ┆           0 ┆           1 ┆           1 ┆           1 ┆           1 ┆           1 ┆           1 ┆           1 │
-│ var_reg1 ┆       1 ┆  2569 ┆         2569 ┆ 0.5278 ┆            1 ┆           0 ┆           1 ┆           1 ┆           1 ┆           1 ┆           1 ┆           1 ┆           1 │
-└──────────┴─────────┴───────┴──────────────┴────────┴──────────────┴─────────────┴─────────────┴─────────────┴─────────────┴─────────────┴─────────────┴─────────────┴─────────────┘
+<pre>┌──────────┬─────────┬───────┬──────────────┬────────┬────────┬──────────────┬─────────────┬─────────────┬─────────────┬─────────────┬─────────────┬─────────────┬─────────────┬─────────────┐
+│ Variable ┆ Imputed ┆     n ┆ n (not null) ┆   mean ┆    std ┆ mean (not 0) ┆ std (not 0) ┆ q10 (not 0) ┆ q25 (not 0) ┆ q50 (not 0) ┆ q75 (not 0) ┆ q90 (not 0) ┆ min (not 0) ┆ max (not 0) │
+╞══════════╪═════════╪═══════╪══════════════╪════════╪════════╪══════════════╪═════════════╪═════════════╪═════════════╪═════════════╪═════════════╪═════════════╪═════════════╪═════════════╡
+│ var_reg1 ┆         ┆ 10000 ┆        10000 ┆ 0.5236 ┆ 0.4995 ┆            1 ┆           0 ┆           1 ┆           1 ┆           1 ┆           1 ┆           1 ┆           1 ┆           1 │
+│ var_reg1 ┆       0 ┆  7431 ┆         7431 ┆ 0.5231 ┆ 0.4995 ┆            1 ┆           0 ┆           1 ┆           1 ┆           1 ┆           1 ┆           1 ┆           1 ┆           1 │
+│ var_reg1 ┆       1 ┆  2569 ┆         2569 ┆ 0.5251 ┆ 0.4995 ┆            1 ┆           0 ┆           1 ┆           1 ┆           1 ┆           1 ┆           1 ┆           1 ┆           1 │
+└──────────┴─────────┴───────┴──────────────┴────────┴────────┴──────────────┴─────────────┴─────────────┴─────────────┴─────────────┴─────────────┴─────────────┴─────────────┴─────────────┘
 </pre>
 </div>
 </div>
@@ -8869,46 +8817,44 @@ R2 = 0.5358
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>         Selected model: ~0+var2+C(var5)+repeat_1+var_reg1+var4:var3+unrelated_4+unrelated_3+unrelated_2+unrelated_1+var3:C(var5)+var4:C(var5)+var4:var3:C(var5)+var4+var3+var3+var4+var4+var3
+<pre>         Selected model: ~0+var_reg1+var2+var3+var4:var3+C(var5)+var4:C(var5)+var4:var3:C(var5)+unrelated_2+unrelated_4+unrelated_5+var4
 </pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>     Imputation using OLS regression with PMM matching
+<pre>     Imputation using pmm
 </pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>R2 = 0.8163
+<pre>R2 = 0.8246
 </pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>┌───────────────────────────┬──────────┐
-│                  Variable ┆     Beta │
-╞═══════════════════════════╪══════════╡
-│                      var2 ┆    1.372 │
-│            C(var5)[False] ┆    1.077 │
-│             C(var5)[True] ┆   -1.077 │
-│                  repeat_1 ┆   0.1153 │
-│               unrelated_4 ┆   -1.118 │
-│               unrelated_3 ┆   0.1726 │
-│               unrelated_2 ┆  -0.1515 │
-│               unrelated_1 ┆   0.1153 │
-│                      var4 ┆   0.6333 │
-│                      var3 ┆ 0.004142 │
-│                 var4:var3 ┆   -1.001 │
-│      var3:C(var5)[T.True] ┆  0.01229 │
-│      var4:C(var5)[T.True] ┆    5.903 │
-│ var4:var3:C(var5)[T.True] ┆ -0.02945 │
-│               _Intercept_ ┆   -0.171 │
-└───────────────────────────┴──────────┘
+<pre>┌───────────────────────┬─────────┐
+│              Variable ┆    Beta │
+╞═══════════════════════╪═════════╡
+│         var_reg1FALSE ┆     0.0 │
+│          var_reg1TRUE ┆    -0.0 │
+│                  var2 ┆   1.417 │
+│                  var3 ┆ 0.01411 │
+│           C(var5)TRUE ┆  -1.319 │
+│           unrelated_2 ┆ 0.04522 │
+│           unrelated_4 ┆ -0.9803 │
+│           unrelated_5 ┆ -0.7875 │
+│                  var4 ┆   1.034 │
+│             var4:var3 ┆   -1.02 │
+│      var4:C(var5)TRUE ┆   3.231 │
+│ var4:var3:C(var5)TRUE ┆ 0.02549 │
+│           _Intercept_ ┆  0.8182 │
+└───────────────────────┴─────────┘
 </pre>
 </div>
 </div>
@@ -8942,11 +8888,11 @@ R2 = 0.5358
 │ ---          ┆ ---     │
 │ i16          ┆ i8      │
 ╞══════════════╪═════════╡
-│ 3986         ┆ 4       │
-│ 5072         ┆ 4       │
-│ 1485         ┆ 3       │
-│ 2571         ┆ 3       │
-│ 4036         ┆ 3       │
+│ 5577         ┆ 4       │
+│ 6529         ┆ 4       │
+│ 2500         ┆ 3       │
+│ 3041         ┆ 3       │
+│ 4038         ┆ 3       │
 └──────────────┴─────────┘
 </pre>
 </div>
@@ -8984,13 +8930,13 @@ R2 = 0.5358
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>┌──────────┬─────────┬──────┬──────────────┬────────┬──────────────┬─────────────┬─────────────┬─────────────┬─────────────┬─────────────┬─────────────┬─────────────┬─────────────┐
-│ Variable ┆ Imputed ┆    n ┆ n (not null) ┆   mean ┆ mean (not 0) ┆ std (not 0) ┆ q10 (not 0) ┆ q25 (not 0) ┆ q50 (not 0) ┆ q75 (not 0) ┆ q90 (not 0) ┆ min (not 0) ┆ max (not 0) │
-╞══════════╪═════════╪══════╪══════════════╪════════╪══════════════╪═════════════╪═════════════╪═════════════╪═════════════╪═════════════╪═════════════╪═════════════╪═════════════╡
-│ var_reg2 ┆         ┆ 5243 ┆         5243 ┆ -4.393 ┆       -4.639 ┆       13.88 ┆      -24.66 ┆       -13.3 ┆      -2.131 ┆       5.791 ┆       11.32 ┆      -55.35 ┆       26.21 │
-│ var_reg2 ┆       0 ┆ 3934 ┆         3934 ┆ -4.275 ┆       -4.515 ┆       13.73 ┆      -24.31 ┆       -13.0 ┆      -2.144 ┆       5.784 ┆       11.19 ┆      -55.35 ┆       26.21 │
-│ var_reg2 ┆       1 ┆ 1309 ┆         1309 ┆ -4.748 ┆       -5.012 ┆       14.33 ┆       -26.2 ┆      -13.97 ┆      -2.089 ┆       5.791 ┆       11.67 ┆      -55.35 ┆       24.89 │
-└──────────┴─────────┴──────┴──────────────┴────────┴──────────────┴─────────────┴─────────────┴─────────────┴─────────────┴─────────────┴─────────────┴─────────────┴─────────────┘
+<pre>┌──────────┬─────────┬──────┬──────────────┬────────┬───────┬──────────────┬─────────────┬─────────────┬─────────────┬─────────────┬─────────────┬─────────────┬─────────────┬─────────────┐
+│ Variable ┆ Imputed ┆    n ┆ n (not null) ┆   mean ┆   std ┆ mean (not 0) ┆ std (not 0) ┆ q10 (not 0) ┆ q25 (not 0) ┆ q50 (not 0) ┆ q75 (not 0) ┆ q90 (not 0) ┆ min (not 0) ┆ max (not 0) │
+╞══════════╪═════════╪══════╪══════════════╪════════╪═══════╪══════════════╪═════════════╪═════════════╪═════════════╪═════════════╪═════════════╪═════════════╪═════════════╪═════════════╡
+│ var_reg2 ┆         ┆ 5236 ┆         5236 ┆ -4.283 ┆ 13.47 ┆       -4.494 ┆       13.77 ┆      -24.54 ┆      -13.03 ┆      -2.107 ┆       5.936 ┆       11.17 ┆      -55.35 ┆       26.21 │
+│ var_reg2 ┆       0 ┆ 3915 ┆         3915 ┆ -4.199 ┆ 13.41 ┆       -4.408 ┆        13.7 ┆      -24.18 ┆      -12.82 ┆      -1.985 ┆       5.906 ┆       11.24 ┆      -55.35 ┆       26.21 │
+│ var_reg2 ┆       1 ┆ 1321 ┆         1321 ┆ -4.532 ┆ 13.67 ┆       -4.747 ┆       13.95 ┆      -25.13 ┆      -13.48 ┆      -2.727 ┆       6.171 ┆        10.7 ┆      -47.42 ┆       26.21 │
+└──────────┴─────────┴──────┴──────────────┴────────┴───────┴──────────────┴─────────────┴─────────────┴─────────────┴─────────────┴─────────────┴─────────────┴─────────────┴─────────────┘
 </pre>
 </div>
 </div>
@@ -9014,22 +8960,8 @@ R2 = 0.5358
 </div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="text/plain" tabindex="0">
-<pre>[ 6.73066716e-02 -0.00000000e+00  0.00000000e+00  3.71367698e-01
- -0.00000000e+00 -1.07062599e-03 -0.00000000e+00 -3.72161168e-04
- -0.00000000e+00 -5.38546132e-03 -4.70160709e-07  0.00000000e+00
- -5.77949554e-03  1.71858786e-03  1.74925402e-02]
-[ 2.61113153e+00 -4.23284371e-14  2.60300215e+00  0.00000000e+00
- -0.00000000e+00 -4.62318054e+00  7.24762103e-02  4.17414062e-02
-  6.79245937e-04 -2.26481611e-02 -0.00000000e+00  1.85148780e-04
- -9.63486912e+00  2.06696684e+00 -2.86280726e-01  4.41981803e+00]
-</pre>
-</div>
-</div>
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>Removing existing directory C:\Users\jonro\OneDrive\Documents\Coding\survey_kit\.scratch\temp_files/py_srmi_test_regression.srmi/2.srmi.implicate
+<pre>Removing existing directory /home/jrothbaum/Coding/claude_code/survey_kit/.scratch/temp_files/py_srmi_test_regression.srmi/2.srmi.implicate
 </pre>
 </div>
 </div>
@@ -9043,23 +8975,29 @@ R2 = 0.5358
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>         Selected model: ~0+var3+var4+var2+C(var5)+repeat_1+var_reg2+var4:var3+unrelated_5+unrelated_4+unrelated_3+unrelated_2+unrelated_1+var3:C(var5)+var4:var3:C(var5)
+<pre>         Selected model: ~0+var_reg2+var2+var4:var3+C(var5)+var4:C(var5)+var4:var3:C(var5)+unrelated_1+unrelated_2+unrelated_3+unrelated_5+repeat_1+var4+var3
 </pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>     Imputation using Logit regression with PMM matching
+<pre>     Imputation using pmm
 </pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>C:\Users\jonro\OneDrive\Documents\Coding\survey_kit\.venv\Lib\site-packages\sklearn\utils\validation.py:1406: DataConversionWarning: A column-vector y was passed when a 1d array was expected. Please change the shape of y to (n_samples, ), for example using ravel().
+<pre>/home/jrothbaum/Coding/claude_code/survey_kit/.venv/lib/python3.13/site-packages/sklearn/utils/validation.py:1406: DataConversionWarning: A column-vector y was passed when a 1d array was expected. Please change the shape of y to (n_samples, ), for example using ravel().
   y = column_or_1d(y, warn=True)
-C:\Users\jonro\OneDrive\Documents\Coding\survey_kit\.venv\Lib\site-packages\sklearn\linear_model\_logistic.py:473: ConvergenceWarning: lbfgs failed to converge after 100 iteration(s) (status=1):
+</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>/home/jrothbaum/Coding/claude_code/survey_kit/.venv/lib/python3.13/site-packages/sklearn/linear_model/_logistic.py:473: ConvergenceWarning: lbfgs failed to converge after 100 iteration(s) (status=1):
 STOP: TOTAL NO. OF ITERATIONS REACHED LIMIT
 
 Increase the number of iterations to improve the convergence (max_iter=100).
@@ -9068,33 +9006,32 @@ You might also want to scale the data as shown in:
 Please also refer to the documentation for alternative solver options:
     https://scikit-learn.org/stable/modules/linear_model.html#logistic-regression
   n_iter_i = _check_optimize_result(
-R2 = 0.5999
+R2 = 0.6195
 </pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>┌───────────────────────────┬──────────┐
-│                  Variable ┆     Beta │
-╞═══════════════════════════╪══════════╡
-│                      var3 ┆  0.01428 │
-│                      var4 ┆   0.5788 │
-│                      var2 ┆   0.2365 │
-│            C(var5)[False] ┆     2.23 │
-│             C(var5)[True] ┆   -2.367 │
-│                  repeat_1 ┆ -0.08821 │
-│                  var_reg2 ┆  -0.1217 │
-│               unrelated_5 ┆  -0.4341 │
-│               unrelated_4 ┆  -0.3981 │
-│               unrelated_3 ┆ -0.07955 │
-│               unrelated_2 ┆ -0.06151 │
-│               unrelated_1 ┆ -0.08821 │
-│                 var4:var3 ┆  -0.1067 │
-│      var3:C(var5)[T.True] ┆ -0.01085 │
-│ var4:var3:C(var5)[T.True] ┆  0.06463 │
-│               _Intercept_ ┆  -0.1442 │
-└───────────────────────────┴──────────┘
+<pre>┌───────────────────────┬──────────┐
+│              Variable ┆     Beta │
+╞═══════════════════════╪══════════╡
+│              var_reg2 ┆  -0.1348 │
+│                  var2 ┆   0.3141 │
+│          C(var5)FALSE ┆    2.275 │
+│           C(var5)TRUE ┆   -2.602 │
+│           unrelated_1 ┆  0.07694 │
+│           unrelated_2 ┆  -0.3327 │
+│           unrelated_3 ┆  -0.2426 │
+│           unrelated_5 ┆  -0.6309 │
+│              repeat_1 ┆  0.07694 │
+│                  var4 ┆   0.3434 │
+│                  var3 ┆ 0.003656 │
+│             var4:var3 ┆ -0.09581 │
+│      var4:C(var5)TRUE ┆  0.05559 │
+│ var4:var3:C(var5)TRUE ┆  0.05213 │
+│           _Intercept_ ┆  -0.3411 │
+└───────────────────────┴──────────┘
 </pre>
 </div>
 </div>
@@ -9128,11 +9065,11 @@ R2 = 0.5999
 │ ---          ┆ ---     │
 │ i16          ┆ i8      │
 ╞══════════════╪═════════╡
-│ 17           ┆ 4       │
-│ 4095         ┆ 4       │
-│ 5072         ┆ 4       │
-│ 221          ┆ 3       │
-│ 956          ┆ 3       │
+│ 390          ┆ 3       │
+│ 1113         ┆ 3       │
+│ 1864         ┆ 3       │
+│ 1931         ┆ 3       │
+│ 2325         ┆ 3       │
 └──────────────┴─────────┘
 </pre>
 </div>
@@ -9170,13 +9107,13 @@ R2 = 0.5999
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>┌──────────┬─────────┬───────┬──────────────┬────────┬──────────────┬─────────────┬─────────────┬─────────────┬─────────────┬─────────────┬─────────────┬─────────────┬─────────────┐
-│ Variable ┆ Imputed ┆     n ┆ n (not null) ┆   mean ┆ mean (not 0) ┆ std (not 0) ┆ q10 (not 0) ┆ q25 (not 0) ┆ q50 (not 0) ┆ q75 (not 0) ┆ q90 (not 0) ┆ min (not 0) ┆ max (not 0) │
-╞══════════╪═════════╪═══════╪══════════════╪════════╪══════════════╪═════════════╪═════════════╪═════════════╪═════════════╪═════════════╪═════════════╪═════════════╪═════════════╡
-│ var_reg1 ┆         ┆ 12569 ┆        12569 ┆ 0.5226 ┆            1 ┆           0 ┆           1 ┆           1 ┆           1 ┆           1 ┆           1 ┆           1 ┆           1 │
-│ var_reg1 ┆       0 ┆ 10000 ┆        10000 ┆ 0.5243 ┆            1 ┆           0 ┆           1 ┆           1 ┆           1 ┆           1 ┆           1 ┆           1 ┆           1 │
-│ var_reg1 ┆       1 ┆  2569 ┆         2569 ┆ 0.5162 ┆            1 ┆           0 ┆           1 ┆           1 ┆           1 ┆           1 ┆           1 ┆           1 ┆           1 │
-└──────────┴─────────┴───────┴──────────────┴────────┴──────────────┴─────────────┴─────────────┴─────────────┴─────────────┴─────────────┴─────────────┴─────────────┴─────────────┘
+<pre>┌──────────┬─────────┬───────┬──────────────┬────────┬────────┬──────────────┬─────────────┬─────────────┬─────────────┬─────────────┬─────────────┬─────────────┬─────────────┬─────────────┐
+│ Variable ┆ Imputed ┆     n ┆ n (not null) ┆   mean ┆    std ┆ mean (not 0) ┆ std (not 0) ┆ q10 (not 0) ┆ q25 (not 0) ┆ q50 (not 0) ┆ q75 (not 0) ┆ q90 (not 0) ┆ min (not 0) ┆ max (not 0) │
+╞══════════╪═════════╪═══════╪══════════════╪════════╪════════╪══════════════╪═════════════╪═════════════╪═════════════╪═════════════╪═════════════╪═════════════╪═════════════╪═════════════╡
+│ var_reg1 ┆         ┆ 12569 ┆        12569 ┆ 0.5204 ┆ 0.4996 ┆            1 ┆           0 ┆           1 ┆           1 ┆           1 ┆           1 ┆           1 ┆           1 ┆           1 │
+│ var_reg1 ┆       0 ┆ 10000 ┆        10000 ┆ 0.5236 ┆ 0.4995 ┆            1 ┆           0 ┆           1 ┆           1 ┆           1 ┆           1 ┆           1 ┆           1 ┆           1 │
+│ var_reg1 ┆       1 ┆  2569 ┆         2569 ┆  0.508 ┆    0.5 ┆            1 ┆           0 ┆           1 ┆           1 ┆           1 ┆           1 ┆           1 ┆           1 ┆           1 │
+└──────────┴─────────┴───────┴──────────────┴────────┴────────┴──────────────┴─────────────┴─────────────┴─────────────┴─────────────┴─────────────┴─────────────┴─────────────┴─────────────┘
 </pre>
 </div>
 </div>
@@ -9201,45 +9138,48 @@ R2 = 0.5999
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>         Selected model: ~0+var3+var4+var2+C(var5)+var_reg1+var4:var3+unrelated_5+unrelated_4+unrelated_3+unrelated_2+var3:C(var5)+var4:C(var5)+var4:var3:C(var5)
+<pre>         Selected model: ~0+var_reg1+var2+var4:var3+C(var5)+var4:C(var5)+var3:C(var5)+var4:var3:C(var5)+unrelated_1+unrelated_2+unrelated_3+unrelated_4+unrelated_5+repeat_1+var4+var3
 </pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>     Imputation using OLS regression with PMM matching
+<pre>     Imputation using pmm
 </pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>R2 = 0.8185
+<pre>R2 = 0.8261
 </pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>┌───────────────────────────┬──────────┐
-│                  Variable ┆     Beta │
-╞═══════════════════════════╪══════════╡
-│                      var3 ┆  0.02064 │
-│                      var4 ┆    1.082 │
-│                      var2 ┆     1.33 │
-│            C(var5)[False] ┆   0.5624 │
-│             C(var5)[True] ┆  -0.5624 │
-│               unrelated_5 ┆  -0.4497 │
-│               unrelated_4 ┆  -0.1819 │
-│               unrelated_3 ┆  -0.1995 │
-│               unrelated_2 ┆   0.1406 │
-│                 var4:var3 ┆    -1.02 │
-│      var3:C(var5)[T.True] ┆ -0.01145 │
-│      var4:C(var5)[T.True] ┆    4.584 │
-│ var4:var3:C(var5)[T.True] ┆  0.00607 │
-│               _Intercept_ ┆  0.01821 │
-└───────────────────────────┴──────────┘
+<pre>┌───────────────────────┬──────────┐
+│              Variable ┆     Beta │
+╞═══════════════════════╪══════════╡
+│         var_reg1FALSE ┆      0.0 │
+│          var_reg1TRUE ┆      0.0 │
+│                  var2 ┆    1.383 │
+│           C(var5)TRUE ┆    -1.33 │
+│           unrelated_1 ┆ -0.07459 │
+│           unrelated_2 ┆ -0.03812 │
+│           unrelated_3 ┆  -0.5404 │
+│           unrelated_4 ┆  -0.4757 │
+│           unrelated_5 ┆  -0.7668 │
+│              repeat_1 ┆ -0.07459 │
+│                  var4 ┆   0.7025 │
+│                  var3 ┆  0.01847 │
+│             var4:var3 ┆  -0.9993 │
+│      var4:C(var5)TRUE ┆    4.674 │
+│      var3:C(var5)TRUE ┆ -0.01269 │
+│ var4:var3:C(var5)TRUE ┆ 0.004028 │
+│           _Intercept_ ┆   0.9632 │
+└───────────────────────┴──────────┘
 </pre>
 </div>
 </div>
@@ -9247,20 +9187,6 @@ R2 = 0.5999
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
 <pre>     Finding 10 nearest neighbors on ['___prediction']
-</pre>
-</div>
-</div>
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="text/plain" tabindex="0">
-<pre>[-1.48978929e-01  8.56240169e-02  1.06448209e-02  8.71445031e-03
-  4.02266676e-01 -5.68046904e-17 -2.17848333e-03  6.38086984e-04
-  1.57094965e-04 -2.79957055e-03 -5.98274298e-03 -4.20249720e-06
- -1.57639625e-01 -0.00000000e+00 -1.64056537e-02  1.14564804e-01]
-[ 2.88964501e+00 -8.84771027e-14  2.44263969e+00  6.39779260e-02
- -5.01120737e-03 -4.96586606e+00  0.00000000e+00 -6.27382024e-02
-  1.09089409e-02 -1.12658865e-01 -6.71704330e-02  0.00000000e+00
- -9.78013377e+00  1.61462238e+00 -2.20516178e-01  5.35854096e+00]
 </pre>
 </div>
 </div>
@@ -9287,11 +9213,11 @@ R2 = 0.5999
 │ ---          ┆ ---     │
 │ i16          ┆ i8      │
 ╞══════════════╪═════════╡
-│ 1160         ┆ 3       │
-│ 2049         ┆ 3       │
-│ 3438         ┆ 3       │
-│ 4080         ┆ 3       │
-│ 4243         ┆ 3       │
+│ 1702         ┆ 3       │
+│ 2008         ┆ 3       │
+│ 2291         ┆ 3       │
+│ 4208         ┆ 3       │
+│ 4295         ┆ 3       │
 └──────────────┴─────────┘
 </pre>
 </div>
@@ -9329,13 +9255,13 @@ R2 = 0.5999
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>┌──────────┬─────────┬──────┬──────────────┬────────┬──────────────┬─────────────┬─────────────┬─────────────┬─────────────┬─────────────┬─────────────┬─────────────┬─────────────┐
-│ Variable ┆ Imputed ┆    n ┆ n (not null) ┆   mean ┆ mean (not 0) ┆ std (not 0) ┆ q10 (not 0) ┆ q25 (not 0) ┆ q50 (not 0) ┆ q75 (not 0) ┆ q90 (not 0) ┆ min (not 0) ┆ max (not 0) │
-╞══════════╪═════════╪══════╪══════════════╪════════╪══════════════╪═════════════╪═════════════╪═════════════╪═════════════╪═════════════╪═════════════╪═════════════╪═════════════╡
-│ var_reg2 ┆         ┆ 6516 ┆         6516 ┆  -4.36 ┆       -4.734 ┆       14.02 ┆      -25.03 ┆      -13.61 ┆      -2.154 ┆       5.784 ┆       11.37 ┆      -55.35 ┆       26.21 │
-│ var_reg2 ┆       0 ┆ 5213 ┆         5213 ┆ -4.351 ┆       -4.715 ┆       13.94 ┆      -24.85 ┆      -13.48 ┆      -2.209 ┆       5.767 ┆       11.32 ┆      -55.35 ┆       26.21 │
-│ var_reg2 ┆       1 ┆ 1303 ┆         1303 ┆ -4.395 ┆       -4.809 ┆       14.33 ┆      -25.35 ┆      -14.22 ┆       -2.07 ┆       5.912 ┆       11.75 ┆      -55.35 ┆       24.89 │
-└──────────┴─────────┴──────┴──────────────┴────────┴──────────────┴─────────────┴─────────────┴─────────────┴─────────────┴─────────────┴─────────────┴─────────────┴─────────────┘
+<pre>┌──────────┬─────────┬──────┬──────────────┬────────┬───────┬──────────────┬─────────────┬─────────────┬─────────────┬─────────────┬─────────────┬─────────────┬─────────────┬─────────────┐
+│ Variable ┆ Imputed ┆    n ┆ n (not null) ┆   mean ┆   std ┆ mean (not 0) ┆ std (not 0) ┆ q10 (not 0) ┆ q25 (not 0) ┆ q50 (not 0) ┆ q75 (not 0) ┆ q90 (not 0) ┆ min (not 0) ┆ max (not 0) │
+╞══════════╪═════════╪══════╪══════════════╪════════╪═══════╪══════════════╪═════════════╪═════════════╪═════════════╪═════════════╪═════════════╪═════════════╪═════════════╪═════════════╡
+│ var_reg2 ┆         ┆ 6491 ┆         6491 ┆ -4.407 ┆ 13.48 ┆       -4.695 ┆       13.87 ┆      -25.03 ┆      -13.42 ┆      -2.211 ┆       5.784 ┆       11.04 ┆      -55.35 ┆       26.21 │
+│ var_reg2 ┆       0 ┆ 5192 ┆         5192 ┆ -4.358 ┆ 13.42 ┆       -4.634 ┆       13.79 ┆      -24.68 ┆      -13.26 ┆      -2.263 ┆       5.852 ┆       10.99 ┆      -55.35 ┆       26.21 │
+│ var_reg2 ┆       1 ┆ 1299 ┆         1299 ┆ -4.601 ┆ 13.72 ┆        -4.94 ┆       14.16 ┆      -25.79 ┆       -13.8 ┆       -2.07 ┆        5.55 ┆       11.22 ┆      -47.42 ┆       22.69 │
+└──────────┴─────────┴──────┴──────────────┴────────┴───────┴──────────────┴─────────────┴─────────────┴─────────────┴─────────────┴─────────────┴─────────────┴─────────────┴─────────────┘
 </pre>
 </div>
 </div>
@@ -9387,13 +9313,13 @@ Final Estimates by Iteration
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>Removing existing directory C:\Users\jonro\OneDrive\Documents\Coding\survey_kit\.scratch\temp_files/py_srmi_test_regression.srmi/2.srmi.implicate
+<pre>Removing existing directory /home/jrothbaum/Coding/claude_code/survey_kit/.scratch/temp_files/py_srmi_test_regression.srmi/2.srmi.implicate
 </pre>
 </div>
 </div>
 </div>
 </div>
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=a5dad9fe">
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=73216a18">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -9421,7 +9347,7 @@ Final Estimates by Iteration
 </div>
 </div>
 </div>
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=7c26efc6">
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=900b51e6">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -9471,7 +9397,6 @@ Look at the original
 │         var2 ┆ 10,000 ┆           0 ┆     4.9782 ┆    3.154508 ┆        0.0 ┆      10.0 │
 │         var3 ┆ 10,000 ┆           0 ┆    25.1084 ┆   14.752302 ┆        0.0 ┆      50.0 │
 │         var4 ┆ 10,000 ┆           0 ┆   0.505666 ┆    0.287861 ┆   0.000027 ┆  0.999997 │
-│         var5 ┆ 10,000 ┆           0 ┆     0.4999 ┆    0.500025 ┆        0.0 ┆       1.0 │
 │  unrelated_1 ┆ 10,000 ┆           0 ┆   0.502449 ┆    0.288359 ┆   0.000119 ┆  0.999997 │
 │  unrelated_2 ┆ 10,000 ┆           0 ┆   0.500105 ┆    0.287638 ┆   0.000049 ┆  0.999539 │
 │  unrelated_3 ┆ 10,000 ┆           0 ┆   0.499175 ┆     0.28876 ┆   0.000129 ┆   0.99994 │
@@ -9479,8 +9404,9 @@ Look at the original
 │  unrelated_5 ┆ 10,000 ┆           0 ┆    0.49876 ┆    0.288979 ┆   0.000071 ┆  0.999867 │
 │ missing_reg1 ┆ 10,000 ┆           0 ┆   0.495784 ┆    0.289051 ┆   0.000161 ┆   0.99991 │
 │ missing_reg2 ┆ 10,000 ┆           0 ┆   0.502597 ┆    0.288468 ┆   0.000006 ┆  0.999963 │
-│     var_reg1 ┆ 10,000 ┆           0 ┆     0.5229 ┆      0.4995 ┆        0.0 ┆       1.0 │
 │     var_reg2 ┆ 10,000 ┆           0 ┆  -2.402477 ┆   10.331745 ┆ -55.354108 ┆ 26.213084 │
+│         var5 ┆ 10,000 ┆           0 ┆     0.4999 ┆    0.500025 ┆        0.0 ┆       1.0 │
+│     var_reg1 ┆ 10,000 ┆           0 ┆     0.5229 ┆      0.4995 ┆        0.0 ┆       1.0 │
 └──────────────┴────────┴─────────────┴────────────┴─────────────┴────────────┴───────────┘
 </pre>
 </div>
@@ -9508,15 +9434,15 @@ Look at the imputes
 │         var2 ┆ 10,000 ┆           0 ┆     4.9782 ┆    3.154508 ┆        0.0 ┆      10.0 │
 │         var3 ┆ 10,000 ┆           0 ┆    25.1084 ┆   14.752302 ┆        0.0 ┆      50.0 │
 │         var4 ┆ 10,000 ┆           0 ┆   0.505666 ┆    0.287861 ┆   0.000027 ┆  0.999997 │
-│         var5 ┆ 10,000 ┆           0 ┆     0.4999 ┆    0.500025 ┆        0.0 ┆       1.0 │
 │  unrelated_1 ┆ 10,000 ┆           0 ┆   0.502449 ┆    0.288359 ┆   0.000119 ┆  0.999997 │
 │  unrelated_2 ┆ 10,000 ┆           0 ┆   0.500105 ┆    0.287638 ┆   0.000049 ┆  0.999539 │
 │  unrelated_3 ┆ 10,000 ┆           0 ┆   0.499175 ┆     0.28876 ┆   0.000129 ┆   0.99994 │
 │  unrelated_4 ┆ 10,000 ┆           0 ┆   0.500655 ┆    0.288698 ┆   0.000133 ┆  0.999972 │
 │  unrelated_5 ┆ 10,000 ┆           0 ┆    0.49876 ┆    0.288979 ┆   0.000071 ┆  0.999867 │
 │     repeat_1 ┆ 10,000 ┆           0 ┆   0.502449 ┆    0.288359 ┆   0.000119 ┆  0.999997 │
-│     var_reg1 ┆ 10,000 ┆           0 ┆     0.5216 ┆    0.499558 ┆        0.0 ┆       1.0 │
-│     var_reg2 ┆ 10,000 ┆           0 ┆  -2.180802 ┆    9.844918 ┆ -55.354108 ┆ 26.213084 │
+│     var_reg2 ┆ 10,000 ┆           0 ┆  -2.261467 ┆    9.983396 ┆ -55.354108 ┆ 26.213084 │
+│         var5 ┆ 10,000 ┆           0 ┆     0.4999 ┆    0.500025 ┆        0.0 ┆       1.0 │
+│     var_reg1 ┆ 10,000 ┆           0 ┆     0.5202 ┆    0.499617 ┆        0.0 ┆       1.0 │
 └──────────────┴────────┴─────────────┴────────────┴─────────────┴────────────┴───────────┘
 </pre>
 </div>
@@ -9535,15 +9461,15 @@ Look at the imputes
 │         var2 ┆ 10,000 ┆           0 ┆     4.9782 ┆    3.154508 ┆        0.0 ┆      10.0 │
 │         var3 ┆ 10,000 ┆           0 ┆    25.1084 ┆   14.752302 ┆        0.0 ┆      50.0 │
 │         var4 ┆ 10,000 ┆           0 ┆   0.505666 ┆    0.287861 ┆   0.000027 ┆  0.999997 │
-│         var5 ┆ 10,000 ┆           0 ┆     0.4999 ┆    0.500025 ┆        0.0 ┆       1.0 │
 │  unrelated_1 ┆ 10,000 ┆           0 ┆   0.502449 ┆    0.288359 ┆   0.000119 ┆  0.999997 │
 │  unrelated_2 ┆ 10,000 ┆           0 ┆   0.500105 ┆    0.287638 ┆   0.000049 ┆  0.999539 │
 │  unrelated_3 ┆ 10,000 ┆           0 ┆   0.499175 ┆     0.28876 ┆   0.000129 ┆   0.99994 │
 │  unrelated_4 ┆ 10,000 ┆           0 ┆   0.500655 ┆    0.288698 ┆   0.000133 ┆  0.999972 │
 │  unrelated_5 ┆ 10,000 ┆           0 ┆    0.49876 ┆    0.288979 ┆   0.000071 ┆  0.999867 │
 │     repeat_1 ┆ 10,000 ┆           0 ┆   0.502449 ┆    0.288359 ┆   0.000119 ┆  0.999997 │
-│     var_reg1 ┆ 10,000 ┆           0 ┆     0.5213 ┆    0.499571 ┆        0.0 ┆       1.0 │
-│     var_reg2 ┆ 10,000 ┆           0 ┆   -2.23131 ┆    9.939851 ┆ -55.354108 ┆ 26.213084 │
+│     var_reg2 ┆ 10,000 ┆           0 ┆  -2.260421 ┆    9.942981 ┆ -55.354108 ┆ 26.213084 │
+│         var5 ┆ 10,000 ┆           0 ┆     0.4999 ┆    0.500025 ┆        0.0 ┆       1.0 │
+│     var_reg1 ┆ 10,000 ┆           0 ┆     0.5192 ┆    0.499656 ┆        0.0 ┆       1.0 │
 └──────────────┴────────┴─────────────┴────────────┴─────────────┴────────────┴───────────┘
 </pre>
 </div>
@@ -9563,23 +9489,23 @@ Look at the imputes | var_reg1 == 0
 <pre>┌──────────────┬───────┬─────────────┬──────────────┬──────────────┬──────────┬──────────┐
 │     Variable ┆     n ┆ n (missing) ┆         mean ┆          std ┆      min ┆      max │
 ╞══════════════╪═══════╪═════════════╪══════════════╪══════════════╪══════════╪══════════╡
-│ ___rownumber ┆ 4,784 ┆           0 ┆ 5,033.632734 ┆ 2,891.610847 ┆      1.0 ┆  9,997.0 │
-│  _row_index_ ┆ 4,784 ┆           0 ┆ 5,033.632734 ┆ 2,891.610847 ┆      1.0 ┆  9,997.0 │
-│        index ┆ 4,784 ┆           0 ┆ 5,033.632734 ┆ 2,891.610847 ┆      1.0 ┆  9,997.0 │
-│         year ┆ 4,784 ┆           0 ┆  2,017.99561 ┆     1.420329 ┆  2,016.0 ┆  2,020.0 │
-│        month ┆ 4,784 ┆           0 ┆     6.572742 ┆     3.407715 ┆      1.0 ┆     12.0 │
-│         var2 ┆ 4,784 ┆           0 ┆     4.628135 ┆     3.233716 ┆      0.0 ┆     10.0 │
-│         var3 ┆ 4,784 ┆           0 ┆    24.966137 ┆    13.395857 ┆      0.0 ┆     50.0 │
-│         var4 ┆ 4,784 ┆           0 ┆     0.507489 ┆     0.289287 ┆ 0.000027 ┆ 0.999997 │
-│         var5 ┆ 4,784 ┆           0 ┆     0.886288 ┆     0.317495 ┆      0.0 ┆      1.0 │
-│  unrelated_1 ┆ 4,784 ┆           0 ┆      0.50384 ┆     0.286077 ┆ 0.000119 ┆ 0.999921 │
-│  unrelated_2 ┆ 4,784 ┆           0 ┆     0.499727 ┆     0.285433 ┆ 0.000079 ┆ 0.999528 │
-│  unrelated_3 ┆ 4,784 ┆           0 ┆     0.501752 ┆     0.289139 ┆ 0.000139 ┆  0.99994 │
-│  unrelated_4 ┆ 4,784 ┆           0 ┆      0.50239 ┆     0.289704 ┆ 0.000141 ┆ 0.999961 │
-│  unrelated_5 ┆ 4,784 ┆           0 ┆     0.501731 ┆     0.290909 ┆ 0.000071 ┆  0.99984 │
-│     repeat_1 ┆ 4,784 ┆           0 ┆      0.50384 ┆     0.286077 ┆ 0.000119 ┆ 0.999921 │
-│     var_reg1 ┆ 4,784 ┆           0 ┆          0.0 ┆          0.0 ┆      0.0 ┆      0.0 │
-│     var_reg2 ┆ 4,784 ┆           0 ┆          0.0 ┆          0.0 ┆      0.0 ┆      0.0 │
+│ ___rownumber ┆ 4,798 ┆           0 ┆ 5,031.139433 ┆ 2,887.061641 ┆      1.0 ┆  9,997.0 │
+│  _row_index_ ┆ 4,798 ┆           0 ┆ 5,031.139433 ┆ 2,887.061641 ┆      1.0 ┆  9,997.0 │
+│        index ┆ 4,798 ┆           0 ┆ 5,031.139433 ┆ 2,887.061641 ┆      1.0 ┆  9,997.0 │
+│         year ┆ 4,798 ┆           0 ┆ 2,017.997499 ┆     1.420976 ┆  2,016.0 ┆  2,020.0 │
+│        month ┆ 4,798 ┆           0 ┆     6.544393 ┆     3.416353 ┆      1.0 ┆     12.0 │
+│         var2 ┆ 4,798 ┆           0 ┆     4.547311 ┆     3.241086 ┆      0.0 ┆     10.0 │
+│         var3 ┆ 4,798 ┆           0 ┆    24.933722 ┆     13.38264 ┆      0.0 ┆     50.0 │
+│         var4 ┆ 4,798 ┆           0 ┆     0.507924 ┆     0.288873 ┆ 0.000027 ┆ 0.999997 │
+│  unrelated_1 ┆ 4,798 ┆           0 ┆     0.501001 ┆     0.287112 ┆ 0.000119 ┆ 0.999921 │
+│  unrelated_2 ┆ 4,798 ┆           0 ┆     0.500255 ┆     0.286069 ┆ 0.000079 ┆ 0.999528 │
+│  unrelated_3 ┆ 4,798 ┆           0 ┆     0.502664 ┆     0.289248 ┆ 0.000139 ┆  0.99994 │
+│  unrelated_4 ┆ 4,798 ┆           0 ┆     0.502696 ┆     0.289793 ┆ 0.000141 ┆ 0.999906 │
+│  unrelated_5 ┆ 4,798 ┆           0 ┆      0.50261 ┆     0.291771 ┆ 0.000071 ┆  0.99984 │
+│     repeat_1 ┆ 4,798 ┆           0 ┆     0.501001 ┆     0.287112 ┆ 0.000119 ┆ 0.999921 │
+│     var_reg2 ┆ 4,798 ┆           0 ┆          0.0 ┆          0.0 ┆      0.0 ┆      0.0 │
+│         var5 ┆ 4,798 ┆           0 ┆      0.88391 ┆     0.320366 ┆      0.0 ┆      1.0 │
+│     var_reg1 ┆ 4,798 ┆           0 ┆          0.0 ┆          0.0 ┆      0.0 ┆      0.0 │
 └──────────────┴───────┴─────────────┴──────────────┴──────────────┴──────────┴──────────┘
 </pre>
 </div>
@@ -9590,23 +9516,23 @@ Look at the imputes | var_reg1 == 0
 <pre>┌──────────────┬───────┬─────────────┬──────────────┬──────────────┬──────────┬──────────┐
 │     Variable ┆     n ┆ n (missing) ┆         mean ┆          std ┆      min ┆      max │
 ╞══════════════╪═══════╪═════════════╪══════════════╪══════════════╪══════════╪══════════╡
-│ ___rownumber ┆ 4,787 ┆           0 ┆ 5,029.025695 ┆ 2,905.488834 ┆      1.0 ┆  9,997.0 │
-│  _row_index_ ┆ 4,787 ┆           0 ┆ 5,029.025695 ┆ 2,905.488834 ┆      1.0 ┆  9,997.0 │
-│        index ┆ 4,787 ┆           0 ┆ 5,029.025695 ┆ 2,905.488834 ┆      1.0 ┆  9,997.0 │
-│         year ┆ 4,787 ┆           0 ┆  2,017.99248 ┆     1.421562 ┆  2,016.0 ┆  2,020.0 │
-│        month ┆ 4,787 ┆           0 ┆     6.585126 ┆     3.414898 ┆      1.0 ┆     12.0 │
-│         var2 ┆ 4,787 ┆           0 ┆     4.609359 ┆     3.225133 ┆      0.0 ┆     10.0 │
-│         var3 ┆ 4,787 ┆           0 ┆    24.976603 ┆    13.404733 ┆      0.0 ┆     50.0 │
-│         var4 ┆ 4,787 ┆           0 ┆     0.508052 ┆     0.288739 ┆ 0.000027 ┆ 0.999997 │
-│         var5 ┆ 4,787 ┆           0 ┆     0.885941 ┆     0.317916 ┆      0.0 ┆      1.0 │
-│  unrelated_1 ┆ 4,787 ┆           0 ┆     0.503982 ┆     0.285823 ┆ 0.000119 ┆ 0.999921 │
-│  unrelated_2 ┆ 4,787 ┆           0 ┆     0.499459 ┆     0.285463 ┆ 0.000079 ┆ 0.999528 │
-│  unrelated_3 ┆ 4,787 ┆           0 ┆     0.501814 ┆     0.289014 ┆ 0.000139 ┆  0.99994 │
-│  unrelated_4 ┆ 4,787 ┆           0 ┆     0.500316 ┆      0.28914 ┆ 0.000141 ┆ 0.999961 │
-│  unrelated_5 ┆ 4,787 ┆           0 ┆     0.501014 ┆      0.29115 ┆ 0.000071 ┆  0.99984 │
-│     repeat_1 ┆ 4,787 ┆           0 ┆     0.503982 ┆     0.285823 ┆ 0.000119 ┆ 0.999921 │
-│     var_reg1 ┆ 4,787 ┆           0 ┆          0.0 ┆          0.0 ┆      0.0 ┆      0.0 │
-│     var_reg2 ┆ 4,787 ┆           0 ┆          0.0 ┆          0.0 ┆      0.0 ┆      0.0 │
+│ ___rownumber ┆ 4,808 ┆           0 ┆ 5,037.021839 ┆ 2,887.460297 ┆      1.0 ┆  9,997.0 │
+│  _row_index_ ┆ 4,808 ┆           0 ┆ 5,037.021839 ┆ 2,887.460297 ┆      1.0 ┆  9,997.0 │
+│        index ┆ 4,808 ┆           0 ┆ 5,037.021839 ┆ 2,887.460297 ┆      1.0 ┆  9,997.0 │
+│         year ┆ 4,808 ┆           0 ┆ 2,017.991057 ┆     1.416757 ┆  2,016.0 ┆  2,020.0 │
+│        month ┆ 4,808 ┆           0 ┆     6.550749 ┆     3.414309 ┆      1.0 ┆     12.0 │
+│         var2 ┆ 4,808 ┆           0 ┆     4.551165 ┆     3.245948 ┆      0.0 ┆     10.0 │
+│         var3 ┆ 4,808 ┆           0 ┆    24.909942 ┆    13.393813 ┆      0.0 ┆     50.0 │
+│         var4 ┆ 4,808 ┆           0 ┆     0.508161 ┆      0.28944 ┆ 0.000027 ┆ 0.999997 │
+│  unrelated_1 ┆ 4,808 ┆           0 ┆     0.503974 ┆     0.287243 ┆ 0.000119 ┆ 0.999921 │
+│  unrelated_2 ┆ 4,808 ┆           0 ┆     0.501499 ┆     0.286001 ┆ 0.000079 ┆ 0.999528 │
+│  unrelated_3 ┆ 4,808 ┆           0 ┆     0.501953 ┆     0.288843 ┆ 0.000139 ┆  0.99994 │
+│  unrelated_4 ┆ 4,808 ┆           0 ┆     0.502293 ┆     0.289339 ┆ 0.000141 ┆ 0.999906 │
+│  unrelated_5 ┆ 4,808 ┆           0 ┆      0.50295 ┆     0.291036 ┆ 0.000071 ┆  0.99984 │
+│     repeat_1 ┆ 4,808 ┆           0 ┆     0.503974 ┆     0.287243 ┆ 0.000119 ┆ 0.999921 │
+│     var_reg2 ┆ 4,808 ┆           0 ┆          0.0 ┆          0.0 ┆      0.0 ┆      0.0 │
+│         var5 ┆ 4,808 ┆           0 ┆     0.886647 ┆     0.317056 ┆      0.0 ┆      1.0 │
+│     var_reg1 ┆ 4,808 ┆           0 ┆          0.0 ┆          0.0 ┆      0.0 ┆      0.0 │
 └──────────────┴───────┴─────────────┴──────────────┴──────────────┴──────────┴──────────┘
 </pre>
 </div>
@@ -9623,27 +9549,27 @@ Look at the imputes | var_reg1 == 1
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>┌──────────────┬───────┬─────────────┬─────────────┬──────────────┬────────────┬───────────┐
-│     Variable ┆     n ┆ n (missing) ┆        mean ┆          std ┆        min ┆       max │
-╞══════════════╪═══════╪═════════════╪═════════════╪══════════════╪════════════╪═══════════╡
-│ ___rownumber ┆ 5,216 ┆           0 ┆ 4,968.19421 ┆ 2,882.486117 ┆        0.0 ┆   9,999.0 │
-│  _row_index_ ┆ 5,216 ┆           0 ┆ 4,968.19421 ┆ 2,882.486117 ┆        0.0 ┆   9,999.0 │
-│        index ┆ 5,216 ┆           0 ┆ 4,968.19421 ┆ 2,882.486117 ┆        0.0 ┆   9,999.0 │
-│         year ┆ 5,216 ┆           0 ┆ 2,017.97546 ┆     1.411965 ┆    2,016.0 ┆   2,020.0 │
-│        month ┆ 5,216 ┆           0 ┆    6.459548 ┆     3.453831 ┆        1.0 ┆      12.0 │
-│         var2 ┆ 5,216 ┆           0 ┆    5.299271 ┆     3.045196 ┆        0.0 ┆      10.0 │
-│         var3 ┆ 5,216 ┆           0 ┆    25.23888 ┆    15.895128 ┆        0.0 ┆      50.0 │
-│         var4 ┆ 5,216 ┆           0 ┆    0.503993 ┆     0.286564 ┆   0.000104 ┆  0.999885 │
-│         var5 ┆ 5,216 ┆           0 ┆    0.145514 ┆     0.352652 ┆        0.0 ┆       1.0 │
-│  unrelated_1 ┆ 5,216 ┆           0 ┆    0.501172 ┆     0.290459 ┆   0.000248 ┆  0.999997 │
-│  unrelated_2 ┆ 5,216 ┆           0 ┆    0.500452 ┆     0.289673 ┆   0.000049 ┆  0.999539 │
-│  unrelated_3 ┆ 5,216 ┆           0 ┆    0.496812 ┆     0.288419 ┆   0.000129 ┆  0.999622 │
-│  unrelated_4 ┆ 5,216 ┆           0 ┆    0.499064 ┆     0.287791 ┆   0.000133 ┆  0.999972 │
-│  unrelated_5 ┆ 5,216 ┆           0 ┆    0.496036 ┆     0.287198 ┆   0.000181 ┆  0.999867 │
-│     repeat_1 ┆ 5,216 ┆           0 ┆    0.501172 ┆     0.290459 ┆   0.000248 ┆  0.999997 │
-│     var_reg1 ┆ 5,216 ┆           0 ┆         1.0 ┆          0.0 ┆        1.0 ┆       1.0 │
-│     var_reg2 ┆ 5,216 ┆           0 ┆   -4.180985 ┆    13.321794 ┆ -55.354108 ┆ 26.213084 │
-└──────────────┴───────┴─────────────┴─────────────┴──────────────┴────────────┴───────────┘
+<pre>┌──────────────┬───────┬─────────────┬──────────────┬──────────────┬────────────┬───────────┐
+│     Variable ┆     n ┆ n (missing) ┆         mean ┆          std ┆        min ┆       max │
+╞══════════════╪═══════╪═════════════╪══════════════╪══════════════╪════════════╪═══════════╡
+│ ___rownumber ┆ 5,202 ┆           0 ┆ 4,970.317762 ┆ 2,886.712665 ┆        0.0 ┆   9,999.0 │
+│  _row_index_ ┆ 5,202 ┆           0 ┆ 4,970.317762 ┆ 2,886.712665 ┆        0.0 ┆   9,999.0 │
+│        index ┆ 5,202 ┆           0 ┆ 4,970.317762 ┆ 2,886.712665 ┆        0.0 ┆   9,999.0 │
+│         year ┆ 5,202 ┆           0 ┆ 2,017.973664 ┆     1.411314 ┆    2,016.0 ┆   2,020.0 │
+│        month ┆ 5,202 ┆           0 ┆      6.48539 ┆     3.446724 ┆        1.0 ┆      12.0 │
+│         var2 ┆ 5,202 ┆           0 ┆     5.375625 ┆     3.018753 ┆        0.0 ┆      10.0 │
+│         var3 ┆ 5,202 ┆           0 ┆    25.269512 ┆    15.911008 ┆        0.0 ┆      50.0 │
+│         var4 ┆ 5,202 ┆           0 ┆     0.503582 ┆     0.286936 ┆   0.000104 ┆  0.999885 │
+│  unrelated_1 ┆ 5,202 ┆           0 ┆     0.503784 ┆     0.289526 ┆   0.000248 ┆  0.999997 │
+│  unrelated_2 ┆ 5,202 ┆           0 ┆     0.499966 ┆     0.289105 ┆   0.000049 ┆  0.999539 │
+│  unrelated_3 ┆ 5,202 ┆           0 ┆     0.495958 ┆       0.2883 ┆   0.000129 ┆  0.999622 │
+│  unrelated_4 ┆ 5,202 ┆           0 ┆     0.498773 ┆       0.2877 ┆   0.000133 ┆  0.999972 │
+│  unrelated_5 ┆ 5,202 ┆           0 ┆     0.495209 ┆     0.286362 ┆   0.000181 ┆  0.999867 │
+│     repeat_1 ┆ 5,202 ┆           0 ┆     0.503784 ┆     0.289526 ┆   0.000248 ┆  0.999997 │
+│     var_reg2 ┆ 5,202 ┆           0 ┆    -4.347303 ┆    13.510887 ┆ -55.354108 ┆ 26.213084 │
+│         var5 ┆ 5,202 ┆           0 ┆     0.145713 ┆     0.352852 ┆        0.0 ┆       1.0 │
+│     var_reg1 ┆ 5,202 ┆           0 ┆          1.0 ┆          0.0 ┆        1.0 ┆       1.0 │
+└──────────────┴───────┴─────────────┴──────────────┴──────────────┴────────────┴───────────┘
 </pre>
 </div>
 </div>
@@ -9653,23 +9579,23 @@ Look at the imputes | var_reg1 == 1
 <pre>┌──────────────┬───────┬─────────────┬──────────────┬──────────────┬────────────┬───────────┐
 │     Variable ┆     n ┆ n (missing) ┆         mean ┆          std ┆        min ┆       max │
 ╞══════════════╪═══════╪═════════════╪══════════════╪══════════════╪════════════╪═══════════╡
-│ ___rownumber ┆ 5,213 ┆           0 ┆ 4,972.387109 ┆ 2,869.727124 ┆        0.0 ┆   9,999.0 │
-│  _row_index_ ┆ 5,213 ┆           0 ┆ 4,972.387109 ┆ 2,869.727124 ┆        0.0 ┆   9,999.0 │
-│        index ┆ 5,213 ┆           0 ┆ 4,972.387109 ┆ 2,869.727124 ┆        0.0 ┆   9,999.0 │
-│         year ┆ 5,213 ┆           0 ┆ 2,017.978323 ┆     1.410855 ┆    2,016.0 ┆   2,020.0 │
-│        month ┆ 5,213 ┆           0 ┆      6.44811 ┆     3.446923 ┆        1.0 ┆      12.0 │
-│         var2 ┆ 5,213 ┆           0 ┆       5.3169 ┆     3.049492 ┆        0.0 ┆      10.0 │
-│         var3 ┆ 5,213 ┆           0 ┆    25.229426 ┆    15.889739 ┆        0.0 ┆      50.0 │
-│         var4 ┆ 5,213 ┆           0 ┆     0.503474 ┆     0.287062 ┆   0.000104 ┆  0.999885 │
-│         var5 ┆ 5,213 ┆           0 ┆     0.145406 ┆     0.352543 ┆        0.0 ┆       1.0 │
-│  unrelated_1 ┆ 5,213 ┆           0 ┆      0.50104 ┆     0.290689 ┆   0.000248 ┆  0.999997 │
-│  unrelated_2 ┆ 5,213 ┆           0 ┆     0.500698 ┆     0.289648 ┆   0.000049 ┆  0.999539 │
-│  unrelated_3 ┆ 5,213 ┆           0 ┆     0.496752 ┆     0.288533 ┆   0.000129 ┆  0.999622 │
-│  unrelated_4 ┆ 5,213 ┆           0 ┆     0.500967 ┆     0.288319 ┆   0.000133 ┆  0.999972 │
-│  unrelated_5 ┆ 5,213 ┆           0 ┆     0.496691 ┆     0.286984 ┆   0.000181 ┆  0.999867 │
-│     repeat_1 ┆ 5,213 ┆           0 ┆      0.50104 ┆     0.290689 ┆   0.000248 ┆  0.999997 │
-│     var_reg1 ┆ 5,213 ┆           0 ┆          1.0 ┆          0.0 ┆        1.0 ┆       1.0 │
-│     var_reg2 ┆ 5,213 ┆           0 ┆     -4.28028 ┆    13.445184 ┆ -55.354108 ┆ 26.213084 │
+│ ___rownumber ┆ 5,192 ┆           0 ┆ 4,964.753274 ┆ 2,886.215769 ┆        0.0 ┆   9,999.0 │
+│  _row_index_ ┆ 5,192 ┆           0 ┆ 4,964.753274 ┆ 2,886.215769 ┆        0.0 ┆   9,999.0 │
+│        index ┆ 5,192 ┆           0 ┆ 4,964.753274 ┆ 2,886.215769 ┆        0.0 ┆   9,999.0 │
+│         year ┆ 5,192 ┆           0 ┆ 2,017.979584 ┆     1.415292 ┆    2,016.0 ┆   2,020.0 │
+│        month ┆ 5,192 ┆           0 ┆     6.479391 ┆     3.448546 ┆        1.0 ┆      12.0 │
+│         var2 ┆ 5,192 ┆           0 ┆     5.373652 ┆     3.014225 ┆        0.0 ┆      10.0 │
+│         var3 ┆ 5,192 ┆           0 ┆     25.29218 ┆    15.906281 ┆        0.0 ┆      50.0 │
+│         var4 ┆ 5,192 ┆           0 ┆     0.503355 ┆     0.286399 ┆   0.000104 ┆  0.999885 │
+│  unrelated_1 ┆ 5,192 ┆           0 ┆     0.501036 ┆      0.28941 ┆   0.000248 ┆  0.999997 │
+│  unrelated_2 ┆ 5,192 ┆           0 ┆     0.498814 ┆     0.289168 ┆   0.000049 ┆  0.999539 │
+│  unrelated_3 ┆ 5,192 ┆           0 ┆     0.496603 ┆     0.288688 ┆   0.000129 ┆  0.999622 │
+│  unrelated_4 ┆ 5,192 ┆           0 ┆     0.499139 ┆     0.288123 ┆   0.000133 ┆  0.999972 │
+│  unrelated_5 ┆ 5,192 ┆           0 ┆      0.49488 ┆     0.287035 ┆   0.000181 ┆  0.999867 │
+│     repeat_1 ┆ 5,192 ┆           0 ┆     0.501036 ┆      0.28941 ┆   0.000248 ┆  0.999997 │
+│     var_reg2 ┆ 5,192 ┆           0 ┆    -4.353661 ┆    13.465381 ┆ -55.354108 ┆ 26.213084 │
+│         var5 ┆ 5,192 ┆           0 ┆     0.141757 ┆     0.348834 ┆        0.0 ┆       1.0 │
+│     var_reg1 ┆ 5,192 ┆           0 ┆          1.0 ┆          0.0 ┆        1.0 ┆       1.0 │
 └──────────────┴───────┴─────────────┴──────────────┴──────────────┴────────────┴───────────┘
 </pre>
 </div>

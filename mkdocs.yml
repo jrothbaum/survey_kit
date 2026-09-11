@@ -6,7 +6,16 @@ nav:
   - Home: index.md
   - User Guide:
     - Calibration: user-guide/calibration.md
-    - Imputation/SRMI: user-guide/srmi.md
+    - Imputation/SRMI:
+      - Overview: user-guide/srmi/index.md
+      - Getting Started: user-guide/srmi/getting-started.md
+      - Variable Types & Models: user-guide/srmi/variable-types-and-models.md
+      - Categorical Predictors & Group Effects: user-guide/srmi/categorical-and-group-effects.md
+      - Semicontinuous Variables: user-guide/srmi/semicontinuous-variables.md
+      - Controlling Predictors: user-guide/srmi/controlling-predictors.md
+      - Convergence Diagnostics: user-guide/srmi/diagnostics-convergence.md
+      - Imputation Quality & Propensity: user-guide/srmi/diagnostics-quality-propensity.md
+      - Advanced/Manual Construction: user-guide/srmi/advanced-manual-construction.md
     - Statistics/Standard Errors: user-guide/statistics.md
   - API Reference:
     - Calibration: api/calibration.md

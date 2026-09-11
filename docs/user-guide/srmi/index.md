@@ -71,49 +71,44 @@ It was designed to handle imputing hundreds of variables across multiple iterati
 
 ## API
 
-See the full [Imputation/SRMI API documentation](../api/srmi.md) 
+See the full [Imputation/SRMI API documentation](../../api/srmi.md)
 
+## A Simple Example
 
-## Examples/Tutorials
+The fastest way to get started is `SRMI.simple_model()` - point it at a dataframe and an id
+column, and it figures out which columns need imputing, whether each one is binary or
+continuous, and picks a sensible model for each one. No `Variable` objects to build by hand.
 
-=== "Hot Deck/Statistical Match"
-    Stat match uses a join and hot deck fill forward from an array across the file, but there is no real difference between them theoretically 
+```python
+from survey_kit.imputation.srmi import SRMI
 
-    === "Code"
-        ```python
-        --8<-- "tutorials/srmi/hotdeck.py"
-        ```
+srmi = SRMI.simple_model(
+    df=df,
+    index="person_id",
+    replication=SRMI.Replication(n_implicates=5, n_iterations=5),
+)
+srmi.run()
 
-    === "Log"
-        [View in separate window](../../tutorials/srmi/hotdeck.html){:target="_blank"}
-        <iframe src="../../tutorials/srmi/hotdeck.html" 
-            style="width: 100%; height: 800px; border: none;">
-        </iframe>
+df_imputed = srmi.df_implicates
+```
 
-=== "Regression"
-    Logit and/or OLS-based imputation
+That covers the common case. Real data usually needs a bit more control - see the pages below
+for how to handle each of those cases, one at a time.
 
-    === "Code"
-        ```python
-        --8<-- "tutorials/srmi/regression.py"
-        ```
+## Learn More
 
-    === "Log"
-        [View in separate window](../../tutorials/srmi/regression.html){:target="_blank"}
-        <iframe src="../../tutorials/srmi/regression.html" 
-            style="width: 100%; height: 800px; border: none;">
-        </iframe>
-
-=== "Machine Learning"
-    Imputation with LightGBM, see the [LightGBM documentation](https://lightgbm.readthedocs.io/en/stable/) for additional information on some of the options.
-
-    === "Code"
-        ```python
-        --8<-- "tutorials/srmi/gbm.py"
-        ```
-
-    === "Log"
-        [View in separate window](../../tutorials/srmi/gbm.html){:target="_blank"}
-        <iframe src="../../tutorials/srmi/gbm.html" 
-            style="width: 100%; height: 800px; border: none;">
-        </iframe>
+- [Getting Started](getting-started.md) - the full `simple_model()` walkthrough, from raw data
+  to completed imputations
+- [Variable Types & Models](variable-types-and-models.md) - declaring categorical variables,
+  and choosing which model imputes which variable
+- [Categorical Predictors & Group Effects](categorical-and-group-effects.md) - predictors that
+  are themselves categorical, and borrowing strength across a grouping variable (like state)
+- [Semicontinuous Variables](semicontinuous-variables.md) - variables with a point mass at
+  zero plus a continuous amount otherwise (a "two-part" or "hurdle" model)
+- [Controlling Predictors](controlling-predictors.md) - keeping a variable out of a model
+  (for one variable, or globally), and imputing an exact list of columns
+- [Convergence Diagnostics](diagnostics-convergence.md) - did the SRMI iteration settle down?
+- [Imputation Quality & Propensity Diagnostics](diagnostics-quality-propensity.md) - do the
+  imputed values themselves look plausible?
+- [Advanced/Manual Construction](advanced-manual-construction.md) - building `Variable`/`SRMI`
+  objects by hand for full control, beyond what `simple_model()` covers
