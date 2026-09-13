@@ -271,8 +271,23 @@ def get_library(name: str):
 
 
 def require_rpy2_arrow():
+    from rpy2.robjects.packages import PackageNotInstalledError
+
     try:
         import rpy2_arrow.arrow as pyra
+    except PackageNotInstalledError as e:
+        #   rpy2_arrow.arrow imports R's own 'arrow' package at import time
+        #   (see rpy2_arrow/arrow.py), so a missing R package surfaces here
+        #   as an ImportError on the *Python* module even though rpy2-arrow
+        #   itself is installed fine - distinguish the two so the message
+        #   points at the actual problem.
+        message = (
+            "The 'rpy2-arrow' Python package is installed, but R's own "
+            "'arrow' package isn't - install it with install.packages"
+            "('arrow') in R."
+        )
+        logger.error(message)
+        raise ImportError(message) from e
     except ImportError as e:
         message = (
             "This requires the 'rpy2-arrow' package - install it with "

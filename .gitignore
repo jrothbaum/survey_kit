@@ -12,6 +12,9 @@ wheels/
 
 .scratch/
 
+# Local, machine-specific secrets/config (e.g. SURVEY_KIT_STATA_PATH) - never shared
+.env
+
 # CatBoost training artifacts (auto-created wherever catboost is run from)
 catboost_info/
 **/catboost_info/

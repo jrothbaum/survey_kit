@@ -1,12 +1,27 @@
 from __future__ import annotations
 
+import os
 import numpy as np
 import polars as pl
+from dotenv import load_dotenv
+
 
 from survey_kit import logger
 from survey_kit.statistics.multiple_imputation import mi_ses_from_function
 from survey_kit.statistics.adapters import stata_adapter
 from survey_kit.statistics import _stata_interop as _st
+from survey_kit.utilities.random import set_seed, RandomNumberGenerator
+
+#   Machine-specific - set these in a local ".env" file (see .gitignore,
+#   which excludes it from git) in the repo root rather than editing this
+#   file or exporting them yourself:
+#       _survey_kit_stata_path_=C:\Program Files\Stata17
+#       _survey_kit_stata_edition_=se
+#   Or, just as easily, set them directly in code instead of via env vars:
+#       from survey_kit import config
+#       config.stata_path = r"C:\Program Files\Stata17"
+#       config.stata_edition = "se"
+load_dotenv()
 
 
 # %%
@@ -26,7 +41,7 @@ logger.info("")
 logger.info("Requires `pip install survey-kit[stata]` (polars_readstat, for writing")
 logger.info(".dta files) plus a licensed Stata 17+ install for pystata itself.")
 
-STATA_PATH = r"C:\Program Files\Stata18"  # <-- change this to your install directory
+
 
 
 # %%
@@ -58,7 +73,6 @@ mi_reg = mi_ses_from_function(
     join_on=["Variable"],
     arguments={
         "command": "regress y x1 x2",
-        "stata_path": STATA_PATH,
     },
     round_output=False,
 )
@@ -75,8 +89,9 @@ mi_svy = mi_ses_from_function(
     join_on=["Variable"],
     arguments={
         "command": "svy: regress y x1 x2",
-        "pre_commands": ["svyset _n [pw=1]"],  # replace with your actual design
-        "stata_path": STATA_PATH,
+        #   svyset's pweight must be a variable, not a literal - replace
+        #   with your actual design (real psu/weight/strata variables).
+        "pre_commands": ["gen _svy_weight = 1", "svyset _n [pw=_svy_weight]"],
     },
     round_output=False,
 )
@@ -87,7 +102,7 @@ mi_svy.print(round_output=False)
 logger.info("\n\nPart 2: calling this like any other delegate, standalone on one")
 logger.info("dataset with no MI at all:")
 (df_estimates, df_ses, df_vcov, df_tidy) = stata_adapter(
-    df_implicates[0], command="regress y x1 x2", stata_path=STATA_PATH
+    df_implicates[0], command="regress y x1 x2",
 )
 logger.info(df_estimates)
 logger.info(df_ses)
@@ -112,20 +127,28 @@ mi_areg = mi_ses_from_function(
         for d in df_implicates
     ],
     join_on=["Variable"],
-    arguments={"command": "areg y x1 x2, absorb(firm)", "stata_path": STATA_PATH},
+    arguments={"command": "areg y x1 x2, absorb(firm)", },
     round_output=False,
 )
 mi_areg.print(round_output=False)
 
 logger.info("\n  Logit (any e-class command works the same way):")
+
+
+def _with_ybin(d: pl.DataFrame, seed: int) -> pl.DataFrame:
+    if seed > 0:
+        set_seed(seed)
+    rng = RandomNumberGenerator()
+    p = 1 / (1 + np.exp(-d["x1"].to_numpy()))
+    ybin = rng.binomial(1, p).astype(np.int8)
+    return d.with_columns(pl.Series("ybin", ybin))
+
+
 mi_logit = mi_ses_from_function(
     delegate=stata_adapter,
-    df_implicates=[
-        d.with_columns((pl.col("x1") > 0).cast(pl.Int8).alias("ybin"))
-        for d in df_implicates
-    ],
+    df_implicates=[_with_ybin(d, seed) for seed, d in enumerate(df_implicates)],
     join_on=["Variable"],
-    arguments={"command": "logit ybin x1 x2", "stata_path": STATA_PATH},
+    arguments={"command": "logit ybin x1 x2"},
     round_output=False,
 )
 mi_logit.print(round_output=False)
@@ -154,7 +177,6 @@ raw = _st.run_stata_results(
     df_implicates[0],
     command="regress y x1 x2",
     results=["e(N)", "e(r2)"],
-    stata_path=STATA_PATH,
 )
 logger.info(raw)
 
@@ -174,8 +196,9 @@ logger.info("\n\nSummary / troubleshooting checklist for getting this working:")
 logger.info("  1. check_stata_setup(stata_path=...) - confirms pystata and")
 logger.info("     polars_readstat both import; doesn't guarantee config.init()")
 logger.info("     succeeds (e.g. an expired license would still fail there).")
-logger.info("  2. If `stata.run(...)` errors immediately, try it with quietly=False")
-logger.info("     to see Stata's own error text in the console.")
+logger.info("  2. If a command errors immediately with just a bare 'r(####);' and no")
+logger.info("     explanation, pass quietly=False to stata_adapter/run_stata_model/")
+logger.info("     run_stata_results to see Stata's own error text in the console.")
 logger.info("  3. If e(b)/e(V) come back empty, the command you ran probably isn't")
 logger.info("     e-class (didn't leave results in e()) - `ereturn list` right after")
 logger.info("     running it interactively in Stata will confirm.")

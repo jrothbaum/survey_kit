@@ -1024,6 +1024,7 @@ def stata_adapter(
     edition: str | None = None,
     stata_path: str | None = None,
     reuse_data: bool = False,
+    quietly: bool = True,
 ) -> tuple[pl.DataFrame, pl.DataFrame, pl.DataFrame, pl.DataFrame]:
     """
     Run an arbitrary Stata e-class estimation command (regress, logit,
@@ -1073,6 +1074,10 @@ def stata_adapter(
         call). Default is False. Call
         `survey_kit.statistics._stata_interop.clear_stata_cache()` once
         done with data reused this way, to free Stata's own copy.
+    quietly : pass False to let `pre_commands`/`command` stream Stata's own
+        console output, including the real error text behind an r()
+        failure (otherwise collapsed to just the bare "r(####);" code) -
+        useful for debugging. Default is True.
 
     Returns
     -------
@@ -1092,6 +1097,7 @@ def stata_adapter(
         edition=edition,
         stata_path=stata_path,
         reuse_data=reuse_data,
+        quietly=quietly,
     )
 
     df_estimates = pl.DataFrame({join_on_name: b_names, value_name: b})
@@ -1137,6 +1143,7 @@ def stata_results_adapter(
     edition: str | None = None,
     stata_path: str | None = None,
     reuse_data: bool = False,
+    quietly: bool = True,
 ) -> pl.DataFrame:
     """
     Run an arbitrary Stata command (r-class or e-class) and return a flat
@@ -1196,6 +1203,10 @@ def stata_results_adapter(
         default the way the R side's dataframe_to_r caching is). Call
         `survey_kit.statistics._stata_interop.clear_stata_cache()` once
         the replicate loop is done, to free Stata's own copy of the data.
+    quietly : pass False to let `pre_commands`/`command` stream Stata's own
+        console output, including the real error text behind an r()
+        failure (otherwise collapsed to just the bare "r(####);" code) -
+        useful for debugging. Default is True.
 
     Returns
     -------
@@ -1216,6 +1227,7 @@ def stata_results_adapter(
         reuse_data=reuse_data,
         edition=edition,
         stata_path=stata_path,
+        quietly=quietly,
     )
 
     import numpy as np

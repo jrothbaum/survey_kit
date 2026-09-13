@@ -13,9 +13,11 @@ against a real Stata instance:
   (b/se/z-or-t/pvalue/ll/ul/df/crit/eform) documented for postestimation
   use, or something that needs a small reshape - test against a plain
   `regress` first.
-- Whether `pystata.config.init(edition)` needs edition passed explicitly on
-  every machine, or can be left None to auto-detect from the license -
-  cheap to test once.
+- `pystata.config.init(edition)` does NOT auto-detect the edition from the
+  license when left None - it raises `ValueError('Stata edition must be one
+  of be, se, or mp')` - confirmed against a real Stata 17 SE install. Every
+  caller must pass edition="be"/"se"/"mp" explicitly, matching whichever
+  edition's exe (e.g. StataSE-64.exe) is present in the Stata install dir.
 - Quoting/escaping of the temp .dta path in the generated `use "..."`
   command on Windows (backslashes) - str(Path) should already produce
   forward slashes that Stata accepts, but worth a first check.
@@ -34,7 +36,7 @@ import os
 import sys
 import tempfile
 
-from .. import logger
+from .. import config, logger
 
 _stata_initialized = False
 
@@ -53,8 +55,10 @@ def check_stata_setup(stata_path: str | None = None) -> dict:
     ----------
     stata_path : str | None, optional
         Path to your Stata installation (the directory containing
-        `utilities`, `StataMP-64.exe`, etc.), or None to only check what's
-        already importable. Default is None.
+        `utilities`, `StataMP-64.exe`, etc.), or None to fall back to
+        `survey_kit.config.stata_path` (env var `_survey_kit_stata_path_`)
+        and, if that's unset too, only check what's already importable.
+        Default is None.
 
     Returns
     -------
@@ -65,6 +69,9 @@ def check_stata_setup(stata_path: str | None = None) -> dict:
         successfully doesn't guarantee `config.init()` will succeed too,
         e.g. an expired license would still fail at that step).
     """
+    if stata_path is None:
+        stata_path = config.stata_path or None
+
     report = {
         "stata_path": stata_path,
         "utilities_dir": None,
@@ -142,8 +149,30 @@ def require_pystata(edition: str | None = None, stata_path: str | None = None):
     first) and initialize pystata. Caches initialization across calls -
     like R package loading, this is slow enough (a real Stata instance
     starting up) that repeated per-implicate calls should only pay it once.
+
+    `edition`/`stata_path` fall back to `survey_kit.config.stata_edition`/
+    `survey_kit.config.stata_path` (env vars `_survey_kit_stata_edition_`/
+    `_survey_kit_stata_path_`) when not passed. Raises RuntimeError
+    immediately if no edition is available from either source, rather than
+    letting pystata's own `config.init(None)` fail with a cryptic
+    ValueError.
     """
     global _stata_initialized
+
+    if stata_path is None:
+        stata_path = config.stata_path or None
+    if edition is None:
+        edition = config.stata_edition or None
+
+    if not edition:
+        message = (
+            "Stata edition is required - pass edition='be'/'se'/'mp' "
+            "(matching your license) to the adapter, or set it once via "
+            "survey_kit.config.stata_edition (env var "
+            "_survey_kit_stata_edition_)."
+        )
+        logger.error(message)
+        raise RuntimeError(message)
 
     if stata_path:
         utilities_dir = os.path.join(stata_path, "utilities")
@@ -151,7 +180,7 @@ def require_pystata(edition: str | None = None, stata_path: str | None = None):
             sys.path.insert(0, utilities_dir)
 
     try:
-        from pystata import config, stata
+        from pystata import config as pystata_config
     except ImportError as e:
         message = (
             "This requires Stata 17+ and its bundled 'pystata' package - "
@@ -164,8 +193,21 @@ def require_pystata(edition: str | None = None, stata_path: str | None = None):
         raise ImportError(message) from e
 
     if not _stata_initialized:
-        config.init(edition)
+        pystata_config.init(edition)
+        #   pystata's default streamout='on' polls Stata's output buffer
+        #   from a background thread while the main thread is still
+        #   executing the command - pystata's embedded Stata engine isn't
+        #   safe for that cross-thread sfi access (can surface as "Unable
+        #   to find thread to evaluate variable reference", or as an error
+        #   raised with only a truncated tail of the real message, e.g. a
+        #   bare "r(2000);" with the actual explanation lost). Capturing
+        #   output synchronously in the same thread avoids both.
+        pystata_config.set_streaming_output_mode("off")
         _stata_initialized = True
+
+    #   pystata.stata calls config.check_initialized() at import time, so it
+    #   can only be imported after config.init() above has actually run.
+    from pystata import stata
 
     return stata
 
@@ -194,6 +236,7 @@ def _run_in_stata(
     edition: str | None,
     stata_path: str | None,
     reuse_data: bool = False,
+    quietly: bool = True,
 ):
     """
     Write df to a temp .dta, `use` it in the running (persistent, embedded)
@@ -231,8 +274,24 @@ def _run_in_stata(
         shared in-memory dataset, so this needs an explicit opt-in from a
         caller who knows the same object will really be reused - call
         clear_stata_cache() once done to free it.
+    quietly : suppresses Stata's own console output for `pre_commands`/
+        `command` on success (default True) - avoids dumping a full
+        regression table/iteration log per implicate/replicate. Has no
+        effect on failures: a failing command is always retried
+        non-quietly so the real explanation reaches the raised
+        SystemError, since Stata's `quietly` prefix would otherwise
+        suppress that error text too, collapsing it to a bare
+        "r(####);".
     """
     global _stata_loaded_df
+
+    def run_line(cmd: str, line_quietly: bool):
+        try:
+            stata.run(cmd, quietly=line_quietly)
+        except SystemError:
+            if line_quietly:
+                stata.run(cmd, quietly=False)
+            raise
 
     stata = require_pystata(edition, stata_path)
 
@@ -244,16 +303,16 @@ def _run_in_stata(
             #   forward slashes work fine as path separators inside Stata
             #   command strings, including on Windows.
             stata_path_str = dta_path.replace(os.sep, "/")
-            stata.run(f'use "{stata_path_str}", clear', quietly=True)
+            run_line(f'use "{stata_path_str}", clear', True)
         _stata_loaded_df = df if reuse_data else None
 
-    stata.run("ereturn clear", quietly=True)
-    stata.run("return clear", quietly=True)
+    run_line("ereturn clear", True)
+    run_line("return clear", True)
 
     for pre in pre_commands or []:
-        stata.run(pre, quietly=True)
+        run_line(pre, quietly)
 
-    stata.run(command, quietly=True)
+    run_line(command, quietly)
 
     return stata
 
@@ -282,6 +341,7 @@ def run_stata_model(
     edition: str | None = None,
     stata_path: str | None = None,
     reuse_data: bool = False,
+    quietly: bool = True,
 ):
     """
     Write df to a temp .dta, `use` it in a running Stata instance, run any
@@ -304,6 +364,9 @@ def run_stata_model(
         re-`use`-ing df when it's the same object as a previous
         reuse_data=True call. Default is False. Call `clear_stata_cache()`
         when done with data reused this way.
+    quietly : pass False to see Stata's own console output/error text for
+        `pre_commands`/`command` - see `_run_in_stata`'s docstring. Default
+        is True.
 
     Returns
     -------
@@ -319,7 +382,9 @@ def run_stata_model(
     **UNTESTED** - see this module's docstring for the specific pieces most
     likely to need adjustment against a real Stata instance.
     """
-    _run_in_stata(df, command, pre_commands, edition, stata_path, reuse_data=reuse_data)
+    _run_in_stata(
+        df, command, pre_commands, edition, stata_path, reuse_data=reuse_data, quietly=quietly
+    )
     import sfi
 
     b = sfi.Matrix.get("e(b)")[0]
@@ -340,6 +405,7 @@ def run_stata_results(
     edition: str | None = None,
     stata_path: str | None = None,
     reuse_data: bool = False,
+    quietly: bool = True,
 ) -> dict[str, object]:
     """
     Write df to a temp .dta, `use` it, run any `pre_commands` then
@@ -374,6 +440,9 @@ def run_stata_results(
         (the common case here, one call per replicate weight). Default is
         False. Call `clear_stata_cache()` when done with data reused this
         way.
+    quietly : pass False to see Stata's own console output/error text for
+        `pre_commands`/`command` - see `_run_in_stata`'s docstring. Default
+        is True.
 
     Returns
     -------
@@ -386,7 +455,9 @@ def run_stata_results(
     (used here to decide to fall back to `sfi.Matrix.get`) isn't confirmed
     against a real Stata instance.
     """
-    _run_in_stata(df, command, pre_commands, edition, stata_path, reuse_data=reuse_data)
+    _run_in_stata(
+        df, command, pre_commands, edition, stata_path, reuse_data=reuse_data, quietly=quietly
+    )
     import sfi
 
     out: dict[str, object] = {}

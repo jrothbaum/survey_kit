@@ -78,6 +78,7 @@ dev = [
     "catboost>=1.2.10",
     "plotly>=6.0.0",
     "survey-kit[all-stats]",
+    "python-dotenv>=1.0.0",
 ]
 
 [build-system]
@@ -90,4 +91,4 @@ target-version = "py39"
 
 [tool.uv.sources]
 survey-kit-data = { git = "https://github.com/jrothbaum/survey_kit_data" }
-survey-kit-formula = { path = "../survey_kit_formula", editable = true }
+# survey-kit-formula = { path = "../survey_kit_formula", editable = true }

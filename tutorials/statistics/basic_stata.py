@@ -1,7 +1,10 @@
 from __future__ import annotations
 
+import os
+
 import numpy as np
 import polars as pl
+from dotenv import load_dotenv
 
 from survey_kit import logger
 from survey_kit.statistics.multiple_imputation import mi_ses_from_function
@@ -16,10 +19,18 @@ logger.info("see stata_arbitrary_estimators.py and _stata_interop's module")
 logger.info("docstring for details/caveats. Requires `pip install survey-kit[stata]`")
 logger.info("plus a licensed Stata 17+ install. Check your setup cheaply with:")
 logger.info("    from survey_kit.statistics._stata_interop import check_stata_setup")
-logger.info('    check_stata_setup(stata_path=r"C:\\Program Files\\Stata18")')
+logger.info('    check_stata_setup(stata_path=r"C:\\Program Files\\Stata17")')
 
-STATA_PATH = r"C:\Program Files\Stata18"  # <-- change this to your install directory
-
+#   Machine-specific - set these in a local ".env" file (see .gitignore,
+#   which excludes it from git) in the repo root rather than editing this
+#   file or exporting them yourself:
+#       _survey_kit_stata_path_=C:\Program Files\Stata17
+#       _survey_kit_stata_edition_=se
+#   Or, just as easily, set them directly in code instead of via env vars:
+#       from survey_kit import config
+#       config.stata_path = r"C:\Program Files\Stata17"
+#       config.stata_edition = "se"
+load_dotenv()
 
 # %%
 def make_implicate(seed: int) -> pl.DataFrame:
@@ -36,7 +47,7 @@ df = make_implicate(0)
 # %%
 logger.info("\n\nOn one dataset, standalone - no MI at all:")
 (df_estimates, df_ses, df_vcov, df_tidy) = stata_adapter(
-    df, command="regress y x1 x2", stata_path=STATA_PATH
+    df, command="regress y x1 x2"
 )
 logger.info(df_estimates)
 logger.info(df_ses)
@@ -49,7 +60,9 @@ mi_reg = mi_ses_from_function(
     delegate=stata_adapter,
     df_implicates=df_implicates,
     join_on=["Variable"],
-    arguments={"command": "regress y x1 x2", "stata_path": STATA_PATH},
+    arguments={
+        "command": "regress y x1 x2",
+    },
     round_output=False,
 )
 mi_reg.print(round_output=False)

@@ -76,6 +76,14 @@ class Config:
         Available memory in megabytes (read-only).
     mem_in_kb : int
         Available memory in kilobytes (read-only).
+    stata_path : str
+        Path to the Stata installation directory used by the Stata adapter
+        (`survey_kit.statistics.adapters.stata_adapter` et al.). Set via
+        `_survey_kit_stata_path_` or directly. Default is "".
+    stata_edition : str
+        Stata license edition ('be', 'se', or 'mp') used by the Stata
+        adapter. Set via `_survey_kit_stata_edition_` or directly. Default
+        is "".
     Examples
     --------
     Basic configuration:
@@ -139,16 +147,20 @@ class Config:
     _ram_key = "_survey_kit_ram_"
     _parameter_files_key = "_survey_kit_parameter_files_"
     _pbs_log_path_key = "_survey_kit_pbs_log_path_"
+    _stata_path_key = "_survey_kit_stata_path_"
+    _stata_edition_key = "_survey_kit_stata_edition_"
 
     code_root = TypedEnvVar(_code_root_key, default="", convert=str)
     data_root = TypedEnvVar(_data_root_key, default="", convert=str)
     versions = TypedEnvVar(_version_key, default=[], convert=list)
-    
+
     _path_temp_files = TypedEnvVar(_path_temp_files_key, "", str)
     _cpus = TypedEnvVar(_cpus_key, None, int)
     ram = TypedEnvVar(_ram_key, psutil.virtual_memory().total)
     parameter_files = TypedEnvVar(_parameter_files_key, {}, convert=dict)
     pbs_log_path = TypedEnvVar(_pbs_log_path_key, "", str)
+    stata_path = TypedEnvVar(_stata_path_key, default="", convert=str)
+    stata_edition = TypedEnvVar(_stata_edition_key, default="", convert=str)
 
     _cpu_env_vars = [
         "POLARS_MAX_THREADS",
