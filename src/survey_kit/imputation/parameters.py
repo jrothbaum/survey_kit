@@ -346,20 +346,16 @@ class Parameters:
         match_to: str | list[str], logit: bool = False, parameters_pmm: dict = None
     ) -> dict:
         """
-        Convenience builder for what used to be its own modeltype -
-        Variable.ModelType.NearestNeighbor (matching directly on raw x
-        values, no fitted model at all) was removed: it turned out to
-        just be a restricted, worse-behaved case of Regression - fit an
-        OLS/Logit on the same predictors, then PMM-match on the fitted
-        prediction instead of raw, unweighted, unlearned multivariate
-        distance on match_to. A fitted probability/prediction is a more
-        principled notion of "similar" than treating every predictor as
-        equally informative.
-
-        This function still exists purely for readability/discoverability
-        - it just returns Parameters.Regression()'s own dict shape, so
-        use it with Variable.ModelType.Regression - there's no dedicated
-        NearestNeighbor modeltype to route it to any more.
+        Convenience builder for nearest-neighbor PMM matching, purely for
+        readability/discoverability - there's no dedicated
+        Variable.ModelType.NearestNeighbor; this just returns
+        Parameters.Regression()'s own dict shape, so use it with
+        Variable.ModelType.Regression. Matching on a fitted OLS/Logit
+        prediction (a principled notion of "similar") is strictly better
+        than matching on raw, unweighted, unlearned multivariate distance
+        across match_to's predictors directly, so this always routes
+        through Regression rather than a distance-based implementation of
+        its own.
 
         Parameters
         ----------

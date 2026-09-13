@@ -8,10 +8,9 @@ the whole subpackage on import, everything here degrades gracefully:
     dot products / gram matrix : sparse_dot_mkl -> scipy/numpy
     sparse solve               : pypardiso -> scipy
 
-(scikit-sparse/CHOLMOD was tried as an extra solve tier and dropped: it never
-beat plain scipy in benchmarks at any tested problem size, while adding a
-source-compile-only dependency and an API that already changed out from under
-this code once. See git history if that tradeoff changes.)
+(scikit-sparse/CHOLMOD isn't included as a solve tier here: it doesn't beat
+plain scipy in benchmarks at any tested problem size, and it's a
+source-compile-only dependency with an unstable API.)
 """
 
 from __future__ import annotations

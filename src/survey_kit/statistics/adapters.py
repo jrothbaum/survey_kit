@@ -99,13 +99,98 @@ def _tidy_from_parts(
 
 
 def _to_pandas(df):
+    import pandas as pd
+
+    if isinstance(df, pd.DataFrame):
+        #   Already converted - returned unchanged rather than re-converted,
+        #   same as _r_interop.dataframe_to_r does for an already-R object.
+        #   Lets a caller that will reuse the same data across several
+        #   calls (e.g. once per replicate weight) convert once and pass
+        #   the pandas frame directly on later calls instead of the
+        #   original polars/narwhals df.
+        return df
+
     if hasattr(df, "to_pandas"):
         return df.to_pandas()
-    #   Already a pandas-like frame, or narwhals-native with no to_pandas
-    #   (e.g. a raw polars/pandas frame handed straight through).
+    #   narwhals-native with no to_pandas (e.g. a raw pyarrow/duckdb frame).
     import narwhals as nw
 
     return nw.from_native(df).lazy().collect().to_pandas()
+
+
+def _to_polars(df) -> pl.DataFrame:
+    """
+    Materializes df to an actual pl.DataFrame, collecting a LazyFrame if
+    given one, so a caller reusing the same implicate across many calls
+    (e.g. once per replicate weight) collects once and passes the
+    materialized frame on later calls - passing an uncollected LazyFrame
+    through unchanged instead would re-run its whole upstream plan (joins/
+    filters/etc.) from scratch on every one of those calls.
+    """
+    if isinstance(df, pl.DataFrame):
+        return df
+    if isinstance(df, pl.LazyFrame):
+        return df.collect()
+
+    import narwhals as nw
+
+    return nw.from_native(df).lazy().collect().to_polars()
+
+
+def _mi_ses_replicates_delegate(
+    adapter,
+    base_arguments: dict,
+    join_on_name: str,
+    replicates,
+    convert=None,
+):
+    """
+    Build an `mi_ses_from_function` delegate (called once per implicate)
+    that instead runs `adapter` once per replicate weight column via
+    `StatCalculator.from_function`, taking just its point estimates
+    (element 0 of the (df_estimates, df_ses, df_vcov, df_tidy) tuple every
+    adapter in this module returns) - the SE then comes from the spread of
+    estimates across replicates rather than the adapter's own df_ses/
+    df_vcov, the same replicate-weight-bootstrap approach
+    `stata_results_adapter` uses for Stata.
+
+    `convert`, if given (e.g. `_to_pandas`, `_to_polars`,
+    `_r_interop.dataframe_to_r`), converts df once per implicate - on the
+    first replicate call, memoized in a closure for the rest - rather than
+    leaving `adapter` to redo that conversion on every one of potentially
+    dozens of replicate-weight calls for the same underlying data. This
+    can't just pre-convert `df` before calling `StatCalculator.from_function`
+    below: its own `df=` parameter has to stay narwhals-compatible (pandas/
+    polars/pyarrow/...) since it inspects it directly - an R data.frame
+    (an rpy2 object, not narwhals-native) would break that immediately, so
+    the conversion has to happen inside `_point_estimate` instead, after
+    `StatCalculator.from_function` has already done its own (cheap, since
+    `df` here is never actually partitioned by `by=`) handling of the
+    original df. None (the default) skips this - appropriate for an
+    adapter that's already cheap to call repeatedly on the same data (e.g.
+    `polars_ds_adapter` with an already-materialized polars df).
+    """
+    from .calculator import StatCalculator
+
+    def delegate(df):
+        converted = {}
+
+        def _point_estimate(df, weight):
+            if convert is not None:
+                if not converted:
+                    converted["df"] = convert(df)
+                df = converted["df"]
+            return adapter(df, weight=weight, **base_arguments)[0]
+
+        return StatCalculator.from_function(
+            delegate=_point_estimate,
+            estimate_ids=[join_on_name],
+            df=df,
+            replicates=replicates,
+            display=False,
+        )
+
+    return delegate
 
 
 def statsmodels_adapter(
@@ -197,6 +282,111 @@ def statsmodels_adapter(
     )
 
     return (df_estimates, df_ses, df_vcov, df_tidy)
+
+
+def mi_ses_from_statsmodels(
+    df_implicates,
+    y: str,
+    x: list[str] | str,
+    weight: str | None = None,
+    add_constant: bool = True,
+    join_on_name: str = "Variable",
+    value_name: str = "estimate",
+    cov_type: str = "HC3",
+    cov_kwds: dict | None = None,
+    model_kwargs: dict | None = None,
+    fit_kwargs: dict | None = None,
+    replicates=None,
+    path_srmi: str = "",
+    index: list | None = None,
+    df_noimputes=None,
+    parallel: bool = False,
+    parallel_inputs=None,
+    rounding=None,
+    round_output: bool = True,
+):
+    """
+    `mi_ses_from_function(delegate=statsmodels_adapter, ...)`, with
+    `statsmodels_adapter`'s own arguments taken directly as keyword
+    arguments instead of packed into an `arguments={}` dict.
+
+    Parameters
+    ----------
+    df_implicates, path_srmi, index, df_noimputes, parallel,
+        parallel_inputs, rounding, round_output : see
+        [`mi_ses_from_function`][survey_kit.statistics.multiple_imputation.mi_ses_from_function].
+    y, x, weight, add_constant, join_on_name, value_name, cov_type,
+        cov_kwds, model_kwargs, fit_kwargs : see `statsmodels_adapter`.
+    replicates : `survey_kit.statistics.replicates.Replicates`, optional.
+        When given, per-implicate SEs come from resampling across
+        replicate weights instead of statsmodels' own cov_type/cov_kwds -
+        `statsmodels_adapter` is run once per replicate weight column
+        (point estimates only), the same replicate-weight-bootstrap
+        approach `mi_ses_from_stata`'s `replicates=` uses. `weight` is
+        ignored in this mode (each replicate call supplies its own weight
+        column) - the implicate is converted to pandas once, not once per
+        replicate. Default is None (use `statsmodels_adapter`'s own
+        cov_type/cov_kwds).
+
+    Returns
+    -------
+    MultipleImputation
+        Same as `mi_ses_from_function`.
+
+    See Also
+    --------
+    statsmodels_adapter : the delegate this wraps.
+    """
+    from .multiple_imputation import mi_ses_from_function
+
+    base_arguments = {
+        "y": y,
+        "x": x,
+        "add_constant": add_constant,
+        "join_on_name": join_on_name,
+        "value_name": value_name,
+        "model_kwargs": model_kwargs,
+        "fit_kwargs": fit_kwargs,
+    }
+
+    if replicates is None:
+        delegate = statsmodels_adapter
+        arguments = {**base_arguments, "weight": weight, "cov_type": cov_type, "cov_kwds": cov_kwds}
+    else:
+        if weight:
+            logger.warning(
+                "mi_ses_from_statsmodels: weight is ignored when replicates "
+                "is given - each replicate call supplies its own weight column."
+            )
+        #   cov_type/cov_kwds are discarded for these point-estimate-only
+        #   replicate calls (the SE comes from the spread across
+        #   replicates, not statsmodels' own covariance) - force the
+        #   cheapest (classical) option rather than whatever the caller
+        #   passed, to skip computing a robust covariance matrix that's
+        #   about to be thrown away, on every one of potentially dozens of
+        #   replicate calls.
+        delegate = _mi_ses_replicates_delegate(
+            statsmodels_adapter,
+            {**base_arguments, "cov_type": "nonrobust", "cov_kwds": None},
+            join_on_name,
+            replicates,
+            convert=_to_pandas,
+        )
+        arguments = {}
+
+    return mi_ses_from_function(
+        delegate=delegate,
+        df_implicates=df_implicates,
+        join_on=[join_on_name],
+        path_srmi=path_srmi,
+        index=index,
+        df_noimputes=df_noimputes,
+        arguments=arguments,
+        parallel=parallel,
+        parallel_inputs=parallel_inputs,
+        rounding=rounding,
+        round_output=round_output,
+    )
 
 
 def linearmodels_adapter(
@@ -311,6 +501,101 @@ def linearmodels_adapter(
     )
 
     return (df_estimates, df_ses, df_vcov, df_tidy)
+
+
+def mi_ses_from_linearmodels(
+    df_implicates,
+    formula: str,
+    weight: str | None = None,
+    model: str = "IV2SLS",
+    join_on_name: str = "Variable",
+    value_name: str = "estimate",
+    cov_type: str = "robust",
+    cov_kwds: dict | None = None,
+    model_kwargs: dict | None = None,
+    fit_kwargs: dict | None = None,
+    replicates=None,
+    path_srmi: str = "",
+    index: list | None = None,
+    df_noimputes=None,
+    parallel: bool = False,
+    parallel_inputs=None,
+    rounding=None,
+    round_output: bool = True,
+):
+    """
+    `mi_ses_from_function(delegate=linearmodels_adapter, ...)`, with
+    `linearmodels_adapter`'s own arguments taken directly as keyword
+    arguments instead of packed into an `arguments={}` dict.
+
+    Parameters
+    ----------
+    df_implicates, path_srmi, index, df_noimputes, parallel,
+        parallel_inputs, rounding, round_output : see
+        [`mi_ses_from_function`][survey_kit.statistics.multiple_imputation.mi_ses_from_function].
+    formula, weight, model, join_on_name, value_name, cov_type, cov_kwds,
+        model_kwargs, fit_kwargs : see `linearmodels_adapter`.
+    replicates : `survey_kit.statistics.replicates.Replicates`, optional.
+        When given, per-implicate SEs come from resampling across
+        replicate weights instead of linearmodels' own cov_type/cov_kwds -
+        `linearmodels_adapter` is run once per replicate weight column
+        (point estimates only, with cov_type forced to "unadjusted" since
+        the covariance is discarded anyway), the same replicate-weight-
+        bootstrap approach `mi_ses_from_stata`'s `replicates=` uses.
+        `weight` is ignored in this mode. Default is None (use
+        `linearmodels_adapter`'s own cov_type/cov_kwds).
+
+    Returns
+    -------
+    MultipleImputation
+        Same as `mi_ses_from_function`.
+
+    See Also
+    --------
+    linearmodels_adapter : the delegate this wraps.
+    """
+    from .multiple_imputation import mi_ses_from_function
+
+    base_arguments = {
+        "formula": formula,
+        "model": model,
+        "join_on_name": join_on_name,
+        "value_name": value_name,
+        "model_kwargs": model_kwargs,
+        "fit_kwargs": fit_kwargs,
+    }
+
+    if replicates is None:
+        delegate = linearmodels_adapter
+        arguments = {**base_arguments, "weight": weight, "cov_type": cov_type, "cov_kwds": cov_kwds}
+    else:
+        if weight:
+            logger.warning(
+                "mi_ses_from_linearmodels: weight is ignored when replicates "
+                "is given - each replicate call supplies its own weight column."
+            )
+        delegate = _mi_ses_replicates_delegate(
+            linearmodels_adapter,
+            {**base_arguments, "cov_type": "unadjusted", "cov_kwds": None},
+            join_on_name,
+            replicates,
+            convert=_to_pandas,
+        )
+        arguments = {}
+
+    return mi_ses_from_function(
+        delegate=delegate,
+        df_implicates=df_implicates,
+        join_on=[join_on_name],
+        path_srmi=path_srmi,
+        index=index,
+        df_noimputes=df_noimputes,
+        arguments=arguments,
+        parallel=parallel,
+        parallel_inputs=parallel_inputs,
+        rounding=rounding,
+        round_output=round_output,
+    )
 
 
 def pyfixest_adapter(
@@ -435,6 +720,272 @@ def pyfixest_adapter(
     return (df_estimates, df_ses, df_vcov, df_tidy)
 
 
+class mi_ses_from_pyfixest:
+    """
+    Namespace for per-estimator `mi_ses_from_function(delegate=
+    pyfixest_adapter, ...)` wrappers - `mi_ses_from_pyfixest.feols(...)`,
+    `.fepois(...)`, `.feglm(...)` - each naming the common `pyfixest_adapter`
+    arguments (`fml`, `weight`, `vcov`, `family`) explicitly instead of
+    picking the estimator via a `func="..."` string, so IDEs show the right
+    parameters for the one you're actually calling. Everything else
+    `pyfixest.feols`/`fepois`/`feglm` accepts still flows through **kwargs
+    exactly as in `pyfixest_adapter`.
+    """
+
+    @staticmethod
+    def feols(
+        df_implicates,
+        fml: str,
+        weight: str | None = None,
+        vcov: str | dict | None = "hetero",
+        join_on_name: str = "Variable",
+        value_name: str = "estimate",
+        replicates=None,
+        path_srmi: str = "",
+        index: list | None = None,
+        df_noimputes=None,
+        parallel: bool = False,
+        parallel_inputs=None,
+        rounding=None,
+        round_output: bool = True,
+        **kwargs,
+    ):
+        """
+        `mi_ses_from_function(delegate=pyfixest_adapter, ...)` for
+        `pyfixest.feols` specifically - OLS/IV with fixed effects, fixest
+        formula syntax (e.g. "y ~ x1 + x2 | firm").
+
+        Parameters
+        ----------
+        df_implicates, path_srmi, index, df_noimputes, parallel,
+            parallel_inputs, rounding, round_output : see
+            [`mi_ses_from_function`][survey_kit.statistics.multiple_imputation.mi_ses_from_function].
+        fml, weight, vcov, join_on_name, value_name : see
+            `pyfixest_adapter` (`fml` is `pyfixest_adapter`'s `formula`).
+        replicates : `survey_kit.statistics.replicates.Replicates`,
+            optional. When given, per-implicate SEs come from resampling
+            across replicate weights instead of `vcov` - `pyfixest_adapter`
+            is run once per replicate weight column (point estimates only,
+            with `vcov` forced to "iid" since it's discarded anyway), the
+            same replicate-weight-bootstrap approach
+            `mi_ses_from_stata`'s `replicates=` uses. `weight` is ignored
+            in this mode. Default is None (use `pyfixest_adapter`'s own
+            `vcov`).
+        **kwargs : any other `pyfixest.feols` argument (`ssc`, `fixef_rm`,
+            `split`/`fsplit`, ...) - forwarded verbatim, see
+            `pyfixest_adapter`.
+
+        Returns
+        -------
+        MultipleImputation
+            Same as `mi_ses_from_function`.
+
+        See Also
+        --------
+        pyfixest_adapter : the delegate this wraps.
+        """
+        from .multiple_imputation import mi_ses_from_function
+
+        base_arguments = {
+            "func": "feols",
+            "formula": fml,
+            "join_on_name": join_on_name,
+            "value_name": value_name,
+            **kwargs,
+        }
+
+        if replicates is None:
+            delegate = pyfixest_adapter
+            arguments = {**base_arguments, "weight": weight, "vcov": vcov}
+        else:
+            if weight:
+                logger.warning(
+                    "mi_ses_from_pyfixest.feols: weight is ignored when "
+                    "replicates is given - each replicate call supplies "
+                    "its own weight column."
+                )
+            delegate = _mi_ses_replicates_delegate(
+                pyfixest_adapter,
+                {**base_arguments, "vcov": "iid"},
+                join_on_name,
+                replicates,
+                convert=_to_pandas,
+            )
+            arguments = {}
+
+        return mi_ses_from_function(
+            delegate=delegate,
+            df_implicates=df_implicates,
+            join_on=[join_on_name],
+            path_srmi=path_srmi,
+            index=index,
+            df_noimputes=df_noimputes,
+            arguments=arguments,
+            parallel=parallel,
+            parallel_inputs=parallel_inputs,
+            rounding=rounding,
+            round_output=round_output,
+        )
+
+    @staticmethod
+    def fepois(
+        df_implicates,
+        fml: str,
+        weight: str | None = None,
+        vcov: str | dict | None = "hetero",
+        join_on_name: str = "Variable",
+        value_name: str = "estimate",
+        replicates=None,
+        path_srmi: str = "",
+        index: list | None = None,
+        df_noimputes=None,
+        parallel: bool = False,
+        parallel_inputs=None,
+        rounding=None,
+        round_output: bool = True,
+        **kwargs,
+    ):
+        """
+        `mi_ses_from_function(delegate=pyfixest_adapter, ...)` for
+        `pyfixest.fepois` specifically - Poisson regression with fixed
+        effects.
+
+        Parameters
+        ----------
+        df_implicates, path_srmi, index, df_noimputes, parallel,
+            parallel_inputs, rounding, round_output : see
+            [`mi_ses_from_function`][survey_kit.statistics.multiple_imputation.mi_ses_from_function].
+        fml, weight, vcov, join_on_name, value_name : see
+            `pyfixest_adapter` (`fml` is `pyfixest_adapter`'s `formula`).
+        replicates : see `mi_ses_from_pyfixest.feols` - same
+            replicate-weight-bootstrap option, `vcov` forced to "iid" and
+            `weight` ignored in this mode. Default is None.
+        **kwargs : any other `pyfixest.fepois` argument (`ssc`,
+            `fixef_rm`, `offset`, `iwls_tol`/`iwls_maxiter`, ...) -
+            forwarded verbatim, see `pyfixest_adapter`.
+
+        Returns
+        -------
+        MultipleImputation
+            Same as `mi_ses_from_function`.
+
+        See Also
+        --------
+        pyfixest_adapter : the delegate this wraps.
+        """
+        from .multiple_imputation import mi_ses_from_function
+
+        base_arguments = {
+            "func": "fepois",
+            "formula": fml,
+            "join_on_name": join_on_name,
+            "value_name": value_name,
+            **kwargs,
+        }
+
+        if replicates is None:
+            delegate = pyfixest_adapter
+            arguments = {**base_arguments, "weight": weight, "vcov": vcov}
+        else:
+            if weight:
+                logger.warning(
+                    "mi_ses_from_pyfixest.fepois: weight is ignored when "
+                    "replicates is given - each replicate call supplies "
+                    "its own weight column."
+                )
+            delegate = _mi_ses_replicates_delegate(
+                pyfixest_adapter,
+                {**base_arguments, "vcov": "iid"},
+                join_on_name,
+                replicates,
+                convert=_to_pandas,
+            )
+            arguments = {}
+
+        return mi_ses_from_function(
+            delegate=delegate,
+            df_implicates=df_implicates,
+            join_on=[join_on_name],
+            path_srmi=path_srmi,
+            index=index,
+            df_noimputes=df_noimputes,
+            arguments=arguments,
+            parallel=parallel,
+            parallel_inputs=parallel_inputs,
+            rounding=rounding,
+            round_output=round_output,
+        )
+
+    @staticmethod
+    def feglm(
+        df_implicates,
+        fml: str,
+        family: str,
+        vcov: str | dict | None = "hetero",
+        join_on_name: str = "Variable",
+        value_name: str = "estimate",
+        path_srmi: str = "",
+        index: list | None = None,
+        df_noimputes=None,
+        parallel: bool = False,
+        parallel_inputs=None,
+        rounding=None,
+        round_output: bool = True,
+        **kwargs,
+    ):
+        """
+        `mi_ses_from_function(delegate=pyfixest_adapter, ...)` for
+        `pyfixest.feglm` specifically - GLM with fixed effects (`family=`
+        required, e.g. "logit", "probit", "poisson"). No `replicates=`
+        option here (unlike `.feols`/`.fepois`) - pyfixest's `feglm()` has
+        no `weights=` argument to substitute a replicate weight column
+        into.
+
+        Parameters
+        ----------
+        df_implicates, path_srmi, index, df_noimputes, parallel,
+            parallel_inputs, rounding, round_output : see
+            [`mi_ses_from_function`][survey_kit.statistics.multiple_imputation.mi_ses_from_function].
+        fml, family, vcov, join_on_name, value_name : see
+            `pyfixest_adapter` (`fml` is `pyfixest_adapter`'s `formula`).
+        **kwargs : any other `pyfixest.feglm` argument (`ssc`,
+            `fixef_rm`, `iwls_tol`/`iwls_maxiter`, ...) - forwarded
+            verbatim, see `pyfixest_adapter`.
+
+        Returns
+        -------
+        MultipleImputation
+            Same as `mi_ses_from_function`.
+
+        See Also
+        --------
+        pyfixest_adapter : the delegate this wraps.
+        """
+        from .multiple_imputation import mi_ses_from_function
+
+        return mi_ses_from_function(
+            delegate=pyfixest_adapter,
+            df_implicates=df_implicates,
+            join_on=[join_on_name],
+            path_srmi=path_srmi,
+            index=index,
+            df_noimputes=df_noimputes,
+            arguments={
+                "func": "feglm",
+                "formula": fml,
+                "family": family,
+                "vcov": vcov,
+                "join_on_name": join_on_name,
+                "value_name": value_name,
+                **kwargs,
+            },
+            parallel=parallel,
+            parallel_inputs=parallel_inputs,
+            rounding=rounding,
+            round_output=round_output,
+        )
+
+
 def polars_ds_adapter(
     df,
     y: str,
@@ -545,6 +1096,101 @@ def polars_ds_adapter(
     return (df_estimates, df_ses, None, df_tidy)
 
 
+def mi_ses_from_polars_ds(
+    df_implicates,
+    y: str,
+    x: list[str] | str,
+    weight: str | None = None,
+    add_bias: bool = True,
+    join_on_name: str = "Variable",
+    value_name: str = "estimate",
+    std_err: str = "hc3",
+    null_policy: str = "raise",
+    replicates=None,
+    path_srmi: str = "",
+    index: list | None = None,
+    df_noimputes=None,
+    parallel: bool = False,
+    parallel_inputs=None,
+    rounding=None,
+    round_output: bool = True,
+):
+    """
+    `mi_ses_from_function(delegate=polars_ds_adapter, ...)`, with
+    `polars_ds_adapter`'s own arguments taken directly as keyword
+    arguments instead of packed into an `arguments={}` dict.
+
+    Parameters
+    ----------
+    df_implicates, path_srmi, index, df_noimputes, parallel,
+        parallel_inputs, rounding, round_output : see
+        [`mi_ses_from_function`][survey_kit.statistics.multiple_imputation.mi_ses_from_function].
+    y, x, weight, add_bias, join_on_name, value_name, std_err, null_policy :
+        see `polars_ds_adapter`.
+    replicates : `survey_kit.statistics.replicates.Replicates`, optional.
+        When given, per-implicate SEs come from resampling across
+        replicate weights instead of `std_err` - `polars_ds_adapter` is
+        run once per replicate weight column (point estimates only, with
+        `std_err` forced to "se" since it's discarded anyway), the same
+        replicate-weight-bootstrap approach `mi_ses_from_stata`'s
+        `replicates=` uses. `weight` is ignored in this mode; the
+        implicate is converted to polars once (if it isn't already), not
+        once per replicate. Default is None (use `polars_ds_adapter`'s own
+        `std_err`).
+
+    Returns
+    -------
+    MultipleImputation
+        Same as `mi_ses_from_function`.
+
+    See Also
+    --------
+    polars_ds_adapter : the delegate this wraps.
+    """
+    from .multiple_imputation import mi_ses_from_function
+
+    base_arguments = {
+        "y": y,
+        "x": x,
+        "add_bias": add_bias,
+        "join_on_name": join_on_name,
+        "value_name": value_name,
+        "null_policy": null_policy,
+    }
+
+    if replicates is None:
+        delegate = polars_ds_adapter
+        arguments = {**base_arguments, "weight": weight, "std_err": std_err}
+    else:
+        if weight:
+            logger.warning(
+                "mi_ses_from_polars_ds: weight is ignored when replicates "
+                "is given - each replicate call supplies its own weight column."
+            )
+        delegate = _mi_ses_replicates_delegate(
+            polars_ds_adapter,
+            {**base_arguments, "std_err": "se"},
+            join_on_name,
+            replicates,
+            convert=_to_polars,
+        )
+        arguments = {}
+
+    return mi_ses_from_function(
+        delegate=delegate,
+        df_implicates=df_implicates,
+        join_on=[join_on_name],
+        path_srmi=path_srmi,
+        index=index,
+        df_noimputes=df_noimputes,
+        arguments=arguments,
+        parallel=parallel,
+        parallel_inputs=parallel_inputs,
+        rounding=rounding,
+        round_output=round_output,
+    )
+
+
 def r_lm_adapter(
     df,
     formula: str,
@@ -572,7 +1218,7 @@ def r_lm_adapter(
     family : a plain R family name (e.g. "binomial", "poisson") to fit via
         glm() instead of lm() - base R resolves the string to the family
         function itself. For a non-default link function, wrap the full
-        expression in [`RRaw`][survey_kit.statistics._r_interop.RRaw], e.g.
+        expression in `_r_interop.RRaw`, e.g.
         `family=RRaw('binomial(link="probit")')`. Default is None (lm(),
         i.e. OLS/WLS).
     join_on_name : name of the term-identifier column in the output.
@@ -580,12 +1226,10 @@ def r_lm_adapter(
     value_name : name of the coefficient/SE/covariance value column in the
         output. Default is "estimate".
     **r_kwargs : any other lm()/glm() argument (e.g. `subset=`, `na.action=`,
-        `offset=`), converted to R via
-        [`py_to_r_literal`][survey_kit.statistics._r_interop.py_to_r_literal]:
+        `offset=`), converted to R via `_r_interop.py_to_r_literal`:
         None omits the argument, bool/int/float/str/list/dict convert
         naturally, a string starting with "~" is passed through raw (a
-        formula), and
-        [`RRaw`][survey_kit.statistics._r_interop.RRaw] wraps any other
+        formula), and `_r_interop.RRaw` wraps any other
         literal R code you need verbatim (e.g. a bare column reference).
         R argument names with a "." (e.g. `na.action`) can't be Python
         keyword names - pass those via a dict: `r_kwargs={"na.action": ...}`
@@ -663,8 +1307,8 @@ def r_fixest_adapter(
         most other arguments here, this can't be a plain quoted string).
     family : a plain R family name (e.g. "binomial", "poisson") - only
         meaningful for func="feglm"/"femlm". For a non-default link
-        function, wrap the full expression in
-        [`RRaw`][survey_kit.statistics._r_interop.RRaw]. Default is None.
+        function, wrap the full expression in `_r_interop.RRaw`. Default
+        is None.
     vcov : fixest's own `vcov=` argument - a string like "hetero" (robust)
         or "iid" (classical), or a one-sided formula string like "~firm"
         for cluster-robust SEs. Defaults to "hetero" for the same reason
@@ -678,14 +1322,12 @@ def r_fixest_adapter(
         output. Default is "estimate".
     **r_kwargs : any other argument any fixest estimator takes - `cluster`,
         `panel.id`, `split`/`fsplit`, `se`, `ssc`, `lean`, `notes`,
-        `verbose`, etc. - converted to R via
-        [`py_to_r_literal`][survey_kit.statistics._r_interop.py_to_r_literal]:
+        `verbose`, etc. - converted to R via `_r_interop.py_to_r_literal`:
         None omits the argument, bool/int/float/str/list/dict convert
         naturally (a plain column name like `cluster="firm"` works exactly
         as it does when you type it directly in fixest), a string starting
         with "~" is passed through raw (a formula, e.g.
-        `panel.id="~id+time"`), and
-        [`RRaw`][survey_kit.statistics._r_interop.RRaw] wraps anything else
+        `panel.id="~id+time"`), and `_r_interop.RRaw` wraps anything else
         that needs to be emitted as literal R code (e.g.
         `ssc=RRaw('ssc(fixef.K="full")')`). R argument names with a "."
         (e.g. `panel.id`) can't be Python keyword names directly - build the
@@ -1015,10 +1657,412 @@ for _fn in (r_feols, r_feglm, r_fepois, r_femlm):
 del _fn
 
 
+class mi_ses_from_r_fixest:
+    """
+    Namespace for per-estimator `mi_ses_from_function(delegate=r_feols/
+    r_feglm/r_fepois/r_femlm, ...)` wrappers - `mi_ses_from_r_fixest.feols(...)`,
+    `.feglm(...)`, `.fepois(...)`, `.femlm(...)` - each naming that
+    estimator's own arguments (`formula`, `weight`, `vcov`, `cluster`,
+    `panel_id`, ...) directly instead of packing them into an
+    `arguments={}` dict, so IDEs show the right parameters for the one
+    you're actually calling. Everything else the R side of fixest accepts
+    still flows through `**r_kwargs` exactly as in `r_feols`/`r_feglm`/
+    `r_fepois`/`r_femlm`. See `r_fixest_adapter` for the fully generic
+    `func=` escape hatch (feNmlm, feglm.fit, ...) this doesn't cover.
+    """
+
+    @staticmethod
+    def feols(
+        df_implicates,
+        formula: str,
+        weight: str | None = None,
+        vcov: str | None = None,
+        cluster=None,
+        panel_id=None,
+        ssc=None,
+        fixef=None,
+        lean: bool | None = None,
+        notes: bool | None = None,
+        verbose: int | None = None,
+        join_on_name: str = "Variable",
+        value_name: str = "estimate",
+        replicates=None,
+        path_srmi: str = "",
+        index: list | None = None,
+        df_noimputes=None,
+        parallel: bool = False,
+        parallel_inputs=None,
+        rounding=None,
+        round_output: bool = True,
+        **r_kwargs,
+    ):
+        """
+        `mi_ses_from_function(delegate=r_feols, ...)` - fixest::feols()
+        (linear regression, with fixed effects) across implicates.
+
+        Parameters
+        ----------
+        df_implicates, path_srmi, index, df_noimputes, parallel,
+            parallel_inputs, rounding, round_output : see
+            [`mi_ses_from_function`][survey_kit.statistics.multiple_imputation.mi_ses_from_function].
+        formula, weight, vcov, cluster, panel_id, ssc, fixef, lean, notes,
+            verbose, join_on_name, value_name, **r_kwargs : see `r_feols`.
+        replicates : `survey_kit.statistics.replicates.Replicates`,
+            optional. When given, per-implicate SEs come from resampling
+            across replicate weights instead of `vcov`/`cluster` - `r_feols`
+            is run once per replicate weight column (point estimates only,
+            with `vcov` forced to "iid" and `cluster` forced off since
+            they're discarded anyway), the same replicate-weight-bootstrap
+            approach `mi_ses_from_stata`'s `replicates=` uses. `weight` is
+            ignored in this mode; the implicate is converted to an R
+            data.frame once, not once per replicate. Default is None (use
+            `r_feols`'s own `vcov`/`cluster`).
+
+        Returns
+        -------
+        MultipleImputation
+            Same as `mi_ses_from_function`.
+
+        See Also
+        --------
+        r_feols : the delegate this wraps.
+        """
+        from .multiple_imputation import mi_ses_from_function
+
+        base_arguments = {
+            "formula": formula,
+            "panel_id": panel_id,
+            "ssc": ssc,
+            "fixef": fixef,
+            "lean": lean,
+            "notes": notes,
+            "verbose": verbose,
+            "join_on_name": join_on_name,
+            "value_name": value_name,
+            **r_kwargs,
+        }
+
+        if replicates is None:
+            delegate = r_feols
+            arguments = {**base_arguments, "weight": weight, "vcov": vcov, "cluster": cluster}
+        else:
+            if weight:
+                logger.warning(
+                    "mi_ses_from_r_fixest.feols: weight is ignored when "
+                    "replicates is given - each replicate call supplies "
+                    "its own weight column."
+                )
+            from . import _r_interop as _r
+
+            delegate = _mi_ses_replicates_delegate(
+                r_feols,
+                {**base_arguments, "vcov": "iid", "cluster": None},
+                join_on_name,
+                replicates,
+                convert=_r.dataframe_to_r,
+            )
+            arguments = {}
+
+        return mi_ses_from_function(
+            delegate=delegate,
+            df_implicates=df_implicates,
+            join_on=[join_on_name],
+            path_srmi=path_srmi,
+            index=index,
+            df_noimputes=df_noimputes,
+            arguments=arguments,
+            parallel=parallel,
+            parallel_inputs=parallel_inputs,
+            rounding=rounding,
+            round_output=round_output,
+        )
+
+    @staticmethod
+    def feglm(
+        df_implicates,
+        formula: str,
+        family: str = "gaussian",
+        weight: str | None = None,
+        vcov: str | None = None,
+        cluster=None,
+        panel_id=None,
+        ssc=None,
+        fixef=None,
+        lean: bool | None = None,
+        notes: bool | None = None,
+        verbose: int | None = None,
+        join_on_name: str = "Variable",
+        value_name: str = "estimate",
+        replicates=None,
+        path_srmi: str = "",
+        index: list | None = None,
+        df_noimputes=None,
+        parallel: bool = False,
+        parallel_inputs=None,
+        rounding=None,
+        round_output: bool = True,
+        **r_kwargs,
+    ):
+        """
+        `mi_ses_from_function(delegate=r_feglm, ...)` - fixest::feglm()
+        (GLM, with fixed effects) across implicates.
+
+        Parameters
+        ----------
+        df_implicates, path_srmi, index, df_noimputes, parallel,
+            parallel_inputs, rounding, round_output : see
+            [`mi_ses_from_function`][survey_kit.statistics.multiple_imputation.mi_ses_from_function].
+        formula, family, weight, vcov, cluster, panel_id, ssc, fixef,
+            lean, notes, verbose, join_on_name, value_name, **r_kwargs :
+            see `r_feglm`.
+        replicates : see `mi_ses_from_r_fixest.feols` - same
+            replicate-weight-bootstrap option, `vcov` forced to "iid",
+            `cluster` forced off, and `weight` ignored in this mode.
+            Default is None.
+
+        Returns
+        -------
+        MultipleImputation
+            Same as `mi_ses_from_function`.
+
+        See Also
+        --------
+        r_feglm : the delegate this wraps.
+        """
+        from .multiple_imputation import mi_ses_from_function
+
+        base_arguments = {
+            "formula": formula,
+            "family": family,
+            "panel_id": panel_id,
+            "ssc": ssc,
+            "fixef": fixef,
+            "lean": lean,
+            "notes": notes,
+            "verbose": verbose,
+            "join_on_name": join_on_name,
+            "value_name": value_name,
+            **r_kwargs,
+        }
+
+        if replicates is None:
+            delegate = r_feglm
+            arguments = {**base_arguments, "weight": weight, "vcov": vcov, "cluster": cluster}
+        else:
+            if weight:
+                logger.warning(
+                    "mi_ses_from_r_fixest.feglm: weight is ignored when "
+                    "replicates is given - each replicate call supplies "
+                    "its own weight column."
+                )
+            from . import _r_interop as _r
+
+            delegate = _mi_ses_replicates_delegate(
+                r_feglm,
+                {**base_arguments, "vcov": "iid", "cluster": None},
+                join_on_name,
+                replicates,
+                convert=_r.dataframe_to_r,
+            )
+            arguments = {}
+
+        return mi_ses_from_function(
+            delegate=delegate,
+            df_implicates=df_implicates,
+            join_on=[join_on_name],
+            path_srmi=path_srmi,
+            index=index,
+            df_noimputes=df_noimputes,
+            arguments=arguments,
+            parallel=parallel,
+            parallel_inputs=parallel_inputs,
+            rounding=rounding,
+            round_output=round_output,
+        )
+
+    @staticmethod
+    def fepois(
+        df_implicates,
+        formula: str,
+        weight: str | None = None,
+        vcov: str | None = None,
+        cluster=None,
+        panel_id=None,
+        ssc=None,
+        fixef=None,
+        lean: bool | None = None,
+        notes: bool | None = None,
+        verbose: int | None = None,
+        join_on_name: str = "Variable",
+        value_name: str = "estimate",
+        replicates=None,
+        path_srmi: str = "",
+        index: list | None = None,
+        df_noimputes=None,
+        parallel: bool = False,
+        parallel_inputs=None,
+        rounding=None,
+        round_output: bool = True,
+        **r_kwargs,
+    ):
+        """
+        `mi_ses_from_function(delegate=r_fepois, ...)` - fixest::fepois()
+        (Poisson regression, with fixed effects) across implicates.
+
+        Parameters
+        ----------
+        df_implicates, path_srmi, index, df_noimputes, parallel,
+            parallel_inputs, rounding, round_output : see
+            [`mi_ses_from_function`][survey_kit.statistics.multiple_imputation.mi_ses_from_function].
+        formula, weight, vcov, cluster, panel_id, ssc, fixef, lean, notes,
+            verbose, join_on_name, value_name, **r_kwargs : see `r_fepois`.
+        replicates : see `mi_ses_from_r_fixest.feols` - same
+            replicate-weight-bootstrap option, `vcov` forced to "iid",
+            `cluster` forced off, and `weight` ignored in this mode.
+            Default is None.
+
+        Returns
+        -------
+        MultipleImputation
+            Same as `mi_ses_from_function`.
+
+        See Also
+        --------
+        r_fepois : the delegate this wraps.
+        """
+        from .multiple_imputation import mi_ses_from_function
+
+        base_arguments = {
+            "formula": formula,
+            "panel_id": panel_id,
+            "ssc": ssc,
+            "fixef": fixef,
+            "lean": lean,
+            "notes": notes,
+            "verbose": verbose,
+            "join_on_name": join_on_name,
+            "value_name": value_name,
+            **r_kwargs,
+        }
+
+        if replicates is None:
+            delegate = r_fepois
+            arguments = {**base_arguments, "weight": weight, "vcov": vcov, "cluster": cluster}
+        else:
+            if weight:
+                logger.warning(
+                    "mi_ses_from_r_fixest.fepois: weight is ignored when "
+                    "replicates is given - each replicate call supplies "
+                    "its own weight column."
+                )
+            from . import _r_interop as _r
+
+            delegate = _mi_ses_replicates_delegate(
+                r_fepois,
+                {**base_arguments, "vcov": "iid", "cluster": None},
+                join_on_name,
+                replicates,
+                convert=_r.dataframe_to_r,
+            )
+            arguments = {}
+
+        return mi_ses_from_function(
+            delegate=delegate,
+            df_implicates=df_implicates,
+            join_on=[join_on_name],
+            path_srmi=path_srmi,
+            index=index,
+            df_noimputes=df_noimputes,
+            arguments=arguments,
+            parallel=parallel,
+            parallel_inputs=parallel_inputs,
+            rounding=rounding,
+            round_output=round_output,
+        )
+
+    @staticmethod
+    def femlm(
+        df_implicates,
+        formula: str,
+        family: str = "poisson",
+        vcov: str | None = None,
+        cluster=None,
+        panel_id=None,
+        ssc=None,
+        fixef=None,
+        lean: bool | None = None,
+        notes: bool | None = None,
+        verbose: int | None = None,
+        join_on_name: str = "Variable",
+        value_name: str = "estimate",
+        path_srmi: str = "",
+        index: list | None = None,
+        df_noimputes=None,
+        parallel: bool = False,
+        parallel_inputs=None,
+        rounding=None,
+        round_output: bool = True,
+        **r_kwargs,
+    ):
+        """
+        `mi_ses_from_function(delegate=r_femlm, ...)` - fixest::femlm()
+        (max-likelihood: Poisson/negative binomial/logit/Gaussian, with
+        fixed effects) across implicates. Note: femlm has no `weight=`
+        argument (unlike feols/feglm/fepois), so - unlike those three -
+        there's no `replicates=` option here either: nothing to substitute
+        a replicate weight column into.
+
+        Parameters
+        ----------
+        df_implicates, path_srmi, index, df_noimputes, parallel,
+            parallel_inputs, rounding, round_output : see
+            [`mi_ses_from_function`][survey_kit.statistics.multiple_imputation.mi_ses_from_function].
+        formula, family, vcov, cluster, panel_id, ssc, fixef, lean, notes,
+            verbose, join_on_name, value_name, **r_kwargs : see `r_femlm`.
+
+        Returns
+        -------
+        MultipleImputation
+            Same as `mi_ses_from_function`.
+
+        See Also
+        --------
+        r_femlm : the delegate this wraps.
+        """
+        from .multiple_imputation import mi_ses_from_function
+
+        return mi_ses_from_function(
+            delegate=r_femlm,
+            df_implicates=df_implicates,
+            join_on=[join_on_name],
+            path_srmi=path_srmi,
+            index=index,
+            df_noimputes=df_noimputes,
+            arguments={
+                "formula": formula,
+                "family": family,
+                "vcov": vcov,
+                "cluster": cluster,
+                "panel_id": panel_id,
+                "ssc": ssc,
+                "fixef": fixef,
+                "lean": lean,
+                "notes": notes,
+                "verbose": verbose,
+                "join_on_name": join_on_name,
+                "value_name": value_name,
+                **r_kwargs,
+            },
+            parallel=parallel,
+            parallel_inputs=parallel_inputs,
+            rounding=rounding,
+            round_output=round_output,
+        )
+
+
 def stata_adapter(
     df,
-    command: str,
-    pre_commands: list[str] | None = None,
+    command: str | list[str],
     join_on_name: str = "Variable",
     value_name: str = "estimate",
     edition: str | None = None,
@@ -1032,13 +2076,8 @@ def stata_adapter(
     and return its coefficient table in survey_kit's normalized
     (df_estimates, df_ses, df_vcov, df_tidy) shape.
 
-    **UNTESTED**: built without a Stata installation available in this
-    development environment (pystata ships inside Stata 17+, not on PyPI,
-    so it can't be installed here to verify against) - expect to need
-    adjustments once you run this for real. See
-    `survey_kit.statistics._stata_interop`'s module docstring for the
-    specific API points most likely to need fixing, and
-    `check_stata_setup()` there for a setup diagnostic.
+    See `survey_kit.statistics._stata_interop`'s module docstring for
+    details, and `check_stata_setup()` there for a setup diagnostic.
 
     Data moves into Stata via a .dta file written by polars_readstat
     (`write_readstat`) rather than pystata's own DataFrame transfer - `.dta`
@@ -1049,13 +2088,13 @@ def stata_adapter(
     ----------
     df : the merged implicate data (supplied by mi_ses_from_function).
     command : the Stata command to run, e.g. "regress y x1 x2", or
-        "regress y x1 x2 [pw=w]", or "xtreg y x1 x2, fe", or (after a
-        `svyset` in `pre_commands`) "svy: regress y x1 x2". Must leave
-        e(b)/e(V) populated - true of most estimation commands.
-    pre_commands : Stata commands to run after the implicate is `use`d but
-        before `command` - e.g. `["svyset psu [pw=weight], strata(strata)"]`
-        for a survey design, or any `gen`/`recode` prep specific to this
-        estimation. Default is None.
+        "regress y x1 x2 [pw=w]", or "xtreg y x1 x2, fe". Must leave
+        e(b)/e(V) populated - true of most estimation commands. Pass a
+        list of commands run in order, instead of a single string, when
+        you need setup (`gen`/`svyset`/...) between `use` and the
+        estimation command - only the LAST command's e(b)/e(V)/r(table)
+        are read back, e.g.
+        `["svyset psu [pw=weight], strata(strata)", "svy: regress y x1 x2"]`.
     join_on_name : name of the term-identifier column in the output.
         Default is "Variable".
     value_name : name of the coefficient/SE/covariance value column in the
@@ -1074,10 +2113,10 @@ def stata_adapter(
         call). Default is False. Call
         `survey_kit.statistics._stata_interop.clear_stata_cache()` once
         done with data reused this way, to free Stata's own copy.
-    quietly : pass False to let `pre_commands`/`command` stream Stata's own
-        console output, including the real error text behind an r()
-        failure (otherwise collapsed to just the bare "r(####);" code) -
-        useful for debugging. Default is True.
+    quietly : pass False to let `command` stream Stata's own console
+        output on success too (failures always surface the real error
+        text regardless - see `_stata_interop._run_in_stata`'s
+        docstring). Default is True.
 
     Returns
     -------
@@ -1093,7 +2132,6 @@ def stata_adapter(
     b, b_names, V, table, table_row_names, table_col_names = _st.run_stata_model(
         df,
         command,
-        pre_commands=pre_commands,
         edition=edition,
         stata_path=stata_path,
         reuse_data=reuse_data,
@@ -1132,12 +2170,145 @@ def stata_adapter(
     return (df_estimates, df_ses, df_vcov, df_tidy)
 
 
+def mi_ses_from_stata(
+    df_implicates,
+    command: str | list[str],
+    path_srmi: str = "",
+    index: list | None = None,
+    df_noimputes=None,
+    join_on_name: str = "Variable",
+    value_name: str = "estimate",
+    edition: str | None = None,
+    stata_path: str | None = None,
+    reuse_data: bool = False,
+    quietly: bool = True,
+    replicates=None,
+    parallel: bool = False,
+    parallel_inputs=None,
+    rounding=None,
+    round_output: bool = True,
+):
+    """
+    `mi_ses_from_function(delegate=stata_adapter, ...)`, with
+    `stata_adapter`'s own arguments (`command`, `edition`, `stata_path`,
+    ...) taken directly as keyword arguments instead of packed into an
+    `arguments={}` dict - the common case of running one Stata command
+    across implicates.
+
+    Parameters
+    ----------
+    df_implicates, path_srmi, index, df_noimputes, parallel,
+        parallel_inputs, rounding, round_output : see
+        [`mi_ses_from_function`][survey_kit.statistics.multiple_imputation.mi_ses_from_function].
+    command, join_on_name, value_name, edition, stata_path, reuse_data,
+        quietly : see `stata_adapter`. When `replicates` is given, `command`
+        needs a "{weight}" placeholder instead (see below) - `reuse_data`
+        is then forced on internally regardless of what's passed here (see
+        `replicates`).
+    replicates : `survey_kit.statistics.replicates.Replicates`, optional.
+        When given, per-implicate SEs come from resampling across
+        replicate weights instead of `command`'s own e(V) - `command` is
+        run once per replicate weight column (via `stata_results_adapter`,
+        reading back e(b) only) rather than Stata's own `bootstrap`/`brr`/
+        `jackknife` prefix, so it needs a "{weight}" placeholder, e.g.
+        `"regress y x1 x2 [pw={weight}]"`. Stata's own replicate-estimation
+        commands are usually faster and more idiomatic if you're already
+        set up for them - this is for reusing survey_kit's own
+        Replicates/StatCalculator machinery (e.g. to match SEs computed
+        the same way elsewhere in a project) instead. Default is None (use
+        `command`'s own e(V), the `stata_adapter` path).
+
+    Returns
+    -------
+    MultipleImputation
+        Same as `mi_ses_from_function`.
+
+    Examples
+    --------
+    >>> mi_reg = mi_ses_from_stata(
+    ...     df_implicates=df_implicates,
+    ...     command="regress y x1 x2",
+    ... )
+
+    Replicate-weight SEs instead of Stata's own e(V):
+
+    >>> from survey_kit.statistics.replicates import Replicates
+    >>> mi_reg = mi_ses_from_stata(
+    ...     df_implicates=df_implicates,
+    ...     command="regress y x1 x2 [pw={weight}]",
+    ...     replicates=Replicates(weight_stub="replicate_", n_replicates=80),
+    ... )
+
+    See Also
+    --------
+    stata_adapter, stata_results_adapter : the delegates this wraps.
+    [`mi_ses_from_function`][survey_kit.statistics.multiple_imputation.mi_ses_from_function] :
+        the general-purpose function this specializes.
+    """
+    from .calculator import StatCalculator
+    from .multiple_imputation import mi_ses_from_function
+    from . import _stata_interop as _st
+
+    if replicates is None:
+        delegate = stata_adapter
+        arguments = {
+            "command": command,
+            "join_on_name": join_on_name,
+            "value_name": value_name,
+            "edition": edition,
+            "stata_path": stata_path,
+            "reuse_data": reuse_data,
+            "quietly": quietly,
+        }
+    else:
+
+        def delegate(df):
+            calc = StatCalculator.from_function(
+                delegate=stata_results_adapter,
+                estimate_ids=[join_on_name],
+                df=df,
+                arguments={
+                    "command": command,
+                    "results": ["e(b)"],
+                    "join_on_name": join_on_name,
+                    "value_name": value_name,
+                    "edition": edition,
+                    "stata_path": stata_path,
+                    #   the same implicate df is reused across every
+                    #   replicate weight in this loop - only `weight`
+                    #   changes - so re-exporting/re-`use`-ing it every
+                    #   call would be pure waste.
+                    "reuse_data": True,
+                    "quietly": quietly,
+                },
+                replicates=replicates,
+                display=False,
+            )
+            _st.clear_stata_cache()
+            return calc
+
+        arguments = {}
+
+    return mi_ses_from_function(
+        delegate=delegate,
+        df_implicates=df_implicates,
+        join_on=[join_on_name],
+        path_srmi=path_srmi,
+        index=index,
+        df_noimputes=df_noimputes,
+        arguments=arguments,
+        parallel=parallel,
+        parallel_inputs=parallel_inputs,
+        rounding=rounding,
+        round_output=round_output,
+    )
+
+
 def stata_results_adapter(
     df,
-    command: str,
+    command: str | list[str],
     results: list[str],
     weight: str = "",
-    pre_commands: list[str] | None = None,
     join_on_name: str = "Variable",
     value_name: str = "estimate",
     edition: str | None = None,
@@ -1159,9 +2330,6 @@ def stata_results_adapter(
     the R tutorial's ad-hoc `run_regression` delegate returns just a plain
     coefficient table with no SE of its own.
 
-    **UNTESTED**: see `_stata_interop`'s module docstring - built without a
-    Stata installation available to verify against.
-
     Unlike `stata_adapter` (which assumes an e-class fit and always reads
     the fixed e(b)/e(V)/r(table) triplet), this works for ANY command that
     populates r()/e() results - `summarize`, `tabstat`, `ci`, `svy: mean`,
@@ -1177,6 +2345,10 @@ def stata_results_adapter(
         Stata's weight syntax/placement varies enough by command (pw/aw/
         fw/iw, and where the bracket goes) that this doesn't try to build
         it for you - write it the way you'd type it directly in Stata.
+        Pass a list of commands run in order, instead of a single string,
+        when you need setup (a `svyset`, say) between `use` and the
+        command whose results you actually want back - each element may
+        use "{weight}", e.g. `["svyset psu [pw={weight}]", "svy: mean x"]`.
     results : names to pull back, e.g. ["r(mean)", "r(Var)"] or ["e(b)"].
         A scalar becomes one row (`join_on_name`=name); a matrix's columns
         (e.g. e(b)'s term names) each become their own row.
@@ -1184,8 +2356,6 @@ def stata_results_adapter(
         (the StatCalculator.from_function convention - see its
         `weight_argument_name`) if `command` needs no weight or already
         hardcodes one. Default is "".
-    pre_commands : Stata commands to run after `use` but before `command`,
-        e.g. a `svyset`. Default is None.
     join_on_name : name of the term-identifier column in the output.
         Default is "Variable".
     value_name : name of the estimate column in the output. Default is
@@ -1203,10 +2373,10 @@ def stata_results_adapter(
         default the way the R side's dataframe_to_r caching is). Call
         `survey_kit.statistics._stata_interop.clear_stata_cache()` once
         the replicate loop is done, to free Stata's own copy of the data.
-    quietly : pass False to let `pre_commands`/`command` stream Stata's own
-        console output, including the real error text behind an r()
-        failure (otherwise collapsed to just the bare "r(####);" code) -
-        useful for debugging. Default is True.
+    quietly : pass False to let `command` stream Stata's own console
+        output on success too (failures always surface the real error
+        text regardless - see `_stata_interop._run_in_stata`'s
+        docstring). Default is True.
 
     Returns
     -------
@@ -1218,12 +2388,18 @@ def stata_results_adapter(
     """
     from . import _stata_interop as _st
 
-    full_command = command.format(weight=weight) if weight else command
+    if weight:
+        if isinstance(command, str):
+            full_command = command.format(weight=weight)
+        else:
+            full_command = [c.format(weight=weight) for c in command]
+    else:
+        full_command = command
+
     raw = _st.run_stata_results(
         df,
         full_command,
         results,
-        pre_commands=pre_commands,
         reuse_data=reuse_data,
         edition=edition,
         stata_path=stata_path,

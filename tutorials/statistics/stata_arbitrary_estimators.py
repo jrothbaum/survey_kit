@@ -7,10 +7,11 @@ from dotenv import load_dotenv
 
 
 from survey_kit import logger
-from survey_kit.statistics.multiple_imputation import mi_ses_from_function
-from survey_kit.statistics.adapters import stata_adapter
+from survey_kit.statistics.adapters import stata_adapter, mi_ses_from_stata
 from survey_kit.statistics import _stata_interop as _st
+from survey_kit.statistics.replicates import Replicates
 from survey_kit.utilities.random import set_seed, RandomNumberGenerator
+from sample_data import make_implicates, with_bootstrap_weights
 
 #   Machine-specific - set these in a local ".env" file (see .gitignore,
 #   which excludes it from git) in the repo root rather than editing this
@@ -25,14 +26,6 @@ load_dotenv()
 
 
 # %%
-logger.info("**UNTESTED** - written without a Stata installation available in the")
-logger.info("environment this was developed in (pystata ships inside Stata 17+, not")
-logger.info("on PyPI, so it couldn't be installed there to verify against). Expect to")
-logger.info("need small fixes running this for real - see")
-logger.info("survey_kit.statistics._stata_interop's module docstring for the specific")
-logger.info("API points most likely to need adjustment, and treat this file as a")
-logger.info("starting point rather than a guarantee.")
-logger.info("")
 logger.info("Before running any cell here, point survey_kit at your Stata install and")
 logger.info("check what's importable:")
 logger.info('    from survey_kit.statistics._stata_interop import check_stata_setup')
@@ -45,57 +38,71 @@ logger.info(".dta files) plus a licensed Stata 17+ install for pystata itself.")
 
 
 # %%
-def make_implicate(seed: int) -> pl.DataFrame:
-    rng = np.random.default_rng(seed)
-    n = 300
-    x1 = rng.normal(size=n)
-    x2 = rng.normal(size=n)
-    y = 1 + 2 * x1 - 1.5 * x2 + rng.normal(size=n) * 0.4
-    return pl.DataFrame({"x1": x1, "x2": x2, "y": y})
-
-
-df_implicates = [make_implicate(seed) for seed in range(5)]
+df_implicates = make_implicates()
 
 
 # %%
-logger.info("\n\nPart 1: the named adapter (stata_adapter) - same shape every other")
-logger.info("adapter in survey_kit.statistics.adapters returns:")
-logger.info("(df_estimates, df_ses, df_vcov, df_tidy).")
+logger.info("\n\nPart 1: mi_ses_from_stata - mi_ses_from_function(delegate=stata_adapter,")
+logger.info("...), with stata_adapter's own arguments (command, edition, stata_path,")
+logger.info("...) taken directly instead of packed into an arguments={} dict. Returns")
+logger.info("the same shape every other adapter in survey_kit.statistics.adapters")
+logger.info("does under the hood: (df_estimates, df_ses, df_vcov, df_tidy), combined")
+logger.info("across implicates via Rubin's rules.")
 logger.info("")
 logger.info("Data goes into Stata as a .dta file written by polars_readstat, not")
 logger.info("through pystata's own DataFrame transfer - this part IS verified (the")
 logger.info(".dta round-trips correctly through polars_readstat's own reader), even")
 logger.info("though the Stata-side execution below isn't.")
 
-mi_reg = mi_ses_from_function(
-    delegate=stata_adapter,
+mi_reg = mi_ses_from_stata(
     df_implicates=df_implicates,
-    join_on=["Variable"],
-    arguments={
-        "command": "regress y x1 x2",
-    },
+    command="regress y x1 x2",
     round_output=False,
 )
 mi_reg.print(round_output=False)
 
 
 # %%
-logger.info("\n\nWeighted regression, and a survey design set up per-implicate via")
-logger.info("pre_commands (run after `use` but before the estimation command):")
+logger.info("\n\nWeighted regression, and a survey design set up per-implicate:")
+logger.info("`command` can be a list of Stata commands run in order (run after")
+logger.info("`use` but before the estimation command) instead of a single string -")
+logger.info("only the LAST command's e(b)/e(V)/r(table) are read back.")
 
-mi_svy = mi_ses_from_function(
-    delegate=stata_adapter,
+mi_svy = mi_ses_from_stata(
     df_implicates=df_implicates,
-    join_on=["Variable"],
-    arguments={
-        "command": "svy: regress y x1 x2",
-        #   svyset's pweight must be a variable, not a literal - replace
-        #   with your actual design (real psu/weight/strata variables).
-        "pre_commands": ["gen _svy_weight = 1", "svyset _n [pw=_svy_weight]"],
-    },
+    #   svyset's pweight must be a variable, not a literal - replace
+    #   with your actual design (real psu/weight/strata variables).
+    command=[
+        "gen _svy_weight = 1",
+        "svyset _n [pw=_svy_weight]",
+        "svy: regress y x1 x2",
+    ],
     round_output=False,
 )
 mi_svy.print(round_output=False)
+
+
+# %%
+logger.info("\n\nReplicate-weight bootstrapping instead of Stata's own e(V): pass")
+logger.info("replicates=, and `command` runs once per replicate weight column (via")
+logger.info("stata_results_adapter under the hood, reading back e(b) only) rather")
+logger.info("than Stata's own bootstrap/brr/jackknife prefix - the spread of")
+logger.info("estimates across replicates IS the SE, computed in Python by")
+logger.info("survey_kit's own Replicates/StatCalculator machinery. Stata's own")
+logger.info("replicate-estimation commands are usually faster/more idiomatic if")
+logger.info("you're already set up for them - this is for matching SEs computed the")
+logger.info("same way elsewhere in a project instead. `command` needs a \"{weight}\"")
+logger.info("placeholder here, unlike the e(V)-based calls above.")
+
+N_REPLICATES = 20
+
+mi_boot = mi_ses_from_stata(
+    df_implicates=with_bootstrap_weights(df_implicates, n_replicates=N_REPLICATES),
+    command="regress y x1 x2 [pw={weight}]",
+    replicates=Replicates(weight_stub="replicate_", n_replicates=N_REPLICATES, bootstrap=True),
+    round_output=False,
+)
+mi_boot.print(round_output=False)
 
 
 # %%
@@ -120,14 +127,12 @@ logger.info("xtreg/xtlogit/areg, or a community-installed command (`ssc install`
 logger.info("survey_kit has never heard of. Two examples:")
 
 logger.info("\n  Fixed effects via areg:")
-mi_areg = mi_ses_from_function(
-    delegate=stata_adapter,
+mi_areg = mi_ses_from_stata(
     df_implicates=[
         d.with_columns((pl.arange(0, pl.len()) % 10).alias("firm"))
         for d in df_implicates
     ],
-    join_on=["Variable"],
-    arguments={"command": "areg y x1 x2, absorb(firm)", },
+    command="areg y x1 x2, absorb(firm)",
     round_output=False,
 )
 mi_areg.print(round_output=False)
@@ -144,11 +149,9 @@ def _with_ybin(d: pl.DataFrame, seed: int) -> pl.DataFrame:
     return d.with_columns(pl.Series("ybin", ybin))
 
 
-mi_logit = mi_ses_from_function(
-    delegate=stata_adapter,
+mi_logit = mi_ses_from_stata(
     df_implicates=[_with_ybin(d, seed) for seed, d in enumerate(df_implicates)],
-    join_on=["Variable"],
-    arguments={"command": "logit ybin x1 x2"},
+    command="logit ybin x1 x2",
     round_output=False,
 )
 mi_logit.print(round_output=False)
@@ -186,9 +189,8 @@ logger.info("stata_adapter wraps run_stata_model - it works for ANY command")
 logger.info("(r-class or e-class) and any named result, not just an e-class fit's")
 logger.info("coefficient table. It's shaped as a StatCalculator.from_function")
 logger.info("delegate (point estimates only, no vcov - the SE comes from")
-logger.info("resampling across replicate weights, not Stata's own e(V)) rather")
-logger.info("than an mi_ses_from_function delegate like stata_adapter - see its")
-logger.info("docstring for the full reuse_data=/replicate-weight-loop story.")
+logger.info("resampling across replicate weights, not Stata's own e(V)) - it's what")
+logger.info("mi_ses_from_stata uses under the hood for the replicates= case above.")
 
 
 # %%
@@ -202,9 +204,5 @@ logger.info("     run_stata_results to see Stata's own error text in the console
 logger.info("  3. If e(b)/e(V) come back empty, the command you ran probably isn't")
 logger.info("     e-class (didn't leave results in e()) - `ereturn list` right after")
 logger.info("     running it interactively in Stata will confirm.")
-logger.info("  4. If r(table) shapes/names look different than expected here, that's")
-logger.info("     the piece flagged as least certain in _stata_interop's docstring -")
-logger.info("     `matrix list r(table)` interactively will show you its real shape.")
-logger.info("  5. Please report back what needed changing - this file (and")
-logger.info("     _stata_interop.py/stata_adapter) should get their 'untested'")
-logger.info("     caveats removed once someone's actually run them against Stata.")
+logger.info("  4. If r(table) shapes/names look different than expected, `matrix list")
+logger.info("     r(table)` interactively will show you its real shape.")

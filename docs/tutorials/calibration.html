@@ -7510,7 +7510,7 @@ a.anchor-link {
 </style>
 <!-- End of mermaid configuration --></head>
 <body class="jp-Notebook" data-jp-theme-light="true" data-jp-theme-name="JupyterLab Light">
-<main><div class="jp-Cell jp-CodeCell jp-Notebook-cell jp-mod-noOutputs" id="cell-id=293f879a">
+<main><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=33cc1298">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -7531,7 +7531,27 @@ a.anchor-link {
 </div>
 </div>
 </div>
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=888e098e">
+<div class="jp-Cell-outputWrapper">
+<div class="jp-Collapser jp-OutputCollapser jp-Cell-outputCollapser">
+</div>
+<div class="jp-OutputArea jp-Cell-outputArea">
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>   WARNING:		pypardiso is unavailable (no usable MKL runtime on this CPU/platform); sparse solves will fall back to scikit-sparse/scipy, which are slower.
+</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>   WARNING:		sparse_dot_mkl is unavailable (no usable MKL runtime on this CPU/platform); falling back to scipy/numpy matrix products, which are slower.
+</pre>
+</div>
+</div>
+</div>
+</div>
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=53af652f">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -7593,7 +7613,7 @@ a.anchor-link {
 </div>
 </div>
 </div>
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=d7e4021f">
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=ca420c52">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -7660,7 +7680,7 @@ a.anchor-link {
 </div>
 </div>
 </div>
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=bf7f4d94">
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=da3f178c">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -7753,63 +7773,63 @@ Entropy Balance Rewighting, Sanders (2024)
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>SparseLinearSolver(size=31, spd=True) using: pypardiso (with PARDISO analysis reuse)
+<pre>SparseLinearSolver(size=31, spd=True) using: scipy
 </pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>  0     0.000000      42881.283999       0.0000          inf            inf      42881.28399894
+<pre>  0     0.000000      42831.275989       0.0000          inf            inf      42831.27598944
 </pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>  1   2763.187061     18728.203481      56.3565     134.48694774    0.87759691   18728.28827425
+<pre>  1   2739.801893     18697.394213      56.3039     134.32575940    0.87719892   18697.47898708
 </pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>  2   9541.594067      12.663227        10.4005      71.14773621    0.02829049    16.38678627  
+<pre>  2   9503.564667      12.648764        10.3916      71.03346459    0.02828378    16.36999643  
 </pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>  3   9516.640496       0.268215         1.2216      12.09222390    0.02880589     1.25070595  
+<pre>  3   9483.511832       0.267324         1.2440      12.07772388    0.02872636     1.27236485  
 </pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>  4   9516.220368       0.001627         0.3218      0.85216397     0.00071913     0.32184373  
+<pre>  4   9483.161421       0.001644         0.3324      0.87395025     0.00072022     0.33245405  
 </pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>  5   9516.215799       0.000008         0.0319      0.04387007     0.00000728     0.03190493  
+<pre>  5   9483.150962       0.000008         0.0338      0.04439508     0.00000710     0.03383681  
 </pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>  6   9516.215683       0.000000         0.0004      0.00514839     0.00000109     0.00035744  
+<pre>  6   9483.150804       0.000000         0.0004      0.00531828     0.00000113     0.00039837  
 </pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>  7   9516.215683       0.000000         0.0000      0.00005919     0.00000001     0.00000005  
+<pre>  7   9483.150804       0.000000         0.0000      0.00006410     0.00000001     0.00000006  
 </pre>
 </div>
 </div>
@@ -7823,7 +7843,7 @@ Entropy Balance Rewighting, Sanders (2024)
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>Time elapsed: 0.4012992609932553
+<pre>Time elapsed: 0.3446362000031513
 </pre>
 </div>
 </div>
@@ -7851,7 +7871,7 @@ Entropy Balance Rewighting, Sanders (2024)
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>Maximum Difference: 0.1146863493824819
+<pre>Maximum Difference: 0.1134415812688645
 </pre>
 </div>
 </div>
@@ -7862,43 +7882,43 @@ Entropy Balance Rewighting, Sanders (2024)
 ┌────────────────────────────────┬──────────┬─────────┬───────────┬────────────┬─────────┬────────────────┬───────────┬───────────┐
 │                       Variable ┆  Initial ┆ Targets ┆ Estimates ┆ Calibrated ┆ NonZero ┆ NonZero_Target ┆      diff ┆   percent │
 ╞════════════════════════════════╪══════════╪═════════╪═══════════╪════════════╪═════════╪════════════════╪═══════════╪═══════════╡
-│ m0_year==2018:v_f_continuous_2 ┆ 1.113311 ┆       1 ┆  1.114686 ┆          1 ┆   16804 ┆          16550 ┆  0.114686 ┆ 11.468635 │
-│ m0_year==2018:v_f_continuous_1 ┆  1.11314 ┆       1 ┆  1.114544 ┆          1 ┆   16804 ┆          16550 ┆  0.114544 ┆ 11.454375 │
-│ m0_year==2018:v_f_continuous_0 ┆ 1.112906 ┆       1 ┆    1.1109 ┆          1 ┆   16804 ┆          16550 ┆    0.1109 ┆ 11.090034 │
-│ m0_year==2016:v_f_continuous_1 ┆  1.10321 ┆       1 ┆  1.107892 ┆          1 ┆   16676 ┆          16676 ┆  0.107892 ┆ 10.789187 │
-│ m0_year==2021:v_f_continuous_0 ┆ 1.103274 ┆       1 ┆  1.105654 ┆          1 ┆   16681 ┆          16506 ┆  0.105654 ┆ 10.565366 │
-│ m0_year==2016:v_f_continuous_0 ┆ 1.101391 ┆       1 ┆   1.10436 ┆          1 ┆   16676 ┆          16676 ┆   0.10436 ┆  10.43601 │
-│ m0_year==2016:v_f_continuous_2 ┆  1.09744 ┆       1 ┆    1.1013 ┆          1 ┆   16676 ┆          16676 ┆    0.1013 ┆ 10.130036 │
-│ m0_year==2021:v_f_continuous_2 ┆  1.09976 ┆       1 ┆   1.10023 ┆          1 ┆   16681 ┆          16506 ┆   0.10023 ┆ 10.022999 │
-│ m0_year==2019:v_f_continuous_1 ┆ 1.101078 ┆       1 ┆   1.09955 ┆          1 ┆   16624 ┆          16763 ┆   0.09955 ┆  9.955007 │
-│ m0_year==2021:v_f_continuous_1 ┆  1.09959 ┆       1 ┆  1.099242 ┆          1 ┆   16681 ┆          16506 ┆  0.099242 ┆  9.924172 │
-│ m0_year==2020:v_f_continuous_2 ┆ 1.100242 ┆       1 ┆  1.098762 ┆          1 ┆   16646 ┆          16618 ┆  0.098762 ┆  9.876188 │
-│ m0_year==2020:v_f_continuous_1 ┆ 1.097323 ┆       1 ┆   1.09811 ┆          1 ┆   16646 ┆          16618 ┆   0.09811 ┆   9.81099 │
-│ m0_year==2019:v_f_continuous_0 ┆ 1.102635 ┆       1 ┆   1.09737 ┆          1 ┆   16624 ┆          16763 ┆   0.09737 ┆  9.737019 │
-│ m0_year==2017:v_f_continuous_2 ┆ 1.096367 ┆       1 ┆  1.095087 ┆          1 ┆   16569 ┆          16887 ┆  0.095087 ┆  9.508733 │
-│ m0_year==2017:v_f_continuous_1 ┆ 1.092783 ┆       1 ┆  1.094633 ┆          1 ┆   16569 ┆          16887 ┆  0.094633 ┆  9.463348 │
-│ m0_year==2017:v_f_continuous_0 ┆ 1.092225 ┆       1 ┆  1.092314 ┆          1 ┆   16569 ┆          16887 ┆  0.092314 ┆  9.231389 │
-│ m0_year==2020:v_f_continuous_0 ┆ 1.092051 ┆       1 ┆  1.091478 ┆          1 ┆   16646 ┆          16618 ┆  0.091478 ┆  9.147843 │
-│ m0_year==2019:v_f_continuous_2 ┆  1.09556 ┆       1 ┆  1.090112 ┆          1 ┆   16624 ┆          16763 ┆  0.090112 ┆  9.011234 │
-│              m0_year==2018:v_1 ┆  1.01166 ┆       1 ┆  1.012648 ┆          1 ┆   16804 ┆          16550 ┆  0.012648 ┆   1.26481 │
-│              m0_year==2018:_in ┆ 1.008746 ┆       1 ┆  1.009857 ┆          1 ┆   16804 ┆          16550 ┆  0.009857 ┆  0.985652 │
-│              m0_year==2019:_in ┆ 0.997436 ┆       1 ┆  0.993336 ┆          1 ┆   16624 ┆          16763 ┆ -0.006664 ┆ -0.666449 │
-│              m0_year==2017:_in ┆ 0.993348 ┆       1 ┆     0.994 ┆          1 ┆   16569 ┆          16887 ┆    -0.006 ┆ -0.600004 │
-│              m0_year==2020:v_1 ┆ 1.001671 ┆       1 ┆  1.004554 ┆          1 ┆   16646 ┆          16618 ┆  0.004554 ┆  0.455433 │
-│              m0_year==2021:v_1 ┆ 1.006379 ┆       1 ┆  1.004087 ┆          1 ┆   16681 ┆          16506 ┆  0.004087 ┆  0.408737 │
-│              m0_year==2019:v_1 ┆ 1.008309 ┆       1 ┆  1.003977 ┆          1 ┆   16624 ┆          16763 ┆  0.003977 ┆  0.397674 │
-│              m0_year==2016:_in ┆ 1.000639 ┆       1 ┆  1.003719 ┆          1 ┆   16676 ┆          16676 ┆  0.003719 ┆  0.371943 │
-│              m0_year==2016:v_1 ┆ 0.999911 ┆       1 ┆  1.002351 ┆          1 ┆   16676 ┆          16676 ┆  0.002351 ┆  0.235077 │
-│              m0_year==2020:_in ┆ 0.998146 ┆       1 ┆  0.997903 ┆          1 ┆   16646 ┆          16618 ┆ -0.002097 ┆ -0.209671 │
-│              m0_year==2021:_in ┆ 1.001684 ┆       1 ┆  1.001185 ┆          1 ┆   16681 ┆          16506 ┆  0.001185 ┆   0.11853 │
-│              m0_year==2017:v_1 ┆ 1.002875 ┆       1 ┆   1.00086 ┆          1 ┆   16569 ┆          16887 ┆   0.00086 ┆  0.086013 │
+│ m0_year==2018:v_f_continuous_2 ┆ 1.113311 ┆       1 ┆  1.113442 ┆          1 ┆   16804 ┆          16550 ┆  0.113442 ┆ 11.344158 │
+│ m0_year==2018:v_f_continuous_1 ┆  1.11314 ┆       1 ┆  1.111781 ┆          1 ┆   16804 ┆          16550 ┆  0.111781 ┆ 11.178072 │
+│ m0_year==2018:v_f_continuous_0 ┆ 1.112906 ┆       1 ┆  1.108594 ┆          1 ┆   16804 ┆          16550 ┆  0.108594 ┆ 10.859389 │
+│ m0_year==2021:v_f_continuous_0 ┆ 1.103274 ┆       1 ┆  1.103745 ┆          1 ┆   16681 ┆          16506 ┆  0.103745 ┆ 10.374487 │
+│ m0_year==2019:v_f_continuous_1 ┆ 1.101078 ┆       1 ┆  1.102324 ┆          1 ┆   16624 ┆          16763 ┆  0.102324 ┆ 10.232387 │
+│ m0_year==2017:v_f_continuous_2 ┆ 1.096367 ┆       1 ┆  1.102151 ┆          1 ┆   16569 ┆          16887 ┆  0.102151 ┆  10.21514 │
+│ m0_year==2021:v_f_continuous_2 ┆  1.09976 ┆       1 ┆  1.101751 ┆          1 ┆   16681 ┆          16506 ┆  0.101751 ┆ 10.175121 │
+│ m0_year==2019:v_f_continuous_0 ┆ 1.102635 ┆       1 ┆  1.101242 ┆          1 ┆   16624 ┆          16763 ┆  0.101242 ┆  10.12422 │
+│ m0_year==2021:v_f_continuous_1 ┆  1.09959 ┆       1 ┆  1.100953 ┆          1 ┆   16681 ┆          16506 ┆  0.100953 ┆ 10.095282 │
+│ m0_year==2017:v_f_continuous_0 ┆ 1.092225 ┆       1 ┆  1.100887 ┆          1 ┆   16569 ┆          16887 ┆  0.100887 ┆ 10.088701 │
+│ m0_year==2017:v_f_continuous_1 ┆ 1.092783 ┆       1 ┆  1.100127 ┆          1 ┆   16569 ┆          16887 ┆  0.100127 ┆ 10.012654 │
+│ m0_year==2020:v_f_continuous_2 ┆ 1.100242 ┆       1 ┆  1.098794 ┆          1 ┆   16646 ┆          16618 ┆  0.098794 ┆  9.879395 │
+│ m0_year==2016:v_f_continuous_1 ┆  1.10321 ┆       1 ┆  1.098022 ┆          1 ┆   16676 ┆          16676 ┆  0.098022 ┆  9.802227 │
+│ m0_year==2016:v_f_continuous_0 ┆ 1.101391 ┆       1 ┆  1.097971 ┆          1 ┆   16676 ┆          16676 ┆  0.097971 ┆  9.797117 │
+│ m0_year==2020:v_f_continuous_1 ┆ 1.097323 ┆       1 ┆  1.094964 ┆          1 ┆   16646 ┆          16618 ┆  0.094964 ┆  9.496403 │
+│ m0_year==2019:v_f_continuous_2 ┆  1.09556 ┆       1 ┆  1.094482 ┆          1 ┆   16624 ┆          16763 ┆  0.094482 ┆  9.448167 │
+│ m0_year==2016:v_f_continuous_2 ┆  1.09744 ┆       1 ┆  1.093343 ┆          1 ┆   16676 ┆          16676 ┆  0.093343 ┆  9.334261 │
+│ m0_year==2020:v_f_continuous_0 ┆ 1.092051 ┆       1 ┆  1.092315 ┆          1 ┆   16646 ┆          16618 ┆  0.092315 ┆  9.231494 │
+│              m0_year==2018:v_1 ┆  1.01166 ┆       1 ┆  1.013113 ┆          1 ┆   16804 ┆          16550 ┆  0.013113 ┆  1.311349 │
+│              m0_year==2021:v_1 ┆ 1.006379 ┆       1 ┆  1.009274 ┆          1 ┆   16681 ┆          16506 ┆  0.009274 ┆  0.927371 │
+│              m0_year==2018:_in ┆ 1.008746 ┆       1 ┆  1.007851 ┆          1 ┆   16804 ┆          16550 ┆  0.007851 ┆  0.785068 │
+│              m0_year==2016:v_1 ┆ 0.999911 ┆       1 ┆  0.992515 ┆          1 ┆   16676 ┆          16676 ┆ -0.007485 ┆ -0.748549 │
+│              m0_year==2019:v_1 ┆ 1.008309 ┆       1 ┆   1.00695 ┆          1 ┆   16624 ┆          16763 ┆   0.00695 ┆  0.694964 │
+│              m0_year==2017:v_1 ┆ 1.002875 ┆       1 ┆    1.0059 ┆          1 ┆   16569 ┆          16887 ┆    0.0059 ┆  0.590018 │
+│              m0_year==2019:_in ┆ 0.997436 ┆       1 ┆  0.995725 ┆          1 ┆   16624 ┆          16763 ┆ -0.004275 ┆ -0.427468 │
+│              m0_year==2016:_in ┆ 1.000639 ┆       1 ┆  0.996354 ┆          1 ┆   16676 ┆          16676 ┆ -0.003646 ┆ -0.364649 │
+│              m0_year==2021:_in ┆ 1.001684 ┆       1 ┆  1.002978 ┆          1 ┆   16681 ┆          16506 ┆  0.002978 ┆  0.297803 │
+│              m0_year==2020:_in ┆ 0.998146 ┆       1 ┆  0.997146 ┆          1 ┆   16646 ┆          16618 ┆ -0.002854 ┆ -0.285395 │
+│              m0_year==2020:v_1 ┆ 1.001671 ┆       1 ┆  1.001688 ┆          1 ┆   16646 ┆          16618 ┆  0.001688 ┆  0.168779 │
+│              m0_year==2017:_in ┆ 0.993348 ┆       1 ┆  0.999946 ┆          1 ┆   16569 ┆          16887 ┆ -0.000054 ┆ -0.005359 │
 └────────────────────────────────┴──────────┴─────────┴───────────┴────────────┴─────────┴────────────────┴───────────┴───────────┘
 </pre>
 </div>
 </div>
 </div>
 </div>
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=5c86b711">
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=9b86ee5b">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -7945,7 +7965,7 @@ Entropy Balance Rewighting, Sanders (2024)
 </div>
 </div>
 </div>
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=65a1371b">
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=4759d99f">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -7988,14 +8008,14 @@ Entropy Balance Rewighting, Sanders (2024)
 │         weight_0 ┆ 100,000 ┆           0 ┆      9.997927 ┆      1.001265 ┆   5.26969 ┆ 14.090873 │
 │             year ┆ 100,000 ┆           0 ┆  2,018.500692 ┆      1.707684 ┆   2,016.0 ┆   2,021.0 │
 │            month ┆ 100,000 ┆           0 ┆      6.489706 ┆      3.447587 ┆       1.0 ┆      12.0 │
-│     weight_final ┆ 100,000 ┆           0 ┆      1.009914 ┆      0.475026 ┆  0.136067 ┆  6.673702 │
+│     weight_final ┆ 100,000 ┆           0 ┆      1.010076 ┆      0.474715 ┆  0.126062 ┆  7.945797 │
 └──────────────────┴─────────┴─────────────┴───────────────┴───────────────┴───────────┴───────────┘
 </pre>
 </div>
 </div>
 </div>
 </div>
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=d50eeb9c">
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=e5cdaa2a">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -8029,16 +8049,16 @@ Entropy Balance Rewighting, Sanders (2024)
 <pre>┌──────────────────┬─────────┬─────────────┬───────────────┬───────────────┬───────────┬───────────┐
 │         Variable ┆       n ┆ n (missing) ┆          mean ┆           std ┆       min ┆       max │
 ╞══════════════════╪═════════╪═════════════╪═══════════════╪═══════════════╪═══════════╪═══════════╡
-│            index ┆ 100,000 ┆           0 ┆ 49,990.627464 ┆ 28,873.051744 ┆       0.0 ┆  99,999.0 │
-│              v_1 ┆ 100,000 ┆           0 ┆      5.510153 ┆      2.870537 ┆       1.0 ┆      10.0 │
-│ v_f_continuous_0 ┆ 100,000 ┆           0 ┆     10.991755 ┆      4.013244 ┆ -5.459849 ┆ 30.287625 │
-│ v_f_continuous_1 ┆ 100,000 ┆           0 ┆     11.025569 ┆      3.993578 ┆ -7.360353 ┆ 27.415263 │
-│ v_f_continuous_2 ┆ 100,000 ┆           0 ┆      10.99814 ┆      4.003502 ┆ -8.478953 ┆ 27.102181 │
-│          v_extra ┆ 100,000 ┆           0 ┆      0.499316 ┆      0.867842 ┆ -0.999996 ┆  1.999988 │
-│         weight_0 ┆ 100,000 ┆           0 ┆      9.998901 ┆      1.002187 ┆   5.26969 ┆ 14.090873 │
-│         weight_1 ┆ 100,000 ┆           0 ┆     10.101212 ┆      0.998198 ┆  5.539069 ┆ 14.227871 │
-│             year ┆ 100,000 ┆           0 ┆  2,018.498543 ┆      1.708479 ┆   2,016.0 ┆   2,021.0 │
-│            month ┆ 100,000 ┆           0 ┆       6.48716 ┆       3.44686 ┆       1.0 ┆      12.0 │
+│            index ┆ 100,000 ┆           0 ┆ 49,987.572128 ┆ 28,868.167031 ┆       0.0 ┆  99,999.0 │
+│              v_1 ┆ 100,000 ┆           0 ┆      5.511032 ┆       2.86937 ┆       1.0 ┆      10.0 │
+│ v_f_continuous_0 ┆ 100,000 ┆           0 ┆     10.996213 ┆      4.014495 ┆ -5.459849 ┆ 30.287625 │
+│ v_f_continuous_1 ┆ 100,000 ┆           0 ┆     11.015899 ┆      4.000952 ┆ -7.360353 ┆ 27.415263 │
+│ v_f_continuous_2 ┆ 100,000 ┆           0 ┆     11.004445 ┆      4.003024 ┆ -8.478953 ┆ 27.102181 │
+│          v_extra ┆ 100,000 ┆           0 ┆      0.500065 ┆      0.867396 ┆ -0.999996 ┆  1.999988 │
+│         weight_0 ┆ 100,000 ┆           0 ┆     10.000925 ┆      1.002408 ┆   5.26969 ┆ 14.090873 │
+│         weight_1 ┆ 100,000 ┆           0 ┆      10.10284 ┆      0.999476 ┆  5.539069 ┆ 14.227871 │
+│             year ┆ 100,000 ┆           0 ┆   2,018.50105 ┆      1.707354 ┆   2,016.0 ┆   2,021.0 │
+│            month ┆ 100,000 ┆           0 ┆      6.493253 ┆      3.446045 ┆       1.0 ┆      12.0 │
 └──────────────────┴─────────┴─────────────┴───────────────┴───────────────┴───────────┴───────────┘
 </pre>
 </div>

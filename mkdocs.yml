@@ -17,11 +17,13 @@ nav:
       - Imputation Quality & Propensity: user-guide/srmi/diagnostics-quality-propensity.md
       - Advanced/Manual Construction: user-guide/srmi/advanced-manual-construction.md
     - Statistics/Standard Errors: user-guide/statistics.md
+    - Regression Adapters: user-guide/adapters.md
   - API Reference:
     - Calibration: api/calibration.md
     - Imputation/SRMI: api/srmi.md
     - Basic Statistics/Standard Errors: api/basic_standard_errors.md
     - Multiple Imputation Standard Errors: api/multiple_imputation.md
+    - Regression Adapters: api/adapters.md
     - Miscellaneous: api/miscellaneous.md
 theme:
   name: material

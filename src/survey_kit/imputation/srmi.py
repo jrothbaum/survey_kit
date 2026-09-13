@@ -73,10 +73,6 @@ class SRMI(Serializable):
         modeltype / parameters / ordered_categorical (fallback values applied to each
         Variable added via AddVariable() when that Variable doesn't specify its own)
 
-    For code still using the pre-refactor flat-kwarg signature (n_implicates=...,
-    bayesian_bootstrap=..., parallel_CallInputs=..., etc.), use SRMI.from_legacy(...)
-    instead of SRMI(...).
-
     Raises
     ------
     Exception
@@ -511,11 +507,11 @@ class SRMI(Serializable):
         imputation_stats: list[str] | None = None,
     ) -> SRMI:
         """
-        Construct an SRMI from the pre-refactor flat-kwarg signature.
-
-        Migration aid only - new code should pass replication=SRMI.Replication(...),
-        parallel=SRMI.Parallel(...), storage=SRMI.Storage(...), bootstrap=SRMI.Bootstrap(...),
-        defaults=SRMI.Defaults(...) directly to SRMI() instead.
+        Construct an SRMI from a flat set of keyword arguments, rather
+        than the grouped replication=SRMI.Replication(...)/
+        parallel=SRMI.Parallel(...)/storage=SRMI.Storage(...)/
+        bootstrap=SRMI.Bootstrap(...)/defaults=SRMI.Defaults(...) form
+        SRMI() itself takes.
         """
         return cls(
             df=df,
@@ -918,7 +914,7 @@ class SRMI(Serializable):
             #       is already fully populated in that case (by
             #       SRMI.load()'s own explicit per-implicate loading
             #       loop), so appending unconditionally here would
-            #       silently duplicate every implicate - confirmed:
+            #       silently duplicate every implicate:
             #       len(self.implicates) doubles, the run loop (indexed
             #       by number, not iterating the list) only ever touches
             #       the ORIGINAL entries so the duplicates just sit

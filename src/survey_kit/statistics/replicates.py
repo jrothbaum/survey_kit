@@ -175,10 +175,10 @@ class Replicates(Serializable):
             pass in StatCalculator's fast batched replicate-SE path (only
             used when the request is eligible for that path - see
             StatCalculator._calculate_replicates). None (default) auto-sizes
-            batches to target roughly 300 total expressions per pass, a
-            sweet spot found empirically to balance speed against peak
-            memory. Pass an explicit value to override for benchmarking or
-            tuning. Has no effect on the fallback sequential path.
+            batches to target roughly 300 total expressions per pass,
+            balancing speed against peak memory. Pass an explicit value to
+            override for benchmarking or tuning. Has no effect on the
+            fallback sequential path.
         """
         if n_replicates is None and df is None:
             message = "You must pass either df or n_replicates to Replicates"
@@ -726,10 +726,10 @@ def _default_batch_size(column_stats: dict[str, list[str]], n_weights: int) -> i
     """
     Auto-size replicate batches to target ~300 total (replicate x column x
     stat) expressions per group_by/agg pass - comfortably inside the
-    100-600 sweet spot found empirically across several stress-test
-    configurations, balancing speed against peak memory. Self-adjusting to
-    however many variables/statistics a given request actually asks for,
-    rather than a fixed replicate count that would need re-tuning per call.
+    100-600 range that balances speed against peak memory. Self-adjusting
+    to however many variables/statistics a given request actually asks
+    for, rather than a fixed replicate count that would need re-tuning per
+    call.
     """
     n_exprs_per_replicate = sum(len(v) for v in column_stats.values())
     if n_exprs_per_replicate <= 0:

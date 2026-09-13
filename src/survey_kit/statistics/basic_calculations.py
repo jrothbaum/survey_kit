@@ -162,13 +162,11 @@ def calculate_by(
         df_join = []
 
         #   gini and quantile stats each need a per-value sort/cumulative
-        #   pass - _custom_stat_by/_gini and _quantiles/_quantiles_actual
-        #   used to do that with one .collect() per column/modifier
-        #   combination. _batched_gini/_batched_quantiles(_interpolated)
-        #   (originally written for the replicate-SE path in replicates.py)
-        #   do the same computation across every requested column in a
-        #   single pass/collect - reused here as a "batch of one" weight to
-        #   get the same speedup for the plain point-estimate path.
+        #   pass - _batched_gini/_batched_quantiles(_interpolated) do that
+        #   computation across every requested column in a single
+        #   pass/collect, rather than one .collect() per column/modifier
+        #   combination - reused here as a "batch of one" weight to get
+        #   the same speedup for the plain point-estimate path.
         (_, quantile_stats, gini_stats, _has_unbatchable) = (
             _split_batchable_column_stats(column_stats)
         )

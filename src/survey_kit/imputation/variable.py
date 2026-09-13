@@ -45,10 +45,6 @@ class Variable(Serializable):
         (pre / post / pre_initialize / post_finalize)
     predictors : Variable.Predictors - predictor inclusion/exclusion control
         (exclude / exclude_first_iteration / require / joint)
-
-    For code still using the pre-refactor flat-kwarg signature
-    (Where=..., preFunctions=..., predictors_exclude=..., etc.), use
-    Variable.from_legacy(...) instead of Variable(...).
     """
 
     class ModelType(Enum):
@@ -76,13 +72,14 @@ class Variable(Serializable):
         #   rifreg = 7
         #   quantile_spacing = 8
 
-        #   NearestNeighbor = 9 - removed. Matching directly on raw x
-        #       values (no fitted model) turned out not to earn its own
-        #       modeltype/impute.py method - it's superseded by
-        #       Regression with Parameters.NearestNeighbor(), which fits
-        #       an OLS on the same predictors and PMM-matches on that
-        #       prediction instead of raw distance - see that function's
-        #       docstring for why that's the better default.
+        #   NearestNeighbor has no modeltype of its own - matching
+        #       directly on raw x values (no fitted model) is a
+        #       restricted, worse-behaved case of Regression, so
+        #       Parameters.NearestNeighbor() builds a Regression parameter
+        #       dict instead: fit an OLS on the same predictors and
+        #       PMM-match on that prediction rather than raw distance -
+        #       see that function's docstring for why that's the better
+        #       default.
 
         #   Predict y with a mean-regression sklearn-compatible estimator
         #       (RandomForestRegressor/XGBRegressor/CatBoostRegressor/your
@@ -629,11 +626,10 @@ class Variable(Serializable):
         By: list = None,
     ) -> Variable:
         """
-        Construct a Variable from the pre-refactor flat-kwarg signature.
-
-        Migration aid only - new code should pass sample=Variable.Sample(...),
-        transforms=Variable.Transforms(...), predictors=Variable.Predictors(...) directly
-        to Variable() instead.
+        Construct a Variable from a flat set of keyword arguments, rather
+        than the grouped sample=Variable.Sample(...)/
+        transforms=Variable.Transforms(...)/
+        predictors=Variable.Predictors(...) form Variable() itself takes.
         """
         return cls(
             impute_var=impute_var,

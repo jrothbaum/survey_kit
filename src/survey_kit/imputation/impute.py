@@ -186,9 +186,8 @@ class Impute:
                     #   pmm is, mechanically, just regression with a fixed
                     #       model/error choice baked into
                     #       Parameters.pmm()'s own convenience builder -
-                    #       see its docstring. No separate impute.py
-                    #       method any more - routes here, same as
-                    #       RandomForest()/etc.
+                    #       see its docstring. Routes through the same
+                    #       regression path here as RandomForest()/etc.
                     Variable.ModelType.pmm,
                 ):
                     #   RandomForest/XGBoost/CatBoost/SklearnModel are all
@@ -2377,8 +2376,8 @@ class Impute:
         CatBoost()'s categorical_feature -> estimator_prepare_data's fixed-
         category dtype cast, applied just above) needs that dtype to
         survive all the way into .fit() - a bare .to_numpy() would coerce
-        it away and crash (confirmed: XGBoost raises "could not convert
-        string to float" if X is flattened to numpy first). tune_estimator()
+        it away and crash (XGBoost raises "could not convert string to
+        float" if X is flattened to numpy first). tune_estimator()
         already established this same "keep X as a dataframe" pattern for
         exactly this reason.
         """
@@ -3448,8 +3447,8 @@ class Impute:
         weight : np.ndarray | None, optional
             Row weight for df_model's rows (self.weight - the bootstrap or
             declared weight, same one the model fit itself already used
-            for sample_weight), by default None (every row counts equally,
-            same as before this was added). When set, both the group mean
+            for sample_weight), by default None (every row counts
+            equally). When set, both the group mean
             and the "how much data do we have" measure become weighted -
             a weighted mean instead of a plain one, and sum-of-weight
             instead of row-count in the n/(n+k) shrinkage factor - so a
@@ -4032,7 +4031,7 @@ class Impute:
         #       right below - make sure impute_var survives the keep_vars
         #       projection inside df_predict_where even if the caller didn't
         #       ask for it, then narrow back to keep_vars via the .select()
-        #       below (unchanged from before this projection was added).
+        #       below.
         where_keep_vars = keep_vars
         if self.variable.impute_var not in keep_vars:
             where_keep_vars = keep_vars + [self.variable.impute_var]

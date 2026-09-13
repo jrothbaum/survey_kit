@@ -488,13 +488,11 @@ class Implicate(Serializable):
                 prefix="bbweight__",
                 n_replicates=1,
                 sum_to=safe_height(self.df),
-                #   Finally wired up - SRMI.Bootstrap.index has documented
-                #       "resample by household, not person" as its intent
-                #       since it was added, but nothing ever read it until
-                #       bayes_bootstrap_weights grew a cluster= parameter
-                #       to actually do that (draw one replicate weight per
-                #       cluster, broadcast to every row in it, instead of
-                #       independently per row).
+                #   SRMI.Bootstrap.index identifies the resampling unit
+                #       (e.g. household, not person) - passing it as
+                #       cluster= draws one replicate weight per cluster,
+                #       broadcast to every row in it, instead of
+                #       independently per row.
                 cluster=self.parent.bootstrap.index,
             )
             weight = "bbweight__1"

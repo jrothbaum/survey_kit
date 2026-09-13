@@ -29,10 +29,10 @@ def survey_calibration(
     w_new = weights0 * r_max = weights0 * [arg min(r) sum(weights0 * phi(r))]
     s.t. (weights0[:,None] * x_sample) @ r = mean_population_moments
 
-    phi defualts to the "raking" function r * log(r) - r + 1, which also has the fastest and most
-    stable solving behavior. Previously other criterions were
-    implemented but showed slow convergence and issues with finding a feasible point in practice and
-    so are no longer available.
+    phi defualts to (and, in practice, is the only implemented) "raking" function
+    r * log(r) - r + 1, which has the fastest and most stable solving behavior of
+    the criterion functions considered here (see criterion()'s NotImplementedError
+    for other values of penalty_fn).
     Weights are allowed to be anything that is proportially correct and are ideally 1-ish, but population moments
     must be in means.
 
@@ -234,7 +234,7 @@ def criterion(g, weights0, penalty_function, logistic_bounds=(0.6, 1.4)):
         )
     else:
         raise NotImplementedError(
-            "All other attempted criterions functions performed very poorly. If you want a new one, the only function needing editing is this one."
+            "Only 'log_diff' is implemented - to add a new criterion function, this is the only function that needs editing."
         )
     return out
 

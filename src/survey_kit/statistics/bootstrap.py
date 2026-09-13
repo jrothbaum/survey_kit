@@ -56,8 +56,7 @@ def bayes_bootstrap_weights(
         real resampling process - a real multistage survey design
         resamples PSUs, not individuals within them, so rows sharing a
         cluster should always move together across replicates. By default
-        None (resample rows independently, unchanged from before this was
-        added).
+        None (resample rows independently).
 
     Returns
     -------

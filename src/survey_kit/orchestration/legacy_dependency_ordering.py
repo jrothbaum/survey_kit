@@ -1,7 +1,8 @@
-#   Kept around for things like R package dependency resolver
-#       where I don't care about duplicate c's in outputs (like a->c, b->c )
-#       and just want to order packages
-#       (duplicate outputs cause the faster method to throw an error, as it should)
+#   For dependency graphs with duplicate outputs (e.g. a->c, b->c - an R
+#       package dependency resolver, say) where that's fine and you just
+#       want a valid ordering - the faster ordering method rejects
+#       duplicate outputs (correctly, in general), so use this one instead
+#       when they're expected and don't matter.
 from __future__ import annotations
 from typing import TYPE_CHECKING
 

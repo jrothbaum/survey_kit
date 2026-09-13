@@ -1,11 +1,8 @@
 from __future__ import annotations
 
-import numpy as np
-import polars as pl
-
 from survey_kit import logger
-from survey_kit.statistics.multiple_imputation import mi_ses_from_function
-from survey_kit.statistics.adapters import r_feols
+from survey_kit.statistics.adapters import r_feols, mi_ses_from_r_fixest
+from sample_data import make_implicates
 
 # %%
 logger.info("The simplest way to run an R regression from survey_kit: r_feols(),")
@@ -15,42 +12,35 @@ logger.info("'fixest' package. Check your setup cheaply with:")
 logger.info("    from survey_kit.statistics._r_interop import check_r_setup")
 logger.info("    check_r_setup(['fixest'])")
 
-
 # %%
-def make_implicate(seed: int) -> pl.DataFrame:
-    rng = np.random.default_rng(seed)
-    n = 300
-    x1 = rng.normal(size=n)
-    x2 = rng.normal(size=n)
-    y = 1 + 2 * x1 - 1.5 * x2 + rng.normal(size=n) * 0.4
-    return pl.DataFrame({"x1": x1, "x2": x2, "y": y})
-
-
-df = make_implicate(0)
+df_implicates = make_implicates()
+logger.info(f"\n\nSample data: {len(df_implicates)} implicates, {df_implicates[0].height}")
+logger.info("rows each (y = 1 + 2*x1 - 1.5*x2 + noise) - see sample_data.py.")
 
 # %%
 logger.info("\n\nOn one dataset, standalone - no MI at all:")
-(df_estimates, df_ses, df_vcov, df_tidy) = r_feols(df, formula="y ~ x1 + x2")
+(df_estimates, df_ses, df_vcov, df_tidy) = r_feols(df_implicates[0], formula="y ~ x1 + x2")
 logger.info(df_estimates)
 logger.info(df_ses)
 
 
 # %%
-logger.info("\n\nAcross multiple imputed datasets, combined via Rubin's rules:")
-df_implicates = [make_implicate(seed) for seed in range(5)]
-mi_reg = mi_ses_from_function(
-    delegate=r_feols,
+logger.info("\n\nAcross multiple imputed datasets, combined via Rubin's rules -")
+logger.info("mi_ses_from_r_fixest.feols(...) runs r_feols once per implicate and")
+logger.info("combines the results, taking r_feols's own arguments directly:")
+mi_reg = mi_ses_from_r_fixest.feols(
     df_implicates=df_implicates,
-    join_on=["Variable"],
-    arguments={"formula": "y ~ x1 + x2"},
+    formula="y ~ x1 + x2",
     round_output=False,
 )
 mi_reg.print(round_output=False)
 
 
 # %%
-logger.info("\n\nThat's it for the common case. r_lm_adapter (base R lm()/glm()) and")
-logger.info("r_fixest_adapter (any fixest estimator, not just feols) cover most of")
-logger.info("what's left with named arguments. For anything none of those wrap - a")
-logger.info("totally different R package or function - see")
-logger.info("r_arbitrary_estimators.py for the generic escape hatch.")
+logger.info("\n\nThat's it for the common case. mi_ses_from_r_fixest also has")
+logger.info(".feglm/.fepois/.femlm for fixest's other estimators, all with the same")
+logger.info("shape. r_lm_adapter (base R lm()/glm()) and r_fixest_adapter (any")
+logger.info("fixest estimator via a func= string, including ones .feglm/.fepois/")
+logger.info(".femlm don't cover) are the lower-level pieces these are built from -")
+logger.info("see r_arbitrary_estimators.py for rolling your own with those, plus a")
+logger.info("generic escape hatch into any R package/function at all.")

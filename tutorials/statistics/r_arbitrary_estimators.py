@@ -5,8 +5,10 @@ import polars as pl
 
 from survey_kit import logger
 from survey_kit.statistics.multiple_imputation import mi_ses_from_function
-from survey_kit.statistics.adapters import r_feols
+from survey_kit.statistics.adapters import r_feols, mi_ses_from_r_fixest
 from survey_kit.statistics import _r_interop as _r
+from survey_kit.statistics.replicates import Replicates
+from sample_data import make_implicates, with_bootstrap_weights
 
 
 # %%
@@ -29,30 +31,45 @@ logger.info("    check_r_setup()")
 
 
 # %%
-def make_implicate(seed: int) -> pl.DataFrame:
-    rng = np.random.default_rng(seed)
-    n = 300
-    x1 = rng.normal(size=n)
-    x2 = rng.normal(size=n)
-    y = 1 + 2 * x1 - 1.5 * x2 + rng.normal(size=n) * 0.4
-    return pl.DataFrame({"x1": x1, "x2": x2, "y": y})
-
-
-df_implicates = [make_implicate(seed) for seed in range(5)]
+df_implicates = make_implicates()
 
 
 # %%
-logger.info("\n\nPart 1: a named adapter (r_feols) - nothing new here, just a reminder")
-logger.info("of the shape everything in this tutorial produces.")
+logger.info("\n\nPart 1: a named adapter (r_feols), via mi_ses_from_r_fixest - nothing")
+logger.info("new here, just a reminder of the shape everything in this tutorial")
+logger.info("produces.")
 
-mi_feols = mi_ses_from_function(
-    delegate=r_feols,
+mi_feols = mi_ses_from_r_fixest.feols(
     df_implicates=df_implicates,
-    join_on=["Variable"],
-    arguments={"formula": "y ~ x1 + x2"},
+    formula="y ~ x1 + x2",
     round_output=False,
 )
 mi_feols.print(round_output=False)
+
+
+# %%
+logger.info("\n\nReplicate-weight bootstrapping instead of fixest's own vcov: pass")
+logger.info("replicates=, and r_feols runs once per replicate weight column (point")
+logger.info("estimates only, vcov forced to \"iid\" since it's discarded anyway) rather")
+logger.info("than reading fixest's own SE - the spread of estimates across replicates")
+logger.info("IS the SE, computed by survey_kit's own Replicates/StatCalculator")
+logger.info("machinery. Each replicate weight column is passed via r_feols's own")
+logger.info("`weight=` argument (no \"{weight}\" string placeholder needed in `formula`")
+logger.info("the way Stata's raw `command` string needs one) - and each implicate is")
+logger.info("converted to an R data.frame once, not once per replicate:")
+logger.info("dataframe_to_r()'s passthrough-if-already-converted behavior (see the")
+logger.info("caching section further below) makes that free to do with no")
+logger.info("special-casing in r_feols itself.")
+
+N_REPLICATES = 20
+
+mi_boot = mi_ses_from_r_fixest.feols(
+    df_implicates=with_bootstrap_weights(df_implicates, n_replicates=N_REPLICATES),
+    formula="y ~ x1 + x2",
+    replicates=Replicates(weight_stub="replicate_", n_replicates=N_REPLICATES, bootstrap=True),
+    round_output=False,
+)
+mi_boot.print(round_output=False)
 
 
 # %%

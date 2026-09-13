@@ -7,19 +7,11 @@ import polars as pl
 from dotenv import load_dotenv
 
 from survey_kit import logger
-from survey_kit.statistics.multiple_imputation import mi_ses_from_function
 from survey_kit.statistics.adapters import stata_adapter
 
 # %%
 logger.info("The simplest way to run a Stata regression from survey_kit:")
 logger.info("stata_adapter() - pass any e-class command as a plain string.")
-logger.info("")
-logger.info("**UNTESTED** here (no Stata license in this development environment) -")
-logger.info("see stata_arbitrary_estimators.py and _stata_interop's module")
-logger.info("docstring for details/caveats. Requires `pip install survey-kit[stata]`")
-logger.info("plus a licensed Stata 17+ install. Check your setup cheaply with:")
-logger.info("    from survey_kit.statistics._stata_interop import check_stata_setup")
-logger.info('    check_stata_setup(stata_path=r"C:\\Program Files\\Stata17")')
 
 #   Machine-specific - set these in a local ".env" file (see .gitignore,
 #   which excludes it from git) in the repo root rather than editing this
@@ -33,16 +25,12 @@ logger.info('    check_stata_setup(stata_path=r"C:\\Program Files\\Stata17")')
 load_dotenv()
 
 # %%
-def make_implicate(seed: int) -> pl.DataFrame:
-    rng = np.random.default_rng(seed)
-    n = 300
-    x1 = rng.normal(size=n)
-    x2 = rng.normal(size=n)
-    y = 1 + 2 * x1 - 1.5 * x2 + rng.normal(size=n) * 0.4
-    return pl.DataFrame({"x1": x1, "x2": x2, "y": y})
-
-
-df = make_implicate(0)
+rng = np.random.default_rng(0)
+n = 300
+x1 = rng.normal(size=n)
+x2 = rng.normal(size=n)
+y = 1 + 2 * x1 - 1.5 * x2 + rng.normal(size=n) * 0.4
+df = pl.DataFrame({"x1": x1, "x2": x2, "y": y})
 
 # %%
 logger.info("\n\nOn one dataset, standalone - no MI at all:")
@@ -54,22 +42,8 @@ logger.info(df_ses)
 
 
 # %%
-logger.info("\n\nAcross multiple imputed datasets, combined via Rubin's rules:")
-df_implicates = [make_implicate(seed) for seed in range(5)]
-mi_reg = mi_ses_from_function(
-    delegate=stata_adapter,
-    df_implicates=df_implicates,
-    join_on=["Variable"],
-    arguments={
-        "command": "regress y x1 x2",
-    },
-    round_output=False,
-)
-mi_reg.print(round_output=False)
-
-
-# %%
-logger.info("\n\nThat's it for the common case. For weighted/survey designs, other")
-logger.info("commands (svy:/xtreg/areg/logit/a community-installed ado/...), or")
-logger.info("pulling back custom r()/e() results via stata_results_adapter instead")
-logger.info("of the usual e(b)/e(V)/r(table), see stata_arbitrary_estimators.py.")
+logger.info("\n\nThat's it for the basics. For multiple imputation (mi_ses_from_stata),")
+logger.info("weighted/survey designs, other commands (svy:/xtreg/areg/logit/a")
+logger.info("community-installed ado/...), replicate-weight bootstrapping, or pulling")
+logger.info("back custom r()/e() results via stata_results_adapter instead of the")
+logger.info("usual e(b)/e(V)/r(table), see stata_arbitrary_estimators.py.")

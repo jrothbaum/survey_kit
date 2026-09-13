@@ -1560,9 +1560,11 @@ def mi_ses_from_function(
     ...     join_on=["Variable"]
     ... )
 
-    See [`survey_kit.statistics.adapters`][survey_kit.statistics.adapters] for
-    ready-made versions of this (statsmodels, linearmodels, polars_ds) that
-    also populate ``df_vcov``.
+    See [`survey_kit.statistics.adapters.statsmodels_adapter`][survey_kit.statistics.adapters.statsmodels_adapter]
+    and its siblings (linearmodels/pyfixest/polars_ds/R/Stata) for
+    ready-made versions of this that also populate ``df_vcov``, plus a
+    matching ``mi_ses_from_<package>(...)`` shortcut for each that wraps
+    this function the same way the example above does by hand.
 
     Parallel processing for faster computation:
 

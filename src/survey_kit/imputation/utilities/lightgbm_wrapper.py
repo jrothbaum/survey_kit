@@ -932,8 +932,7 @@ class Survey_kit_Lightgbm:
 
 
 #   Tuner/Objective (imported at the top of this file, from tuning.py) are
-#       intentionally still reachable as lightgbm_wrapper.Tuner/.Objective -
-#       LightGBM used to be the only tunable model, so existing callers may
-#       still import tuning types from here rather than from tuning.py
-#       directly; no need to duplicate their definitions to keep that working.
+#       intentionally still reachable as lightgbm_wrapper.Tuner/.Objective,
+#       for callers that import tuning types from here rather than from
+#       tuning.py directly.
 

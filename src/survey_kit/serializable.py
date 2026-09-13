@@ -129,10 +129,10 @@ class Serializable:
         #       lazily scanned from their own just-loaded files, not
         #       eagerly read. Deleting folder_path first, then later
         #       trying to sink_parquet a lazy scan of a file that's now
-        #       gone, crashes with FileNotFoundError - confirmed: a bare
+        #       gone, crashes with FileNotFoundError - e.g. a bare
         #       SRMI.load(path) followed immediately by .save() with no
-        #       other changes hits this every time. Collecting here,
-        #       once, before the delete, makes the whole save() call
+        #       other changes. Collecting here, once, before the delete,
+        #       makes the whole save() call
         #       correct regardless of whether the source was lazily
         #       loaded from this exact path - at the cost of no longer
         #       streaming a reload-then-resave through sink_parquet's
@@ -413,16 +413,8 @@ class Serializable:
                 _class_name = item["__class__"]
                 _parent = _namespace
                 for classi in _class_name.split("."):
-                    # #   Fix for any refactor class name changes
-                    # d_refactor = {"MultipleImputationStats":"MultipleImputation"}
-
-                    # classi = d_refactor.get(classi,
-                    #                         classi)
-
                     _class = getattr(_parent, classi)
                     _parent = _class
-
-                #   _class = getattr(_namespace, item['__class__'])
 
                 init_sig = inspect.signature(_class._init_from_dict)
                 if "init_kwargs" in init_sig.parameters.keys():

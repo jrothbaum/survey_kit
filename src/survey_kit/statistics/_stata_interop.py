@@ -2,30 +2,19 @@
 Minimal, self-contained pystata plumbing shared by the Stata-based adapter
 in adapters.py. Mirrors _r_interop.py's shape and division of labor.
 
-**UNTESTED**: written without a Stata installation available in this
-development environment - pystata ships inside a Stata 17+ install (in its
-`utilities` subfolder), not on PyPI, so it can't be installed here to
-verify against. Everything below is based on StataCorp's documented
-pystata/sfi API surface. The parts most likely to need adjustment once run
-against a real Stata instance:
-
-- Whether `sfi.Matrix.get("r(table)")` returns exactly the 9-row layout
-  (b/se/z-or-t/pvalue/ll/ul/df/crit/eform) documented for postestimation
-  use, or something that needs a small reshape - test against a plain
-  `regress` first.
 - `pystata.config.init(edition)` does NOT auto-detect the edition from the
   license when left None - it raises `ValueError('Stata edition must be one
-  of be, se, or mp')` - confirmed against a real Stata 17 SE install. Every
-  caller must pass edition="be"/"se"/"mp" explicitly, matching whichever
-  edition's exe (e.g. StataSE-64.exe) is present in the Stata install dir.
-- Quoting/escaping of the temp .dta path in the generated `use "..."`
-  command on Windows (backslashes) - str(Path) should already produce
-  forward slashes that Stata accepts, but worth a first check.
+  of be, se, or mp')`. Every caller must pass edition="be"/"se"/"mp"
+  explicitly, matching whichever edition's exe (e.g. StataSE-64.exe) is
+  present in the Stata install dir.
+- `sfi.Scalar.getValue(name)` does not raise for a name that's actually a
+  matrix (e.g. "e(b)") - it returns None, which `run_stata_results` uses
+  as the signal to fall back to `sfi.Matrix.get` instead of relying on an
+  exception.
 
 Data moves into Stata via a .dta file written by polars_readstat's
 `write_readstat`, not through pystata's own DataFrame transfer
-(`pystata.stata.pdataframe_to_data`) - by design (see the survey_kit
-conversation this was built from): `.dta` is Stata's own native, most
+(`pystata.stata.pdataframe_to_data`) - `.dta` is Stata's own native, most
 battle-tested ingestion path, and this keeps survey_kit independent of
 whichever transfer mechanism pystata favors internally.
 """
@@ -193,7 +182,11 @@ def require_pystata(edition: str | None = None, stata_path: str | None = None):
         raise ImportError(message) from e
 
     if not _stata_initialized:
-        pystata_config.init(edition)
+        #   splash=False suppresses pystata's one-time startup banner
+        #   (Stata's copyright/version splash) - pure boilerplate with no
+        #   informational value beyond "Stata initialized", which survey_kit
+        #   already logs its own message for.
+        pystata_config.init(edition, splash=False)
         #   pystata's default streamout='on' polls Stata's output buffer
         #   from a background thread while the main thread is still
         #   executing the command - pystata's embedded Stata engine isn't
@@ -231,8 +224,7 @@ _stata_loaded_df: object | None = None
 
 def _run_in_stata(
     df,
-    command: str,
-    pre_commands: list[str] | None,
+    command: str | list[str],
     edition: str | None,
     stata_path: str | None,
     reuse_data: bool = False,
@@ -240,12 +232,13 @@ def _run_in_stata(
 ):
     """
     Write df to a temp .dta, `use` it in the running (persistent, embedded)
-    Stata instance, then run any `pre_commands` followed by `command`.
-    Shared setup behind run_stata_model/run_stata_results - callers read
-    back whatever e()/r() results they need via `sfi` afterward (the temp
-    .dta is only needed for the `use`, so it's fine for the
-    TemporaryDirectory to clean up before that read - sfi reads from
-    Stata's own memory, not the file).
+    Stata instance, then run `command` - a single command string, or a
+    list of commands run in order (e.g. a `gen`/`svyset` setup step
+    followed by the actual estimation command). Shared setup behind
+    run_stata_model/run_stata_results - callers read back whatever e()/r()
+    results they need via `sfi` afterward (the temp .dta is only needed
+    for the `use`, so it's fine for the TemporaryDirectory to clean up
+    before that read - sfi reads from Stata's own memory, not the file).
 
     pystata embeds a single long-running Stata process in this Python
     process (the same model as rpy2 embedding R), so `e()`/`r()` results,
@@ -261,9 +254,9 @@ def _run_in_stata(
     ----------
     reuse_data : if True and `df` is the exact same object (by identity)
         as the one loaded by the previous reuse_data=True call, skip
-        rewriting/re-`use`-ing the .dta entirely and just rerun
-        pre_commands/command against the dataset already sitting in
-        Stata's memory. Useful in a replicate-weight loop, where
+        rewriting/re-`use`-ing the .dta entirely and just rerun `command`
+        against the dataset already sitting in Stata's memory. Useful in a
+        replicate-weight loop, where
         StatCalculator.from_function/mi_ses_from_function pass the exact
         same df object across every replicate call for one implicate (only
         the weight column referenced in `command` changes) - re-exporting
@@ -274,14 +267,13 @@ def _run_in_stata(
         shared in-memory dataset, so this needs an explicit opt-in from a
         caller who knows the same object will really be reused - call
         clear_stata_cache() once done to free it.
-    quietly : suppresses Stata's own console output for `pre_commands`/
-        `command` on success (default True) - avoids dumping a full
-        regression table/iteration log per implicate/replicate. Has no
-        effect on failures: a failing command is always retried
-        non-quietly so the real explanation reaches the raised
-        SystemError, since Stata's `quietly` prefix would otherwise
-        suppress that error text too, collapsing it to a bare
-        "r(####);".
+    quietly : suppresses Stata's own console output for `command` on
+        success (default True) - avoids dumping a full regression
+        table/iteration log per implicate/replicate. Has no effect on
+        failures: a failing command is always retried non-quietly so the
+        real explanation reaches the raised SystemError, since Stata's
+        `quietly` prefix would otherwise suppress that error text too,
+        collapsing it to a bare "r(####);".
     """
     global _stata_loaded_df
 
@@ -292,6 +284,10 @@ def _run_in_stata(
             if line_quietly:
                 stata.run(cmd, quietly=False)
             raise
+
+    commands = [command] if isinstance(command, str) else list(command)
+    if not commands:
+        raise ValueError("command must be a non-empty string or list of strings")
 
     stata = require_pystata(edition, stata_path)
 
@@ -309,10 +305,8 @@ def _run_in_stata(
     run_line("ereturn clear", True)
     run_line("return clear", True)
 
-    for pre in pre_commands or []:
-        run_line(pre, quietly)
-
-    run_line(command, quietly)
+    for cmd in commands:
+        run_line(cmd, quietly)
 
     return stata
 
@@ -336,37 +330,38 @@ def clear_stata_cache() -> None:
 
 def run_stata_model(
     df,
-    command: str,
-    pre_commands: list[str] | None = None,
+    command: str | list[str],
     edition: str | None = None,
     stata_path: str | None = None,
     reuse_data: bool = False,
     quietly: bool = True,
 ):
     """
-    Write df to a temp .dta, `use` it in a running Stata instance, run any
-    `pre_commands` (e.g. `svyset`) then `command` (must be e-class - i.e.
-    leave e(b)/e(V) populated, true of most estimation commands), and pull
-    back the coefficient vector, covariance matrix, and Stata's own
-    postestimation results table.
+    Write df to a temp .dta, `use` it in a running Stata instance, run
+    `command` (must leave the estimation e-class - i.e. e(b)/e(V)
+    populated, true of most estimation commands), and pull back the
+    coefficient vector, covariance matrix, and Stata's own postestimation
+    results table.
 
     Parameters
     ----------
     df : the data to estimate on (already merged with any design/weight
         columns needed).
     command : the Stata command to run, e.g. "regress y x1 x2" or
-        "regress y x1 x2 [pw=w]" or "xtreg y x1 x2, fe" or, given a prior
-        `svyset` (pass it via pre_commands), "svy: regress y x1 x2".
-    pre_commands : commands to run after `use` but before `command`, e.g.
-        `["svyset psu [pw=weight], strata(strata)"]`. Default is None.
+        "regress y x1 x2 [pw=w]" or "xtreg y x1 x2, fe". Pass a list of
+        commands run in order (e.g. a `svyset`/`gen` setup step then the
+        actual estimation command) instead of a single string when you
+        need to run something after `use` but before the estimation
+        command itself - only the LAST command's e(b)/e(V)/r(table) are
+        read back, e.g. `["svyset psu [pw=weight], strata(strata)",
+        "svy: regress y x1 x2"]`.
     edition, stata_path : see require_pystata.
     reuse_data : see `_run_in_stata`'s docstring - skips re-exporting/
         re-`use`-ing df when it's the same object as a previous
         reuse_data=True call. Default is False. Call `clear_stata_cache()`
         when done with data reused this way.
     quietly : pass False to see Stata's own console output/error text for
-        `pre_commands`/`command` - see `_run_in_stata`'s docstring. Default
-        is True.
+        `command` - see `_run_in_stata`'s docstring. Default is True.
 
     Returns
     -------
@@ -378,13 +373,8 @@ def run_stata_model(
         - table : list[list[float]], Stata's r(table) (rows are stats -
           b/se/t-or-z/pvalue/ll/ul/..., columns are terms).
         - table_row_names, table_col_names : r(table)'s row/column names.
-
-    **UNTESTED** - see this module's docstring for the specific pieces most
-    likely to need adjustment against a real Stata instance.
     """
-    _run_in_stata(
-        df, command, pre_commands, edition, stata_path, reuse_data=reuse_data, quietly=quietly
-    )
+    _run_in_stata(df, command, edition, stata_path, reuse_data=reuse_data, quietly=quietly)
     import sfi
 
     b = sfi.Matrix.get("e(b)")[0]
@@ -399,19 +389,19 @@ def run_stata_model(
 
 def run_stata_results(
     df,
-    command: str,
+    command: str | list[str],
     results: list[str],
-    pre_commands: list[str] | None = None,
     edition: str | None = None,
     stata_path: str | None = None,
     reuse_data: bool = False,
     quietly: bool = True,
 ) -> dict[str, object]:
     """
-    Write df to a temp .dta, `use` it, run any `pre_commands` then
-    `command`, and pull back exactly the r()/e() results named in
-    `results` - by scalar name (e.g. "r(mean)", "e(N)") or matrix name
-    (e.g. "e(b)", "r(table)"), whichever `command` actually populates.
+    Write df to a temp .dta, `use` it, run `command` (a single command, or
+    a list of commands run in order - see `run_stata_model`'s docstring),
+    and pull back exactly the r()/e() results named in `results` - by
+    scalar name (e.g. "r(mean)", "e(N)") or matrix name (e.g. "e(b)",
+    "r(table)"), whichever `command`'s last line actually populates.
 
     Unlike run_stata_model (which assumes an e-class fit and always reads
     the fixed e(b)/e(V)/r(table) triplet), this works for ANY command that
@@ -441,33 +431,35 @@ def run_stata_results(
         False. Call `clear_stata_cache()` when done with data reused this
         way.
     quietly : pass False to see Stata's own console output/error text for
-        `pre_commands`/`command` - see `_run_in_stata`'s docstring. Default
-        is True.
+        `command` - see `_run_in_stata`'s docstring. Default is True.
 
     Returns
     -------
     dict[str, object]
         name -> float (scalar) or (values, row_names, col_names) (matrix,
         as returned by sfi.Matrix.get/getRowNames/getColNames).
-
-    **UNTESTED** - see this module's docstring. In particular, which
-    exception `sfi.Scalar.getValue` raises for a name that isn't a scalar
-    (used here to decide to fall back to `sfi.Matrix.get`) isn't confirmed
-    against a real Stata instance.
     """
-    _run_in_stata(
-        df, command, pre_commands, edition, stata_path, reuse_data=reuse_data, quietly=quietly
-    )
+    _run_in_stata(df, command, edition, stata_path, reuse_data=reuse_data, quietly=quietly)
     import sfi
 
     out: dict[str, object] = {}
     for name in results:
+        #   sfi.Scalar.getValue(name) doesn't raise for a name that's
+        #   actually a matrix (e.g. "e(b)") - it just returns None, so
+        #   that's the signal to fall back to sfi.Matrix.get, not an
+        #   exception.
+        value = None
         try:
-            out[name] = sfi.Scalar.getValue(name)
+            value = sfi.Scalar.getValue(name)
         except Exception:
+            pass
+
+        if value is None:
             out[name] = (
                 sfi.Matrix.get(name),
                 sfi.Matrix.getRowNames(name),
                 sfi.Matrix.getColNames(name),
             )
+        else:
+            out[name] = value
     return out

@@ -72,6 +72,7 @@ Implements Rubin's (1987) combining rules:
 | Imputed data | `mi_ses_from_function()` | Accounts for imputation uncertainty |
 | Imputed survey data | Both combined | Full uncertainty (sampling + imputation) |
 | Custom analysis | `StatCalculator.from_function()` | Any function gets proper SEs |
+| Regression across implicates (statsmodels/linearmodels/pyfixest/polars_ds/R/Stata) | `mi_ses_from_<package>()` - see the [Regression Adapters guide](adapters.md) | Same shape as `mi_ses_from_function()`, no delegate function to write by hand |
 
 
 ## API
