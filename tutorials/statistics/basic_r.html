@@ -3,7 +3,7 @@
 <html lang="en">
 <head><meta charset="utf-8"/>
 <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
-<title>simple_model_categorical_and_group</title><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.1.10/require.min.js"></script>
+<title>basic_r</title><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.1.10/require.min.js"></script>
 <style type="text/css">
     pre { line-height: 125%; }
 td.linenos .normal { color: inherit; background-color: transparent; padding-left: 5px; padding-right: 5px; }
@@ -7510,7 +7510,7 @@ a.anchor-link {
 </style>
 <!-- End of mermaid configuration --></head>
 <body class="jp-Notebook" data-jp-theme-light="true" data-jp-theme-name="JupyterLab Light">
-<main><div class="jp-Cell jp-CodeCell jp-Notebook-cell jp-mod-noOutputs" id="cell-id=54577e87">
+<main><div class="jp-Cell jp-CodeCell jp-Notebook-cell jp-mod-noOutputs" id="cell-id=5fc2a152">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -7518,18 +7518,17 @@ a.anchor-link {
 <div class="jp-InputPrompt jp-InputArea-prompt">In [1]:</div>
 <div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
 <div class="cm-editor cm-s-jupyter">
-<div class="highlight hl-ipython3"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
-<span class="kn">import</span><span class="w"> </span><span class="nn">polars</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pl</span>
+<div class="highlight hl-ipython3"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
 
-<span class="kn">from</span><span class="w"> </span><span class="nn">survey_kit.imputation.variable</span><span class="w"> </span><span class="kn">import</span> <span class="n">Variable</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">survey_kit.imputation.srmi</span><span class="w"> </span><span class="kn">import</span> <span class="n">SRMI</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">survey_kit</span><span class="w"> </span><span class="kn">import</span> <span class="n">logger</span><span class="p">,</span> <span class="n">config</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">survey_kit</span><span class="w"> </span><span class="kn">import</span> <span class="n">logger</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">survey_kit.statistics.adapters</span><span class="w"> </span><span class="kn">import</span> <span class="n">r_feols</span><span class="p">,</span> <span class="n">mi_ses_from_r_fixest</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">sample_data</span><span class="w"> </span><span class="kn">import</span> <span class="n">make_implicates</span>
 </pre></div>
 </div>
 </div>
 </div>
 </div>
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell jp-mod-noOutputs" id="cell-id=6f881220">
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=d7282070">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -7537,50 +7536,66 @@ a.anchor-link {
 <div class="jp-InputPrompt jp-InputArea-prompt">In [2]:</div>
 <div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
 <div class="cm-editor cm-s-jupyter">
-<div class="highlight hl-ipython3"><pre><span></span><span class="c1"># Draw data with a categorical PREDICTOR (not itself being imputed) and a</span>
-<span class="c1"># grouping variable (state) whose effect we want captured without treating</span>
-<span class="c1"># it as a plain dummy-coded predictor</span>
-
-<span class="n">n_rows</span> <span class="o">=</span> <span class="mi">4_000</span>
-<span class="n">rng</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">default_rng</span><span class="p">(</span><span class="mi">20260913</span><span class="p">)</span>
-
-<span class="n">x1</span> <span class="o">=</span> <span class="n">rng</span><span class="o">.</span><span class="n">normal</span><span class="p">(</span><span class="n">size</span><span class="o">=</span><span class="n">n_rows</span><span class="p">)</span>
-
-<span class="n">industry_levels</span> <span class="o">=</span> <span class="p">[</span><span class="s2">"retail"</span><span class="p">,</span> <span class="s2">"healthcare"</span><span class="p">,</span> <span class="s2">"manufacturing"</span><span class="p">,</span> <span class="s2">"tech"</span><span class="p">]</span>
-<span class="n">industry_effect</span> <span class="o">=</span> <span class="p">{</span><span class="s2">"retail"</span><span class="p">:</span> <span class="o">-</span><span class="mf">2_000.0</span><span class="p">,</span> <span class="s2">"healthcare"</span><span class="p">:</span> <span class="mf">3_000.0</span><span class="p">,</span> <span class="s2">"manufacturing"</span><span class="p">:</span> <span class="mf">0.0</span><span class="p">,</span> <span class="s2">"tech"</span><span class="p">:</span> <span class="mf">6_000.0</span><span class="p">}</span>
-<span class="n">industry</span> <span class="o">=</span> <span class="n">rng</span><span class="o">.</span><span class="n">choice</span><span class="p">(</span><span class="n">industry_levels</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="n">n_rows</span><span class="p">)</span>
-
-<span class="n">state_levels</span> <span class="o">=</span> <span class="p">[</span><span class="s2">"ca"</span><span class="p">,</span> <span class="s2">"tx"</span><span class="p">,</span> <span class="s2">"ny"</span><span class="p">,</span> <span class="s2">"fl"</span><span class="p">]</span>
-<span class="n">state_effect</span> <span class="o">=</span> <span class="p">{</span><span class="s2">"ca"</span><span class="p">:</span> <span class="mf">4_000.0</span><span class="p">,</span> <span class="s2">"tx"</span><span class="p">:</span> <span class="o">-</span><span class="mf">1_000.0</span><span class="p">,</span> <span class="s2">"ny"</span><span class="p">:</span> <span class="mf">2_000.0</span><span class="p">,</span> <span class="s2">"fl"</span><span class="p">:</span> <span class="o">-</span><span class="mf">2_000.0</span><span class="p">}</span>
-<span class="n">state</span> <span class="o">=</span> <span class="n">rng</span><span class="o">.</span><span class="n">choice</span><span class="p">(</span><span class="n">state_levels</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="n">n_rows</span><span class="p">)</span>
-
-<span class="n">income</span> <span class="o">=</span> <span class="p">(</span>
-    <span class="mi">40_000</span>
-    <span class="o">+</span> <span class="mi">8_000</span> <span class="o">*</span> <span class="n">x1</span>
-    <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">industry_effect</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">industry</span><span class="p">])</span>
-    <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">state_effect</span><span class="p">[</span><span class="n">s</span><span class="p">]</span> <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="n">state</span><span class="p">])</span>
-    <span class="o">+</span> <span class="n">rng</span><span class="o">.</span><span class="n">normal</span><span class="p">(</span><span class="n">scale</span><span class="o">=</span><span class="mi">4_000</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="n">n_rows</span><span class="p">)</span>
-<span class="p">)</span>
-
-<span class="n">df</span> <span class="o">=</span> <span class="n">pl</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span>
-    <span class="nb">dict</span><span class="p">(</span>
-        <span class="n">person_id</span><span class="o">=</span><span class="nb">range</span><span class="p">(</span><span class="n">n_rows</span><span class="p">),</span>
-        <span class="n">x1</span><span class="o">=</span><span class="n">x1</span><span class="p">,</span>
-        <span class="n">industry</span><span class="o">=</span><span class="n">industry</span><span class="p">,</span>
-        <span class="n">state</span><span class="o">=</span><span class="n">state</span><span class="p">,</span>
-        <span class="n">income</span><span class="o">=</span><span class="n">income</span><span class="p">,</span>
-    <span class="p">)</span>
-<span class="p">)</span>
-<span class="n">missing_income</span> <span class="o">=</span> <span class="n">rng</span><span class="o">.</span><span class="n">random</span><span class="p">(</span><span class="n">n_rows</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mf">0.2</span>
-<span class="n">df</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">with_columns</span><span class="p">(</span>
-    <span class="n">pl</span><span class="o">.</span><span class="n">when</span><span class="p">(</span><span class="n">pl</span><span class="o">.</span><span class="n">Series</span><span class="p">(</span><span class="n">missing_income</span><span class="p">))</span><span class="o">.</span><span class="n">then</span><span class="p">(</span><span class="kc">None</span><span class="p">)</span><span class="o">.</span><span class="n">otherwise</span><span class="p">(</span><span class="n">pl</span><span class="o">.</span><span class="n">col</span><span class="p">(</span><span class="s2">"income"</span><span class="p">))</span><span class="o">.</span><span class="n">alias</span><span class="p">(</span><span class="s2">"income"</span><span class="p">)</span>
-<span class="p">)</span>
+<div class="highlight hl-ipython3"><pre><span></span><span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">"The simplest way to run an R regression from survey_kit: r_feols(),"</span><span class="p">)</span>
+<span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">"a wrapper around fixest::feols() with robust SEs by default. Requires R"</span><span class="p">)</span>
+<span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">"itself plus rpy2/rpy2-arrow (`pip install survey-kit[r]`) and the R"</span><span class="p">)</span>
+<span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">"'fixest' package. Check your setup cheaply with:"</span><span class="p">)</span>
+<span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">"    from survey_kit.statistics._r_interop import check_r_setup"</span><span class="p">)</span>
+<span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">"    check_r_setup(['fixest'])"</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
 </div>
 </div>
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=b937702f">
+<div class="jp-Cell-outputWrapper">
+<div class="jp-Collapser jp-OutputCollapser jp-Cell-outputCollapser">
+</div>
+<div class="jp-OutputArea jp-Cell-outputArea">
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>The simplest way to run an R regression from survey_kit: r_feols(),
+</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>a wrapper around fixest::feols() with robust SEs by default. Requires R
+</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>itself plus rpy2/rpy2-arrow (`pip install survey-kit[r]`) and the R
+</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>'fixest' package. Check your setup cheaply with:
+</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>    from survey_kit.statistics._r_interop import check_r_setup
+</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>    check_r_setup(['fixest'])
+</pre>
+</div>
+</div>
+</div>
+</div>
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=5860eec1">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -7588,38 +7603,9 @@ a.anchor-link {
 <div class="jp-InputPrompt jp-InputArea-prompt">In [3]:</div>
 <div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
 <div class="cm-editor cm-s-jupyter">
-<div class="highlight hl-ipython3"><pre><span></span><span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span>
-    <span class="s2">"'industry' is a string predictor for income, not something being imputed - "</span>
-    <span class="s2">"declare it via categorical_predictors so the model treats it as a real "</span>
-    <span class="s2">"category, not a scrambled numeric column"</span>
-<span class="p">)</span>
-<span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span>
-    <span class="s2">"'state' is a grouping variable - group_levels lets the model borrow strength "</span>
-    <span class="s2">"across observations that share a state, without adding 'state' as an ordinary "</span>
-    <span class="s2">"dummy-coded predictor"</span>
-<span class="p">)</span>
-
-<span class="n">srmi</span> <span class="o">=</span> <span class="n">SRMI</span><span class="o">.</span><span class="n">simple_model</span><span class="p">(</span>
-    <span class="n">df</span><span class="o">=</span><span class="n">df</span><span class="p">,</span>
-    <span class="n">index</span><span class="o">=</span><span class="s2">"person_id"</span><span class="p">,</span>
-    <span class="n">categorical_predictors</span><span class="o">=</span><span class="p">[</span><span class="s2">"industry"</span><span class="p">],</span>
-    <span class="n">group_levels</span><span class="o">=</span><span class="s2">"state"</span><span class="p">,</span>
-    <span class="c1">#   group_levels only actually applies to models that support it -</span>
-    <span class="c1">#       the continuous default (LightGBM) doesn't, so switch to</span>
-    <span class="c1">#       RandomForest here to see it take effect</span>
-    <span class="n">model</span><span class="o">=</span><span class="p">{</span><span class="n">Variable</span><span class="o">.</span><span class="n">Class</span><span class="o">.</span><span class="n">continuous</span><span class="p">:</span> <span class="n">Variable</span><span class="o">.</span><span class="n">ModelType</span><span class="o">.</span><span class="n">RandomForest</span><span class="p">},</span>
-    <span class="n">replication</span><span class="o">=</span><span class="n">SRMI</span><span class="o">.</span><span class="n">Replication</span><span class="p">(</span><span class="n">n_implicates</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">n_iterations</span><span class="o">=</span><span class="mi">1</span><span class="p">),</span>
-    <span class="n">parallel</span><span class="o">=</span><span class="n">SRMI</span><span class="o">.</span><span class="n">Parallel</span><span class="p">(</span><span class="n">enabled</span><span class="o">=</span><span class="kc">False</span><span class="p">),</span>
-    <span class="n">storage</span><span class="o">=</span><span class="n">SRMI</span><span class="o">.</span><span class="n">Storage</span><span class="p">(</span>
-        <span class="n">path_model</span><span class="o">=</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">config</span><span class="o">.</span><span class="n">path_temp_files</span><span class="si">}</span><span class="s2">/tutorial_simple_model_categorical_group"</span><span class="p">,</span>
-        <span class="n">force_start</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
-    <span class="p">),</span>
-<span class="p">)</span>
-
-<span class="n">v_income</span> <span class="o">=</span> <span class="n">srmi</span><span class="o">.</span><span class="n">variables</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
-<span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">"income predictors: </span><span class="si">{</span><span class="n">v_income</span><span class="o">.</span><span class="n">model</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
-<span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">"income categorical_feature: </span><span class="si">{</span><span class="n">v_income</span><span class="o">.</span><span class="n">parameters</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'categorical_feature'</span><span class="p">)</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
-<span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">"income group_levels: </span><span class="si">{</span><span class="n">v_income</span><span class="o">.</span><span class="n">parameters</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'group_levels'</span><span class="p">)</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+<div class="highlight hl-ipython3"><pre><span></span><span class="n">df_implicates</span> <span class="o">=</span> <span class="n">make_implicates</span><span class="p">()</span>
+<span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="se">\n\n</span><span class="s2">Sample data: </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">df_implicates</span><span class="p">)</span><span class="si">}</span><span class="s2"> implicates, </span><span class="si">{</span><span class="n">df_implicates</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">height</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+<span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">"rows each (y = 1 + 2*x1 - 1.5*x2 + noise) - see sample_data.py."</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
@@ -7632,55 +7618,22 @@ a.anchor-link {
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>'industry' is a string predictor for income, not something being imputed - declare it via categorical_predictors so the model treats it as a real category, not a scrambled numeric column
+<pre>
+
+Sample data: 5 implicates, 300
 </pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>'state' is a grouping variable - group_levels lets the model borrow strength across observations that share a state, without adding 'state' as an ordinary dummy-coded predictor
-</pre>
-</div>
-</div>
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>auto_detect: 'income' -&gt; class=continuous, modeltype=RandomForest, predictors=['x1', 'industry']
-</pre>
-</div>
-</div>
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>Removing existing directory C:\Users\jonro\OneDrive\Documents\Coding\survey_kit\.scratch\temp_files/tutorial_simple_model_categorical_group.srmi
-</pre>
-</div>
-</div>
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>income predictors: ~1+x1+C(industry)
-</pre>
-</div>
-</div>
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>income categorical_feature: []
-</pre>
-</div>
-</div>
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>income group_levels: ['state']
+<pre>rows each (y = 1 + 2*x1 - 1.5*x2 + noise) - see sample_data.py.
 </pre>
 </div>
 </div>
 </div>
 </div>
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=af6a278c">
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=18852741">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -7688,8 +7641,10 @@ a.anchor-link {
 <div class="jp-InputPrompt jp-InputArea-prompt">In [4]:</div>
 <div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
 <div class="cm-editor cm-s-jupyter">
-<div class="highlight hl-ipython3"><pre><span></span><span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">"Run it"</span><span class="p">)</span>
-<span class="n">srmi</span><span class="o">.</span><span class="n">run</span><span class="p">()</span>
+<div class="highlight hl-ipython3"><pre><span></span><span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">"</span><span class="se">\n\n</span><span class="s2">On one dataset, standalone - no MI at all:"</span><span class="p">)</span>
+<span class="p">(</span><span class="n">df_estimates</span><span class="p">,</span> <span class="n">df_ses</span><span class="p">,</span> <span class="n">df_vcov</span><span class="p">,</span> <span class="n">df_tidy</span><span class="p">)</span> <span class="o">=</span> <span class="n">r_feols</span><span class="p">(</span><span class="n">df_implicates</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">formula</span><span class="o">=</span><span class="s2">"y ~ x1 + x2"</span><span class="p">)</span>
+<span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="n">df_estimates</span><span class="p">)</span>
+<span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="n">df_ses</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
@@ -7702,366 +7657,220 @@ a.anchor-link {
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>Run it
+<pre>
+
+On one dataset, standalone - no MI at all:
 </pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>Variable selection before SRMI run, if necessary
+<pre>shape: (3, 2)
+┌─────────────┬───────────┐
+│ Variable    ┆ estimate  │
+│ ---         ┆ ---       │
+│ str         ┆ f64       │
+╞═════════════╪═══════════╡
+│ (Intercept) ┆ 0.990009  │
+│ x1          ┆ 2.016691  │
+│ x2          ┆ -1.478573 │
+└─────────────┴───────────┘
 </pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>     income: Method.No
+<pre>shape: (3, 2)
+┌─────────────┬──────────┐
+│ Variable    ┆ estimate │
+│ ---         ┆ ---      │
+│ str         ┆ f64      │
+╞═════════════╪══════════╡
+│ (Intercept) ┆ 0.02144  │
+│ x1          ┆ 0.019448 │
+│ x2          ┆ 0.024854 │
+└─────────────┴──────────┘
 </pre>
 </div>
 </div>
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>Hyperparameter tuning before SRMI run, if necessary
-</pre>
 </div>
 </div>
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>Removing existing directory C:\Users\jonro\OneDrive\Documents\Coding\survey_kit\.scratch\temp_files/tutorial_simple_model_categorical_group.srmi/1.srmi.implicate
-</pre>
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=66a56222">
+<div class="jp-Cell-inputWrapper" tabindex="0">
+<div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
+</div>
+<div class="jp-InputArea jp-Cell-inputArea">
+<div class="jp-InputPrompt jp-InputArea-prompt">In [5]:</div>
+<div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
+<div class="cm-editor cm-s-jupyter">
+<div class="highlight hl-ipython3"><pre><span></span><span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">"</span><span class="se">\n\n</span><span class="s2">Across multiple imputed datasets, combined via Rubin's rules -"</span><span class="p">)</span>
+<span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">"mi_ses_from_r_fixest.feols(...) runs r_feols once per implicate and"</span><span class="p">)</span>
+<span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">"combines the results, taking r_feols's own arguments directly:"</span><span class="p">)</span>
+<span class="n">mi_reg</span> <span class="o">=</span> <span class="n">mi_ses_from_r_fixest</span><span class="o">.</span><span class="n">feols</span><span class="p">(</span>
+    <span class="n">df_implicates</span><span class="o">=</span><span class="n">df_implicates</span><span class="p">,</span>
+    <span class="n">formula</span><span class="o">=</span><span class="s2">"y ~ x1 + x2"</span><span class="p">,</span>
+    <span class="n">round_output</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="n">mi_reg</span><span class="o">.</span><span class="n">print</span><span class="p">(</span><span class="n">round_output</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+</pre></div>
 </div>
 </div>
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>Removing existing directory C:\Users\jonro\OneDrive\Documents\Coding\survey_kit\.scratch\temp_files/tutorial_simple_model_categorical_group.srmi/2.srmi.implicate
-</pre>
 </div>
 </div>
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>     Imputation using RandomForest
-</pre>
+<div class="jp-Cell-outputWrapper">
+<div class="jp-Collapser jp-OutputCollapser jp-Cell-outputCollapser">
 </div>
-</div>
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>C:\Users\jonro\OneDrive\Documents\Coding\survey_kit\.venv\Lib\site-packages\sklearn\base.py:1365: DataConversionWarning: A column-vector y was passed when a 1d array was expected. Please change the shape of y to (n_samples,), for example using ravel().
-  return fit_method(estimator, *args, **kwargs)
-</pre>
-</div>
-</div>
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>R2 = 0.9664
-</pre>
-</div>
-</div>
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>┌──────────────────────────┬──────────┐
-│                 Variable ┆     Beta │
-╞══════════════════════════╪══════════╡
-│                       x1 ┆   0.8917 │
-│    C(industry)healthcare ┆  0.01941 │
-│ C(industry)manufacturing ┆ 0.006627 │
-│        C(industry)retail ┆  0.01841 │
-│          C(industry)tech ┆  0.06381 │
-└──────────────────────────┴──────────┘
-</pre>
-</div>
-</div>
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>     error=pmm: donating observed value(s) ['income'] from 10-nearest matched donors
-</pre>
-</div>
-</div>
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>     Finding 10 nearest neighbors on ['___prediction']
-</pre>
-</div>
-</div>
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>     Randomly picking one and donating ['income']
-</pre>
-</div>
-</div>
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>     Most common matches: 
-</pre>
-</div>
-</div>
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>shape: (5, 2)
-┌───────────┬─────────┐
-│ person_id ┆ nDonors │
-│ ---       ┆ ---     │
-│ i16       ┆ i8      │
-╞═══════════╪═════════╡
-│ 2037      ┆ 5       │
-│ 520       ┆ 4       │
-│ 111       ┆ 3       │
-│ 128       ┆ 3       │
-│ 1136      ┆ 3       │
-└───────────┴─────────┘
-</pre>
-</div>
-</div>
+<div class="jp-OutputArea jp-Cell-outputArea">
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
 <pre>
 
-
+Across multiple imputed datasets, combined via Rubin's rules -
 </pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>Post-imputation statistics for ['income']
+<pre>mi_ses_from_r_fixest.feols(...) runs r_feols once per implicate and
 </pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>    Where:          None
+<pre>combines the results, taking r_feols's own arguments directly:
 </pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>    Where (impute): col(___imp_missing_income_1)
+<pre>Implicate #1
 </pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>┌──────────┬─────────┬──────┬──────────────┬─────────┬────────┬──────────────┬─────────────┬─────────────┬─────────────┬─────────────┬─────────────┬─────────────┬─────────────┬─────────────┐
-│ Variable ┆ Imputed ┆    n ┆ n (not null) ┆    mean ┆    std ┆ mean (not 0) ┆ std (not 0) ┆ q10 (not 0) ┆ q25 (not 0) ┆ q50 (not 0) ┆ q75 (not 0) ┆ q90 (not 0) ┆ min (not 0) ┆ max (not 0) │
-╞══════════╪═════════╪══════╪══════════════╪═════════╪════════╪══════════════╪═════════════╪═════════════╪═════════════╪═════════════╪═════════════╪═════════════╪═════════════╪═════════════╡
-│   income ┆         ┆ 4000 ┆         4000 ┆ 42750.0 ┆ 9881.0 ┆      42750.0 ┆      9881.0 ┆     30020.0 ┆     36100.0 ┆     42810.0 ┆     49050.0 ┆     55660.0 ┆      4395.0 ┆     74220.0 │
-│   income ┆       0 ┆ 3180 ┆         3180 ┆ 42670.0 ┆ 9892.0 ┆      42670.0 ┆      9892.0 ┆     29960.0 ┆     36110.0 ┆     42720.0 ┆     49030.0 ┆     55430.0 ┆      4395.0 ┆     74220.0 │
-│   income ┆       1 ┆  820 ┆          820 ┆ 43040.0 ┆ 9840.0 ┆      43040.0 ┆      9840.0 ┆     30230.0 ┆     35860.0 ┆     43050.0 ┆     49280.0 ┆     56060.0 ┆     12530.0 ┆     71520.0 │
-└──────────┴─────────┴──────┴──────────────┴─────────┴────────┴──────────────┴─────────────┴─────────────┴─────────────┴─────────────┴─────────────┴─────────────┴─────────────┴─────────────┘
+<pre>Implicate #2
 </pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>
-
-
-
-
+<pre>Implicate #3
 </pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>
-
-income
+<pre>Implicate #4
 </pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>
-
-Final Estimates by Iteration
+<pre>Implicate #5
 </pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>Removing existing directory C:\Users\jonro\OneDrive\Documents\Coding\survey_kit\.scratch\temp_files/tutorial_simple_model_categorical_group.srmi/1.srmi.implicate
+<pre>┌─────────────┬───────────┐
+│    Variable ┆  estimate │
+╞═════════════╪═══════════╡
+│ (Intercept) ┆  0.983256 │
+│             ┆  0.028668 │
+│          x1 ┆  1.996435 │
+│             ┆  0.047854 │
+│          x2 ┆ -1.488951 │
+│             ┆  0.030649 │
+└─────────────┴───────────┘
 </pre>
 </div>
 </div>
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>     Imputation using RandomForest
-</pre>
 </div>
 </div>
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>C:\Users\jonro\OneDrive\Documents\Coding\survey_kit\.venv\Lib\site-packages\sklearn\base.py:1365: DataConversionWarning: A column-vector y was passed when a 1d array was expected. Please change the shape of y to (n_samples,), for example using ravel().
-  return fit_method(estimator, *args, **kwargs)
-</pre>
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=169f59d4">
+<div class="jp-Cell-inputWrapper" tabindex="0">
+<div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
+</div>
+<div class="jp-InputArea jp-Cell-inputArea">
+<div class="jp-InputPrompt jp-InputArea-prompt">In [6]:</div>
+<div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
+<div class="cm-editor cm-s-jupyter">
+<div class="highlight hl-ipython3"><pre><span></span><span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">"</span><span class="se">\n\n</span><span class="s2">That's it for the common case. mi_ses_from_r_fixest also has"</span><span class="p">)</span>
+<span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">".feglm/.fepois/.femlm for fixest's other estimators, all with the same"</span><span class="p">)</span>
+<span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">"shape. r_lm_adapter (base R lm()/glm()) and r_fixest_adapter (any"</span><span class="p">)</span>
+<span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">"fixest estimator via a func= string, including ones .feglm/.fepois/"</span><span class="p">)</span>
+<span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">".femlm don't cover) are the lower-level pieces these are built from -"</span><span class="p">)</span>
+<span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">"see r_arbitrary_estimators.py for rolling your own with those, plus a"</span><span class="p">)</span>
+<span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">"generic escape hatch into any R package/function at all."</span><span class="p">)</span>
+</pre></div>
 </div>
 </div>
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>R2 = 0.9659
-</pre>
 </div>
 </div>
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>┌──────────────────────────┬──────────┐
-│                 Variable ┆     Beta │
-╞══════════════════════════╪══════════╡
-│                       x1 ┆   0.8908 │
-│    C(industry)healthcare ┆  0.02323 │
-│ C(industry)manufacturing ┆ 0.006389 │
-│        C(industry)retail ┆  0.01308 │
-│          C(industry)tech ┆  0.06647 │
-└──────────────────────────┴──────────┘
-</pre>
+<div class="jp-Cell-outputWrapper">
+<div class="jp-Collapser jp-OutputCollapser jp-Cell-outputCollapser">
 </div>
-</div>
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>     error=pmm: donating observed value(s) ['income'] from 10-nearest matched donors
-</pre>
-</div>
-</div>
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>     Finding 10 nearest neighbors on ['___prediction']
-</pre>
-</div>
-</div>
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>     Randomly picking one and donating ['income']
-</pre>
-</div>
-</div>
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>     Most common matches: 
-</pre>
-</div>
-</div>
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>shape: (5, 2)
-┌───────────┬─────────┐
-│ person_id ┆ nDonors │
-│ ---       ┆ ---     │
-│ i16       ┆ i8      │
-╞═══════════╪═════════╡
-│ 755       ┆ 4       │
-│ 2264      ┆ 4       │
-│ 4         ┆ 3       │
-│ 493       ┆ 3       │
-│ 969       ┆ 3       │
-└───────────┴─────────┘
-</pre>
-</div>
-</div>
+<div class="jp-OutputArea jp-Cell-outputArea">
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
 <pre>
 
-
+That's it for the common case. mi_ses_from_r_fixest also has
 </pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>Post-imputation statistics for ['income']
+<pre>.feglm/.fepois/.femlm for fixest's other estimators, all with the same
 </pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>    Where:          None
+<pre>shape. r_lm_adapter (base R lm()/glm()) and r_fixest_adapter (any
 </pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>    Where (impute): col(___imp_missing_income_1)
+<pre>fixest estimator via a func= string, including ones .feglm/.fepois/
 </pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>┌──────────┬─────────┬──────┬──────────────┬─────────┬────────┬──────────────┬─────────────┬─────────────┬─────────────┬─────────────┬─────────────┬─────────────┬─────────────┬─────────────┐
-│ Variable ┆ Imputed ┆    n ┆ n (not null) ┆    mean ┆    std ┆ mean (not 0) ┆ std (not 0) ┆ q10 (not 0) ┆ q25 (not 0) ┆ q50 (not 0) ┆ q75 (not 0) ┆ q90 (not 0) ┆ min (not 0) ┆ max (not 0) │
-╞══════════╪═════════╪══════╪══════════════╪═════════╪════════╪══════════════╪═════════════╪═════════════╪═════════════╪═════════════╪═════════════╪═════════════╪═════════════╪═════════════╡
-│   income ┆         ┆ 4000 ┆         4000 ┆ 42790.0 ┆ 9853.0 ┆      42790.0 ┆      9853.0 ┆     30110.0 ┆     36270.0 ┆     42830.0 ┆     49080.0 ┆     55550.0 ┆      4395.0 ┆     74220.0 │
-│   income ┆       0 ┆ 3180 ┆         3180 ┆ 42670.0 ┆ 9892.0 ┆      42670.0 ┆      9892.0 ┆     29960.0 ┆     36110.0 ┆     42720.0 ┆     49030.0 ┆     55430.0 ┆      4395.0 ┆     74220.0 │
-│   income ┆       1 ┆  820 ┆          820 ┆ 43220.0 ┆ 9692.0 ┆      43220.0 ┆      9692.0 ┆     30710.0 ┆     36600.0 ┆     43440.0 ┆     49470.0 ┆     56040.0 ┆     13160.0 ┆     71120.0 │
-└──────────┴─────────┴──────┴──────────────┴─────────┴────────┴──────────────┴─────────────┴─────────────┴─────────────┴─────────────┴─────────────┴─────────────┴─────────────┴─────────────┘
+<pre>.femlm don't cover) are the lower-level pieces these are built from -
 </pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>
-
-
-
-
+<pre>see r_arbitrary_estimators.py for rolling your own with those, plus a
 </pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>
-
-income
-</pre>
-</div>
-</div>
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>
-
-Final Estimates by Iteration
-</pre>
-</div>
-</div>
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>Removing existing directory C:\Users\jonro\OneDrive\Documents\Coding\survey_kit\.scratch\temp_files/tutorial_simple_model_categorical_group.srmi/2.srmi.implicate
+<pre>generic escape hatch into any R package/function at all.
 </pre>
 </div>
 </div>

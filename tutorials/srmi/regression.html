@@ -7510,7 +7510,7 @@ a.anchor-link {
 </style>
 <!-- End of mermaid configuration --></head>
 <body class="jp-Notebook" data-jp-theme-light="true" data-jp-theme-name="JupyterLab Light">
-<main><div class="jp-Cell jp-CodeCell jp-Notebook-cell jp-mod-noOutputs" id="cell-id=65bb1f44">
+<main><div class="jp-Cell jp-CodeCell jp-Notebook-cell jp-mod-noOutputs" id="cell-id=0c35574b">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -7538,7 +7538,7 @@ a.anchor-link {
 </div>
 </div>
 </div>
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=129e2432">
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=a0d9813a">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -7688,12 +7688,12 @@ a.anchor-link {
 <div class="jp-RenderedHTMLCommon jp-RenderedHTML jp-OutputArea-output jp-OutputArea-executeResult" data-mime-type="text/html" tabindex="0">
 <i>naive plan: (run <b>LazyFrame.explain(optimized=True)</b> to see the optimized plan)</i>
 <p></p>
-<div>SELECT [col("Variable"), col("n"), col("n (missing)"), col("mean"), col("std"), col("min"), col("max")]<p></p>  UNION<p></p>    PLAN 0:<p></p>       WITH_COLUMNS:<p></p>       [col("n (missing)").cast(Int16), col("min").strict_cast(Float64), col("max").strict_cast(Float64)] <p></p>        SELECT [col("Variable"), col("n"), col("n (missing)"), col("mean"), col("std"), col("min"), col("max")]<p></p>           WITH_COLUMNS:<p></p>           ["_row_index_".alias("Variable")] <p></p>            SELECT [col("max"), col("min"), col("mean"), col("std"), col("n"), col("n (missing)")]<p></p>              SELECT [col("___index___"), col("_row_index__max").alias("max"), col("_row_index__min").alias("min"), col("_row_index__mean").alias("mean"), col("_row_index__std").alias("std"), col("_row_index__rawn").alias("n"), col("_row_index__rawn_missing").alias("n (missing)")]<p></p>                SELECT [col("___index___"), col("_row_index__max"), col("_row_index__min"), col("_row_index__mean"), col("_row_index__std"), col("_row_index__rawn"), col("_row_index__rawn_missing")]<p></p>                  DF ["___index___", "_row_index__rawn", "_row_index__mean", "_row_index__std", ...]; PROJECT */97 COLUMNS<p></p>    PLAN 1:<p></p>       WITH_COLUMNS:<p></p>       [col("n (missing)").cast(Int16), col("min").strict_cast(Float64), col("max").strict_cast(Float64)] <p></p>        SELECT [col("Variable"), col("n"), col("n (missing)"), col("mean"), col("std"), col("min"), col("max")]<p></p>           WITH_COLUMNS:<p></p>           ["index".alias("Variable")] <p></p>            SELECT [col("max"), col("min"), col("mean"), col("std"), col("n"), col("n (missing)")]<p></p>              SELECT [col("___index___"), col("index_max").alias("max"), col("index_min").alias("min"), col("index_mean").alias("mean"), col("index_std").alias("std"), col("index_rawn").alias("n"), col("index_rawn_missing").alias("n (missing)")]<p></p>                SELECT [col("___index___"), col("index_max"), col("index_min"), col("index_mean"), col("index_std"), col("index_rawn"), col("index_rawn_missing")]<p></p>                  DF ["___index___", "_row_index__rawn", "_row_index__mean", "_row_index__std", ...]; PROJECT */97 COLUMNS<p></p>    PLAN 2:<p></p>       WITH_COLUMNS:<p></p>       [col("n (missing)").cast(Int16), col("min").strict_cast(Float64), col("max").strict_cast(Float64)] <p></p>        SELECT [col("Variable"), col("n"), col("n (missing)"), col("mean"), col("std"), col("min"), col("max")]<p></p>           WITH_COLUMNS:<p></p>           ["year".alias("Variable")] <p></p>            SELECT [col("max"), col("min"), col("mean"), col("std"), col("n"), col("n (missing)")]<p></p>              SELECT [col("___index___"), col("year_max").alias("max"), col("year_min").alias("min"), col("year_mean").alias("mean"), col("year_std").alias("std"), col("year_rawn").alias("n"), col("year_rawn_missing").alias("n (missing)")]<p></p>                SELECT [col("___index___"), col("year_max"), col("year_min"), col("year_mean"), col("year_std"), col("year_rawn"), col("year_rawn_missing")]<p></p>                  DF ["___index___", "_row_index__rawn", "_row_index__mean", "_row_index__std", ...]; PROJECT */97 COLUMNS<p></p>    PLAN 3:<p></p>       WITH_COLUMNS:<p></p>       [col("n (missing)").cast(Int16), col("min").strict_cast(Float64), col("max").strict_cast(Float64)] <p></p>        SELECT [col("Variable"), col("n"), col("n (missing)"), col("mean"), col("std"), col("min"), col("max")]<p></p>           WITH_COLUMNS:<p></p>           ["month".alias("Variable")] <p></p>            SELECT [col("max"), col("min"), col("mean"), col("std"), col("n"), col("n (missing)")]<p></p>              SELECT [col("___index___"), col("month_max").alias("max"), col("month_min").alias("min"), col("month_mean").alias("mean"), col("month_std").alias("std"), col("month_rawn").alias("n"), col("month_rawn_missing").alias("n (missing)")]<p></p>                SELECT [col("___index___"), col("month_max"), col("month_min"), col("month_mean"), col("month_std"), col("month_rawn"), col("month_rawn_missing")]<p></p>                  DF ["___index___", "_row_index__rawn", "_row_index__mean", "_row_index__std", ...]; PROJECT */97 COLUMNS<p></p>    PLAN 4:<p></p>       WITH_COLUMNS:<p></p>       [col("n (missing)").cast(Int16), col("min").strict_cast(Float64), col("max").strict_cast(Float64)] <p></p>        SELECT [col("Variable"), col("n"), col("n (missing)"), col("mean"), col("std"), col("min"), col("max")]<p></p>           WITH_COLUMNS:<p></p>           ["var2".alias("Variable")] <p></p>            SELECT [col("max"), col("min"), col("mean"), col("std"), col("n"), col("n (missing)")]<p></p>              SELECT [col("___index___"), col("var2_max").alias("max"), col("var2_min").alias("min"), col("var2_mean").alias("mean"), col("var2_std").alias("std"), col("var2_rawn").alias("n"), col("var2_rawn_missing").alias("n (missing)")]<p></p>                SELECT [col("___index___"), col("var2_max"), col("var2_min"), col("var2_mean"), col("var2_std"), col("var2_rawn"), col("var2_rawn_missing")]<p></p>                  DF ["___index___", "_row_index__rawn", "_row_index__mean", "_row_index__std", ...]; PROJECT */97 COLUMNS<p></p>    PLAN 5:<p></p>       WITH_COLUMNS:<p></p>       [col("n (missing)").cast(Int16), col("min").strict_cast(Float64), col("max").strict_cast(Float64)] <p></p>        SELECT [col("Variable"), col("n"), col("n (missing)"), col("mean"), col("std"), col("min"), col("max")]<p></p>           WITH_COLUMNS:<p></p>           ["var3".alias("Variable")] <p></p>            SELECT [col("max"), col("min"), col("mean"), col("std"), col("n"), col("n (missing)")]<p></p>              SELECT [col("___index___"), col("var3_max").alias("max"), col("var3_min").alias("min"), col("var3_mean").alias("mean"), col("var3_std").alias("std"), col("var3_rawn").alias("n"), col("var3_rawn_missing").alias("n (missing)")]<p></p>                SELECT [col("___index___"), col("var3_max"), col("var3_min"), col("var3_mean"), col("var3_std"), col("var3_rawn"), col("var3_rawn_missing")]<p></p>                  DF ["___index___", "_row_index__rawn", "_row_index__mean", "_row_index__std", ...]; PROJECT */97 COLUMNS<p></p>    PLAN 6:<p></p>       WITH_COLUMNS:<p></p>       [col("n (missing)").cast(Int16)] <p></p>        SELECT [col("Variable"), col("n"), col("n (missing)"), col("mean"), col("std"), col("min"), col("max")]<p></p>           WITH_COLUMNS:<p></p>           ["var4".alias("Variable")] <p></p>            SELECT [col("max"), col("min"), col("mean"), col("std"), col("n"), col("n (missing)")]<p></p>              SELECT [col("___index___"), col("var4_max").alias("max"), col("var4_min").alias("min"), col("var4_mean").alias("mean"), col("var4_std").alias("std"), col("var4_rawn").alias("n"), col("var4_rawn_missing").alias("n (missing)")]<p></p>                SELECT [col("___index___"), col("var4_max"), col("var4_min"), col("var4_mean"), col("var4_std"), col("var4_rawn"), col("var4_rawn_missing")]<p></p>                  DF ["___index___", "_row_index__rawn", "_row_index__mean", "_row_index__std", ...]; PROJECT */97 COLUMNS<p></p>    PLAN 7:<p></p>       WITH_COLUMNS:<p></p>       [col("n (missing)").cast(Int16)] <p></p>        SELECT [col("Variable"), col("n"), col("n (missing)"), col("mean"), col("std"), col("min"), col("max")]<p></p>           WITH_COLUMNS:<p></p>           ["unrelated_1".alias("Variable")] <p></p>            SELECT [col("max"), col("min"), col("mean"), col("std"), col("n"), col("n (missing)")]<p></p>              SELECT [col("___index___"), col("unrelated_1_max").alias("max"), col("unrelated_1_min").alias("min"), col("unrelated_1_mean").alias("mean"), col("unrelated_1_std").alias("std"), col("unrelated_1_rawn").alias("n"), col("unrelated_1_rawn_missing").alias("n (missing)")]<p></p>                SELECT [col("___index___"), col("unrelated_1_max"), col("unrelated_1_min"), col("unrelated_1_mean"), col("unrelated_1_std"), col("unrelated_1_rawn"), col("unrelated_1_rawn_missing")]<p></p>                  DF ["___index___", "_row_index__rawn", "_row_index__mean", "_row_index__std", ...]; PROJECT */97 COLUMNS<p></p>    PLAN 8:<p></p>       WITH_COLUMNS:<p></p>       [col("n (missing)").cast(Int16)] <p></p>        SELECT [col("Variable"), col("n"), col("n (missing)"), col("mean"), col("std"), col("min"), col("max")]<p></p>           WITH_COLUMNS:<p></p>           ["unrelated_2".alias("Variable")] <p></p>            SELECT [col("max"), col("min"), col("mean"), col("std"), col("n"), col("n (missing)")]<p></p>              SELECT [col("___index___"), col("unrelated_2_max").alias("max"), col("unrelated_2_min").alias("min"), col("unrelated_2_mean").alias("mean"), col("unrelated_2_std").alias("std"), col("unrelated_2_rawn").alias("n"), col("unrelated_2_rawn_missing").alias("n (missing)")]<p></p>                SELECT [col("___index___"), col("unrelated_2_max"), col("unrelated_2_min"), col("unrelated_2_mean"), col("unrelated_2_std"), col("unrelated_2_rawn"), col("unrelated_2_rawn_missing")]<p></p>                  DF ["___index___", "_row_index__rawn", "_row_index__mean", "_row_index__std", ...]; PROJECT */97 COLUMNS<p></p>    PLAN 9:<p></p>       WITH_COLUMNS:<p></p>       [col("n (missing)").cast(Int16)] <p></p>        SELECT [col("Variable"), col("n"), col("n (missing)"), col("mean"), col("std"), col("min"), col("max")]<p></p>           WITH_COLUMNS:<p></p>           ["unrelated_3".alias("Variable")] <p></p>            SELECT [col("max"), col("min"), col("mean"), col("std"), col("n"), col("n (missing)")]<p></p>              SELECT [col("___index___"), col("unrelated_3_max").alias("max"), col("unrelated_3_min").alias("min"), col("unrelated_3_mean").alias("mean"), col("unrelated_3_std").alias("std"), col("unrelated_3_rawn").alias("n"), col("unrelated_3_rawn_missing").alias("n (missing)")]<p></p>                SELECT [col("___index___"), col("unrelated_3_max"), col("unrelated_3_min"), col("unrelated_3_mean"), col("unrelated_3_std"), col("unrelated_3_rawn"), col("unrelated_3_rawn_missing")]<p></p>                  DF ["___index___", "_row_index__rawn", "_row_index__mean", "_row_index__std", ...]; PROJECT */97 COLUMNS<p></p>    PLAN 10:<p></p>       WITH_COLUMNS:<p></p>       [col("n (missing)").cast(Int16)] <p></p>        SELECT [col("Variable"), col("n"), col("n (missing)"), col("mean"), col("std"), col("min"), col("max")]<p></p>           WITH_COLUMNS:<p></p>           ["unrelated_4".alias("Variable")] <p></p>            SELECT [col("max"), col("min"), col("mean"), col("std"), col("n"), col("n (missing)")]<p></p>              SELECT [col("___index___"), col("unrelated_4_max").alias("max"), col("unrelated_4_min").alias("min"), col("unrelated_4_mean").alias("mean"), col("unrelated_4_std").alias("std"), col("unrelated_4_rawn").alias("n"), col("unrelated_4_rawn_missing").alias("n (missing)")]<p></p>                SELECT [col("___index___"), col("unrelated_4_max"), col("unrelated_4_min"), col("unrelated_4_mean"), col("unrelated_4_std"), col("unrelated_4_rawn"), col("unrelated_4_rawn_missing")]<p></p>                  DF ["___index___", "_row_index__rawn", "_row_index__mean", "_row_index__std", ...]; PROJECT */97 COLUMNS<p></p>    PLAN 11:<p></p>       WITH_COLUMNS:<p></p>       [col("n (missing)").cast(Int16)] <p></p>        SELECT [col("Variable"), col("n"), col("n (missing)"), col("mean"), col("std"), col("min"), col("max")]<p></p>           WITH_COLUMNS:<p></p>           ["unrelated_5".alias("Variable")] <p></p>            SELECT [col("max"), col("min"), col("mean"), col("std"), col("n"), col("n (missing)")]<p></p>              SELECT [col("___index___"), col("unrelated_5_max").alias("max"), col("unrelated_5_min").alias("min"), col("unrelated_5_mean").alias("mean"), col("unrelated_5_std").alias("std"), col("unrelated_5_rawn").alias("n"), col("unrelated_5_rawn_missing").alias("n (missing)")]<p></p>                SELECT [col("___index___"), col("unrelated_5_max"), col("unrelated_5_min"), col("unrelated_5_mean"), col("unrelated_5_std"), col("unrelated_5_rawn"), col("unrelated_5_rawn_missing")]<p></p>                  DF ["___index___", "_row_index__rawn", "_row_index__mean", "_row_index__std", ...]; PROJECT */97 COLUMNS<p></p>    PLAN 12:<p></p>      SELECT [col("Variable"), col("n"), col("n (missing)"), col("mean"), col("std"), col("min"), col("max")]<p></p>         WITH_COLUMNS:<p></p>         ["var_reg2".alias("Variable")] <p></p>          SELECT [col("max"), col("min"), col("mean"), col("std"), col("n"), col("n (missing)")]<p></p>            SELECT [col("___index___"), col("var_reg2_max").alias("max"), col("var_reg2_min").alias("min"), col("var_reg2_mean").alias("mean"), col("var_reg2_std").alias("std"), col("var_reg2_rawn").alias("n"), col("var_reg2_rawn_missing").alias("n (missing)")]<p></p>              SELECT [col("___index___"), col("var_reg2_max"), col("var_reg2_min"), col("var_reg2_mean"), col("var_reg2_std"), col("var_reg2_rawn"), col("var_reg2_rawn_missing")]<p></p>                DF ["___index___", "_row_index__rawn", "_row_index__mean", "_row_index__std", ...]; PROJECT */97 COLUMNS<p></p>    PLAN 13:<p></p>       WITH_COLUMNS:<p></p>       [col("n (missing)").cast(Int16)] <p></p>        SELECT [col("Variable"), col("n"), col("n (missing)"), col("mean"), col("std"), col("min"), col("max")]<p></p>           WITH_COLUMNS:<p></p>           ["repeat_1".alias("Variable")] <p></p>            SELECT [col("max"), col("min"), col("mean"), col("std"), col("n"), col("n (missing)")]<p></p>              SELECT [col("___index___"), col("repeat_1_max").alias("max"), col("repeat_1_min").alias("min"), col("repeat_1_mean").alias("mean"), col("repeat_1_std").alias("std"), col("repeat_1_rawn").alias("n"), col("repeat_1_rawn_missing").alias("n (missing)")]<p></p>                SELECT [col("___index___"), col("repeat_1_max"), col("repeat_1_min"), col("repeat_1_mean"), col("repeat_1_std"), col("repeat_1_rawn"), col("repeat_1_rawn_missing")]<p></p>                  DF ["___index___", "_row_index__rawn", "_row_index__mean", "_row_index__std", ...]; PROJECT */97 COLUMNS<p></p>    PLAN 14:<p></p>       WITH_COLUMNS:<p></p>       [col("n (missing)").cast(Int16), col("min").strict_cast(Float64), col("max").strict_cast(Float64)] <p></p>        SELECT [col("Variable"), col("n"), col("n (missing)"), col("mean"), col("std"), col("min"), col("max")]<p></p>           WITH_COLUMNS:<p></p>           ["var5".alias("Variable")] <p></p>            SELECT [col("max"), col("min"), col("mean"), col("std"), col("n"), col("n (missing)")]<p></p>              SELECT [col("___index___"), col("var5_max").alias("max"), col("var5_min").alias("min"), col("var5_mean").alias("mean"), col("var5_std").alias("std"), col("var5_rawn").alias("n"), col("var5_rawn_missing").alias("n (missing)")]<p></p>                SELECT [col("___index___"), col("var5_max"), col("var5_min"), col("var5_mean"), col("var5_std"), col("var5_rawn"), col("var5_rawn_missing")]<p></p>                  DF ["___index___", "_row_index__rawn", "_row_index__mean", "_row_index__std", ...]; PROJECT */97 COLUMNS<p></p>    PLAN 15:<p></p>       WITH_COLUMNS:<p></p>       [col("min").strict_cast(Float64), col("max").strict_cast(Float64)] <p></p>        SELECT [col("Variable"), col("n"), col("n (missing)"), col("mean"), col("std"), col("min"), col("max")]<p></p>           WITH_COLUMNS:<p></p>           ["var_reg1".alias("Variable")] <p></p>            SELECT [col("max"), col("min"), col("mean"), col("std"), col("n"), col("n (missing)")]<p></p>              SELECT [col("___index___"), col("var_reg1_max").alias("max"), col("var_reg1_min").alias("min"), col("var_reg1_mean").alias("mean"), col("var_reg1_std").alias("std"), col("var_reg1_rawn").alias("n"), col("var_reg1_rawn_missing").alias("n (missing)")]<p></p>                SELECT [col("___index___"), col("var_reg1_max"), col("var_reg1_min"), col("var_reg1_mean"), col("var_reg1_std"), col("var_reg1_rawn"), col("var_reg1_rawn_missing")]<p></p>                  DF ["___index___", "_row_index__rawn", "_row_index__mean", "_row_index__std", ...]; PROJECT */97 COLUMNS<p></p>  END UNION</div>
+<div>SELECT [col("Variable"), col("n"), col("n (missing)"), col("mean"), col("std"), col("min"), col("max")]<p></p>  UNION<p></p>    PLAN 0:<p></p>       WITH_COLUMNS:<p></p>       [col("n (missing)").cast(Int16), col("min").strict_cast(Float64), col("max").strict_cast(Float64)] <p></p>        SELECT [col("Variable"), col("n"), col("n (missing)"), col("mean"), col("std"), col("min"), col("max")]<p></p>           WITH_COLUMNS:<p></p>           ["_row_index_".alias("Variable")] <p></p>            SELECT [col("std"), col("n"), col("min"), col("max"), col("mean"), col("n (missing)")]<p></p>              SELECT [col("___index___"), col("_row_index__std").alias("std"), col("_row_index__rawn").alias("n"), col("_row_index__min").alias("min"), col("_row_index__max").alias("max"), col("_row_index__mean").alias("mean"), col("_row_index__rawn_missing").alias("n (missing)")]<p></p>                SELECT [col("___index___"), col("_row_index__std"), col("_row_index__rawn"), col("_row_index__min"), col("_row_index__max"), col("_row_index__mean"), col("_row_index__rawn_missing")]<p></p>                  DF ["___index___", "_row_index__rawn", "_row_index__mean", "_row_index__std", ...]; PROJECT */97 COLUMNS<p></p>    PLAN 1:<p></p>       WITH_COLUMNS:<p></p>       [col("n (missing)").cast(Int16), col("min").strict_cast(Float64), col("max").strict_cast(Float64)] <p></p>        SELECT [col("Variable"), col("n"), col("n (missing)"), col("mean"), col("std"), col("min"), col("max")]<p></p>           WITH_COLUMNS:<p></p>           ["index".alias("Variable")] <p></p>            SELECT [col("std"), col("n"), col("min"), col("max"), col("mean"), col("n (missing)")]<p></p>              SELECT [col("___index___"), col("index_std").alias("std"), col("index_rawn").alias("n"), col("index_min").alias("min"), col("index_max").alias("max"), col("index_mean").alias("mean"), col("index_rawn_missing").alias("n (missing)")]<p></p>                SELECT [col("___index___"), col("index_std"), col("index_rawn"), col("index_min"), col("index_max"), col("index_mean"), col("index_rawn_missing")]<p></p>                  DF ["___index___", "_row_index__rawn", "_row_index__mean", "_row_index__std", ...]; PROJECT */97 COLUMNS<p></p>    PLAN 2:<p></p>       WITH_COLUMNS:<p></p>       [col("n (missing)").cast(Int16), col("min").strict_cast(Float64), col("max").strict_cast(Float64)] <p></p>        SELECT [col("Variable"), col("n"), col("n (missing)"), col("mean"), col("std"), col("min"), col("max")]<p></p>           WITH_COLUMNS:<p></p>           ["year".alias("Variable")] <p></p>            SELECT [col("std"), col("n"), col("min"), col("max"), col("mean"), col("n (missing)")]<p></p>              SELECT [col("___index___"), col("year_std").alias("std"), col("year_rawn").alias("n"), col("year_min").alias("min"), col("year_max").alias("max"), col("year_mean").alias("mean"), col("year_rawn_missing").alias("n (missing)")]<p></p>                SELECT [col("___index___"), col("year_std"), col("year_rawn"), col("year_min"), col("year_max"), col("year_mean"), col("year_rawn_missing")]<p></p>                  DF ["___index___", "_row_index__rawn", "_row_index__mean", "_row_index__std", ...]; PROJECT */97 COLUMNS<p></p>    PLAN 3:<p></p>       WITH_COLUMNS:<p></p>       [col("n (missing)").cast(Int16), col("min").strict_cast(Float64), col("max").strict_cast(Float64)] <p></p>        SELECT [col("Variable"), col("n"), col("n (missing)"), col("mean"), col("std"), col("min"), col("max")]<p></p>           WITH_COLUMNS:<p></p>           ["month".alias("Variable")] <p></p>            SELECT [col("std"), col("n"), col("min"), col("max"), col("mean"), col("n (missing)")]<p></p>              SELECT [col("___index___"), col("month_std").alias("std"), col("month_rawn").alias("n"), col("month_min").alias("min"), col("month_max").alias("max"), col("month_mean").alias("mean"), col("month_rawn_missing").alias("n (missing)")]<p></p>                SELECT [col("___index___"), col("month_std"), col("month_rawn"), col("month_min"), col("month_max"), col("month_mean"), col("month_rawn_missing")]<p></p>                  DF ["___index___", "_row_index__rawn", "_row_index__mean", "_row_index__std", ...]; PROJECT */97 COLUMNS<p></p>    PLAN 4:<p></p>       WITH_COLUMNS:<p></p>       [col("n (missing)").cast(Int16), col("min").strict_cast(Float64), col("max").strict_cast(Float64)] <p></p>        SELECT [col("Variable"), col("n"), col("n (missing)"), col("mean"), col("std"), col("min"), col("max")]<p></p>           WITH_COLUMNS:<p></p>           ["var2".alias("Variable")] <p></p>            SELECT [col("std"), col("n"), col("min"), col("max"), col("mean"), col("n (missing)")]<p></p>              SELECT [col("___index___"), col("var2_std").alias("std"), col("var2_rawn").alias("n"), col("var2_min").alias("min"), col("var2_max").alias("max"), col("var2_mean").alias("mean"), col("var2_rawn_missing").alias("n (missing)")]<p></p>                SELECT [col("___index___"), col("var2_std"), col("var2_rawn"), col("var2_min"), col("var2_max"), col("var2_mean"), col("var2_rawn_missing")]<p></p>                  DF ["___index___", "_row_index__rawn", "_row_index__mean", "_row_index__std", ...]; PROJECT */97 COLUMNS<p></p>    PLAN 5:<p></p>       WITH_COLUMNS:<p></p>       [col("n (missing)").cast(Int16), col("min").strict_cast(Float64), col("max").strict_cast(Float64)] <p></p>        SELECT [col("Variable"), col("n"), col("n (missing)"), col("mean"), col("std"), col("min"), col("max")]<p></p>           WITH_COLUMNS:<p></p>           ["var3".alias("Variable")] <p></p>            SELECT [col("std"), col("n"), col("min"), col("max"), col("mean"), col("n (missing)")]<p></p>              SELECT [col("___index___"), col("var3_std").alias("std"), col("var3_rawn").alias("n"), col("var3_min").alias("min"), col("var3_max").alias("max"), col("var3_mean").alias("mean"), col("var3_rawn_missing").alias("n (missing)")]<p></p>                SELECT [col("___index___"), col("var3_std"), col("var3_rawn"), col("var3_min"), col("var3_max"), col("var3_mean"), col("var3_rawn_missing")]<p></p>                  DF ["___index___", "_row_index__rawn", "_row_index__mean", "_row_index__std", ...]; PROJECT */97 COLUMNS<p></p>    PLAN 6:<p></p>       WITH_COLUMNS:<p></p>       [col("n (missing)").cast(Int16)] <p></p>        SELECT [col("Variable"), col("n"), col("n (missing)"), col("mean"), col("std"), col("min"), col("max")]<p></p>           WITH_COLUMNS:<p></p>           ["var4".alias("Variable")] <p></p>            SELECT [col("std"), col("n"), col("min"), col("max"), col("mean"), col("n (missing)")]<p></p>              SELECT [col("___index___"), col("var4_std").alias("std"), col("var4_rawn").alias("n"), col("var4_min").alias("min"), col("var4_max").alias("max"), col("var4_mean").alias("mean"), col("var4_rawn_missing").alias("n (missing)")]<p></p>                SELECT [col("___index___"), col("var4_std"), col("var4_rawn"), col("var4_min"), col("var4_max"), col("var4_mean"), col("var4_rawn_missing")]<p></p>                  DF ["___index___", "_row_index__rawn", "_row_index__mean", "_row_index__std", ...]; PROJECT */97 COLUMNS<p></p>    PLAN 7:<p></p>       WITH_COLUMNS:<p></p>       [col("n (missing)").cast(Int16)] <p></p>        SELECT [col("Variable"), col("n"), col("n (missing)"), col("mean"), col("std"), col("min"), col("max")]<p></p>           WITH_COLUMNS:<p></p>           ["unrelated_1".alias("Variable")] <p></p>            SELECT [col("std"), col("n"), col("min"), col("max"), col("mean"), col("n (missing)")]<p></p>              SELECT [col("___index___"), col("unrelated_1_std").alias("std"), col("unrelated_1_rawn").alias("n"), col("unrelated_1_min").alias("min"), col("unrelated_1_max").alias("max"), col("unrelated_1_mean").alias("mean"), col("unrelated_1_rawn_missing").alias("n (missing)")]<p></p>                SELECT [col("___index___"), col("unrelated_1_std"), col("unrelated_1_rawn"), col("unrelated_1_min"), col("unrelated_1_max"), col("unrelated_1_mean"), col("unrelated_1_rawn_missing")]<p></p>                  DF ["___index___", "_row_index__rawn", "_row_index__mean", "_row_index__std", ...]; PROJECT */97 COLUMNS<p></p>    PLAN 8:<p></p>       WITH_COLUMNS:<p></p>       [col("n (missing)").cast(Int16)] <p></p>        SELECT [col("Variable"), col("n"), col("n (missing)"), col("mean"), col("std"), col("min"), col("max")]<p></p>           WITH_COLUMNS:<p></p>           ["unrelated_2".alias("Variable")] <p></p>            SELECT [col("std"), col("n"), col("min"), col("max"), col("mean"), col("n (missing)")]<p></p>              SELECT [col("___index___"), col("unrelated_2_std").alias("std"), col("unrelated_2_rawn").alias("n"), col("unrelated_2_min").alias("min"), col("unrelated_2_max").alias("max"), col("unrelated_2_mean").alias("mean"), col("unrelated_2_rawn_missing").alias("n (missing)")]<p></p>                SELECT [col("___index___"), col("unrelated_2_std"), col("unrelated_2_rawn"), col("unrelated_2_min"), col("unrelated_2_max"), col("unrelated_2_mean"), col("unrelated_2_rawn_missing")]<p></p>                  DF ["___index___", "_row_index__rawn", "_row_index__mean", "_row_index__std", ...]; PROJECT */97 COLUMNS<p></p>    PLAN 9:<p></p>       WITH_COLUMNS:<p></p>       [col("n (missing)").cast(Int16)] <p></p>        SELECT [col("Variable"), col("n"), col("n (missing)"), col("mean"), col("std"), col("min"), col("max")]<p></p>           WITH_COLUMNS:<p></p>           ["unrelated_3".alias("Variable")] <p></p>            SELECT [col("std"), col("n"), col("min"), col("max"), col("mean"), col("n (missing)")]<p></p>              SELECT [col("___index___"), col("unrelated_3_std").alias("std"), col("unrelated_3_rawn").alias("n"), col("unrelated_3_min").alias("min"), col("unrelated_3_max").alias("max"), col("unrelated_3_mean").alias("mean"), col("unrelated_3_rawn_missing").alias("n (missing)")]<p></p>                SELECT [col("___index___"), col("unrelated_3_std"), col("unrelated_3_rawn"), col("unrelated_3_min"), col("unrelated_3_max"), col("unrelated_3_mean"), col("unrelated_3_rawn_missing")]<p></p>                  DF ["___index___", "_row_index__rawn", "_row_index__mean", "_row_index__std", ...]; PROJECT */97 COLUMNS<p></p>    PLAN 10:<p></p>       WITH_COLUMNS:<p></p>       [col("n (missing)").cast(Int16)] <p></p>        SELECT [col("Variable"), col("n"), col("n (missing)"), col("mean"), col("std"), col("min"), col("max")]<p></p>           WITH_COLUMNS:<p></p>           ["unrelated_4".alias("Variable")] <p></p>            SELECT [col("std"), col("n"), col("min"), col("max"), col("mean"), col("n (missing)")]<p></p>              SELECT [col("___index___"), col("unrelated_4_std").alias("std"), col("unrelated_4_rawn").alias("n"), col("unrelated_4_min").alias("min"), col("unrelated_4_max").alias("max"), col("unrelated_4_mean").alias("mean"), col("unrelated_4_rawn_missing").alias("n (missing)")]<p></p>                SELECT [col("___index___"), col("unrelated_4_std"), col("unrelated_4_rawn"), col("unrelated_4_min"), col("unrelated_4_max"), col("unrelated_4_mean"), col("unrelated_4_rawn_missing")]<p></p>                  DF ["___index___", "_row_index__rawn", "_row_index__mean", "_row_index__std", ...]; PROJECT */97 COLUMNS<p></p>    PLAN 11:<p></p>       WITH_COLUMNS:<p></p>       [col("n (missing)").cast(Int16)] <p></p>        SELECT [col("Variable"), col("n"), col("n (missing)"), col("mean"), col("std"), col("min"), col("max")]<p></p>           WITH_COLUMNS:<p></p>           ["unrelated_5".alias("Variable")] <p></p>            SELECT [col("std"), col("n"), col("min"), col("max"), col("mean"), col("n (missing)")]<p></p>              SELECT [col("___index___"), col("unrelated_5_std").alias("std"), col("unrelated_5_rawn").alias("n"), col("unrelated_5_min").alias("min"), col("unrelated_5_max").alias("max"), col("unrelated_5_mean").alias("mean"), col("unrelated_5_rawn_missing").alias("n (missing)")]<p></p>                SELECT [col("___index___"), col("unrelated_5_std"), col("unrelated_5_rawn"), col("unrelated_5_min"), col("unrelated_5_max"), col("unrelated_5_mean"), col("unrelated_5_rawn_missing")]<p></p>                  DF ["___index___", "_row_index__rawn", "_row_index__mean", "_row_index__std", ...]; PROJECT */97 COLUMNS<p></p>    PLAN 12:<p></p>      SELECT [col("Variable"), col("n"), col("n (missing)"), col("mean"), col("std"), col("min"), col("max")]<p></p>         WITH_COLUMNS:<p></p>         ["var_reg2".alias("Variable")] <p></p>          SELECT [col("std"), col("n"), col("min"), col("max"), col("mean"), col("n (missing)")]<p></p>            SELECT [col("___index___"), col("var_reg2_std").alias("std"), col("var_reg2_rawn").alias("n"), col("var_reg2_min").alias("min"), col("var_reg2_max").alias("max"), col("var_reg2_mean").alias("mean"), col("var_reg2_rawn_missing").alias("n (missing)")]<p></p>              SELECT [col("___index___"), col("var_reg2_std"), col("var_reg2_rawn"), col("var_reg2_min"), col("var_reg2_max"), col("var_reg2_mean"), col("var_reg2_rawn_missing")]<p></p>                DF ["___index___", "_row_index__rawn", "_row_index__mean", "_row_index__std", ...]; PROJECT */97 COLUMNS<p></p>    PLAN 13:<p></p>       WITH_COLUMNS:<p></p>       [col("n (missing)").cast(Int16)] <p></p>        SELECT [col("Variable"), col("n"), col("n (missing)"), col("mean"), col("std"), col("min"), col("max")]<p></p>           WITH_COLUMNS:<p></p>           ["repeat_1".alias("Variable")] <p></p>            SELECT [col("std"), col("n"), col("min"), col("max"), col("mean"), col("n (missing)")]<p></p>              SELECT [col("___index___"), col("repeat_1_std").alias("std"), col("repeat_1_rawn").alias("n"), col("repeat_1_min").alias("min"), col("repeat_1_max").alias("max"), col("repeat_1_mean").alias("mean"), col("repeat_1_rawn_missing").alias("n (missing)")]<p></p>                SELECT [col("___index___"), col("repeat_1_std"), col("repeat_1_rawn"), col("repeat_1_min"), col("repeat_1_max"), col("repeat_1_mean"), col("repeat_1_rawn_missing")]<p></p>                  DF ["___index___", "_row_index__rawn", "_row_index__mean", "_row_index__std", ...]; PROJECT */97 COLUMNS<p></p>    PLAN 14:<p></p>       WITH_COLUMNS:<p></p>       [col("n (missing)").cast(Int16), col("min").strict_cast(Float64), col("max").strict_cast(Float64)] <p></p>        SELECT [col("Variable"), col("n"), col("n (missing)"), col("mean"), col("std"), col("min"), col("max")]<p></p>           WITH_COLUMNS:<p></p>           ["var5".alias("Variable")] <p></p>            SELECT [col("std"), col("n"), col("min"), col("max"), col("mean"), col("n (missing)")]<p></p>              SELECT [col("___index___"), col("var5_std").alias("std"), col("var5_rawn").alias("n"), col("var5_min").alias("min"), col("var5_max").alias("max"), col("var5_mean").alias("mean"), col("var5_rawn_missing").alias("n (missing)")]<p></p>                SELECT [col("___index___"), col("var5_std"), col("var5_rawn"), col("var5_min"), col("var5_max"), col("var5_mean"), col("var5_rawn_missing")]<p></p>                  DF ["___index___", "_row_index__rawn", "_row_index__mean", "_row_index__std", ...]; PROJECT */97 COLUMNS<p></p>    PLAN 15:<p></p>       WITH_COLUMNS:<p></p>       [col("min").strict_cast(Float64), col("max").strict_cast(Float64)] <p></p>        SELECT [col("Variable"), col("n"), col("n (missing)"), col("mean"), col("std"), col("min"), col("max")]<p></p>           WITH_COLUMNS:<p></p>           ["var_reg1".alias("Variable")] <p></p>            SELECT [col("std"), col("n"), col("min"), col("max"), col("mean"), col("n (missing)")]<p></p>              SELECT [col("___index___"), col("var_reg1_std").alias("std"), col("var_reg1_rawn").alias("n"), col("var_reg1_min").alias("min"), col("var_reg1_max").alias("max"), col("var_reg1_mean").alias("mean"), col("var_reg1_rawn_missing").alias("n (missing)")]<p></p>                SELECT [col("___index___"), col("var_reg1_std"), col("var_reg1_rawn"), col("var_reg1_min"), col("var_reg1_max"), col("var_reg1_mean"), col("var_reg1_rawn_missing")]<p></p>                  DF ["___index___", "_row_index__rawn", "_row_index__mean", "_row_index__std", ...]; PROJECT */97 COLUMNS<p></p>  END UNION</div>
 </div>
 </div>
 </div>
 </div>
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=41935615">
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=ae785d3e">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -7735,7 +7735,7 @@ a.anchor-link {
 </div>
 </div>
 </div>
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=7d8fd8b8">
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=5fdfae26">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -7855,7 +7855,7 @@ a.anchor-link {
 </div>
 </div>
 </div>
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=2cb03075">
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=672d7904">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -7907,7 +7907,7 @@ a.anchor-link {
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>Removing existing directory /home/jrothbaum/Coding/claude_code/survey_kit/.scratch/temp_files/py_srmi_test_regression.srmi
+<pre>Removing existing directory C:\Users\jonro\OneDrive\Documents\Coding\survey_kit\.scratch\temp_files/py_srmi_test_regression.srmi
 </pre>
 </div>
 </div>
@@ -7927,7 +7927,7 @@ a.anchor-link {
 </div>
 </div>
 </div>
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=d1aaecc5">
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=918cca98">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -7984,14 +7984,14 @@ a.anchor-link {
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>Removing existing directory /home/jrothbaum/Coding/claude_code/survey_kit/.scratch/temp_files/py_srmi_test_regression.srmi/1.srmi.implicate
+<pre>Removing existing directory C:\Users\jonro\OneDrive\Documents\Coding\survey_kit\.scratch\temp_files/py_srmi_test_regression.srmi/1.srmi.implicate
 </pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>Removing existing directory /home/jrothbaum/Coding/claude_code/survey_kit/.scratch/temp_files/py_srmi_test_regression.srmi/2.srmi.implicate
+<pre>Removing existing directory C:\Users\jonro\OneDrive\Documents\Coding\survey_kit\.scratch\temp_files/py_srmi_test_regression.srmi/2.srmi.implicate
 </pre>
 </div>
 </div>
@@ -8026,7 +8026,7 @@ a.anchor-link {
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>/home/jrothbaum/Coding/claude_code/survey_kit/.venv/lib/python3.13/site-packages/sklearn/utils/validation.py:1406: DataConversionWarning: A column-vector y was passed when a 1d array was expected. Please change the shape of y to (n_samples, ), for example using ravel().
+<pre>C:\Users\jonro\OneDrive\Documents\Coding\survey_kit\.venv\Lib\site-packages\sklearn\utils\validation.py:1406: DataConversionWarning: A column-vector y was passed when a 1d array was expected. Please change the shape of y to (n_samples, ), for example using ravel().
   y = column_or_1d(y, warn=True)
 R2 = 0.5507
 </pre>
@@ -8049,10 +8049,17 @@ R2 = 0.5507
 │            unrelated_5 ┆   -0.1206 │
 │               repeat_1 ┆   -0.1082 │
 │                   var3 ┆ -0.004198 │
-│ var4:var3:C(var5)FALSE ┆ 0.0009904 │
+│ var4:var3:C(var5)FALSE ┆ 0.0009905 │
 │  var4:var3:C(var5)TRUE ┆   0.02909 │
 │            _Intercept_ ┆   -0.3496 │
 └────────────────────────┴───────────┘
+</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>     error=pmm: donating observed value(s) ['var_reg1'] from 10-nearest matched donors
 </pre>
 </div>
 </div>
@@ -8131,9 +8138,9 @@ R2 = 0.5507
 <pre>┌──────────┬─────────┬───────┬──────────────┬────────┬────────┬──────────────┬─────────────┬─────────────┬─────────────┬─────────────┬─────────────┬─────────────┬─────────────┬─────────────┐
 │ Variable ┆ Imputed ┆     n ┆ n (not null) ┆   mean ┆    std ┆ mean (not 0) ┆ std (not 0) ┆ q10 (not 0) ┆ q25 (not 0) ┆ q50 (not 0) ┆ q75 (not 0) ┆ q90 (not 0) ┆ min (not 0) ┆ max (not 0) │
 ╞══════════╪═════════╪═══════╪══════════════╪════════╪════════╪══════════════╪═════════════╪═════════════╪═════════════╪═════════════╪═════════════╪═════════════╪═════════════╪═════════════╡
-│ var_reg1 ┆         ┆ 10000 ┆        10000 ┆ 0.5235 ┆ 0.4995 ┆            1 ┆           0 ┆           1 ┆           1 ┆           1 ┆           1 ┆           1 ┆           1 ┆           1 │
+│ var_reg1 ┆         ┆ 10000 ┆        10000 ┆ 0.5233 ┆ 0.4995 ┆            1 ┆           0 ┆           1 ┆           1 ┆           1 ┆           1 ┆           1 ┆           1 ┆           1 │
 │ var_reg1 ┆       0 ┆  7431 ┆         7431 ┆ 0.5231 ┆ 0.4995 ┆            1 ┆           0 ┆           1 ┆           1 ┆           1 ┆           1 ┆           1 ┆           1 ┆           1 │
-│ var_reg1 ┆       1 ┆  2569 ┆         2569 ┆ 0.5247 ┆ 0.4995 ┆            1 ┆           0 ┆           1 ┆           1 ┆           1 ┆           1 ┆           1 ┆           1 ┆           1 │
+│ var_reg1 ┆       1 ┆  2569 ┆         2569 ┆ 0.5239 ┆ 0.4995 ┆            1 ┆           0 ┆           1 ┆           1 ┆           1 ┆           1 ┆           1 ┆           1 ┆           1 │
 └──────────┴─────────┴───────┴──────────────┴────────┴────────┴──────────────┴─────────────┴─────────────┴─────────────┴─────────────┴─────────────┴─────────────┴─────────────┴─────────────┘
 </pre>
 </div>
@@ -8173,7 +8180,7 @@ R2 = 0.5507
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>R2 = 0.8184
+<pre>R2 = 0.8185
 </pre>
 </div>
 </div>
@@ -8186,21 +8193,28 @@ R2 = 0.5507
 │         var_reg1FALSE ┆      0.0 │
 │          var_reg1TRUE ┆     -0.0 │
 │                  var2 ┆    1.383 │
-│                  var4 ┆   0.5671 │
-│                  var3 ┆  0.01675 │
-│           C(var5)TRUE ┆  -0.5774 │
-│           unrelated_1 ┆   0.1543 │
-│           unrelated_2 ┆   0.5426 │
-│           unrelated_3 ┆  -0.1954 │
-│           unrelated_4 ┆  0.05883 │
-│           unrelated_5 ┆  -0.3622 │
-│              repeat_1 ┆   0.1543 │
+│                  var4 ┆   0.5612 │
+│                  var3 ┆  0.01672 │
+│           C(var5)TRUE ┆  -0.5865 │
+│           unrelated_1 ┆   0.1563 │
+│           unrelated_2 ┆   0.5452 │
+│           unrelated_3 ┆  -0.1947 │
+│           unrelated_4 ┆  0.06568 │
+│           unrelated_5 ┆   -0.368 │
+│              repeat_1 ┆   0.1563 │
 │             var4:var3 ┆  -0.9976 │
-│      var4:C(var5)TRUE ┆    3.776 │
-│      var3:C(var5)TRUE ┆ -0.06237 │
-│ var4:var3:C(var5)TRUE ┆  0.06704 │
-│           _Intercept_ ┆  0.06299 │
+│      var4:C(var5)TRUE ┆    3.789 │
+│      var3:C(var5)TRUE ┆ -0.06316 │
+│ var4:var3:C(var5)TRUE ┆  0.06792 │
+│           _Intercept_ ┆  0.06084 │
 └───────────────────────┴──────────┘
+</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>     error=pmm: donating observed value(s) ['var_reg2'] from 10-nearest matched donors
 </pre>
 </div>
 </div>
@@ -8234,11 +8248,11 @@ R2 = 0.5507
 │ ---          ┆ ---     │
 │ i16          ┆ i8      │
 ╞══════════════╪═════════╡
-│ 4309         ┆ 4       │
-│ 8103         ┆ 4       │
-│ 1446         ┆ 3       │
-│ 2246         ┆ 3       │
-│ 2614         ┆ 3       │
+│ 110          ┆ 4       │
+│ 460          ┆ 3       │
+│ 519          ┆ 3       │
+│ 1061         ┆ 3       │
+│ 2180         ┆ 3       │
 └──────────────┴─────────┘
 </pre>
 </div>
@@ -8279,9 +8293,9 @@ R2 = 0.5507
 <pre>┌──────────┬─────────┬──────┬──────────────┬────────┬───────┬──────────────┬─────────────┬─────────────┬─────────────┬─────────────┬─────────────┬─────────────┬─────────────┬─────────────┐
 │ Variable ┆ Imputed ┆    n ┆ n (not null) ┆   mean ┆   std ┆ mean (not 0) ┆ std (not 0) ┆ q10 (not 0) ┆ q25 (not 0) ┆ q50 (not 0) ┆ q75 (not 0) ┆ q90 (not 0) ┆ min (not 0) ┆ max (not 0) │
 ╞══════════╪═════════╪══════╪══════════════╪════════╪═══════╪══════════════╪═════════════╪═════════════╪═════════════╪═════════════╪═════════════╪═════════════╪═════════════╪═════════════╡
-│ var_reg2 ┆         ┆ 5235 ┆         5235 ┆ -4.208 ┆ 13.55 ┆       -4.406 ┆       13.84 ┆      -24.62 ┆       -13.0 ┆      -1.968 ┆       6.003 ┆       11.35 ┆      -55.35 ┆       26.21 │
-│ var_reg2 ┆       0 ┆ 3923 ┆         3923 ┆ -4.145 ┆ 13.38 ┆       -4.355 ┆       13.68 ┆      -24.04 ┆      -12.75 ┆      -1.984 ┆       5.921 ┆       11.27 ┆      -55.35 ┆       26.21 │
-│ var_reg2 ┆       1 ┆ 1312 ┆         1312 ┆ -4.397 ┆ 14.07 ┆       -4.557 ┆        14.3 ┆       -25.9 ┆       -13.6 ┆       -1.83 ┆       6.257 ┆       11.76 ┆      -55.35 ┆       24.89 │
+│ var_reg2 ┆         ┆ 5233 ┆         5233 ┆ -4.196 ┆ 13.47 ┆       -4.403 ┆       13.76 ┆      -24.64 ┆      -12.77 ┆      -1.985 ┆       6.003 ┆       11.24 ┆      -55.35 ┆       26.21 │
+│ var_reg2 ┆       0 ┆ 3923 ┆         3923 ┆ -4.147 ┆ 13.38 ┆       -4.356 ┆       13.68 ┆      -24.04 ┆      -12.75 ┆      -1.984 ┆       5.914 ┆       11.27 ┆      -55.35 ┆       26.21 │
+│ var_reg2 ┆       1 ┆ 1310 ┆         1310 ┆ -4.345 ┆ 13.75 ┆       -4.543 ┆       14.02 ┆      -25.48 ┆      -13.04 ┆      -1.995 ┆         6.4 ┆       11.19 ┆      -55.35 ┆       22.69 │
 └──────────┴─────────┴──────┴──────────────┴────────┴───────┴──────────────┴─────────────┴─────────────┴─────────────┴─────────────┴─────────────┴─────────────┴─────────────┴─────────────┘
 </pre>
 </div>
@@ -8307,7 +8321,7 @@ R2 = 0.5507
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>Removing existing directory /home/jrothbaum/Coding/claude_code/survey_kit/.scratch/temp_files/py_srmi_test_regression.srmi/1.srmi.implicate
+<pre>Removing existing directory C:\Users\jonro\OneDrive\Documents\Coding\survey_kit\.scratch\temp_files/py_srmi_test_regression.srmi/1.srmi.implicate
 </pre>
 </div>
 </div>
@@ -8321,7 +8335,7 @@ R2 = 0.5507
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>         Selected model: ~0+var_reg2+var2+var4+var3+var4:var3+C(var5)+var4:var3:C(var5)+unrelated_1+unrelated_2+unrelated_3+unrelated_4+unrelated_5+repeat_1
+<pre>         Selected model: ~0+var_reg2+var2+var4+var3+var4:var3+C(var5)+var4:var3:C(var5)+unrelated_2+unrelated_4+unrelated_5+repeat_1
 </pre>
 </div>
 </div>
@@ -8335,9 +8349,9 @@ R2 = 0.5507
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>/home/jrothbaum/Coding/claude_code/survey_kit/.venv/lib/python3.13/site-packages/sklearn/utils/validation.py:1406: DataConversionWarning: A column-vector y was passed when a 1d array was expected. Please change the shape of y to (n_samples, ), for example using ravel().
+<pre>C:\Users\jonro\OneDrive\Documents\Coding\survey_kit\.venv\Lib\site-packages\sklearn\utils\validation.py:1406: DataConversionWarning: A column-vector y was passed when a 1d array was expected. Please change the shape of y to (n_samples, ), for example using ravel().
   y = column_or_1d(y, warn=True)
-R2 = 0.6237
+R2 = 0.6249
 </pre>
 </div>
 </div>
@@ -8347,22 +8361,27 @@ R2 = 0.6237
 <pre>┌───────────────────────┬───────────┐
 │              Variable ┆      Beta │
 ╞═══════════════════════╪═══════════╡
-│              var_reg2 ┆   -0.1309 │
-│                  var2 ┆    0.2904 │
-│                  var4 ┆    -0.176 │
-│                  var3 ┆ -0.003809 │
-│          C(var5)FALSE ┆     2.402 │
-│           C(var5)TRUE ┆    -2.514 │
-│           unrelated_1 ┆   0.01499 │
-│           unrelated_2 ┆      -0.2 │
-│           unrelated_3 ┆  -0.02264 │
-│           unrelated_4 ┆   -0.3057 │
-│           unrelated_5 ┆   -0.3083 │
-│              repeat_1 ┆   0.01499 │
-│             var4:var3 ┆  -0.08421 │
-│ var4:var3:C(var5)TRUE ┆   0.05645 │
-│           _Intercept_ ┆   -0.1227 │
+│              var_reg2 ┆   -0.1319 │
+│                  var2 ┆    0.2891 │
+│                  var4 ┆    -0.157 │
+│                  var3 ┆ -0.003246 │
+│          C(var5)FALSE ┆     2.413 │
+│           C(var5)TRUE ┆    -2.526 │
+│           unrelated_2 ┆   -0.2193 │
+│           unrelated_4 ┆   -0.3354 │
+│           unrelated_5 ┆   -0.2822 │
+│              repeat_1 ┆  0.007163 │
+│             var4:var3 ┆  -0.08512 │
+│ var4:var3:C(var5)TRUE ┆   0.05801 │
+│           _Intercept_ ┆   -0.1207 │
 └───────────────────────┴───────────┘
+</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>     error=pmm: donating observed value(s) ['var_reg1'] from 10-nearest matched donors
 </pre>
 </div>
 </div>
@@ -8396,11 +8415,11 @@ R2 = 0.6237
 │ ---          ┆ ---     │
 │ i16          ┆ i8      │
 ╞══════════════╪═════════╡
-│ 2232         ┆ 4       │
-│ 2374         ┆ 4       │
-│ 5888         ┆ 4       │
-│ 8933         ┆ 4       │
-│ 9167         ┆ 4       │
+│ 5477         ┆ 4       │
+│ 8656         ┆ 4       │
+│ 93           ┆ 3       │
+│ 400          ┆ 3       │
+│ 597          ┆ 3       │
 └──────────────┴─────────┘
 </pre>
 </div>
@@ -8441,9 +8460,9 @@ R2 = 0.6237
 <pre>┌──────────┬─────────┬───────┬──────────────┬────────┬────────┬──────────────┬─────────────┬─────────────┬─────────────┬─────────────┬─────────────┬─────────────┬─────────────┬─────────────┐
 │ Variable ┆ Imputed ┆     n ┆ n (not null) ┆   mean ┆    std ┆ mean (not 0) ┆ std (not 0) ┆ q10 (not 0) ┆ q25 (not 0) ┆ q50 (not 0) ┆ q75 (not 0) ┆ q90 (not 0) ┆ min (not 0) ┆ max (not 0) │
 ╞══════════╪═════════╪═══════╪══════════════╪════════╪════════╪══════════════╪═════════════╪═════════════╪═════════════╪═════════════╪═════════════╪═════════════╪═════════════╪═════════════╡
-│ var_reg1 ┆         ┆ 12569 ┆        12569 ┆ 0.5211 ┆ 0.4996 ┆            1 ┆           0 ┆           1 ┆           1 ┆           1 ┆           1 ┆           1 ┆           1 ┆           1 │
-│ var_reg1 ┆       0 ┆ 10000 ┆        10000 ┆ 0.5235 ┆ 0.4995 ┆            1 ┆           0 ┆           1 ┆           1 ┆           1 ┆           1 ┆           1 ┆           1 ┆           1 │
-│ var_reg1 ┆       1 ┆  2569 ┆         2569 ┆ 0.5119 ┆    0.5 ┆            1 ┆           0 ┆           1 ┆           1 ┆           1 ┆           1 ┆           1 ┆           1 ┆           1 │
+│ var_reg1 ┆         ┆ 12569 ┆        12569 ┆ 0.5209 ┆ 0.4996 ┆            1 ┆           0 ┆           1 ┆           1 ┆           1 ┆           1 ┆           1 ┆           1 ┆           1 │
+│ var_reg1 ┆       0 ┆ 10000 ┆        10000 ┆ 0.5233 ┆ 0.4995 ┆            1 ┆           0 ┆           1 ┆           1 ┆           1 ┆           1 ┆           1 ┆           1 ┆           1 │
+│ var_reg1 ┆       1 ┆  2569 ┆         2569 ┆ 0.5115 ┆    0.5 ┆            1 ┆           0 ┆           1 ┆           1 ┆           1 ┆           1 ┆           1 ┆           1 ┆           1 │
 └──────────┴─────────┴───────┴──────────────┴────────┴────────┴──────────────┴─────────────┴─────────────┴─────────────┴─────────────┴─────────────┴─────────────┴─────────────┴─────────────┘
 </pre>
 </div>
@@ -8469,7 +8488,7 @@ R2 = 0.6237
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>         Selected model: ~0+var_reg1+var2+var3+var4:var3+C(var5)+var4:C(var5)+var3:C(var5)+var4:var3:C(var5)+unrelated_1+unrelated_3+unrelated_4+unrelated_5+repeat_1+var4
+<pre>         Selected model: ~0+var_reg1+var2+var4+var3+var4:var3+C(var5)+var4:C(var5)+var3:C(var5)+var4:var3:C(var5)+unrelated_2+unrelated_3+unrelated_4+unrelated_5
 </pre>
 </div>
 </div>
@@ -8483,7 +8502,7 @@ R2 = 0.6237
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>R2 = 0.8247
+<pre>R2 = 0.8298
 </pre>
 </div>
 </div>
@@ -8494,22 +8513,28 @@ R2 = 0.6237
 │              Variable ┆     Beta │
 ╞═══════════════════════╪══════════╡
 │         var_reg1FALSE ┆      0.0 │
-│          var_reg1TRUE ┆      0.0 │
-│                  var2 ┆    1.374 │
-│                  var3 ┆  0.03341 │
-│           C(var5)TRUE ┆  -0.4513 │
-│           unrelated_1 ┆   0.1777 │
-│           unrelated_3 ┆   0.1812 │
-│           unrelated_4 ┆  -0.6366 │
-│           unrelated_5 ┆  -0.3989 │
-│              repeat_1 ┆   0.1777 │
-│                  var4 ┆    1.402 │
-│             var4:var3 ┆   -1.033 │
-│      var4:C(var5)TRUE ┆    2.832 │
-│      var3:C(var5)TRUE ┆ -0.08348 │
-│ var4:var3:C(var5)TRUE ┆    0.138 │
-│           _Intercept_ ┆   0.2334 │
+│          var_reg1TRUE ┆     -0.0 │
+│                  var2 ┆    1.364 │
+│                  var4 ┆    1.554 │
+│                  var3 ┆  0.04128 │
+│           C(var5)TRUE ┆  -0.4464 │
+│           unrelated_2 ┆ -0.06238 │
+│           unrelated_3 ┆   0.2616 │
+│           unrelated_4 ┆   -0.592 │
+│           unrelated_5 ┆   -0.146 │
+│             var4:var3 ┆   -1.046 │
+│      var4:C(var5)TRUE ┆    2.439 │
+│      var3:C(var5)TRUE ┆ -0.07164 │
+│ var4:var3:C(var5)TRUE ┆    0.128 │
+│           _Intercept_ ┆   0.1934 │
 └───────────────────────┴──────────┘
+</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>     error=pmm: donating observed value(s) ['var_reg2'] from 10-nearest matched donors
 </pre>
 </div>
 </div>
@@ -8543,11 +8568,11 @@ R2 = 0.6237
 │ ---          ┆ ---     │
 │ i16          ┆ i8      │
 ╞══════════════╪═════════╡
-│ 1795         ┆ 3       │
-│ 2017         ┆ 3       │
-│ 2218         ┆ 3       │
-│ 2732         ┆ 3       │
-│ 3047         ┆ 3       │
+│ 515          ┆ 3       │
+│ 731          ┆ 3       │
+│ 787          ┆ 3       │
+│ 1559         ┆ 3       │
+│ 1668         ┆ 3       │
 └──────────────┴─────────┘
 </pre>
 </div>
@@ -8588,9 +8613,9 @@ R2 = 0.6237
 <pre>┌──────────┬─────────┬──────┬──────────────┬────────┬───────┬──────────────┬─────────────┬─────────────┬─────────────┬─────────────┬─────────────┬─────────────┬─────────────┬─────────────┐
 │ Variable ┆ Imputed ┆    n ┆ n (not null) ┆   mean ┆   std ┆ mean (not 0) ┆ std (not 0) ┆ q10 (not 0) ┆ q25 (not 0) ┆ q50 (not 0) ┆ q75 (not 0) ┆ q90 (not 0) ┆ min (not 0) ┆ max (not 0) │
 ╞══════════╪═════════╪══════╪══════════════╪════════╪═══════╪══════════════╪═════════════╪═════════════╪═════════════╪═════════════╪═════════════╪═════════════╪═════════════╪═════════════╡
-│ var_reg2 ┆         ┆ 6504 ┆         6504 ┆ -4.364 ┆  13.6 ┆       -4.617 ┆       13.95 ┆      -25.13 ┆      -13.34 ┆      -2.199 ┆        5.93 ┆       11.35 ┆      -55.35 ┆       26.21 │
-│ var_reg2 ┆       0 ┆ 5202 ┆         5202 ┆ -4.264 ┆  13.5 ┆       -4.527 ┆       13.87 ┆      -24.74 ┆      -13.26 ┆      -2.148 ┆        5.93 ┆       11.32 ┆      -55.35 ┆       26.21 │
-│ var_reg2 ┆       1 ┆ 1302 ┆         1302 ┆ -4.764 ┆ 14.01 ┆       -4.971 ┆       14.28 ┆       -26.2 ┆      -13.59 ┆      -2.488 ┆        5.93 ┆       11.38 ┆      -48.27 ┆       24.31 │
+│ var_reg2 ┆         ┆ 6500 ┆         6500 ┆ -4.311 ┆ 13.47 ┆       -4.582 ┆       13.84 ┆      -25.03 ┆       -13.3 ┆      -2.209 ┆        5.98 ┆        11.1 ┆      -55.35 ┆       26.21 │
+│ var_reg2 ┆       0 ┆ 5201 ┆         5201 ┆ -4.232 ┆ 13.41 ┆         -4.5 ┆       13.79 ┆      -24.74 ┆       -13.0 ┆      -2.152 ┆       5.936 ┆       11.19 ┆      -55.35 ┆       26.21 │
+│ var_reg2 ┆       1 ┆ 1299 ┆         1299 ┆ -4.628 ┆ 13.69 ┆       -4.908 ┆       14.05 ┆       -25.9 ┆      -14.59 ┆      -2.416 ┆       6.171 ┆       10.83 ┆      -46.63 ┆       24.89 │
 └──────────┴─────────┴──────┴──────────────┴────────┴───────┴──────────────┴─────────────┴─────────────┴─────────────┴─────────────┴─────────────┴─────────────┴─────────────┴─────────────┘
 </pre>
 </div>
@@ -8643,7 +8668,7 @@ Final Estimates by Iteration
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>Removing existing directory /home/jrothbaum/Coding/claude_code/survey_kit/.scratch/temp_files/py_srmi_test_regression.srmi/1.srmi.implicate
+<pre>Removing existing directory C:\Users\jonro\OneDrive\Documents\Coding\survey_kit\.scratch\temp_files/py_srmi_test_regression.srmi/1.srmi.implicate
 </pre>
 </div>
 </div>
@@ -8678,15 +8703,9 @@ Final Estimates by Iteration
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>/home/jrothbaum/Coding/claude_code/survey_kit/.venv/lib/python3.13/site-packages/sklearn/utils/validation.py:1406: DataConversionWarning: A column-vector y was passed when a 1d array was expected. Please change the shape of y to (n_samples, ), for example using ravel().
+<pre>C:\Users\jonro\OneDrive\Documents\Coding\survey_kit\.venv\Lib\site-packages\sklearn\utils\validation.py:1406: DataConversionWarning: A column-vector y was passed when a 1d array was expected. Please change the shape of y to (n_samples, ), for example using ravel().
   y = column_or_1d(y, warn=True)
-</pre>
-</div>
-</div>
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>R2 = 0.5509
+R2 = 0.5509
 </pre>
 </div>
 </div>
@@ -8711,6 +8730,13 @@ Final Estimates by Iteration
 │  var4:var3:C(var5)TRUE ┆   0.03546 │
 │            _Intercept_ ┆   -0.1482 │
 └────────────────────────┴───────────┘
+</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>     error=pmm: donating observed value(s) ['var_reg1'] from 10-nearest matched donors
 </pre>
 </div>
 </div>
@@ -8861,6 +8887,13 @@ Final Estimates by Iteration
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>     error=pmm: donating observed value(s) ['var_reg2'] from 10-nearest matched donors
+</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
 <pre>     Finding 10 nearest neighbors on ['___prediction']
 </pre>
 </div>
@@ -8961,7 +8994,7 @@ Final Estimates by Iteration
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>Removing existing directory /home/jrothbaum/Coding/claude_code/survey_kit/.scratch/temp_files/py_srmi_test_regression.srmi/2.srmi.implicate
+<pre>Removing existing directory C:\Users\jonro\OneDrive\Documents\Coding\survey_kit\.scratch\temp_files/py_srmi_test_regression.srmi/2.srmi.implicate
 </pre>
 </div>
 </div>
@@ -8989,15 +9022,9 @@ Final Estimates by Iteration
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>/home/jrothbaum/Coding/claude_code/survey_kit/.venv/lib/python3.13/site-packages/sklearn/utils/validation.py:1406: DataConversionWarning: A column-vector y was passed when a 1d array was expected. Please change the shape of y to (n_samples, ), for example using ravel().
+<pre>C:\Users\jonro\OneDrive\Documents\Coding\survey_kit\.venv\Lib\site-packages\sklearn\utils\validation.py:1406: DataConversionWarning: A column-vector y was passed when a 1d array was expected. Please change the shape of y to (n_samples, ), for example using ravel().
   y = column_or_1d(y, warn=True)
-</pre>
-</div>
-</div>
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>/home/jrothbaum/Coding/claude_code/survey_kit/.venv/lib/python3.13/site-packages/sklearn/linear_model/_logistic.py:473: ConvergenceWarning: lbfgs failed to converge after 100 iteration(s) (status=1):
+C:\Users\jonro\OneDrive\Documents\Coding\survey_kit\.venv\Lib\site-packages\sklearn\linear_model\_logistic.py:473: ConvergenceWarning: lbfgs failed to converge after 100 iteration(s) (status=1):
 STOP: TOTAL NO. OF ITERATIONS REACHED LIMIT
 
 Increase the number of iterations to improve the convergence (max_iter=100).
@@ -9032,6 +9059,13 @@ R2 = 0.6195
 │ var4:var3:C(var5)TRUE ┆  0.05213 │
 │           _Intercept_ ┆  -0.3411 │
 └───────────────────────┴──────────┘
+</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>     error=pmm: donating observed value(s) ['var_reg1'] from 10-nearest matched donors
 </pre>
 </div>
 </div>
@@ -9110,9 +9144,9 @@ R2 = 0.6195
 <pre>┌──────────┬─────────┬───────┬──────────────┬────────┬────────┬──────────────┬─────────────┬─────────────┬─────────────┬─────────────┬─────────────┬─────────────┬─────────────┬─────────────┐
 │ Variable ┆ Imputed ┆     n ┆ n (not null) ┆   mean ┆    std ┆ mean (not 0) ┆ std (not 0) ┆ q10 (not 0) ┆ q25 (not 0) ┆ q50 (not 0) ┆ q75 (not 0) ┆ q90 (not 0) ┆ min (not 0) ┆ max (not 0) │
 ╞══════════╪═════════╪═══════╪══════════════╪════════╪════════╪══════════════╪═════════════╪═════════════╪═════════════╪═════════════╪═════════════╪═════════════╪═════════════╪═════════════╡
-│ var_reg1 ┆         ┆ 12569 ┆        12569 ┆ 0.5204 ┆ 0.4996 ┆            1 ┆           0 ┆           1 ┆           1 ┆           1 ┆           1 ┆           1 ┆           1 ┆           1 │
+│ var_reg1 ┆         ┆ 12569 ┆        12569 ┆ 0.5206 ┆ 0.4996 ┆            1 ┆           0 ┆           1 ┆           1 ┆           1 ┆           1 ┆           1 ┆           1 ┆           1 │
 │ var_reg1 ┆       0 ┆ 10000 ┆        10000 ┆ 0.5236 ┆ 0.4995 ┆            1 ┆           0 ┆           1 ┆           1 ┆           1 ┆           1 ┆           1 ┆           1 ┆           1 │
-│ var_reg1 ┆       1 ┆  2569 ┆         2569 ┆  0.508 ┆    0.5 ┆            1 ┆           0 ┆           1 ┆           1 ┆           1 ┆           1 ┆           1 ┆           1 ┆           1 │
+│ var_reg1 ┆       1 ┆  2569 ┆         2569 ┆ 0.5088 ┆    0.5 ┆            1 ┆           0 ┆           1 ┆           1 ┆           1 ┆           1 ┆           1 ┆           1 ┆           1 │
 └──────────┴─────────┴───────┴──────────────┴────────┴────────┴──────────────┴─────────────┴─────────────┴─────────────┴─────────────┴─────────────┴─────────────┴─────────────┴─────────────┘
 </pre>
 </div>
@@ -9152,7 +9186,7 @@ R2 = 0.6195
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>R2 = 0.8261
+<pre>R2 = 0.8258
 </pre>
 </div>
 </div>
@@ -9163,23 +9197,30 @@ R2 = 0.6195
 │              Variable ┆     Beta │
 ╞═══════════════════════╪══════════╡
 │         var_reg1FALSE ┆      0.0 │
-│          var_reg1TRUE ┆      0.0 │
-│                  var2 ┆    1.383 │
-│           C(var5)TRUE ┆    -1.33 │
-│           unrelated_1 ┆ -0.07459 │
-│           unrelated_2 ┆ -0.03812 │
-│           unrelated_3 ┆  -0.5404 │
-│           unrelated_4 ┆  -0.4757 │
-│           unrelated_5 ┆  -0.7668 │
-│              repeat_1 ┆ -0.07459 │
-│                  var4 ┆   0.7025 │
-│                  var3 ┆  0.01847 │
-│             var4:var3 ┆  -0.9993 │
-│      var4:C(var5)TRUE ┆    4.674 │
-│      var3:C(var5)TRUE ┆ -0.01269 │
-│ var4:var3:C(var5)TRUE ┆ 0.004028 │
-│           _Intercept_ ┆   0.9632 │
+│          var_reg1TRUE ┆     -0.0 │
+│                  var2 ┆    1.381 │
+│           C(var5)TRUE ┆   -1.331 │
+│           unrelated_1 ┆ -0.06996 │
+│           unrelated_2 ┆  -0.0357 │
+│           unrelated_3 ┆  -0.5286 │
+│           unrelated_4 ┆  -0.4791 │
+│           unrelated_5 ┆  -0.7511 │
+│              repeat_1 ┆ -0.06996 │
+│                  var4 ┆   0.7273 │
+│                  var3 ┆  0.01873 │
+│             var4:var3 ┆  -0.9999 │
+│      var4:C(var5)TRUE ┆    4.685 │
+│      var3:C(var5)TRUE ┆ -0.01287 │
+│ var4:var3:C(var5)TRUE ┆ 0.004049 │
+│           _Intercept_ ┆   0.9459 │
 └───────────────────────┴──────────┘
+</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>     error=pmm: donating observed value(s) ['var_reg2'] from 10-nearest matched donors
 </pre>
 </div>
 </div>
@@ -9213,11 +9254,11 @@ R2 = 0.6195
 │ ---          ┆ ---     │
 │ i16          ┆ i8      │
 ╞══════════════╪═════════╡
+│ 3625         ┆ 4       │
+│ 1299         ┆ 3       │
 │ 1702         ┆ 3       │
-│ 2008         ┆ 3       │
-│ 2291         ┆ 3       │
-│ 4208         ┆ 3       │
-│ 4295         ┆ 3       │
+│ 2790         ┆ 3       │
+│ 2949         ┆ 3       │
 └──────────────┴─────────┘
 </pre>
 </div>
@@ -9258,9 +9299,9 @@ R2 = 0.6195
 <pre>┌──────────┬─────────┬──────┬──────────────┬────────┬───────┬──────────────┬─────────────┬─────────────┬─────────────┬─────────────┬─────────────┬─────────────┬─────────────┬─────────────┐
 │ Variable ┆ Imputed ┆    n ┆ n (not null) ┆   mean ┆   std ┆ mean (not 0) ┆ std (not 0) ┆ q10 (not 0) ┆ q25 (not 0) ┆ q50 (not 0) ┆ q75 (not 0) ┆ q90 (not 0) ┆ min (not 0) ┆ max (not 0) │
 ╞══════════╪═════════╪══════╪══════════════╪════════╪═══════╪══════════════╪═════════════╪═════════════╪═════════════╪═════════════╪═════════════╪═════════════╪═════════════╪═════════════╡
-│ var_reg2 ┆         ┆ 6491 ┆         6491 ┆ -4.407 ┆ 13.48 ┆       -4.695 ┆       13.87 ┆      -25.03 ┆      -13.42 ┆      -2.211 ┆       5.784 ┆       11.04 ┆      -55.35 ┆       26.21 │
-│ var_reg2 ┆       0 ┆ 5192 ┆         5192 ┆ -4.358 ┆ 13.42 ┆       -4.634 ┆       13.79 ┆      -24.68 ┆      -13.26 ┆      -2.263 ┆       5.852 ┆       10.99 ┆      -55.35 ┆       26.21 │
-│ var_reg2 ┆       1 ┆ 1299 ┆         1299 ┆ -4.601 ┆ 13.72 ┆        -4.94 ┆       14.16 ┆      -25.79 ┆       -13.8 ┆       -2.07 ┆        5.55 ┆       11.22 ┆      -47.42 ┆       22.69 │
+│ var_reg2 ┆         ┆ 6494 ┆         6494 ┆ -4.419 ┆ 13.45 ┆       -4.693 ┆       13.81 ┆      -24.74 ┆      -13.28 ┆      -2.505 ┆       5.791 ┆       10.99 ┆      -55.35 ┆       26.21 │
+│ var_reg2 ┆       0 ┆ 5194 ┆         5194 ┆ -4.356 ┆ 13.42 ┆       -4.634 ┆       13.79 ┆      -24.68 ┆      -13.26 ┆      -2.263 ┆       5.852 ┆       10.99 ┆      -55.35 ┆       26.21 │
+│ var_reg2 ┆       1 ┆ 1300 ┆         1300 ┆ -4.666 ┆ 13.56 ┆       -4.928 ┆       13.88 ┆      -25.06 ┆      -13.49 ┆      -2.894 ┆       5.505 ┆       11.17 ┆      -47.42 ┆       22.69 │
 └──────────┴─────────┴──────┴──────────────┴────────┴───────┴──────────────┴─────────────┴─────────────┴─────────────┴─────────────┴─────────────┴─────────────┴─────────────┴─────────────┘
 </pre>
 </div>
@@ -9313,13 +9354,13 @@ Final Estimates by Iteration
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>Removing existing directory /home/jrothbaum/Coding/claude_code/survey_kit/.scratch/temp_files/py_srmi_test_regression.srmi/2.srmi.implicate
+<pre>Removing existing directory C:\Users\jonro\OneDrive\Documents\Coding\survey_kit\.scratch\temp_files/py_srmi_test_regression.srmi/2.srmi.implicate
 </pre>
 </div>
 </div>
 </div>
 </div>
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=73216a18">
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=5e8c0e85">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -9347,7 +9388,7 @@ Final Estimates by Iteration
 </div>
 </div>
 </div>
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=900b51e6">
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=cebe8f47">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -9440,9 +9481,9 @@ Look at the imputes
 │  unrelated_4 ┆ 10,000 ┆           0 ┆   0.500655 ┆    0.288698 ┆   0.000133 ┆  0.999972 │
 │  unrelated_5 ┆ 10,000 ┆           0 ┆    0.49876 ┆    0.288979 ┆   0.000071 ┆  0.999867 │
 │     repeat_1 ┆ 10,000 ┆           0 ┆   0.502449 ┆    0.288359 ┆   0.000119 ┆  0.999997 │
-│     var_reg2 ┆ 10,000 ┆           0 ┆  -2.261467 ┆    9.983396 ┆ -55.354108 ┆ 26.213084 │
+│     var_reg2 ┆ 10,000 ┆           0 ┆  -2.246963 ┆    9.922099 ┆ -55.354108 ┆ 26.213084 │
 │         var5 ┆ 10,000 ┆           0 ┆     0.4999 ┆    0.500025 ┆        0.0 ┆       1.0 │
-│     var_reg1 ┆ 10,000 ┆           0 ┆     0.5202 ┆    0.499617 ┆        0.0 ┆       1.0 │
+│     var_reg1 ┆ 10,000 ┆           0 ┆     0.5201 ┆    0.499621 ┆        0.0 ┆       1.0 │
 └──────────────┴────────┴─────────────┴────────────┴─────────────┴────────────┴───────────┘
 </pre>
 </div>
@@ -9467,9 +9508,9 @@ Look at the imputes
 │  unrelated_4 ┆ 10,000 ┆           0 ┆   0.500655 ┆    0.288698 ┆   0.000133 ┆  0.999972 │
 │  unrelated_5 ┆ 10,000 ┆           0 ┆    0.49876 ┆    0.288979 ┆   0.000071 ┆  0.999867 │
 │     repeat_1 ┆ 10,000 ┆           0 ┆   0.502449 ┆    0.288359 ┆   0.000119 ┆  0.999997 │
-│     var_reg2 ┆ 10,000 ┆           0 ┆  -2.260421 ┆    9.942981 ┆ -55.354108 ┆ 26.213084 │
+│     var_reg2 ┆ 10,000 ┆           0 ┆  -2.269353 ┆    9.916197 ┆ -55.354108 ┆ 26.213084 │
 │         var5 ┆ 10,000 ┆           0 ┆     0.4999 ┆    0.500025 ┆        0.0 ┆       1.0 │
-│     var_reg1 ┆ 10,000 ┆           0 ┆     0.5192 ┆    0.499656 ┆        0.0 ┆       1.0 │
+│     var_reg1 ┆ 10,000 ┆           0 ┆     0.5194 ┆    0.499648 ┆        0.0 ┆       1.0 │
 └──────────────┴────────┴─────────────┴────────────┴─────────────┴────────────┴───────────┘
 </pre>
 </div>
@@ -9489,23 +9530,23 @@ Look at the imputes | var_reg1 == 0
 <pre>┌──────────────┬───────┬─────────────┬──────────────┬──────────────┬──────────┬──────────┐
 │     Variable ┆     n ┆ n (missing) ┆         mean ┆          std ┆      min ┆      max │
 ╞══════════════╪═══════╪═════════════╪══════════════╪══════════════╪══════════╪══════════╡
-│ ___rownumber ┆ 4,798 ┆           0 ┆ 5,031.139433 ┆ 2,887.061641 ┆      1.0 ┆  9,997.0 │
-│  _row_index_ ┆ 4,798 ┆           0 ┆ 5,031.139433 ┆ 2,887.061641 ┆      1.0 ┆  9,997.0 │
-│        index ┆ 4,798 ┆           0 ┆ 5,031.139433 ┆ 2,887.061641 ┆      1.0 ┆  9,997.0 │
-│         year ┆ 4,798 ┆           0 ┆ 2,017.997499 ┆     1.420976 ┆  2,016.0 ┆  2,020.0 │
-│        month ┆ 4,798 ┆           0 ┆     6.544393 ┆     3.416353 ┆      1.0 ┆     12.0 │
-│         var2 ┆ 4,798 ┆           0 ┆     4.547311 ┆     3.241086 ┆      0.0 ┆     10.0 │
-│         var3 ┆ 4,798 ┆           0 ┆    24.933722 ┆     13.38264 ┆      0.0 ┆     50.0 │
-│         var4 ┆ 4,798 ┆           0 ┆     0.507924 ┆     0.288873 ┆ 0.000027 ┆ 0.999997 │
-│  unrelated_1 ┆ 4,798 ┆           0 ┆     0.501001 ┆     0.287112 ┆ 0.000119 ┆ 0.999921 │
-│  unrelated_2 ┆ 4,798 ┆           0 ┆     0.500255 ┆     0.286069 ┆ 0.000079 ┆ 0.999528 │
-│  unrelated_3 ┆ 4,798 ┆           0 ┆     0.502664 ┆     0.289248 ┆ 0.000139 ┆  0.99994 │
-│  unrelated_4 ┆ 4,798 ┆           0 ┆     0.502696 ┆     0.289793 ┆ 0.000141 ┆ 0.999906 │
-│  unrelated_5 ┆ 4,798 ┆           0 ┆      0.50261 ┆     0.291771 ┆ 0.000071 ┆  0.99984 │
-│     repeat_1 ┆ 4,798 ┆           0 ┆     0.501001 ┆     0.287112 ┆ 0.000119 ┆ 0.999921 │
-│     var_reg2 ┆ 4,798 ┆           0 ┆          0.0 ┆          0.0 ┆      0.0 ┆      0.0 │
-│         var5 ┆ 4,798 ┆           0 ┆      0.88391 ┆     0.320366 ┆      0.0 ┆      1.0 │
-│     var_reg1 ┆ 4,798 ┆           0 ┆          0.0 ┆          0.0 ┆      0.0 ┆      0.0 │
+│ ___rownumber ┆ 4,799 ┆           0 ┆ 5,038.299229 ┆ 2,889.298096 ┆      1.0 ┆  9,997.0 │
+│  _row_index_ ┆ 4,799 ┆           0 ┆ 5,038.299229 ┆ 2,889.298096 ┆      1.0 ┆  9,997.0 │
+│        index ┆ 4,799 ┆           0 ┆ 5,038.299229 ┆ 2,889.298096 ┆      1.0 ┆  9,997.0 │
+│         year ┆ 4,799 ┆           0 ┆ 2,017.998333 ┆     1.418921 ┆  2,016.0 ┆  2,020.0 │
+│        month ┆ 4,799 ┆           0 ┆     6.542405 ┆     3.413955 ┆      1.0 ┆     12.0 │
+│         var2 ┆ 4,799 ┆           0 ┆     4.562617 ┆     3.237666 ┆      0.0 ┆     10.0 │
+│         var3 ┆ 4,799 ┆           0 ┆    24.898312 ┆    13.384091 ┆      0.0 ┆     50.0 │
+│         var4 ┆ 4,799 ┆           0 ┆     0.508898 ┆     0.288576 ┆ 0.000027 ┆ 0.999997 │
+│  unrelated_1 ┆ 4,799 ┆           0 ┆     0.501877 ┆     0.286643 ┆ 0.000119 ┆ 0.999921 │
+│  unrelated_2 ┆ 4,799 ┆           0 ┆     0.499477 ┆     0.285419 ┆ 0.000079 ┆ 0.999528 │
+│  unrelated_3 ┆ 4,799 ┆           0 ┆     0.501495 ┆     0.289221 ┆ 0.000139 ┆  0.99994 │
+│  unrelated_4 ┆ 4,799 ┆           0 ┆     0.503626 ┆     0.289203 ┆ 0.000348 ┆ 0.999906 │
+│  unrelated_5 ┆ 4,799 ┆           0 ┆     0.500986 ┆     0.291456 ┆ 0.000071 ┆  0.99984 │
+│     repeat_1 ┆ 4,799 ┆           0 ┆     0.501877 ┆     0.286643 ┆ 0.000119 ┆ 0.999921 │
+│     var_reg2 ┆ 4,799 ┆           0 ┆          0.0 ┆          0.0 ┆      0.0 ┆      0.0 │
+│         var5 ┆ 4,799 ┆           0 ┆     0.887477 ┆     0.316042 ┆      0.0 ┆      1.0 │
+│     var_reg1 ┆ 4,799 ┆           0 ┆          0.0 ┆          0.0 ┆      0.0 ┆      0.0 │
 └──────────────┴───────┴─────────────┴──────────────┴──────────────┴──────────┴──────────┘
 </pre>
 </div>
@@ -9516,23 +9557,23 @@ Look at the imputes | var_reg1 == 0
 <pre>┌──────────────┬───────┬─────────────┬──────────────┬──────────────┬──────────┬──────────┐
 │     Variable ┆     n ┆ n (missing) ┆         mean ┆          std ┆      min ┆      max │
 ╞══════════════╪═══════╪═════════════╪══════════════╪══════════════╪══════════╪══════════╡
-│ ___rownumber ┆ 4,808 ┆           0 ┆ 5,037.021839 ┆ 2,887.460297 ┆      1.0 ┆  9,997.0 │
-│  _row_index_ ┆ 4,808 ┆           0 ┆ 5,037.021839 ┆ 2,887.460297 ┆      1.0 ┆  9,997.0 │
-│        index ┆ 4,808 ┆           0 ┆ 5,037.021839 ┆ 2,887.460297 ┆      1.0 ┆  9,997.0 │
-│         year ┆ 4,808 ┆           0 ┆ 2,017.991057 ┆     1.416757 ┆  2,016.0 ┆  2,020.0 │
-│        month ┆ 4,808 ┆           0 ┆     6.550749 ┆     3.414309 ┆      1.0 ┆     12.0 │
-│         var2 ┆ 4,808 ┆           0 ┆     4.551165 ┆     3.245948 ┆      0.0 ┆     10.0 │
-│         var3 ┆ 4,808 ┆           0 ┆    24.909942 ┆    13.393813 ┆      0.0 ┆     50.0 │
-│         var4 ┆ 4,808 ┆           0 ┆     0.508161 ┆      0.28944 ┆ 0.000027 ┆ 0.999997 │
-│  unrelated_1 ┆ 4,808 ┆           0 ┆     0.503974 ┆     0.287243 ┆ 0.000119 ┆ 0.999921 │
-│  unrelated_2 ┆ 4,808 ┆           0 ┆     0.501499 ┆     0.286001 ┆ 0.000079 ┆ 0.999528 │
-│  unrelated_3 ┆ 4,808 ┆           0 ┆     0.501953 ┆     0.288843 ┆ 0.000139 ┆  0.99994 │
-│  unrelated_4 ┆ 4,808 ┆           0 ┆     0.502293 ┆     0.289339 ┆ 0.000141 ┆ 0.999906 │
-│  unrelated_5 ┆ 4,808 ┆           0 ┆      0.50295 ┆     0.291036 ┆ 0.000071 ┆  0.99984 │
-│     repeat_1 ┆ 4,808 ┆           0 ┆     0.503974 ┆     0.287243 ┆ 0.000119 ┆ 0.999921 │
-│     var_reg2 ┆ 4,808 ┆           0 ┆          0.0 ┆          0.0 ┆      0.0 ┆      0.0 │
-│         var5 ┆ 4,808 ┆           0 ┆     0.886647 ┆     0.317056 ┆      0.0 ┆      1.0 │
-│     var_reg1 ┆ 4,808 ┆           0 ┆          0.0 ┆          0.0 ┆      0.0 ┆      0.0 │
+│ ___rownumber ┆ 4,806 ┆           0 ┆  5,035.05722 ┆ 2,887.183498 ┆      1.0 ┆  9,997.0 │
+│  _row_index_ ┆ 4,806 ┆           0 ┆  5,035.05722 ┆ 2,887.183498 ┆      1.0 ┆  9,997.0 │
+│        index ┆ 4,806 ┆           0 ┆  5,035.05722 ┆ 2,887.183498 ┆      1.0 ┆  9,997.0 │
+│         year ┆ 4,806 ┆           0 ┆ 2,017.990221 ┆       1.4169 ┆  2,016.0 ┆  2,020.0 │
+│        month ┆ 4,806 ┆           0 ┆      6.55077 ┆     3.414455 ┆      1.0 ┆     12.0 │
+│         var2 ┆ 4,806 ┆           0 ┆     4.552434 ┆     3.245113 ┆      0.0 ┆     10.0 │
+│         var3 ┆ 4,806 ┆           0 ┆    24.904078 ┆    13.393172 ┆      0.0 ┆     50.0 │
+│         var4 ┆ 4,806 ┆           0 ┆     0.508162 ┆     0.289413 ┆ 0.000027 ┆ 0.999997 │
+│  unrelated_1 ┆ 4,806 ┆           0 ┆     0.504055 ┆     0.287282 ┆ 0.000119 ┆ 0.999921 │
+│  unrelated_2 ┆ 4,806 ┆           0 ┆     0.501535 ┆     0.286096 ┆ 0.000079 ┆ 0.999528 │
+│  unrelated_3 ┆ 4,806 ┆           0 ┆      0.50177 ┆     0.288888 ┆ 0.000139 ┆  0.99994 │
+│  unrelated_4 ┆ 4,806 ┆           0 ┆     0.502307 ┆     0.289378 ┆ 0.000141 ┆ 0.999906 │
+│  unrelated_5 ┆ 4,806 ┆           0 ┆     0.502701 ┆     0.291023 ┆ 0.000071 ┆  0.99984 │
+│     repeat_1 ┆ 4,806 ┆           0 ┆     0.504055 ┆     0.287282 ┆ 0.000119 ┆ 0.999921 │
+│     var_reg2 ┆ 4,806 ┆           0 ┆          0.0 ┆          0.0 ┆      0.0 ┆      0.0 │
+│         var5 ┆ 4,806 ┆           0 ┆     0.887016 ┆     0.316606 ┆      0.0 ┆      1.0 │
+│     var_reg1 ┆ 4,806 ┆           0 ┆          0.0 ┆          0.0 ┆      0.0 ┆      0.0 │
 └──────────────┴───────┴─────────────┴──────────────┴──────────────┴──────────┴──────────┘
 </pre>
 </div>
@@ -9552,23 +9593,23 @@ Look at the imputes | var_reg1 == 1
 <pre>┌──────────────┬───────┬─────────────┬──────────────┬──────────────┬────────────┬───────────┐
 │     Variable ┆     n ┆ n (missing) ┆         mean ┆          std ┆        min ┆       max │
 ╞══════════════╪═══════╪═════════════╪══════════════╪══════════════╪════════════╪═══════════╡
-│ ___rownumber ┆ 5,202 ┆           0 ┆ 4,970.317762 ┆ 2,886.712665 ┆        0.0 ┆   9,999.0 │
-│  _row_index_ ┆ 5,202 ┆           0 ┆ 4,970.317762 ┆ 2,886.712665 ┆        0.0 ┆   9,999.0 │
-│        index ┆ 5,202 ┆           0 ┆ 4,970.317762 ┆ 2,886.712665 ┆        0.0 ┆   9,999.0 │
-│         year ┆ 5,202 ┆           0 ┆ 2,017.973664 ┆     1.411314 ┆    2,016.0 ┆   2,020.0 │
-│        month ┆ 5,202 ┆           0 ┆      6.48539 ┆     3.446724 ┆        1.0 ┆      12.0 │
-│         var2 ┆ 5,202 ┆           0 ┆     5.375625 ┆     3.018753 ┆        0.0 ┆      10.0 │
-│         var3 ┆ 5,202 ┆           0 ┆    25.269512 ┆    15.911008 ┆        0.0 ┆      50.0 │
-│         var4 ┆ 5,202 ┆           0 ┆     0.503582 ┆     0.286936 ┆   0.000104 ┆  0.999885 │
-│  unrelated_1 ┆ 5,202 ┆           0 ┆     0.503784 ┆     0.289526 ┆   0.000248 ┆  0.999997 │
-│  unrelated_2 ┆ 5,202 ┆           0 ┆     0.499966 ┆     0.289105 ┆   0.000049 ┆  0.999539 │
-│  unrelated_3 ┆ 5,202 ┆           0 ┆     0.495958 ┆       0.2883 ┆   0.000129 ┆  0.999622 │
-│  unrelated_4 ┆ 5,202 ┆           0 ┆     0.498773 ┆       0.2877 ┆   0.000133 ┆  0.999972 │
-│  unrelated_5 ┆ 5,202 ┆           0 ┆     0.495209 ┆     0.286362 ┆   0.000181 ┆  0.999867 │
-│     repeat_1 ┆ 5,202 ┆           0 ┆     0.503784 ┆     0.289526 ┆   0.000248 ┆  0.999997 │
-│     var_reg2 ┆ 5,202 ┆           0 ┆    -4.347303 ┆    13.510887 ┆ -55.354108 ┆ 26.213084 │
-│         var5 ┆ 5,202 ┆           0 ┆     0.145713 ┆     0.352852 ┆        0.0 ┆       1.0 │
-│     var_reg1 ┆ 5,202 ┆           0 ┆          1.0 ┆          0.0 ┆        1.0 ┆       1.0 │
+│ ___rownumber ┆ 5,201 ┆           0 ┆ 4,963.699673 ┆ 2,884.492009 ┆        0.0 ┆   9,999.0 │
+│  _row_index_ ┆ 5,201 ┆           0 ┆ 4,963.699673 ┆ 2,884.492009 ┆        0.0 ┆   9,999.0 │
+│        index ┆ 5,201 ┆           0 ┆ 4,963.699673 ┆ 2,884.492009 ┆        0.0 ┆   9,999.0 │
+│         year ┆ 5,201 ┆           0 ┆  2,017.97289 ┆     1.413205 ┆    2,016.0 ┆   2,020.0 │
+│        month ┆ 5,201 ┆           0 ┆     6.487214 ┆     3.448952 ┆        1.0 ┆      12.0 │
+│         var2 ┆ 5,201 ┆           0 ┆     5.361661 ┆     3.025873 ┆        0.0 ┆      10.0 │
+│         var3 ┆ 5,201 ┆           0 ┆     25.30225 ┆    15.909569 ┆        0.0 ┆      50.0 │
+│         var4 ┆ 5,201 ┆           0 ┆     0.502683 ┆     0.287195 ┆   0.000104 ┆  0.999885 │
+│  unrelated_1 ┆ 5,201 ┆           0 ┆     0.502976 ┆      0.28996 ┆   0.000248 ┆  0.999997 │
+│  unrelated_2 ┆ 5,201 ┆           0 ┆     0.500685 ┆     0.289698 ┆   0.000049 ┆  0.999539 │
+│  unrelated_3 ┆ 5,201 ┆           0 ┆     0.497035 ┆     0.288346 ┆   0.000129 ┆  0.999622 │
+│  unrelated_4 ┆ 5,201 ┆           0 ┆     0.497914 ┆     0.288232 ┆   0.000133 ┆  0.999972 │
+│  unrelated_5 ┆ 5,201 ┆           0 ┆     0.496707 ┆     0.286688 ┆   0.000181 ┆  0.999867 │
+│     repeat_1 ┆ 5,201 ┆           0 ┆     0.502976 ┆      0.28996 ┆   0.000248 ┆  0.999997 │
+│     var_reg2 ┆ 5,201 ┆           0 ┆    -4.320253 ┆    13.429273 ┆ -55.354108 ┆ 26.213084 │
+│         var5 ┆ 5,201 ┆           0 ┆      0.14228 ┆     0.349371 ┆        0.0 ┆       1.0 │
+│     var_reg1 ┆ 5,201 ┆           0 ┆          1.0 ┆          0.0 ┆        1.0 ┆       1.0 │
 └──────────────┴───────┴─────────────┴──────────────┴──────────────┴────────────┴───────────┘
 </pre>
 </div>
@@ -9579,23 +9620,23 @@ Look at the imputes | var_reg1 == 1
 <pre>┌──────────────┬───────┬─────────────┬──────────────┬──────────────┬────────────┬───────────┐
 │     Variable ┆     n ┆ n (missing) ┆         mean ┆          std ┆        min ┆       max │
 ╞══════════════╪═══════╪═════════════╪══════════════╪══════════════╪════════════╪═══════════╡
-│ ___rownumber ┆ 5,192 ┆           0 ┆ 4,964.753274 ┆ 2,886.215769 ┆        0.0 ┆   9,999.0 │
-│  _row_index_ ┆ 5,192 ┆           0 ┆ 4,964.753274 ┆ 2,886.215769 ┆        0.0 ┆   9,999.0 │
-│        index ┆ 5,192 ┆           0 ┆ 4,964.753274 ┆ 2,886.215769 ┆        0.0 ┆   9,999.0 │
-│         year ┆ 5,192 ┆           0 ┆ 2,017.979584 ┆     1.415292 ┆    2,016.0 ┆   2,020.0 │
-│        month ┆ 5,192 ┆           0 ┆     6.479391 ┆     3.448546 ┆        1.0 ┆      12.0 │
-│         var2 ┆ 5,192 ┆           0 ┆     5.373652 ┆     3.014225 ┆        0.0 ┆      10.0 │
-│         var3 ┆ 5,192 ┆           0 ┆     25.29218 ┆    15.906281 ┆        0.0 ┆      50.0 │
-│         var4 ┆ 5,192 ┆           0 ┆     0.503355 ┆     0.286399 ┆   0.000104 ┆  0.999885 │
-│  unrelated_1 ┆ 5,192 ┆           0 ┆     0.501036 ┆      0.28941 ┆   0.000248 ┆  0.999997 │
-│  unrelated_2 ┆ 5,192 ┆           0 ┆     0.498814 ┆     0.289168 ┆   0.000049 ┆  0.999539 │
-│  unrelated_3 ┆ 5,192 ┆           0 ┆     0.496603 ┆     0.288688 ┆   0.000129 ┆  0.999622 │
-│  unrelated_4 ┆ 5,192 ┆           0 ┆     0.499139 ┆     0.288123 ┆   0.000133 ┆  0.999972 │
-│  unrelated_5 ┆ 5,192 ┆           0 ┆      0.49488 ┆     0.287035 ┆   0.000181 ┆  0.999867 │
-│     repeat_1 ┆ 5,192 ┆           0 ┆     0.501036 ┆      0.28941 ┆   0.000248 ┆  0.999997 │
-│     var_reg2 ┆ 5,192 ┆           0 ┆    -4.353661 ┆    13.465381 ┆ -55.354108 ┆ 26.213084 │
-│         var5 ┆ 5,192 ┆           0 ┆     0.141757 ┆     0.348834 ┆        0.0 ┆       1.0 │
-│     var_reg1 ┆ 5,192 ┆           0 ┆          1.0 ┆          0.0 ┆        1.0 ┆       1.0 │
+│ ___rownumber ┆ 5,194 ┆           0 ┆  4,966.59896 ┆ 2,886.517115 ┆        0.0 ┆   9,999.0 │
+│  _row_index_ ┆ 5,194 ┆           0 ┆  4,966.59896 ┆ 2,886.517115 ┆        0.0 ┆   9,999.0 │
+│        index ┆ 5,194 ┆           0 ┆  4,966.59896 ┆ 2,886.517115 ┆        0.0 ┆   9,999.0 │
+│         year ┆ 5,194 ┆           0 ┆ 2,017.980362 ┆     1.415166 ┆    2,016.0 ┆   2,020.0 │
+│        month ┆ 5,194 ┆           0 ┆     6.479399 ┆     3.448398 ┆        1.0 ┆      12.0 │
+│         var2 ┆ 5,194 ┆           0 ┆      5.37216 ┆     3.015513 ┆        0.0 ┆      10.0 │
+│         var3 ┆ 5,194 ┆           0 ┆    25.297459 ┆    15.905758 ┆        0.0 ┆      50.0 │
+│         var4 ┆ 5,194 ┆           0 ┆     0.503356 ┆     0.286426 ┆   0.000104 ┆  0.999885 │
+│  unrelated_1 ┆ 5,194 ┆           0 ┆     0.500962 ┆     0.289372 ┆   0.000248 ┆  0.999997 │
+│  unrelated_2 ┆ 5,194 ┆           0 ┆     0.498781 ┆      0.28908 ┆   0.000049 ┆  0.999539 │
+│  unrelated_3 ┆ 5,194 ┆           0 ┆     0.496775 ┆     0.288649 ┆   0.000129 ┆  0.999622 │
+│  unrelated_4 ┆ 5,194 ┆           0 ┆     0.499127 ┆     0.288087 ┆   0.000133 ┆  0.999972 │
+│  unrelated_5 ┆ 5,194 ┆           0 ┆     0.495114 ┆     0.287055 ┆   0.000181 ┆  0.999867 │
+│     repeat_1 ┆ 5,194 ┆           0 ┆     0.500962 ┆     0.289372 ┆   0.000248 ┆  0.999997 │
+│     var_reg2 ┆ 5,194 ┆           0 ┆    -4.369182 ┆    13.422283 ┆ -55.354108 ┆ 26.213084 │
+│         var5 ┆ 5,194 ┆           0 ┆     0.141702 ┆     0.348778 ┆        0.0 ┆       1.0 │
+│     var_reg1 ┆ 5,194 ┆           0 ┆          1.0 ┆          0.0 ┆        1.0 ┆       1.0 │
 └──────────────┴───────┴─────────────┴──────────────┴──────────────┴────────────┴───────────┘
 </pre>
 </div>

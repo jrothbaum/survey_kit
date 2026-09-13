@@ -292,6 +292,8 @@
       
         
       
+        
+      
     
     
     
@@ -630,6 +632,29 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../user-guide/adapters/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Regression Adapters
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
@@ -647,6 +672,8 @@
   
     
     
+      
+        
       
         
       
@@ -1343,6 +1370,29 @@
   
   
     <li class="md-nav__item">
+      <a href="../adapters/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Regression Adapters
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../miscellaneous/" class="md-nav__link">
         
   
@@ -1957,9 +2007,6 @@ bootstrap : SRMI.Bootstrap - enabled / index / where
 defaults : SRMI.Defaults - weight / model / joint / selection / preselection /
     modeltype / parameters / ordered_categorical (fallback values applied to each
     Variable added via AddVariable() when that Variable doesn't specify its own)</p>
-<p>For code still using the pre-refactor flat-kwarg signature (n_implicates=...,
-bayesian_bootstrap=..., parallel_CallInputs=..., etc.), use SRMI.from_legacy(...)
-instead of SRMI(...).</p>
 
 
 <p><span class="doc-section-title">Raises:</span></p>
@@ -3575,10 +3622,10 @@ post_finalize after the last).</p>
 
     <div class="doc doc-contents ">
 
-        <p>Construct a Variable from the pre-refactor flat-kwarg signature.</p>
-<p>Migration aid only - new code should pass sample=Variable.Sample(...),
-transforms=Variable.Transforms(...), predictors=Variable.Predictors(...) directly
-to Variable() instead.</p>
+        <p>Construct a Variable from a flat set of keyword arguments, rather
+than the grouped sample=Variable.Sample(...)/
+transforms=Variable.Transforms(...)/
+predictors=Variable.Predictors(...) form Variable() itself takes.</p>
 
 
     </div>
@@ -5004,19 +5051,16 @@ recipient's own group, by default None.</p>
 
     <div class="doc doc-contents ">
 
-        <p>Convenience builder for what used to be its own modeltype -
-Variable.ModelType.NearestNeighbor (matching directly on raw x
-values, no fitted model at all) was removed: it turned out to
-just be a restricted, worse-behaved case of Regression - fit an
-OLS/Logit on the same predictors, then PMM-match on the fitted
-prediction instead of raw, unweighted, unlearned multivariate
-distance on match_to. A fitted probability/prediction is a more
-principled notion of "similar" than treating every predictor as
-equally informative.</p>
-<p>This function still exists purely for readability/discoverability
-- it just returns Parameters.Regression()'s own dict shape, so
-use it with Variable.ModelType.Regression - there's no dedicated
-NearestNeighbor modeltype to route it to any more.</p>
+        <p>Convenience builder for nearest-neighbor PMM matching, purely for
+readability/discoverability - there's no dedicated
+Variable.ModelType.NearestNeighbor; this just returns
+Parameters.Regression()'s own dict shape, so use it with
+Variable.ModelType.Regression. Matching on a fitted OLS/Logit
+prediction (a principled notion of "similar") is strictly better
+than matching on raw, unweighted, unlearned multivariate distance
+across match_to's predictors directly, so this always routes
+through Regression rather than a distance-based implementation of
+its own.</p>
 
 
 <p><span class="doc-section-title">Parameters:</span></p>
@@ -6746,7 +6790,7 @@ and custom functions to reduce model dimensionality.</p>
 
 
               <details class="quote">
-                <summary>Source code in <code>src/survey_kit/imputation/selection.py</code></summary>
+                <summary>Source code in <code>src\survey_kit\imputation\selection.py</code></summary>
                 <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-18"> 18</a></span>
 <span class="normal"><a href="#__codelineno-0-19"> 19</a></span>
 <span class="normal"><a href="#__codelineno-0-20"> 20</a></span>
@@ -7907,7 +7951,7 @@ and custom functions to reduce model dimensionality.</p>
 
 
               <details class="quote">
-                <summary>Source code in <code>src/survey_kit/imputation/selection.py</code></summary>
+                <summary>Source code in <code>src\survey_kit\imputation\selection.py</code></summary>
                 <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-46"> 46</a></span>
 <span class="normal"><a href="#__codelineno-0-47"> 47</a></span>
 <span class="normal"><a href="#__codelineno-0-48"> 48</a></span>
@@ -8436,7 +8480,7 @@ it weaker (more variables selected).</p>
 
 
             <details class="quote">
-              <summary>Source code in <code>src/survey_kit/imputation/selection.py</code></summary>
+              <summary>Source code in <code>src\survey_kit\imputation\selection.py</code></summary>
               <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-47"> 47</a></span>
 <span class="normal"><a href="#__codelineno-0-48"> 48</a></span>
 <span class="normal"><a href="#__codelineno-0-49"> 49</a></span>
@@ -8764,7 +8808,7 @@ Prevents over-reduction of the feature set.</p>
 
 
             <details class="quote">
-              <summary>Source code in <code>src/survey_kit/imputation/selection.py</code></summary>
+              <summary>Source code in <code>src\survey_kit\imputation\selection.py</code></summary>
               <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-129">129</a></span>
 <span class="normal"><a href="#__codelineno-0-130">130</a></span>
 <span class="normal"><a href="#__codelineno-0-131">131</a></span>
