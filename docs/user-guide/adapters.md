@@ -12,17 +12,17 @@ so every estimator plugs into the same downstream machinery ([`mi_ses_from_funct
 
 ## Why Use It
 
-Writing a delegate function by hand for `mi_ses_from_function` every time you want to fit a model across implicates is repetitive, and easy to get subtly wrong (term-name alignment between `df_estimates`/`df_ses`/`df_vcov`, handling a missing `vcov()` method, converting the data into whatever the underlying package expects). The adapters handle that once, so:
+The adapters handle the fiddly parts of wiring a regression package into `mi_ses_from_function` - term-name alignment between `df_estimates`/`df_ses`/`df_vcov`, a missing `vcov()` method, converting the data into whatever the underlying package expects - so:
 
 - **Any package plugs into MI/replicate-weight machinery identically** - swap `pyfixest_adapter` for `r_feols` for `stata_adapter` without changing anything downstream.
-- **Simple call shape for the common case** - `mi_ses_from_pyfixest.feols(df_implicates=..., fml="y ~ x1 + x2 | firm", ...)`, no boilerplate delegate function.
+- **Simple call shape for the common case** - `mi_ses_from_pyfixest.feols(df_implicates=..., fml="y ~ x1 + x2 | firm", ...)` runs the fit across every implicate and combines the results.
 - **Replicate-weight bootstrapping built in** - pass `replicates=` to run the same command once per replicate weight column and get the SE from the spread across replicates, instead of the package's own `vcov`/`cov_type` - useful when you need SEs computed the same way elsewhere in a project rather than trusting a given package's own variance estimator. The data conversion to whatever the underlying package needs (pandas, an R `data.frame`, a Stata `.dta`) happens once per implicate, not once per replicate.
 - **An escape hatch when you need it** - every language also exposes its underlying primitives (`_r_interop`, `_stata_interop`) for writing a custom delegate when the named adapters don't cover what you need. See [Rolling Your Own](#rolling-your-own) below.
 
 ## Key Features
 
 - **Same shape everywhere** - `(df_estimates, df_ses, df_vcov, df_tidy)` regardless of package.
-- **`mi_ses_from_<package>` shortcuts** - one call combines across implicates via Rubin's rules, no manual delegate wiring.
+- **`mi_ses_from_<package>` shortcuts** - one call combines across implicates via Rubin's rules.
 - **Replicate-weight bootstrapping** - `replicates=` on every `mi_ses_from_*` that has a weight argument to substitute a column into.
 - **No hard dependencies** - none of statsmodels/linearmodels/pyfixest/polars_ds/rpy2/pystata are required by survey_kit itself; each adapter raises a clear, actionable error (with the install command) only if you actually call it without the package installed.
 - **Data conversion caching** - each package's own "already converted, don't redo the work" passthrough (an already-pandas frame, an already-`data.frame` R object, Stata's `reuse_data=`) means repeated calls against the same implicate - the replicate-weight loop being the main case - don't redo an expensive conversion on every call.
