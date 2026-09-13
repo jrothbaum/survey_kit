@@ -208,11 +208,45 @@ class ReplicateStats(Serializable):
         df_ses: IntoFrameT | None = None,
         df_replicates: IntoFrameT | None = None,
         bootstrap: bool = False,
+        df_vcov: IntoFrameT | None = None,
+        df_tidy: IntoFrameT | None = None,
     ):
+        """
+        Parameters
+        ----------
+        df_vcov : IntoFrameT | None, optional
+            Variance-covariance matrix of df_estimates, in long/pairwise form:
+            for each join_on column, two copies suffixed "_1" and "_2" (row
+            term, column term) plus one value column matching the single
+            non-join_on column in df_estimates. Only meaningful when
+            df_estimates has exactly one such column (e.g. a regression
+            coefficient table) - this is how estimators like statsmodels/
+            linearmodels report their coefficient covariance, and is what
+            lets [`MultipleImputation`][survey_kit.statistics.multiple_imputation.MultipleImputation]
+            and `.compare()` compute correct joint standard errors for
+            contrasts between two rows (e.g. two coefficients) of the same
+            fit, instead of assuming independence. Default is None (no
+            covariance information - comparisons between correlated rows of
+            the same fit will raise rather than guess).
+        df_tidy : IntoFrameT | None, optional
+            The underlying package's own native coefficient/summary table
+            for this single fit (whatever columns it naturally has - term,
+            estimate, SE, t/z, p-value, CI, R², ...), held as-is rather than
+            normalized. Purely a per-fit diagnostic snapshot - unlike
+            df_estimates/df_ses/df_vcov, it isn't combined across implicates
+            by [`MultipleImputation`][survey_kit.statistics.multiple_imputation.MultipleImputation]
+            (a single implicate's own t-stats/p-values/R² aren't valid MI
+            inference to begin with, so there's nothing statistically
+            meaningful to combine); each implicate's df_tidy just stays
+            accessible via `mi_result.implicate_stats[i].df_tidy`. Default
+            is None.
+        """
         self.df_estimates = df_estimates
         self.df_ses = df_ses
         self.df_replicates = df_replicates
         self.bootstrap = bootstrap
+        self.df_vcov = df_vcov
+        self.df_tidy = df_tidy
 
     def copy(self) -> ReplicateStats:
         return ReplicateStats(
@@ -220,6 +254,8 @@ class ReplicateStats(Serializable):
             df_ses=self.df_ses,
             df_replicates=self.df_replicates,
             bootstrap=self.bootstrap,
+            df_vcov=self.df_vcov,
+            df_tidy=self.df_tidy,
         )
 
     def _df_ci(self, join_on: list[str], ci_level: float = 0.95):
@@ -247,6 +283,7 @@ class ReplicateStats(Serializable):
                 obj=self, df_name=dfi_name, nw_expr=filter_expr, nw_method="filter"
             )
 
+        _invalidate_extras(self, "filter")
         return self
 
     def select(
@@ -270,6 +307,7 @@ class ReplicateStats(Serializable):
                 nw_expr=cols_keep + replicate_col,
                 nw_method="select",
             )
+        _invalidate_extras(self, "select")
         return self
 
     def with_columns(self, with_expr: nw.Expr | list[nw.Expr]) -> ReplicateStats:
@@ -281,6 +319,7 @@ class ReplicateStats(Serializable):
                 obj=self, df_name=dfi_name, nw_expr=with_expr, nw_method="with_columns"
             )
 
+        _invalidate_extras(self, "with_columns")
         return self
 
     def sort(
@@ -294,6 +333,8 @@ class ReplicateStats(Serializable):
                 obj=self, df_name=dfi_name, nw_expr=sort_expr, nw_method="sort"
             )
 
+        #   Row order in df_vcov is keyed by term names, not positional -
+        #   reordering df_estimates/df_ses doesn't invalidate it.
         return self
 
     def drop(
@@ -307,6 +348,7 @@ class ReplicateStats(Serializable):
                 obj=self, df_name=dfi_name, nw_expr=drop_expr, nw_method="drop"
             )
 
+        _invalidate_extras(self, "drop")
         return self
 
     def rename(self, d_rename: dict[str, str]) -> ReplicateStats:
@@ -318,6 +360,7 @@ class ReplicateStats(Serializable):
                 obj=self, df_name=dfi_name, nw_expr=d_rename, nw_method="rename"
             )
 
+        _invalidate_extras(self, "rename")
         return self
 
     def pipe(self, function: Callable, *args, **kwargs) -> None:
@@ -350,6 +393,7 @@ class ReplicateStats(Serializable):
                     nw.to_native(function(nw.from_native(dfi), *args, **kwargs)),
                 )
 
+        _invalidate_extras(self, "pipe")
         return self
 
     def concat_with(
@@ -394,6 +438,7 @@ class ReplicateStats(Serializable):
                 dfi,
                 _concat_df(df=getattr(self, dfi), df_join=getattr(rs_concat, dfi)),
             )
+        _invalidate_extras(self, "concat_with")
         return self
 
     @property
@@ -955,6 +1000,29 @@ def ses_from_replicates(
     df_estimates = fill_missing(df_estimates, None)
     df_ses = fill_missing(df_ses, None)
     return df_estimates, df_ses
+
+
+def _invalidate_extras(obj, method_name: str) -> None:
+    """
+    df_vcov's rows are pairwise (term_1, term_2), and df_tidy's columns are
+    whatever the source package happens to call them - neither has the
+    "join_on columns + one value column per join_on group" shape every
+    other attribute in _df_attributes has, so neither can be reshaped by
+    the same generic filter/select/rename/... expression. Doing so silently
+    would leave them referencing dropped/renamed terms or stale columns, so
+    drop both instead; callers who need them after a reshape should
+    recompute from the original implicate results.
+    """
+    for attr, reason in (
+        ("df_vcov", "its rows are term-pairs, not join_on groups"),
+        ("df_tidy", "its columns are the source package's own, not join_on-shaped"),
+    ):
+        if getattr(obj, attr, None) is not None:
+            logger.warning(
+                f"{type(obj).__name__}.{method_name}() cannot reshape {attr} "
+                f"({reason}) - dropping it."
+            )
+            setattr(obj, attr, None)
 
 
 def apply_as_attribute(obj, df_name: str, nw_expr, nw_method: str):

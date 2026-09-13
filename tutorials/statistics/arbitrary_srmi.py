@@ -31,12 +31,21 @@ df_weights = bayes_bootstrap(
     initial_weight_index=0,
 ).with_row_index("index")
 
+df_weights2 = bayes_bootstrap(
+    n_rows=n_rows,
+    n_draws=n_replicates + 1,
+    seed=9846489,
+    prefix="weight2_",
+    initial_weight_index=0,
+).with_row_index("index")
 # %%
 logger.info("What's the data look like")
 logger.info("   The SRMI data - both implicates")
 _ = df_implicates.pipe(summary)
 logger.info("   The weights")
 _ = summary(df_weights)
+
+
 
 # %%
 logger.info("To run an arbitrary stat, you need")
@@ -93,6 +102,9 @@ arguments_sc = dict(
 replicates = Replicates(
     weight_stub="weight_", n_replicates=n_replicates, bootstrap=True
 )
+replicates2 = Replicates(
+    weight_stub="weight2_", n_replicates=n_replicates, bootstrap=True
+)
 sc_compare = StatCalculator.from_function(
     run_regression,
     df=join_wrapper(df_implicates[0], df_weights, on=["index"], how="left"),
@@ -122,6 +134,14 @@ arguments_mi = dict(
     replicates=replicates,
 )
 
+arguments_mi2 = dict(
+    delegate=run_regression,
+    arguments=arguments_sc,
+    estimate_ids=["Variable"],
+    replicates=replicates2,
+)
+
+
 mi_results_seq = mi_ses_from_function(
     delegate=StatCalculator.from_function,
     df_implicates=df_implicates,
@@ -150,6 +170,16 @@ mi_results = mi_ses_from_function(
     parallel=True,
 )
 
+
+mi_results2 = mi_ses_from_function(
+    delegate=StatCalculator.from_function,
+    # df_implicates=df_implicates,
+    path_srmi=path_model,
+    df_noimputes=df_weights2,
+    index=["index"],
+    arguments=arguments_mi2,
+    join_on=["Variable"],
+)
 # %%
 logger.info("The results")
 mi_results.print()
@@ -158,5 +188,22 @@ mi_results_seq.print()
 # %%
 logger.info("Compare two sets of results")
 d_comparison = mi_results.compare(mi_results_seq)
+logger.info("seq - parallel")
 d_comparison["difference"].print()
+logger.info("seq/parallel-1")
 d_comparison["ratio"].print()
+
+# %%
+logger.info("Compare two sets of results that are different (different weights)")
+d_comparison = mi_results.compare(mi_results2)
+logger.info("weights 2 - weights")
+d_comparison["difference"].print()
+logger.info("weights 2 /weights-1")
+d_comparison["ratio"].print()
+logger.info("MI p-values (degrees of freedom, t stat, p-value)")
+logger.info(d_comparison["ratio"].df_p.collect())
+
+d_comparison["ratio"].table_of_estimates(
+    estimates_to_show=["estimate","se","p","ci"],
+    display=True
+)

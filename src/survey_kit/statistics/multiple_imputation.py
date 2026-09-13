@@ -5,6 +5,7 @@ import os
 import narwhals as nw
 import narwhals.selectors as cs
 from narwhals.typing import IntoFrameT
+import numpy as np
 import polars as pl
 import polars.selectors as pl_cs
 from pathlib import Path
@@ -26,12 +27,13 @@ from ..utilities.dataframe import (
     columns_from_list,
     _columns_original_order,
     safe_columns,
+    print_longer_table
 )
 
 from ..utilities.rounding import drb_round_table
 from .rounding import Rounding
 from .calculator import StatCalculator, print_se_table
-from .replicates import ReplicateStats, apply_as_attribute
+from .replicates import ReplicateStats, apply_as_attribute, _invalidate_extras
 from .comparisons import ComparisonItem
 import survey_kit.statistics.comparisons as kit_comparisons
 from ..imputation.srmi import SRMI
@@ -43,6 +45,112 @@ from ..orchestration.from_python import FunctionFromPython
 from ..orchestration.callers import run_function_list
 
 from .. import logger, config
+
+
+def _combine_vcov(
+    implicate_stats: list[ReplicateStats],
+    join_on: list[str],
+    df_estimates: IntoFrameT,
+    cols_stats: list[str],
+) -> IntoFrameT | None:
+    """
+    Matrix form of Rubin's rules: combine each implicate's variance-covariance
+    matrix (U_i, the within-implicate covariance of the estimate vector) and
+    the between-implicate covariance of the estimate vectors (B) into
+    T = U + (1 + 1/m)B - the same combining rule as the elementwise diagonal
+    case above, generalized to off-diagonal (cross-term) entries so that
+    contrasts between two rows of the same result (e.g. two coefficients from
+    one regression) get a correct joint standard error instead of one that
+    assumes independence.
+
+    Only supported when df_estimates has exactly one non-join_on column (e.g.
+    a single regression coefficient per term) - no adapter today produces a
+    covariance tensor across both terms and multiple simultaneous statistic
+    columns, and combining that generalizes well beyond what's needed for a
+    coefficient table.
+
+    Returns None if no implicate supplied a df_vcov (the ordinary case).
+    Raises if only some implicates did (an inconsistent delegate).
+    """
+    has_vcov = [imp.df_vcov is not None for imp in implicate_stats]
+    if not any(has_vcov):
+        return None
+    if not all(has_vcov):
+        message = (
+            "Some implicates returned a variance-covariance matrix (df_vcov) "
+            "and some didn't - either every implicate must supply one, or none of them may."
+        )
+        logger.error(message)
+        raise Exception(message)
+
+    if len(cols_stats) != 1:
+        message = (
+            "Combining a variance-covariance matrix across implicates is only "
+            f"supported when df_estimates has exactly one stat column, got {cols_stats}."
+        )
+        logger.error(message)
+        raise Exception(message)
+
+    value_col = cols_stats[0]
+    col_1 = [f"{c}_1" for c in join_on]
+    col_2 = [f"{c}_2" for c in join_on]
+
+    nw_type = NarwhalsType(df_estimates)
+    df_terms = nw_type.to_polars().lazy().select(join_on).collect()
+    n_terms = df_terms.height
+
+    m = len(implicate_stats)
+    q_matrix = np.full((m, n_terms), float("nan"))
+    for i, imp in enumerate(implicate_stats):
+        dfi = (
+            NarwhalsType(imp.df_estimates)
+            .to_polars()
+            .lazy()
+            .select(join_on + [value_col])
+            .collect()
+        )
+        dfi = df_terms.join(dfi, on=join_on, how="left")
+        q_matrix[i, :] = dfi[value_col].to_numpy()
+
+    if n_terms == 1:
+        b_matrix = np.array([[np.var(q_matrix[:, 0], ddof=1)]])
+    else:
+        b_matrix = np.cov(q_matrix, rowvar=False, ddof=1)
+
+    term_rows = df_terms.rows()
+    b_records = []
+    for i in range(n_terms):
+        for j in range(n_terms):
+            record = {}
+            for idx, c in enumerate(join_on):
+                record[f"{c}_1"] = term_rows[i][idx]
+                record[f"{c}_2"] = term_rows[j][idx]
+            record[f"{value_col}__B"] = float(b_matrix[i, j])
+            b_records.append(record)
+    df_B = pl.DataFrame(b_records)
+
+    df_vcov_stacked = NarwhalsType(
+        concat_wrapper([imp.df_vcov for imp in implicate_stats], how="diagonal")
+    ).to_polars()
+
+    df_U = (
+        df_vcov_stacked.lazy()
+        .group_by(col_1 + col_2)
+        .agg(pl.col(value_col).mean())
+        .collect()
+    )
+
+    df_T = (
+        df_U.join(df_B, on=col_1 + col_2, how="left")
+        .with_columns(
+            (
+                pl.col(value_col) + (1 + 1 / m) * pl.col(f"{value_col}__B")
+            ).alias(value_col)
+        )
+        .select(col_1 + col_2 + [value_col])
+    )
+
+    return nw_type.from_polars(df_T)
 
 
 class MultipleImputation(Serializable):
@@ -171,7 +279,23 @@ class MultipleImputation(Serializable):
         df_p: IntoFrameT | None = None,
         df_rate_of_missing_information: IntoFrameT | None = None,
         rounding: Rounding | None = None,
+        df_vcov: IntoFrameT | None = None,
     ):
+        """
+        Parameters
+        ----------
+        df_vcov : IntoFrameT | None, optional
+            Combined variance-covariance matrix across implicates (calculated
+            automatically when every implicate's
+            [`ReplicateStats.df_vcov`][survey_kit.statistics.replicates.ReplicateStats]
+            is populated - e.g. from a delegate that returns
+            `(df_estimates, df_ses, df_vcov)`). Long/pairwise form: join_on
+            columns suffixed "_1"/"_2" plus one value column matching the
+            single stat column in df_estimates. Lets `.compare()` compute a
+            correct joint standard error for a contrast between two rows of
+            this same result instead of assuming independence. Default is
+            None.
+        """
         self.implicate_stats = implicate_stats
 
         if join_on is None:
@@ -184,6 +308,7 @@ class MultipleImputation(Serializable):
         self.df_p = df_p
         self.df_rate_of_missing_information = df_rate_of_missing_information
         self.rounding = rounding
+        self.df_vcov = df_vcov
 
     def copy(self) -> MultipleImputation:
         return MultipleImputation(
@@ -196,6 +321,7 @@ class MultipleImputation(Serializable):
             df_p=self.df_p,
             df_rate_of_missing_information=self.df_rate_of_missing_information,
             rounding=copy(self.rounding),
+            df_vcov=self.df_vcov,
         )
 
     def calculate(self, implicate_name="___implicate___"):
@@ -494,6 +620,13 @@ class MultipleImputation(Serializable):
             self.df_rate_of_missing_information
         )
 
+        self.df_vcov = _combine_vcov(
+            implicate_stats=self.implicate_stats,
+            join_on=self.join_on,
+            df_estimates=self.df_estimates,
+            cols_stats=cols_stats,
+        )
+
     def compare(
         self,
         other: ReplicateStats | MultipleImputation | StatCalculator,
@@ -676,6 +809,7 @@ class MultipleImputation(Serializable):
         variable_prefix: str = "",
         estimate_type_variable_name: str = "Statistic",
         ci_level: float = 0.95,
+        display:bool=False,
     ) -> IntoFrameT:
         """
         Create a formatted table combining different types of estimates.
@@ -702,7 +836,9 @@ class MultipleImputation(Serializable):
             Name for column indicating statistic type. Default is "Statistic".
         ci_level : float, optional
             Confidence level for confidence intervals. Default is 0.95.
-
+        display : bool, optional
+            Print to console?
+            Default is False
         Returns
         -------
         IntoFrameT
@@ -720,9 +856,15 @@ class MultipleImputation(Serializable):
 
         df_ordered = []
         col_sort = "__order_output_table__"
+        #   Rows are diagonal-concatenated below, which scrambles physical
+        #   row order. col_row_index records the original computation order
+        #   (self.join_on's natural sort is alphabetical, not that order) so
+        #   it can be restored afterward. It only needs to be attached once,
+        #   to whichever estimate type is requested first.
+        col_row_index = "___estimate_row_count___"
         for index, esti in enumerate(estimates_to_show):
             if esti.lower() == "estimate":
-                df_ordered.append(
+                native_df = (
                     nw.from_native(self.df_estimates)
                     .with_columns(
                         [
@@ -733,7 +875,7 @@ class MultipleImputation(Serializable):
                     .to_native()
                 )
             elif esti.lower() == "se":
-                df_ordered.append(
+                native_df = (
                     nw.from_native(self.df_ses)
                     .with_columns(
                         [
@@ -744,7 +886,7 @@ class MultipleImputation(Serializable):
                     .to_native()
                 )
             elif esti.lower() == "t":
-                df_ordered.append(
+                native_df = (
                     nw.from_native(self.df_t)
                     .with_columns(
                         [
@@ -782,7 +924,7 @@ class MultipleImputation(Serializable):
                 when_then_censor_absurd_values = []
                 absurd_value_threshold = 1e-10
                 #   I don't want to see p-values below a ridiculously low number
-                for coli in self.df_estimates.columns:
+                for coli in self.df_estimates.collect_schema().names():
                     if coli not in self.join_on:
                         ci = nw.col(coli)
                         when_then_censor_absurd_values.append(
@@ -795,14 +937,14 @@ class MultipleImputation(Serializable):
                             )
                         )
 
-                df_ordered.append(
+                native_df = (
                     nw.from_native(df_p)
                     .with_columns(when_then_censor_absurd_values)
                     .to_native()
                 )
 
             elif esti.lower() == "ci":
-                df_ordered.append(
+                native_df = (
                     nw.from_native(self._df_ci(ci_level=ci_level))
                     .with_columns(
                         [
@@ -827,7 +969,7 @@ class MultipleImputation(Serializable):
                         )
                     )
 
-                df_ordered.append(
+                native_df = (
                     nw.from_native(self.df_df)
                     .with_columns(with_infinites)
                     .with_columns(
@@ -836,16 +978,21 @@ class MultipleImputation(Serializable):
                             nw.lit(esti.lower()).alias(estimate_type_variable_name),
                         ]
                     )
+                    .to_native()
                 )
             else:
                 message = f"{esti} not allowed for estimates_to_show"
                 logger.error(message)
                 raise Exception(message)
 
-        col_row_index = "___estimate_row_count___"
-        df_ordered[0] = (
-            nw.from_native(df_ordered[0]).with_row_index(col_row_index).to_native()
-        )
+            if index == 0:
+                native_df = (
+                    nw.from_native(native_df)
+                    .with_row_index(col_row_index, order_by=self.join_on)
+                    .to_native()
+                )
+
+            df_ordered.append(native_df)
 
         df_display = concat_wrapper(df_ordered, how="diagonal")
 
@@ -872,7 +1019,7 @@ class MultipleImputation(Serializable):
         select_order = sort_vars + [estimate_type_variable_name]
         remaining = []
         rename = {}
-        for coli in df_display.columns:
+        for coli in df_display.collect_schema().names():
             if coli not in select_order and coli != col_sort:
                 if variable_prefix != "":
                     rename[coli] = f"{variable_prefix}{coli}"
@@ -904,7 +1051,14 @@ class MultipleImputation(Serializable):
 
         if len(rename):
             df_display = df_display.rename(rename)
-        return nw_type.from_polars(df_display)
+        df_display = nw_type.from_polars(df_display)
+
+        if display:
+            print_longer_table(df_display)
+
+        return df_display
+
+
 
     def _df_ci(self, ci_level: float = 0.95):
         #   Use scipy to get the t-stat ci multiple
@@ -913,7 +1067,7 @@ class MultipleImputation(Serializable):
 
         nw_type = NarwhalsType(self.df_df)
         dof = (
-            nw_type.to_polars.lazy()
+            nw_type.to_polars().lazy()
             .collect()
             .with_columns(
                 pl_cs.numeric().map_elements(to_ci_multiple, return_dtype=pl.Float64)
@@ -934,7 +1088,7 @@ class MultipleImputation(Serializable):
                     se_np * dof_np,
                     schema={
                         coli: pl.Float64
-                        for coli in safe_columns(dof.select(cs.numeric()))
+                        for coli in safe_columns(dof.select(pl_cs.numeric()))
                     },
                 ),
             ],
@@ -955,6 +1109,7 @@ class MultipleImputation(Serializable):
         for repi in range(0, len(self.implicate_stats)):
             self.implicate_stats[repi].filter(filter_expr)
 
+        _invalidate_extras(self, "filter")
         return self
 
     def select(
@@ -990,6 +1145,7 @@ class MultipleImputation(Serializable):
 
             for repi in range(0, len(self.implicate_stats)):
                 self.implicate_stats[repi].select(cols_keep)
+        _invalidate_extras(self, "select")
         return self
 
     def with_columns(self, with_expr: nw.Expr | list[nw.Expr]) -> MultipleImputation:
@@ -1002,6 +1158,7 @@ class MultipleImputation(Serializable):
 
         for repi in range(0, len(self.implicate_stats)):
             self.implicate_stats[repi].with_columns(with_expr)
+        _invalidate_extras(self, "with_columns")
         return self
 
     def rename(self, d_rename: dict[str, str]) -> MultipleImputation:
@@ -1015,6 +1172,7 @@ class MultipleImputation(Serializable):
         for repi in range(0, len(self.implicate_stats)):
             self.implicate_stats[repi].rename(d_rename)
 
+        _invalidate_extras(self, "rename")
         return self
 
     def scale_by(
@@ -1061,6 +1219,7 @@ class MultipleImputation(Serializable):
         for repi in range(0, len(self.implicate_stats)):
             self.implicate_stats[repi].pipe(function, *args, **kwargs)
 
+        _invalidate_extras(self, "pipe")
         return self
 
     def concat_with(
@@ -1112,6 +1271,7 @@ class MultipleImputation(Serializable):
                 join_on_concat=mi_concat.join_on,
             )
 
+        _invalidate_extras(self, "concat_with")
         return self
 
     def sort(
@@ -1140,6 +1300,7 @@ class MultipleImputation(Serializable):
         for repi in range(0, len(self.implicate_stats)):
             self.implicate_stats[repi].drop(drop_expr)
 
+        _invalidate_extras(self, "drop")
         return self
 
     # def reshape_groups_wide_long(self,
@@ -1375,28 +1536,33 @@ def mi_ses_from_function(
     >>> print("Degrees of freedom:", mi_results.df_df)
     >>> print("Missing information rate:", mi_results.df_rate_of_missing_information)
 
-    With a custom analysis function:
+    With a custom analysis function - any delegate returning
+    ``(df_estimates, df_ses)`` (or a third item, ``df_vcov``, see Notes) is
+    combined via Rubin's rules exactly like the StatCalculator case above,
+    with no dependency on StatCalculator/ReplicateStats at all:
 
-    >>> def custom_analysis(df, weight="", var="income"):
-    ...     '''Custom function returning estimates'''
-    ...     import polars as pl
+    >>> import polars as pl
+    >>> import statsmodels.formula.api as smf
+    >>>
+    >>> def regression_analysis(df, weight="", formula="income ~ age"):
+    ...     '''Fit a (weighted) OLS and return its coefficient table'''
+    ...     model = smf.wls(formula, data=df, weights=df[weight]) if weight else smf.ols(formula, data=df)
+    ...     results = model.fit(cov_type="HC3")
     ...
-    ...     if weight:
-    ...         mean_est = (df[var] * df[weight]).sum() / df[weight].sum()
-    ...     else:
-    ...         mean_est = df[var].mean()
-    ...
-    ...     return pl.DataFrame({
-    ...         "Variable": [var],
-    ...         "estimate": [mean_est]
-    ...     })
+    ...     df_estimates = pl.DataFrame({"Variable": results.params.index, "estimate": results.params.values})
+    ...     df_ses = pl.DataFrame({"Variable": results.bse.index, "estimate": results.bse.values})
+    ...     return (df_estimates, df_ses)
     >>>
     >>> mi_custom = mi_ses_from_function(
-    ...     delegate=custom_analysis,
+    ...     delegate=regression_analysis,
     ...     df_implicates=srmi.df_implicates,
-    ...     arguments={"weight": "survey_weight", "var": "income"},
+    ...     arguments={"weight": "survey_weight", "formula": "income ~ age"},
     ...     join_on=["Variable"]
     ... )
+
+    See [`survey_kit.statistics.adapters`][survey_kit.statistics.adapters] for
+    ready-made versions of this (statsmodels, linearmodels, polars_ds) that
+    also populate ``df_vcov``.
 
     Parallel processing for faster computation:
 
@@ -1420,11 +1586,17 @@ def mi_ses_from_function(
     3. Combine using Rubin's rules for MI inference
     4. Calculate degrees of freedom and missing information rates
 
-    For delegate functions that return tuples/lists, expects:
-    - Item 0: estimates dataframe
-    - Item 1: standard errors dataframe
-    - Item 2: replicate estimates (optional)
-    - Item 3: bootstrap flag (optional)
+    For delegate functions that return a tuple/list, expects either:
+    - (df_estimates, df_ses), or
+    - (df_estimates, df_ses, df_vcov) - df_vcov is the per-implicate
+      variance-covariance matrix (long/pairwise form: join_on columns
+      suffixed "_1"/"_2" plus one value column matching the single stat
+      column in df_estimates), combined across implicates via the matrix
+      form of Rubin's rules and stored as the resulting
+      [`MultipleImputation.df_vcov`][survey_kit.statistics.multiple_imputation.MultipleImputation].
+      Needed for `.compare()`/contrasts between two rows of the same result
+      to get a correct joint standard error instead of assuming
+      independence; pass None here (or omit the item) if unavailable.
 
     See Also
     --------
@@ -1641,28 +1813,40 @@ def _mi_ses_from_function_one_implicate(
         )
 
     elif type(out) is list or type(out) is tuple:
-        #   Expects item 0 to be estimates
-        #           item 1 to be ses
-        #           item 2 to be replicates (if there)
-        #           item 4 to be bootstrap dummy
+        #   Generic delegate contract: (df_estimates, df_ses), optionally
+        #   followed by df_vcov and/or df_tidy - either or both may be None
+        #   so adapters can always return a uniform-length tuple whether or
+        #   not their underlying package computes a covariance matrix.
+        #   df_tidy is the package's own native coefficient/summary table
+        #   for this implicate, held as-is on the resulting ReplicateStats
+        #   (see its docstring) - never combined across implicates.
+        if len(out) not in (2, 3, 4):
+            message = (
+                f"delegate returned a {type(out).__name__} of length {len(out)}; "
+                "expected (df_estimates, df_ses[, df_vcov[, df_tidy]])."
+            )
+            logger.error(message)
+            raise Exception(message)
+
         df_estimates = out[0]
         df_ses = out[1]
+        df_vcov = out[2] if len(out) >= 3 else None
+        df_tidy = out[3] if len(out) >= 4 else None
 
-        if len(out) >= 3:
-            df_replicates = out[2]
-        else:
-            df_replicates = None
-
-        if len(out) >= 4:
-            bootstrap = out[3]
-        else:
-            bootstrap = False
+        for name, dfi in (("df_estimates", df_estimates), ("df_ses", df_ses)):
+            missing = [c for c in join_on if c not in safe_columns(dfi)]
+            if missing:
+                message = f"delegate's {name} is missing join_on column(s) {missing}"
+                logger.error(message)
+                raise Exception(message)
 
         imp_statsi = ReplicateStats(
             df_estimates=df_estimates,
             df_ses=df_ses,
-            df_replicates=df_replicates,
-            bootstrap=bootstrap,
+            df_replicates=None,
+            bootstrap=False,
+            df_vcov=df_vcov,
+            df_tidy=df_tidy,
         )
 
     if path_save != "":

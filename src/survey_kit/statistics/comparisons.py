@@ -4,6 +4,7 @@ from copy import deepcopy
 
 import narwhals as nw
 import narwhals.selectors as cs
+import polars as pl
 from narwhals.typing import IntoFrameT
 
 from ..utilities.inputs import list_input
@@ -203,19 +204,45 @@ def compare(
 
         statsi_2 = _comparison_item(stat_item=stats2, implicate=i)
 
-        comparisons.append(
-            _compare_one_implicate(
-                replicate1=statsi_1,
-                replicate2=statsi_2,
-                join_on=join_on,
-                difference=difference,
-                ratio=ratio,
-                ratio_minus_1=ratio_minus_1,
-                replicate_name=replicate_name,
-                compare_list_variables=compare_list_variables,
-                compare_list_columns=compare_list_columns,
+        has_replicates1 = getattr(statsi_1, "df_replicates", None) is not None
+        has_replicates2 = getattr(statsi_2, "df_replicates", None) is not None
+
+        if has_replicates1 != has_replicates2:
+            message = (
+                "Cannot compare results where one has replicate weights "
+                "(df_replicates) and the other doesn't - both sides must use "
+                "the same variance estimation method."
             )
-        )
+            logger.error(message)
+            raise Exception(message)
+
+        if has_replicates1:
+            comparisons.append(
+                _compare_one_implicate(
+                    replicate1=statsi_1,
+                    replicate2=statsi_2,
+                    join_on=join_on,
+                    difference=difference,
+                    ratio=ratio,
+                    ratio_minus_1=ratio_minus_1,
+                    replicate_name=replicate_name,
+                    compare_list_variables=compare_list_variables,
+                    compare_list_columns=compare_list_columns,
+                )
+            )
+        else:
+            comparisons.append(
+                _compare_one_implicate_generic(
+                    replicate1=statsi_1,
+                    replicate2=statsi_2,
+                    join_on=join_on,
+                    difference=difference,
+                    ratio=ratio,
+                    ratio_minus_1=ratio_minus_1,
+                    compare_list_variables=compare_list_variables,
+                    compare_list_columns=compare_list_columns,
+                )
+            )
     output = {}
     if len(comparisons):
         implicate_stats_difference = []
@@ -356,6 +383,225 @@ def _compare_one_implicate(
     )
 
     return comparison
+
+
+def _single_stat_column(df: pl.DataFrame, join_on: list[str]) -> str:
+    cols = [c for c in df.columns if c not in join_on]
+    if len(cols) != 1:
+        message = (
+            "Comparing results that have no replicate weights (df_replicates) "
+            f"only supports a single stat column, got {cols}."
+        )
+        logger.error(message)
+        raise Exception(message)
+    return cols[0]
+
+
+def _matching_row(df: pl.DataFrame, column: str, value) -> dict:
+    matched = df.filter(pl.col(column) == value)
+    if matched.height == 0:
+        message = f"No row found where {column} == {value!r}"
+        logger.error(message)
+        raise Exception(message)
+    return matched.row(0, named=True)
+
+
+def _vcov_lookup(
+    df_vcov: IntoFrameT | None,
+    join_on: list[str],
+    column: str,
+    value1,
+    value2,
+) -> float | None:
+    """
+    Look up Cov(value1, value2) from a df_vcov table (long/pairwise form,
+    see MultipleImputation.df_vcov). Only meaningful when the comparison is
+    keyed by the object's single join_on column, since df_vcov's rows are
+    keyed by join_on, not by an arbitrary ComparisonItem.Variable.column.
+    Returns None (not calculable) rather than guessing in every other case.
+    """
+    if df_vcov is None or len(join_on) != 1 or column != join_on[0]:
+        return None
+
+    df_vcov = NarwhalsType(df_vcov).to_polars().lazy().collect()
+    col_1, col_2 = f"{join_on[0]}_1", f"{join_on[0]}_2"
+    value_col = [c for c in df_vcov.columns if c not in (col_1, col_2)][0]
+
+    matched = df_vcov.filter((pl.col(col_1) == value1) & (pl.col(col_2) == value2))
+    if matched.height == 0:
+        return None
+    return matched.row(0, named=True)[value_col]
+
+
+def _compare_one_implicate_generic(
+    replicate1,
+    replicate2,
+    join_on: list[str],
+    difference: bool = True,
+    ratio: bool = True,
+    ratio_minus_1: bool = True,
+    compare_list_variables: list[ComparisonItem.Variable] | None = None,
+    compare_list_columns: list[ComparisonItem.Column] | None = None,
+) -> dict[str, IntoFrameT]:
+    """
+    Compare two results that have no replicate weights (df_replicates) - e.g.
+    generic delegate output combined via Rubin's rules only. Standard errors
+    for the difference/ratio are computed by classical propagation
+    (Var(diff) = Var(a) + Var(b) - 2 Cov(a,b), and the analogous delta-method
+    formula for a ratio) instead of by resampling.
+
+    Cov(a,b) is only nonzero when both values come from the SAME underlying
+    result (replicate1 is replicate2 - e.g. `mi.compare(mi, ...)` comparing
+    two rows/coefficients of one fit) and that result has a df_vcov to look
+    the covariance up in; otherwise the two values are treated as
+    independent, which is the standard (and only available) assumption when
+    comparing across two separately-estimated results. Raises when
+    independence can't be safely assumed (same source, different rows) and
+    no covariance information is available.
+    """
+    if compare_list_columns:
+        message = (
+            "compare_list_columns is not supported when comparing results "
+            "that have no replicate weights (df_replicates) - only a plain "
+            "row-by-row compare() or compare_list_variables is supported here."
+        )
+        logger.error(message)
+        raise Exception(message)
+
+    df1_est = NarwhalsType(replicate1.df_estimates).to_polars().lazy().collect()
+    df2_est = NarwhalsType(replicate2.df_estimates).to_polars().lazy().collect()
+    df1_ses = NarwhalsType(replicate1.df_ses).to_polars().lazy().collect()
+    df2_ses = NarwhalsType(replicate2.df_ses).to_polars().lazy().collect()
+
+    value_col1 = _single_stat_column(df1_est, join_on)
+    value_col2 = _single_stat_column(df2_est, join_on)
+
+    same_source = replicate1 is replicate2
+    compare_list_variables = list_input(compare_list_variables)
+
+    if compare_list_variables:
+        if len(join_on) != 1:
+            message = (
+                "compare_list_variables for results without replicate weights "
+                "only supports a single join_on column."
+            )
+            logger.error(message)
+            raise Exception(message)
+
+        rows = []
+        for comparei in compare_list_variables:
+            col = comparei.column
+            name = comparei.name if comparei.name else f"{comparei.value1}_vs_{comparei.value2}"
+
+            est1 = _matching_row(df1_est, col, comparei.value1)[value_col1]
+            est2 = _matching_row(df2_est, col, comparei.value2)[value_col2]
+            se1 = _matching_row(df1_ses, col, comparei.value1)[value_col1]
+            se2 = _matching_row(df2_ses, col, comparei.value2)[value_col2]
+
+            cov = 0.0
+            if same_source:
+                if comparei.value1 == comparei.value2:
+                    #   Same row compared to itself - perfectly correlated.
+                    cov = se1**2
+                else:
+                    looked_up = _vcov_lookup(
+                        replicate1.df_vcov,
+                        join_on,
+                        col,
+                        comparei.value1,
+                        comparei.value2,
+                    )
+                    if looked_up is None:
+                        message = (
+                            f"Cannot compute a joint standard error between "
+                            f"'{comparei.value1}' and '{comparei.value2}' from the "
+                            "same result without a variance-covariance matrix "
+                            "(df_vcov) or replicate weights (df_replicates) - "
+                            "independence can't be assumed within the same fit."
+                        )
+                        logger.error(message)
+                        raise Exception(message)
+                    cov = looked_up
+
+            rows.append(
+                {
+                    join_on[0]: name,
+                    "___est1___": est1,
+                    "___est2___": est2,
+                    "___se1___": se1,
+                    "___se2___": se2,
+                    "___cov___": cov,
+                }
+            )
+        merged = pl.DataFrame(rows)
+    else:
+        if same_source:
+            message = (
+                "A plain row-by-row compare() of a result against itself "
+                "would compare correlated rows without a covariance lookup - "
+                "use compare_list_variables instead, which can use df_vcov."
+            )
+            logger.error(message)
+            raise Exception(message)
+
+        merged = (
+            df1_est.rename({value_col1: "___est1___"})
+            .join(
+                df2_est.rename({value_col2: "___est2___"}), on=join_on, how="inner"
+            )
+            .join(
+                df1_ses.rename({value_col1: "___se1___"}), on=join_on, how="inner"
+            )
+            .join(
+                df2_ses.rename({value_col2: "___se2___"}), on=join_on, how="inner"
+            )
+            .with_columns(pl.lit(0.0).alias("___cov___"))
+        )
+
+    outputs = {}
+    c_est1 = pl.col("___est1___")
+    c_est2 = pl.col("___est2___")
+    c_se1 = pl.col("___se1___")
+    c_se2 = pl.col("___se2___")
+    c_cov = pl.col("___cov___")
+
+    if difference:
+        df_diff = merged.with_columns(
+            [
+                (c_est2 - c_est1).alias(value_col1),
+                (c_se1**2 + c_se2**2 - 2 * c_cov).sqrt().alias("___diff_se___"),
+            ]
+        )
+        outputs["difference_estimates"] = df_diff.select(join_on + [value_col1])
+        outputs["difference_ses"] = df_diff.select(
+            join_on + [pl.col("___diff_se___").alias(value_col1)]
+        )
+        outputs["difference_replicates"] = None
+
+    if ratio:
+        ratio_expr = c_est2 / c_est1
+        if ratio_minus_1:
+            ratio_expr = ratio_expr - 1
+        #   Delta method: Var(b/a) = (b/a^2)^2 Var(a) + (1/a)^2 Var(b) - 2(b/a^3)Cov(a,b)
+        var_ratio = (
+            (c_est2 / c_est1**2) ** 2 * c_se1**2
+            + (1 / c_est1) ** 2 * c_se2**2
+            - 2 * (c_est2 / c_est1**3) * c_cov
+        )
+        df_ratio = merged.with_columns(
+            [
+                ratio_expr.alias(value_col1),
+                var_ratio.sqrt().alias("___ratio_se___"),
+            ]
+        )
+        outputs["ratio_estimates"] = df_ratio.select(join_on + [value_col1])
+        outputs["ratio_ses"] = df_ratio.select(
+            join_on + [pl.col("___ratio_se___").alias(value_col1)]
+        )
+        outputs["ratio_replicates"] = None
+
+    outputs["bootstrap"] = False
+    return outputs
 
 
 def process_compare_lists(
