@@ -3,7 +3,7 @@
 <html lang="en">
 <head><meta charset="utf-8"/>
 <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
-<title>simple_model_semicontinuous</title><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.1.10/require.min.js"></script>
+<title>sample_data</title><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.1.10/require.min.js"></script>
 <style type="text/css">
     pre { line-height: 125%; }
 td.linenos .normal { color: inherit; background-color: transparent; padding-left: 5px; padding-right: 5px; }
@@ -7510,7 +7510,7 @@ a.anchor-link {
 </style>
 <!-- End of mermaid configuration --></head>
 <body class="jp-Notebook" data-jp-theme-light="true" data-jp-theme-name="JupyterLab Light">
-<main><div class="jp-Cell jp-CodeCell jp-Notebook-cell jp-mod-noOutputs" id="cell-id=42b87cd7">
+<main><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=54e80880">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -7518,19 +7518,33 @@ a.anchor-link {
 <div class="jp-InputPrompt jp-InputArea-prompt">In [1]:</div>
 <div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
 <div class="cm-editor cm-s-jupyter">
-<div class="highlight hl-ipython3"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
-<span class="kn">import</span><span class="w"> </span><span class="nn">narwhals</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">nw</span>
-<span class="kn">import</span><span class="w"> </span><span class="nn">polars</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pl</span>
+<div class="highlight hl-ipython3"><pre><span></span><span class="sd">"""</span>
+<span class="sd">Shared synthetic multiple-imputation data for the adapter tutorials</span>
+<span class="sd">(basic_r.py, basic_stata.py, basic_python_adapters.py, ...) - kept out of</span>
+<span class="sd">those files so they can focus on the adapter calls themselves rather than</span>
+<span class="sd">on how the sample data got built.</span>
 
-<span class="kn">from</span><span class="w"> </span><span class="nn">survey_kit.imputation.srmi</span><span class="w"> </span><span class="kn">import</span> <span class="n">SRMI</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">survey_kit.utilities.dataframe</span><span class="w"> </span><span class="kn">import</span> <span class="n">summary</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">survey_kit</span><span class="w"> </span><span class="kn">import</span> <span class="n">logger</span><span class="p">,</span> <span class="n">config</span>
+<span class="sd">Run this file directly to see exactly what it generates:</span>
+<span class="sd">    python sample_data.py</span>
+<span class="sd">"""</span>
 </pre></div>
 </div>
 </div>
 </div>
 </div>
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell jp-mod-noOutputs" id="cell-id=20f5cf95">
+<div class="jp-Cell-outputWrapper">
+<div class="jp-Collapser jp-OutputCollapser jp-Cell-outputCollapser">
+</div>
+<div class="jp-OutputArea jp-Cell-outputArea">
+<div class="jp-OutputArea-child jp-OutputArea-executeResult">
+<div class="jp-OutputPrompt jp-OutputArea-prompt">Out[1]:</div>
+<div class="jp-RenderedText jp-OutputArea-output jp-OutputArea-executeResult" data-mime-type="text/plain" tabindex="0">
+<pre>'\nShared synthetic multiple-imputation data for the adapter tutorials\n(basic_r.py, basic_stata.py, basic_python_adapters.py, ...) - kept out of\nthose files so they can focus on the adapter calls themselves rather than\non how the sample data got built.\n\nRun this file directly to see exactly what it generates:\n    python sample_data.py\n'</pre>
+</div>
+</div>
+</div>
+</div>
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell jp-mod-noOutputs" id="cell-id=b5b2eff5">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -7538,49 +7552,13 @@ a.anchor-link {
 <div class="jp-InputPrompt jp-InputArea-prompt">In [2]:</div>
 <div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
 <div class="cm-editor cm-s-jupyter">
-<div class="highlight hl-ipython3"><pre><span></span><span class="c1"># A semicontinuous ("two-part"/hurdle) variable: most people have $0 of</span>
-<span class="c1"># self-employment income (they don't have any), and everyone else has some</span>
-<span class="c1"># genuinely continuous positive amount. Modeling that as one plain</span>
-<span class="c1"># continuous variable fights itself - the "is it zero" and "how much, given</span>
-<span class="c1"># it's not zero" questions are really two different models.</span>
-
-<span class="n">n_rows</span> <span class="o">=</span> <span class="mi">4_000</span>
-<span class="n">rng</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">default_rng</span><span class="p">(</span><span class="mi">20260913</span><span class="p">)</span>
-
-<span class="n">x1</span> <span class="o">=</span> <span class="n">rng</span><span class="o">.</span><span class="n">normal</span><span class="p">(</span><span class="n">size</span><span class="o">=</span><span class="n">n_rows</span><span class="p">)</span>
-
-<span class="n">has_self_employment_income</span> <span class="o">=</span> <span class="p">(</span><span class="n">rng</span><span class="o">.</span><span class="n">normal</span><span class="p">(</span><span class="n">size</span><span class="o">=</span><span class="n">n_rows</span><span class="p">)</span> <span class="o">+</span> <span class="mf">0.4</span> <span class="o">*</span> <span class="n">x1</span> <span class="o">&gt;</span> <span class="mf">0.8</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">int</span><span class="p">)</span>
-<span class="n">self_employment_income</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span>
-    <span class="n">has_self_employment_income</span> <span class="o">==</span> <span class="mi">1</span><span class="p">,</span>
-    <span class="mi">15_000</span> <span class="o">+</span> <span class="mi">6_000</span> <span class="o">*</span> <span class="n">x1</span> <span class="o">+</span> <span class="n">rng</span><span class="o">.</span><span class="n">normal</span><span class="p">(</span><span class="n">scale</span><span class="o">=</span><span class="mi">4_000</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="n">n_rows</span><span class="p">),</span>
-    <span class="mf">0.0</span><span class="p">,</span>
-<span class="p">)</span>
-
-<span class="n">df</span> <span class="o">=</span> <span class="n">pl</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span>
-    <span class="nb">dict</span><span class="p">(</span>
-        <span class="n">person_id</span><span class="o">=</span><span class="nb">range</span><span class="p">(</span><span class="n">n_rows</span><span class="p">),</span>
-        <span class="n">x1</span><span class="o">=</span><span class="n">x1</span><span class="p">,</span>
-        <span class="n">has_self_employment_income</span><span class="o">=</span><span class="n">has_self_employment_income</span><span class="p">,</span>
-        <span class="n">self_employment_income</span><span class="o">=</span><span class="n">self_employment_income</span><span class="p">,</span>
-    <span class="p">)</span>
-<span class="p">)</span>
-
-<span class="c1">#   Only the dollar amount has missingness here - the yes/no flag is fully</span>
-<span class="c1">#       observed, a common real-world pattern (people usually answer "do</span>
-<span class="c1">#       you have this income source" even when they skip the amount)</span>
-<span class="n">missing_amount</span> <span class="o">=</span> <span class="n">rng</span><span class="o">.</span><span class="n">random</span><span class="p">(</span><span class="n">n_rows</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mf">0.2</span>
-<span class="n">df</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">with_columns</span><span class="p">(</span>
-    <span class="n">pl</span><span class="o">.</span><span class="n">when</span><span class="p">(</span><span class="n">pl</span><span class="o">.</span><span class="n">Series</span><span class="p">(</span><span class="n">missing_amount</span><span class="p">))</span>
-    <span class="o">.</span><span class="n">then</span><span class="p">(</span><span class="kc">None</span><span class="p">)</span>
-    <span class="o">.</span><span class="n">otherwise</span><span class="p">(</span><span class="n">pl</span><span class="o">.</span><span class="n">col</span><span class="p">(</span><span class="s2">"self_employment_income"</span><span class="p">))</span>
-    <span class="o">.</span><span class="n">alias</span><span class="p">(</span><span class="s2">"self_employment_income"</span><span class="p">)</span>
-<span class="p">)</span>
+<div class="highlight hl-ipython3"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
 </pre></div>
 </div>
 </div>
 </div>
 </div>
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=901da54e">
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell jp-mod-noOutputs" id="cell-id=799142c9">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -7588,66 +7566,14 @@ a.anchor-link {
 <div class="jp-InputPrompt jp-InputArea-prompt">In [3]:</div>
 <div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
 <div class="cm-editor cm-s-jupyter">
-<div class="highlight hl-ipython3"><pre><span></span><span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span>
-    <span class="s2">"yn_pairs={value_var: yn_var} routes self_employment_income through a proper "</span>
-    <span class="s2">"two-part model: has_self_employment_income gates it, and only the "</span>
-    <span class="s2">"has_self_employment_income==True population gets a real continuous model fit"</span>
-<span class="p">)</span>
-
-<span class="n">srmi</span> <span class="o">=</span> <span class="n">SRMI</span><span class="o">.</span><span class="n">simple_model</span><span class="p">(</span>
-    <span class="n">df</span><span class="o">=</span><span class="n">df</span><span class="p">,</span>
-    <span class="n">index</span><span class="o">=</span><span class="s2">"person_id"</span><span class="p">,</span>
-    <span class="n">yn_pairs</span><span class="o">=</span><span class="p">{</span><span class="s2">"self_employment_income"</span><span class="p">:</span> <span class="s2">"has_self_employment_income"</span><span class="p">},</span>
-    <span class="n">replication</span><span class="o">=</span><span class="n">SRMI</span><span class="o">.</span><span class="n">Replication</span><span class="p">(</span><span class="n">n_implicates</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">n_iterations</span><span class="o">=</span><span class="mi">2</span><span class="p">),</span>
-    <span class="n">parallel</span><span class="o">=</span><span class="n">SRMI</span><span class="o">.</span><span class="n">Parallel</span><span class="p">(</span><span class="n">enabled</span><span class="o">=</span><span class="kc">False</span><span class="p">),</span>
-    <span class="n">bootstrap</span><span class="o">=</span><span class="n">SRMI</span><span class="o">.</span><span class="n">Bootstrap</span><span class="p">(</span><span class="n">enabled</span><span class="o">=</span><span class="kc">True</span><span class="p">),</span>
-    <span class="n">storage</span><span class="o">=</span><span class="n">SRMI</span><span class="o">.</span><span class="n">Storage</span><span class="p">(</span>
-        <span class="n">path_model</span><span class="o">=</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">config</span><span class="o">.</span><span class="n">path_temp_files</span><span class="si">}</span><span class="s2">/tutorial_simple_model_semicontinuous"</span><span class="p">,</span>
-        <span class="n">force_start</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
-    <span class="p">),</span>
-<span class="p">)</span>
-
-<span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Built variables: </span><span class="si">{</span><span class="p">[</span><span class="n">v</span><span class="o">.</span><span class="n">impute_var</span><span class="w"> </span><span class="k">for</span><span class="w"> </span><span class="n">v</span><span class="w"> </span><span class="ow">in</span><span class="w"> </span><span class="n">srmi</span><span class="o">.</span><span class="n">variables</span><span class="p">]</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+<div class="highlight hl-ipython3"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">polars</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pl</span>
 </pre></div>
 </div>
 </div>
 </div>
 </div>
-<div class="jp-Cell-outputWrapper">
-<div class="jp-Collapser jp-OutputCollapser jp-Cell-outputCollapser">
-</div>
-<div class="jp-OutputArea jp-Cell-outputArea">
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>yn_pairs={value_var: yn_var} routes self_employment_income through a proper two-part model: has_self_employment_income gates it, and only the has_self_employment_income==True population gets a real continuous model fit
-</pre>
-</div>
-</div>
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>auto_detect: 'self_employment_income' (yn='has_self_employment_income') -&gt; class=continuous, modeltype=LightGBM, predictors=['x1', 'has_self_employment_income']
-</pre>
-</div>
-</div>
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>Removing existing directory C:\Users\jonro\OneDrive\Documents\Coding\survey_kit\.scratch\temp_files/tutorial_simple_model_semicontinuous.srmi
-</pre>
-</div>
-</div>
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>Built variables: ['self_employment_income']
-</pre>
-</div>
-</div>
-</div>
-</div>
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=dfa8a7ad">
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell jp-mod-noOutputs" id="cell-id=e78726d5">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -7655,982 +7581,14 @@ a.anchor-link {
 <div class="jp-InputPrompt jp-InputArea-prompt">In [4]:</div>
 <div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
 <div class="cm-editor cm-s-jupyter">
-<div class="highlight hl-ipython3"><pre><span></span><span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">"Run it"</span><span class="p">)</span>
-<span class="n">srmi</span><span class="o">.</span><span class="n">run</span><span class="p">()</span>
+<div class="highlight hl-ipython3"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">survey_kit</span><span class="w"> </span><span class="kn">import</span> <span class="n">logger</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">survey_kit.statistics.bootstrap</span><span class="w"> </span><span class="kn">import</span> <span class="n">bayes_bootstrap_weights</span>
 </pre></div>
 </div>
 </div>
 </div>
 </div>
-<div class="jp-Cell-outputWrapper">
-<div class="jp-Collapser jp-OutputCollapser jp-Cell-outputCollapser">
-</div>
-<div class="jp-OutputArea jp-Cell-outputArea">
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>Run it
-</pre>
-</div>
-</div>
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>Variable selection before SRMI run, if necessary
-</pre>
-</div>
-</div>
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>     self_employment_income: Method.No
-</pre>
-</div>
-</div>
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>Hyperparameter tuning before SRMI run, if necessary
-</pre>
-</div>
-</div>
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>Removing existing directory C:\Users\jonro\OneDrive\Documents\Coding\survey_kit\.scratch\temp_files/tutorial_simple_model_semicontinuous.srmi/1.srmi.implicate
-</pre>
-</div>
-</div>
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>Removing existing directory C:\Users\jonro\OneDrive\Documents\Coding\survey_kit\.scratch\temp_files/tutorial_simple_model_semicontinuous.srmi/2.srmi.implicate
-</pre>
-</div>
-</div>
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>
-
-Calling _two_part_value_consistency
-</pre>
-</div>
-</div>
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>     Imputation using LightGBM
-</pre>
-</div>
-</div>
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>Running lightgbm model with parameters: {'objective': 'regression', 'metric': 'rmse', 'boosting': 'gbdt', 'min_data_per_group': 25, 'num_threads': 1, 'verbose': -1, 'seed': 2584501089}
-</pre>
-</div>
-</div>
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>     Iterations:                        100
-</pre>
-</div>
-</div>
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>Model:     self_employment_income=f(x1, has_self_employment_income, bbweight__1)
-</pre>
-</div>
-</div>
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>Categorical features: []
-</pre>
-</div>
-</div>
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="text/plain" tabindex="0">
-<pre>
-</pre>
-</div>
-</div>
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>┌─────────┬──────┬───────────┬─────────────────┬────────┬─────────────────┬────────┐
-│ Feature ┆ Gain ┆ Frequency ┆           Model ┆  Model ┆          Impute ┆ Impute │
-│         ┆      ┆           ┆ share (missing) ┆   mean ┆ share (missing) ┆   mean │
-╞═════════╪══════╪═══════════╪═════════════════╪════════╪═════════════════╪════════╡
-│      x1 ┆  1.0 ┆       1.0 ┆               0 ┆ 0.4713 ┆               0 ┆ 0.5489 │
-└─────────┴──────┴───────────┴─────────────────┴────────┴─────────────────┴────────┘
-</pre>
-</div>
-</div>
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>Predictions
-</pre>
-</div>
-</div>
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>shape: (9, 4)
-┌────────────┬────────────────────────┬──────────────┬────────────────┐
-│ statistic  ┆ self_employment_income ┆ Model (yhat) ┆ Imputed (yhat) │
-│ ---        ┆ ---                    ┆ ---          ┆ ---            │
-│ str        ┆ f64                    ┆ f64          ┆ f64            │
-╞════════════╪════════════════════════╪══════════════╪════════════════╡
-│ count      ┆ 735.0                  ┆ 735.0        ┆ 203.0          │
-│ null_count ┆ 0.0                    ┆ 0.0          ┆ 0.0            │
-│ mean       ┆ 17583.916243           ┆ 17564.854296 ┆ 17861.492964   │
-│ std        ┆ 6890.67421             ┆ 5747.55897   ┆ 5549.527357    │
-│ min        ┆ -3538.079948           ┆ 4617.411496  ┆ 4617.411496    │
-│ 25%        ┆ 12926.583631           ┆ 13689.160544 ┆ 14093.755837   │
-│ 50%        ┆ 17617.58387            ┆ 17411.091987 ┆ 17282.234638   │
-│ 75%        ┆ 22098.299793           ┆ 21092.092037 ┆ 21938.52967    │
-│ max        ┆ 39902.742597           ┆ 32118.146326 ┆ 32118.146326   │
-└────────────┴────────────────────────┴──────────────┴────────────────┘
-</pre>
-</div>
-</div>
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>shape: (9, 4)
-┌────────────┬────────────────────────┬──────────────┬────────────────┐
-│ statistic  ┆ self_employment_income ┆ Model (yhat) ┆ Imputed (yhat) │
-│ ---        ┆ ---                    ┆ ---          ┆ ---            │
-│ str        ┆ f64                    ┆ f64          ┆ f64            │
-╞════════════╪════════════════════════╪══════════════╪════════════════╡
-│ count      ┆ 735.0                  ┆ 735.0        ┆ 203.0          │
-│ null_count ┆ 0.0                    ┆ 0.0          ┆ 0.0            │
-│ mean       ┆ 17583.916243           ┆ 17564.854296 ┆ 17861.492964   │
-│ std        ┆ 6890.67421             ┆ 5747.55897   ┆ 5549.527357    │
-│ min        ┆ -3538.079948           ┆ 4617.411496  ┆ 4617.411496    │
-│ 25%        ┆ 12926.583631           ┆ 13689.160544 ┆ 14093.755837   │
-│ 50%        ┆ 17617.58387            ┆ 17411.091987 ┆ 17282.234638   │
-│ 75%        ┆ 22098.299793           ┆ 21092.092037 ┆ 21938.52967    │
-│ max        ┆ 39902.742597           ┆ 32118.146326 ┆ 32118.146326   │
-└────────────┴────────────────────────┴──────────────┴────────────────┘
-</pre>
-</div>
-</div>
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>     error=pmm: donating observed value(s) ['self_employment_income'] from 10-nearest matched donors
-</pre>
-</div>
-</div>
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>     Finding 10 nearest neighbors on ['___prediction']
-</pre>
-</div>
-</div>
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>     Randomly picking one and donating ['self_employment_income']
-</pre>
-</div>
-</div>
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>     Most common matches: 
-</pre>
-</div>
-</div>
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>shape: (5, 2)
-┌───────────┬─────────┐
-│ person_id ┆ nDonors │
-│ ---       ┆ ---     │
-│ i16       ┆ i8      │
-╞═══════════╪═════════╡
-│ 1097      ┆ 3       │
-│ 29        ┆ 2       │
-│ 444       ┆ 2       │
-│ 883       ┆ 2       │
-│ 985       ┆ 2       │
-└───────────┴─────────┘
-</pre>
-</div>
-</div>
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>
-
-
-</pre>
-</div>
-</div>
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>Post-imputation statistics for ['self_employment_income']
-</pre>
-</div>
-</div>
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>    Where:          col(has_self_employment_income)
-</pre>
-</div>
-</div>
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>    Where (impute): col(___imp_missing_self_employment_income_1)
-</pre>
-</div>
-</div>
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>┌────────────────────────┬─────────┬─────┬──────────────┬─────────┬────────┬──────────────┬─────────────┬─────────────┬─────────────┬─────────────┬─────────────┬─────────────┬─────────────┬─────────────┐
-│               Variable ┆ Imputed ┆   n ┆ n (not null) ┆    mean ┆    std ┆ mean (not 0) ┆ std (not 0) ┆ q10 (not 0) ┆ q25 (not 0) ┆ q50 (not 0) ┆ q75 (not 0) ┆ q90 (not 0) ┆ min (not 0) ┆ max (not 0) │
-╞════════════════════════╪═════════╪═════╪══════════════╪═════════╪════════╪══════════════╪═════════════╪═════════════╪═════════════╪═════════════╪═════════════╪═════════════╪═════════════╪═════════════╡
-│ self_employment_income ┆         ┆ 938 ┆          938 ┆ 17590.0 ┆ 6887.0 ┆      17590.0 ┆      6887.0 ┆      8721.0 ┆     12970.0 ┆     17620.0 ┆     22240.0 ┆     26250.0 ┆     -3538.0 ┆     39900.0 │
-│ self_employment_income ┆       0 ┆ 735 ┆          735 ┆ 17580.0 ┆ 6891.0 ┆      17580.0 ┆      6891.0 ┆      8640.0 ┆     12890.0 ┆     17620.0 ┆     22100.0 ┆     26210.0 ┆     -3538.0 ┆     39900.0 │
-│ self_employment_income ┆       1 ┆ 203 ┆          203 ┆ 17620.0 ┆ 6892.0 ┆      17620.0 ┆      6892.0 ┆      8814.0 ┆     13050.0 ┆     17790.0 ┆     22590.0 ┆     26480.0 ┆     -3538.0 ┆     36180.0 │
-└────────────────────────┴─────────┴─────┴──────────────┴─────────┴────────┴──────────────┴─────────────┴─────────────┴─────────────┴─────────────┴─────────────┴─────────────┴─────────────┴─────────────┘
-</pre>
-</div>
-</div>
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>
-
-
-
-
-</pre>
-</div>
-</div>
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>Removing existing directory C:\Users\jonro\OneDrive\Documents\Coding\survey_kit\.scratch\temp_files/tutorial_simple_model_semicontinuous.srmi/1.srmi.implicate
-</pre>
-</div>
-</div>
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>
-
-Calling _two_part_value_consistency
-</pre>
-</div>
-</div>
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>     Imputation using LightGBM
-</pre>
-</div>
-</div>
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>Running lightgbm model with parameters: {'objective': 'regression', 'metric': 'rmse', 'boosting': 'gbdt', 'min_data_per_group': 25, 'num_threads': 1, 'verbose': -1, 'seed': 4259448543}
-</pre>
-</div>
-</div>
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>     Iterations:                        100
-</pre>
-</div>
-</div>
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>Model:     self_employment_income=f(x1, has_self_employment_income, bbweight__1)
-</pre>
-</div>
-</div>
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>Categorical features: []
-</pre>
-</div>
-</div>
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="text/plain" tabindex="0">
-<pre>
-</pre>
-</div>
-</div>
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>┌─────────┬──────┬───────────┬─────────────────┬────────┬─────────────────┬────────┐
-│ Feature ┆ Gain ┆ Frequency ┆           Model ┆  Model ┆          Impute ┆ Impute │
-│         ┆      ┆           ┆ share (missing) ┆   mean ┆ share (missing) ┆   mean │
-╞═════════╪══════╪═══════════╪═════════════════╪════════╪═════════════════╪════════╡
-│      x1 ┆  1.0 ┆       1.0 ┆               0 ┆ 0.4881 ┆               0 ┆ 0.5489 │
-└─────────┴──────┴───────────┴─────────────────┴────────┴─────────────────┴────────┘
-</pre>
-</div>
-</div>
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>Predictions
-</pre>
-</div>
-</div>
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>shape: (9, 4)
-┌────────────┬────────────────────────┬──────────────┬────────────────┐
-│ statistic  ┆ self_employment_income ┆ Model (yhat) ┆ Imputed (yhat) │
-│ ---        ┆ ---                    ┆ ---          ┆ ---            │
-│ str        ┆ f64                    ┆ f64          ┆ f64            │
-╞════════════╪════════════════════════╪══════════════╪════════════════╡
-│ count      ┆ 938.0                  ┆ 938.0        ┆ 203.0          │
-│ null_count ┆ 0.0                    ┆ 0.0          ┆ 0.0            │
-│ mean       ┆ 17591.395722           ┆ 17602.228933 ┆ 17930.892608   │
-│ std        ┆ 6887.312788            ┆ 5917.783504  ┆ 5874.102761    │
-│ min        ┆ -3538.079948           ┆ 2579.704692  ┆ 2579.704692    │
-│ 25%        ┆ 12966.611002           ┆ 13924.797817 ┆ 14700.451058   │
-│ 50%        ┆ 17628.772305           ┆ 17882.123036 ┆ 17758.539496   │
-│ 75%        ┆ 22237.95632            ┆ 21293.625806 ┆ 22599.317857   │
-│ max        ┆ 39902.742597           ┆ 31671.3653   ┆ 31671.3653     │
-└────────────┴────────────────────────┴──────────────┴────────────────┘
-</pre>
-</div>
-</div>
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>shape: (9, 4)
-┌────────────┬────────────────────────┬──────────────┬────────────────┐
-│ statistic  ┆ self_employment_income ┆ Model (yhat) ┆ Imputed (yhat) │
-│ ---        ┆ ---                    ┆ ---          ┆ ---            │
-│ str        ┆ f64                    ┆ f64          ┆ f64            │
-╞════════════╪════════════════════════╪══════════════╪════════════════╡
-│ count      ┆ 938.0                  ┆ 938.0        ┆ 203.0          │
-│ null_count ┆ 0.0                    ┆ 0.0          ┆ 0.0            │
-│ mean       ┆ 17591.395722           ┆ 17602.228933 ┆ 17930.892608   │
-│ std        ┆ 6887.312788            ┆ 5917.783504  ┆ 5874.102761    │
-│ min        ┆ -3538.079948           ┆ 2579.704692  ┆ 2579.704692    │
-│ 25%        ┆ 12966.611002           ┆ 13924.797817 ┆ 14700.451058   │
-│ 50%        ┆ 17628.772305           ┆ 17882.123036 ┆ 17758.539496   │
-│ 75%        ┆ 22237.95632            ┆ 21293.625806 ┆ 22599.317857   │
-│ max        ┆ 39902.742597           ┆ 31671.3653   ┆ 31671.3653     │
-└────────────┴────────────────────────┴──────────────┴────────────────┘
-</pre>
-</div>
-</div>
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>     error=pmm: donating observed value(s) ['self_employment_income'] from 10-nearest matched donors
-</pre>
-</div>
-</div>
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>     Finding 10 nearest neighbors on ['___prediction']
-</pre>
-</div>
-</div>
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>     Randomly picking one and donating ['self_employment_income']
-</pre>
-</div>
-</div>
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>     Most common matches: 
-</pre>
-</div>
-</div>
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>shape: (5, 2)
-┌───────────┬─────────┐
-│ person_id ┆ nDonors │
-│ ---       ┆ ---     │
-│ i16       ┆ i8      │
-╞═══════════╪═════════╡
-│ 268       ┆ 3       │
-│ 1294      ┆ 3       │
-│ 44        ┆ 2       │
-│ 74        ┆ 2       │
-│ 473       ┆ 2       │
-└───────────┴─────────┘
-</pre>
-</div>
-</div>
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>
-
-
-</pre>
-</div>
-</div>
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>Post-imputation statistics for ['self_employment_income']
-</pre>
-</div>
-</div>
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>    Where:          col(has_self_employment_income)
-</pre>
-</div>
-</div>
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>    Where (impute): col(___imp_missing_self_employment_income_1)
-</pre>
-</div>
-</div>
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>┌────────────────────────┬─────────┬──────┬──────────────┬─────────┬────────┬──────────────┬─────────────┬─────────────┬─────────────┬─────────────┬─────────────┬─────────────┬─────────────┬─────────────┐
-│               Variable ┆ Imputed ┆    n ┆ n (not null) ┆    mean ┆    std ┆ mean (not 0) ┆ std (not 0) ┆ q10 (not 0) ┆ q25 (not 0) ┆ q50 (not 0) ┆ q75 (not 0) ┆ q90 (not 0) ┆ min (not 0) ┆ max (not 0) │
-╞════════════════════════╪═════════╪══════╪══════════════╪═════════╪════════╪══════════════╪═════════════╪═════════════╪═════════════╪═════════════╪═════════════╪═════════════╪═════════════╪═════════════╡
-│ self_employment_income ┆         ┆ 1141 ┆         1141 ┆ 17610.0 ┆ 6904.0 ┆      17610.0 ┆      6904.0 ┆      8721.0 ┆     12850.0 ┆     17820.0 ┆     22280.0 ┆     26230.0 ┆     -3538.0 ┆     39900.0 │
-│ self_employment_income ┆       0 ┆  938 ┆          938 ┆ 17590.0 ┆ 6887.0 ┆      17590.0 ┆      6887.0 ┆      8721.0 ┆     12970.0 ┆     17620.0 ┆     22240.0 ┆     26250.0 ┆     -3538.0 ┆     39900.0 │
-│ self_employment_income ┆       1 ┆  203 ┆          203 ┆ 17710.0 ┆ 6997.0 ┆      17710.0 ┆      6997.0 ┆      8640.0 ┆     12180.0 ┆     18280.0 ┆     22580.0 ┆     26230.0 ┆      2144.0 ┆     39000.0 │
-└────────────────────────┴─────────┴──────┴──────────────┴─────────┴────────┴──────────────┴─────────────┴─────────────┴─────────────┴─────────────┴─────────────┴─────────────┴─────────────┴─────────────┘
-</pre>
-</div>
-</div>
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>
-
-
-
-
-</pre>
-</div>
-</div>
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>
-
-self_employment_income
-</pre>
-</div>
-</div>
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>
-
-Final Estimates by Iteration
-</pre>
-</div>
-</div>
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>Removing existing directory C:\Users\jonro\OneDrive\Documents\Coding\survey_kit\.scratch\temp_files/tutorial_simple_model_semicontinuous.srmi/1.srmi.implicate
-</pre>
-</div>
-</div>
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>
-
-Calling _two_part_value_consistency
-</pre>
-</div>
-</div>
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>     Imputation using LightGBM
-</pre>
-</div>
-</div>
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>Running lightgbm model with parameters: {'objective': 'regression', 'metric': 'rmse', 'boosting': 'gbdt', 'min_data_per_group': 25, 'num_threads': 1, 'verbose': -1, 'seed': 448163623}
-</pre>
-</div>
-</div>
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>     Iterations:                        100
-</pre>
-</div>
-</div>
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>Model:     self_employment_income=f(x1, has_self_employment_income, bbweight__1)
-</pre>
-</div>
-</div>
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>Categorical features: []
-</pre>
-</div>
-</div>
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="text/plain" tabindex="0">
-<pre>
-</pre>
-</div>
-</div>
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>┌─────────┬──────┬───────────┬─────────────────┬────────┬─────────────────┬────────┐
-│ Feature ┆ Gain ┆ Frequency ┆           Model ┆  Model ┆          Impute ┆ Impute │
-│         ┆      ┆           ┆ share (missing) ┆   mean ┆ share (missing) ┆   mean │
-╞═════════╪══════╪═══════════╪═════════════════╪════════╪═════════════════╪════════╡
-│      x1 ┆  1.0 ┆       1.0 ┆               0 ┆ 0.4713 ┆               0 ┆ 0.5489 │
-└─────────┴──────┴───────────┴─────────────────┴────────┴─────────────────┴────────┘
-</pre>
-</div>
-</div>
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>Predictions
-</pre>
-</div>
-</div>
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>shape: (9, 4)
-┌────────────┬────────────────────────┬──────────────┬────────────────┐
-│ statistic  ┆ self_employment_income ┆ Model (yhat) ┆ Imputed (yhat) │
-│ ---        ┆ ---                    ┆ ---          ┆ ---            │
-│ str        ┆ f64                    ┆ f64          ┆ f64            │
-╞════════════╪════════════════════════╪══════════════╪════════════════╡
-│ count      ┆ 735.0                  ┆ 735.0        ┆ 203.0          │
-│ null_count ┆ 0.0                    ┆ 0.0          ┆ 0.0            │
-│ mean       ┆ 17583.916243           ┆ 17661.080534 ┆ 18041.661252   │
-│ std        ┆ 6890.67421             ┆ 5768.345769  ┆ 5825.629148    │
-│ min        ┆ -3538.079948           ┆ 4358.843485  ┆ 4358.843485    │
-│ 25%        ┆ 12926.583631           ┆ 13734.337262 ┆ 14341.516503   │
-│ 50%        ┆ 17617.58387            ┆ 17519.822572 ┆ 16947.637552   │
-│ 75%        ┆ 22098.299793           ┆ 21223.869252 ┆ 23666.718323   │
-│ max        ┆ 39902.742597           ┆ 30556.951896 ┆ 30556.951896   │
-└────────────┴────────────────────────┴──────────────┴────────────────┘
-</pre>
-</div>
-</div>
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>shape: (9, 4)
-┌────────────┬────────────────────────┬──────────────┬────────────────┐
-│ statistic  ┆ self_employment_income ┆ Model (yhat) ┆ Imputed (yhat) │
-│ ---        ┆ ---                    ┆ ---          ┆ ---            │
-│ str        ┆ f64                    ┆ f64          ┆ f64            │
-╞════════════╪════════════════════════╪══════════════╪════════════════╡
-│ count      ┆ 735.0                  ┆ 735.0        ┆ 203.0          │
-│ null_count ┆ 0.0                    ┆ 0.0          ┆ 0.0            │
-│ mean       ┆ 17583.916243           ┆ 17661.080534 ┆ 18041.661252   │
-│ std        ┆ 6890.67421             ┆ 5768.345769  ┆ 5825.629148    │
-│ min        ┆ -3538.079948           ┆ 4358.843485  ┆ 4358.843485    │
-│ 25%        ┆ 12926.583631           ┆ 13734.337262 ┆ 14341.516503   │
-│ 50%        ┆ 17617.58387            ┆ 17519.822572 ┆ 16947.637552   │
-│ 75%        ┆ 22098.299793           ┆ 21223.869252 ┆ 23666.718323   │
-│ max        ┆ 39902.742597           ┆ 30556.951896 ┆ 30556.951896   │
-└────────────┴────────────────────────┴──────────────┴────────────────┘
-</pre>
-</div>
-</div>
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>     error=pmm: donating observed value(s) ['self_employment_income'] from 10-nearest matched donors
-</pre>
-</div>
-</div>
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>     Finding 10 nearest neighbors on ['___prediction']
-</pre>
-</div>
-</div>
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>     Randomly picking one and donating ['self_employment_income']
-</pre>
-</div>
-</div>
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>     Most common matches: 
-</pre>
-</div>
-</div>
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>shape: (5, 2)
-┌───────────┬─────────┐
-│ person_id ┆ nDonors │
-│ ---       ┆ ---     │
-│ i16       ┆ i8      │
-╞═══════════╪═════════╡
-│ 373       ┆ 3       │
-│ 1882      ┆ 3       │
-│ 2084      ┆ 3       │
-│ 2098      ┆ 3       │
-│ 3711      ┆ 3       │
-└───────────┴─────────┘
-</pre>
-</div>
-</div>
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>
-
-
-</pre>
-</div>
-</div>
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>Post-imputation statistics for ['self_employment_income']
-</pre>
-</div>
-</div>
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>    Where:          col(has_self_employment_income)
-</pre>
-</div>
-</div>
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>    Where (impute): col(___imp_missing_self_employment_income_1)
-</pre>
-</div>
-</div>
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>┌────────────────────────┬─────────┬─────┬──────────────┬─────────┬────────┬──────────────┬─────────────┬─────────────┬─────────────┬─────────────┬─────────────┬─────────────┬─────────────┬─────────────┐
-│               Variable ┆ Imputed ┆   n ┆ n (not null) ┆    mean ┆    std ┆ mean (not 0) ┆ std (not 0) ┆ q10 (not 0) ┆ q25 (not 0) ┆ q50 (not 0) ┆ q75 (not 0) ┆ q90 (not 0) ┆ min (not 0) ┆ max (not 0) │
-╞════════════════════════╪═════════╪═════╪══════════════╪═════════╪════════╪══════════════╪═════════════╪═════════════╪═════════════╪═════════════╪═════════════╪═════════════╪═════════════╪═════════════╡
-│ self_employment_income ┆         ┆ 938 ┆          938 ┆ 17710.0 ┆ 6845.0 ┆      17710.0 ┆      6845.0 ┆      8814.0 ┆     13020.0 ┆     17710.0 ┆     22380.0 ┆     26250.0 ┆     -3538.0 ┆     39900.0 │
-│ self_employment_income ┆       0 ┆ 735 ┆          735 ┆ 17580.0 ┆ 6891.0 ┆      17580.0 ┆      6891.0 ┆      8640.0 ┆     12890.0 ┆     17620.0 ┆     22100.0 ┆     26210.0 ┆     -3538.0 ┆     39900.0 │
-│ self_employment_income ┆       1 ┆ 203 ┆          203 ┆ 18170.0 ┆ 6676.0 ┆      18170.0 ┆      6676.0 ┆      9287.0 ┆     13370.0 ┆     17990.0 ┆     23050.0 ┆     26600.0 ┆      2431.0 ┆     34050.0 │
-└────────────────────────┴─────────┴─────┴──────────────┴─────────┴────────┴──────────────┴─────────────┴─────────────┴─────────────┴─────────────┴─────────────┴─────────────┴─────────────┴─────────────┘
-</pre>
-</div>
-</div>
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>
-
-
-
-
-</pre>
-</div>
-</div>
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>Removing existing directory C:\Users\jonro\OneDrive\Documents\Coding\survey_kit\.scratch\temp_files/tutorial_simple_model_semicontinuous.srmi/2.srmi.implicate
-</pre>
-</div>
-</div>
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>
-
-Calling _two_part_value_consistency
-</pre>
-</div>
-</div>
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>     Imputation using LightGBM
-</pre>
-</div>
-</div>
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>Running lightgbm model with parameters: {'objective': 'regression', 'metric': 'rmse', 'boosting': 'gbdt', 'min_data_per_group': 25, 'num_threads': 1, 'verbose': -1, 'seed': 645139403}
-</pre>
-</div>
-</div>
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>     Iterations:                        100
-</pre>
-</div>
-</div>
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>Model:     self_employment_income=f(x1, has_self_employment_income, bbweight__1)
-</pre>
-</div>
-</div>
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>Categorical features: []
-</pre>
-</div>
-</div>
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="text/plain" tabindex="0">
-<pre>
-</pre>
-</div>
-</div>
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>┌─────────┬──────┬───────────┬─────────────────┬────────┬─────────────────┬────────┐
-│ Feature ┆ Gain ┆ Frequency ┆           Model ┆  Model ┆          Impute ┆ Impute │
-│         ┆      ┆           ┆ share (missing) ┆   mean ┆ share (missing) ┆   mean │
-╞═════════╪══════╪═══════════╪═════════════════╪════════╪═════════════════╪════════╡
-│      x1 ┆  1.0 ┆       1.0 ┆               0 ┆ 0.4881 ┆               0 ┆ 0.5489 │
-└─────────┴──────┴───────────┴─────────────────┴────────┴─────────────────┴────────┘
-</pre>
-</div>
-</div>
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>Predictions
-</pre>
-</div>
-</div>
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>shape: (9, 4)
-┌────────────┬────────────────────────┬──────────────┬────────────────┐
-│ statistic  ┆ self_employment_income ┆ Model (yhat) ┆ Imputed (yhat) │
-│ ---        ┆ ---                    ┆ ---          ┆ ---            │
-│ str        ┆ f64                    ┆ f64          ┆ f64            │
-╞════════════╪════════════════════════╪══════════════╪════════════════╡
-│ count      ┆ 938.0                  ┆ 938.0        ┆ 203.0          │
-│ null_count ┆ 0.0                    ┆ 0.0          ┆ 0.0            │
-│ mean       ┆ 17711.216597           ┆ 17541.123202 ┆ 17899.055143   │
-│ std        ┆ 6845.4778              ┆ 5913.013268  ┆ 5942.404683    │
-│ min        ┆ -3538.079948           ┆ 4250.136055  ┆ 4250.136055    │
-│ 25%        ┆ 13024.471763           ┆ 13983.238833 ┆ 14627.182257   │
-│ 50%        ┆ 17740.179121           ┆ 16902.260281 ┆ 16771.671033   │
-│ 75%        ┆ 22380.357717           ┆ 22043.203842 ┆ 22491.360247   │
-│ max        ┆ 39902.742597           ┆ 29802.026643 ┆ 29802.026643   │
-└────────────┴────────────────────────┴──────────────┴────────────────┘
-</pre>
-</div>
-</div>
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>shape: (9, 4)
-┌────────────┬────────────────────────┬──────────────┬────────────────┐
-│ statistic  ┆ self_employment_income ┆ Model (yhat) ┆ Imputed (yhat) │
-│ ---        ┆ ---                    ┆ ---          ┆ ---            │
-│ str        ┆ f64                    ┆ f64          ┆ f64            │
-╞════════════╪════════════════════════╪══════════════╪════════════════╡
-│ count      ┆ 938.0                  ┆ 938.0        ┆ 203.0          │
-│ null_count ┆ 0.0                    ┆ 0.0          ┆ 0.0            │
-│ mean       ┆ 17711.216597           ┆ 17541.123202 ┆ 17899.055143   │
-│ std        ┆ 6845.4778              ┆ 5913.013268  ┆ 5942.404683    │
-│ min        ┆ -3538.079948           ┆ 4250.136055  ┆ 4250.136055    │
-│ 25%        ┆ 13024.471763           ┆ 13983.238833 ┆ 14627.182257   │
-│ 50%        ┆ 17740.179121           ┆ 16902.260281 ┆ 16771.671033   │
-│ 75%        ┆ 22380.357717           ┆ 22043.203842 ┆ 22491.360247   │
-│ max        ┆ 39902.742597           ┆ 29802.026643 ┆ 29802.026643   │
-└────────────┴────────────────────────┴──────────────┴────────────────┘
-</pre>
-</div>
-</div>
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>     error=pmm: donating observed value(s) ['self_employment_income'] from 10-nearest matched donors
-</pre>
-</div>
-</div>
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>     Finding 10 nearest neighbors on ['___prediction']
-</pre>
-</div>
-</div>
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>     Randomly picking one and donating ['self_employment_income']
-</pre>
-</div>
-</div>
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>     Most common matches: 
-</pre>
-</div>
-</div>
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>shape: (5, 2)
-┌───────────┬─────────┐
-│ person_id ┆ nDonors │
-│ ---       ┆ ---     │
-│ i16       ┆ i8      │
-╞═══════════╪═════════╡
-│ 2584      ┆ 3       │
-│ 148       ┆ 2       │
-│ 560       ┆ 2       │
-│ 563       ┆ 2       │
-│ 587       ┆ 2       │
-└───────────┴─────────┘
-</pre>
-</div>
-</div>
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>
-
-
-</pre>
-</div>
-</div>
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>Post-imputation statistics for ['self_employment_income']
-</pre>
-</div>
-</div>
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>    Where:          col(has_self_employment_income)
-</pre>
-</div>
-</div>
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>    Where (impute): col(___imp_missing_self_employment_income_1)
-</pre>
-</div>
-</div>
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>┌────────────────────────┬─────────┬──────┬──────────────┬─────────┬────────┬──────────────┬─────────────┬─────────────┬─────────────┬─────────────┬─────────────┬─────────────┬─────────────┬─────────────┐
-│               Variable ┆ Imputed ┆    n ┆ n (not null) ┆    mean ┆    std ┆ mean (not 0) ┆ std (not 0) ┆ q10 (not 0) ┆ q25 (not 0) ┆ q50 (not 0) ┆ q75 (not 0) ┆ q90 (not 0) ┆ min (not 0) ┆ max (not 0) │
-╞════════════════════════╪═════════╪══════╪══════════════╪═════════╪════════╪══════════════╪═════════════╪═════════════╪═════════════╪═════════════╪═════════════╪═════════════╪═════════════╪═════════════╡
-│ self_employment_income ┆         ┆ 1141 ┆         1141 ┆ 17730.0 ┆ 7000.0 ┆      17730.0 ┆      7000.0 ┆      8814.0 ┆     13020.0 ┆     17770.0 ┆     22380.0 ┆     26510.0 ┆     -3538.0 ┆     39900.0 │
-│ self_employment_income ┆       0 ┆  938 ┆          938 ┆ 17710.0 ┆ 6845.0 ┆      17710.0 ┆      6845.0 ┆      8814.0 ┆     13020.0 ┆     17710.0 ┆     22380.0 ┆     26250.0 ┆     -3538.0 ┆     39900.0 │
-│ self_employment_income ┆       1 ┆  203 ┆          203 ┆ 17810.0 ┆ 7691.0 ┆      17810.0 ┆      7691.0 ┆      8745.0 ┆     12720.0 ┆     18020.0 ┆     22420.0 ┆     27460.0 ┆     -3538.0 ┆     37040.0 │
-└────────────────────────┴─────────┴──────┴──────────────┴─────────┴────────┴──────────────┴─────────────┴─────────────┴─────────────┴─────────────┴─────────────┴─────────────┴─────────────┴─────────────┘
-</pre>
-</div>
-</div>
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>
-
-
-
-
-</pre>
-</div>
-</div>
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>
-
-self_employment_income
-</pre>
-</div>
-</div>
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>
-
-Final Estimates by Iteration
-</pre>
-</div>
-</div>
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>Removing existing directory C:\Users\jonro\OneDrive\Documents\Coding\survey_kit\.scratch\temp_files/tutorial_simple_model_semicontinuous.srmi/2.srmi.implicate
-</pre>
-</div>
-</div>
-</div>
-</div>
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=cc1b4461">
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell jp-mod-noOutputs" id="cell-id=71d3a471">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -8638,18 +7596,95 @@ Final Estimates by Iteration
 <div class="jp-InputPrompt jp-InputArea-prompt">In [5]:</div>
 <div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
 <div class="cm-editor cm-s-jupyter">
-<div class="highlight hl-ipython3"><pre><span></span><span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span>
-    <span class="s2">"Every imputed value respects the hurdle: 0 whenever "</span>
-    <span class="s2">"has_self_employment_income is False, a real positive draw otherwise"</span>
-<span class="p">)</span>
-<span class="c1">#   has_self_employment_income is an int-coded (0/1) column, not a real</span>
-<span class="c1">#       boolean - use == 0 rather than ~, which does bitwise (not logical)</span>
-<span class="c1">#       negation on a non-boolean column and would match every row</span>
-<span class="n">_</span> <span class="o">=</span> <span class="p">(</span>
-    <span class="n">srmi</span><span class="o">.</span><span class="n">df_implicates</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">nw</span><span class="o">.</span><span class="n">col</span><span class="p">(</span><span class="s2">"has_self_employment_income"</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">)</span>
-    <span class="o">.</span><span class="n">select</span><span class="p">(</span><span class="s2">"self_employment_income"</span><span class="p">)</span>
-    <span class="o">.</span><span class="n">pipe</span><span class="p">(</span><span class="n">summary</span><span class="p">)</span>
-<span class="p">)</span>
+<div class="highlight hl-ipython3"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">make_implicates</span><span class="p">(</span><span class="n">n_implicates</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">5</span><span class="p">,</span> <span class="n">n</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">300</span><span class="p">,</span> <span class="n">seed</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">pl</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">"""</span>
+<span class="sd">    n_implicates independent draws of a simple linear DGP:</span>
+<span class="sd">    y = 1 + 2*x1 - 1.5*x2 + noise, x1/x2 ~ N(0, 1) - standing in for what</span>
+<span class="sd">    would normally be n_implicates completed datasets from an imputation</span>
+<span class="sd">    model (e.g. SRMI.df_implicates), just enough variation between</span>
+<span class="sd">    implicates to make Rubin's-rules combination meaningful.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    n_implicates : number of implicates to generate. Default is 5.</span>
+<span class="sd">    n : rows per implicate. Default is 300.</span>
+<span class="sd">    seed : seed for the first implicate - later implicates use seed+1,</span>
+<span class="sd">        seed+2, ... so they're independent draws, not copies. Default is 0.</span>
+<span class="sd">    """</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_one</span><span class="p">(</span><span class="n">s</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pl</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
+        <span class="n">rng</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">default_rng</span><span class="p">(</span><span class="n">s</span><span class="p">)</span>
+        <span class="n">x1</span> <span class="o">=</span> <span class="n">rng</span><span class="o">.</span><span class="n">normal</span><span class="p">(</span><span class="n">size</span><span class="o">=</span><span class="n">n</span><span class="p">)</span>
+        <span class="n">x2</span> <span class="o">=</span> <span class="n">rng</span><span class="o">.</span><span class="n">normal</span><span class="p">(</span><span class="n">size</span><span class="o">=</span><span class="n">n</span><span class="p">)</span>
+        <span class="n">y</span> <span class="o">=</span> <span class="mi">1</span> <span class="o">+</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">x1</span> <span class="o">-</span> <span class="mf">1.5</span> <span class="o">*</span> <span class="n">x2</span> <span class="o">+</span> <span class="n">rng</span><span class="o">.</span><span class="n">normal</span><span class="p">(</span><span class="n">size</span><span class="o">=</span><span class="n">n</span><span class="p">)</span> <span class="o">*</span> <span class="mf">0.4</span>
+        <span class="k">return</span> <span class="n">pl</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">({</span><span class="s2">"x1"</span><span class="p">:</span> <span class="n">x1</span><span class="p">,</span> <span class="s2">"x2"</span><span class="p">:</span> <span class="n">x2</span><span class="p">,</span> <span class="s2">"y"</span><span class="p">:</span> <span class="n">y</span><span class="p">})</span>
+
+    <span class="k">return</span> <span class="p">[</span><span class="n">_one</span><span class="p">(</span><span class="n">seed</span> <span class="o">+</span> <span class="n">i</span><span class="p">)</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n_implicates</span><span class="p">)]</span>
+</pre></div>
+</div>
+</div>
+</div>
+</div>
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell jp-mod-noOutputs" id="cell-id=3fb631a0">
+<div class="jp-Cell-inputWrapper" tabindex="0">
+<div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
+</div>
+<div class="jp-InputArea jp-Cell-inputArea">
+<div class="jp-InputPrompt jp-InputArea-prompt">In [6]:</div>
+<div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
+<div class="cm-editor cm-s-jupyter">
+<div class="highlight hl-ipython3"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">with_bootstrap_weights</span><span class="p">(</span>
+    <span class="n">df_implicates</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">pl</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">],</span> <span class="n">n_replicates</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">20</span><span class="p">,</span> <span class="n">seed</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">1000</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">pl</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">"""</span>
+<span class="sd">    Adds replicate_0..replicate_&lt;n_replicates&gt; bootstrap weight columns to</span>
+<span class="sd">    each implicate, via survey_kit's own</span>
+<span class="sd">    [`bayes_bootstrap_weights`][survey_kit.statistics.bootstrap.bayes_bootstrap_weights]</span>
+<span class="sd">    - replicate_0 is the full-sample weight (all 1s), replicate_1.. are a</span>
+<span class="sd">    genuine Bayesian bootstrap draw (strictly positive by construction, so</span>
+<span class="sd">    they work with every adapter, including ones like linearmodels that</span>
+<span class="sd">    reject a zero weight outright). Pair with</span>
+<span class="sd">    `Replicates(weight_stub="replicate_", n_replicates=n_replicates,</span>
+<span class="sd">    bootstrap=True)` and a `command`/`formula` with a "{weight}"</span>
+<span class="sd">    placeholder, e.g. "y ~ x1 + x2 [pw={weight}]".</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    df_implicates : implicates to add weight columns to (e.g. from</span>
+<span class="sd">        `make_implicates()`).</span>
+<span class="sd">    n_replicates : number of replicate weight columns. Default is 20.</span>
+<span class="sd">    seed : seed for the first implicate's weights - later implicates use</span>
+<span class="sd">        seed+1, seed+2, ... Default is 1000.</span>
+<span class="sd">    """</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_one</span><span class="p">(</span><span class="n">df</span><span class="p">:</span> <span class="n">pl</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="n">s</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pl</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
+        <span class="n">df</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">with_columns</span><span class="p">(</span><span class="n">pl</span><span class="o">.</span><span class="n">lit</span><span class="p">(</span><span class="mf">1.0</span><span class="p">)</span><span class="o">.</span><span class="n">alias</span><span class="p">(</span><span class="s2">"replicate_0"</span><span class="p">))</span>
+        <span class="c1">#   bayes_bootstrap_weights returns lazy (survey_kit's narwhals</span>
+        <span class="c1">#   convention) - collect back to a plain DataFrame to match what</span>
+        <span class="c1">#   this function documents/returns.</span>
+        <span class="n">result</span> <span class="o">=</span> <span class="n">bayes_bootstrap_weights</span><span class="p">(</span>
+            <span class="n">df</span><span class="p">,</span> <span class="n">prefix</span><span class="o">=</span><span class="s2">"replicate_"</span><span class="p">,</span> <span class="n">n_replicates</span><span class="o">=</span><span class="n">n_replicates</span><span class="p">,</span> <span class="n">seed</span><span class="o">=</span><span class="n">s</span>
+        <span class="p">)</span>
+        <span class="k">return</span> <span class="n">result</span><span class="o">.</span><span class="n">collect</span><span class="p">()</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">result</span><span class="p">,</span> <span class="n">pl</span><span class="o">.</span><span class="n">LazyFrame</span><span class="p">)</span> <span class="k">else</span> <span class="n">result</span>
+
+    <span class="k">return</span> <span class="p">[</span><span class="n">_one</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="n">seed</span> <span class="o">+</span> <span class="n">i</span><span class="p">)</span> <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">df</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">df_implicates</span><span class="p">)]</span>
+</pre></div>
+</div>
+</div>
+</div>
+</div>
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=665f29f1">
+<div class="jp-Cell-inputWrapper" tabindex="0">
+<div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
+</div>
+<div class="jp-InputArea jp-Cell-inputArea">
+<div class="jp-InputPrompt jp-InputArea-prompt">In [7]:</div>
+<div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
+<div class="cm-editor cm-s-jupyter">
+<div class="highlight hl-ipython3"><pre><span></span><span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s2">"__main__"</span><span class="p">:</span>
+    <span class="n">implicates</span> <span class="o">=</span> <span class="n">make_implicates</span><span class="p">()</span>
+    <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Generated </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">implicates</span><span class="p">)</span><span class="si">}</span><span class="s2"> implicates, </span><span class="si">{</span><span class="n">implicates</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">height</span><span class="si">}</span><span class="s2"> rows each:"</span><span class="p">)</span>
+    <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="n">implicates</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">head</span><span class="p">())</span>
 </pre></div>
 </div>
 </div>
@@ -8662,29 +7697,25 @@ Final Estimates by Iteration
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>Every imputed value respects the hurdle: 0 whenever has_self_employment_income is False, a real positive draw otherwise
+<pre>Generated 5 implicates, 300 rows each:
 </pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>┌────────────────────────┬───────┬─────────────┬──────┬─────┬─────┬─────┐
-│               Variable ┆     n ┆ n (missing) ┆ mean ┆ std ┆ min ┆ max │
-╞════════════════════════╪═══════╪═════════════╪══════╪═════╪═════╪═════╡
-│ self_employment_income ┆ 3,062 ┆           0 ┆    0 ┆   0 ┆   0 ┆   0 │
-└────────────────────────┴───────┴─────────────┴──────┴─────┴─────┴─────┘
-</pre>
-</div>
-</div>
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>┌────────────────────────┬───────┬─────────────┬──────┬─────┬─────┬─────┐
-│               Variable ┆     n ┆ n (missing) ┆ mean ┆ std ┆ min ┆ max │
-╞════════════════════════╪═══════╪═════════════╪══════╪═════╪═════╪═════╡
-│ self_employment_income ┆ 3,062 ┆           0 ┆    0 ┆   0 ┆   0 ┆   0 │
-└────────────────────────┴───────┴─────────────┴──────┴─────┴─────┴─────┘
+<pre>shape: (5, 3)
+┌───────────┬───────────┬───────────┐
+│ x1        ┆ x2        ┆ y         │
+│ ---       ┆ ---       ┆ ---       │
+│ f64       ┆ f64       ┆ f64       │
+╞═══════════╪═══════════╪═══════════╡
+│ 0.12573   ┆ 1.203259  ┆ -1.01616  │
+│ -0.132105 ┆ 0.637073  ┆ -0.765771 │
+│ 0.640423  ┆ 0.55834   ┆ 1.350845  │
+│ 0.1049    ┆ -3.772275 ┆ 7.779213  │
+│ -0.535669 ┆ 0.26063   ┆ -0.351267 │
+└───────────┴───────────┴───────────┘
 </pre>
 </div>
 </div>

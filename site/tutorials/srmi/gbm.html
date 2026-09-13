@@ -7510,7 +7510,7 @@ a.anchor-link {
 </style>
 <!-- End of mermaid configuration --></head>
 <body class="jp-Notebook" data-jp-theme-light="true" data-jp-theme-name="JupyterLab Light">
-<main><div class="jp-Cell jp-CodeCell jp-Notebook-cell jp-mod-noOutputs" id="cell-id=cadd8f64">
+<main><div class="jp-Cell jp-CodeCell jp-Notebook-cell jp-mod-noOutputs" id="cell-id=2d07b833">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -7544,7 +7544,7 @@ a.anchor-link {
 </div>
 </div>
 </div>
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=9a0a9ba7">
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=a221fba6">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -7700,12 +7700,12 @@ a.anchor-link {
 <div class="jp-RenderedHTMLCommon jp-RenderedHTML jp-OutputArea-output jp-OutputArea-executeResult" data-mime-type="text/html" tabindex="0">
 <i>naive plan: (run <b>LazyFrame.explain(optimized=True)</b> to see the optimized plan)</i>
 <p></p>
-<div>SELECT [col("Variable"), col("n"), col("n (missing)"), col("mean"), col("std"), col("min"), col("max")]<p></p>  UNION<p></p>    PLAN 0:<p></p>       WITH_COLUMNS:<p></p>       [col("n (missing)").cast(Int16), col("min").strict_cast(Float64), col("max").strict_cast(Float64)] <p></p>        SELECT [col("Variable"), col("n"), col("n (missing)"), col("mean"), col("std"), col("min"), col("max")]<p></p>           WITH_COLUMNS:<p></p>           ["_row_index_".alias("Variable")] <p></p>            SELECT [col("std"), col("n"), col("n (missing)"), col("mean"), col("max"), col("min")]<p></p>              SELECT [col("___index___"), col("_row_index__std").alias("std"), col("_row_index__rawn").alias("n"), col("_row_index__rawn_missing").alias("n (missing)"), col("_row_index__mean").alias("mean"), col("_row_index__max").alias("max"), col("_row_index__min").alias("min")]<p></p>                SELECT [col("___index___"), col("_row_index__std"), col("_row_index__rawn"), col("_row_index__rawn_missing"), col("_row_index__mean"), col("_row_index__max"), col("_row_index__min")]<p></p>                  DF ["___index___", "_row_index__rawn", "_row_index__mean", "_row_index__std", ...]; PROJECT */103 COLUMNS<p></p>    PLAN 1:<p></p>       WITH_COLUMNS:<p></p>       [col("n (missing)").cast(Int16), col("min").strict_cast(Float64), col("max").strict_cast(Float64)] <p></p>        SELECT [col("Variable"), col("n"), col("n (missing)"), col("mean"), col("std"), col("min"), col("max")]<p></p>           WITH_COLUMNS:<p></p>           ["index".alias("Variable")] <p></p>            SELECT [col("std"), col("n"), col("n (missing)"), col("mean"), col("max"), col("min")]<p></p>              SELECT [col("___index___"), col("index_std").alias("std"), col("index_rawn").alias("n"), col("index_rawn_missing").alias("n (missing)"), col("index_mean").alias("mean"), col("index_max").alias("max"), col("index_min").alias("min")]<p></p>                SELECT [col("___index___"), col("index_std"), col("index_rawn"), col("index_rawn_missing"), col("index_mean"), col("index_max"), col("index_min")]<p></p>                  DF ["___index___", "_row_index__rawn", "_row_index__mean", "_row_index__std", ...]; PROJECT */103 COLUMNS<p></p>    PLAN 2:<p></p>       WITH_COLUMNS:<p></p>       [col("n (missing)").cast(Int16), col("min").strict_cast(Float64), col("max").strict_cast(Float64)] <p></p>        SELECT [col("Variable"), col("n"), col("n (missing)"), col("mean"), col("std"), col("min"), col("max")]<p></p>           WITH_COLUMNS:<p></p>           ["year".alias("Variable")] <p></p>            SELECT [col("std"), col("n"), col("n (missing)"), col("mean"), col("max"), col("min")]<p></p>              SELECT [col("___index___"), col("year_std").alias("std"), col("year_rawn").alias("n"), col("year_rawn_missing").alias("n (missing)"), col("year_mean").alias("mean"), col("year_max").alias("max"), col("year_min").alias("min")]<p></p>                SELECT [col("___index___"), col("year_std"), col("year_rawn"), col("year_rawn_missing"), col("year_mean"), col("year_max"), col("year_min")]<p></p>                  DF ["___index___", "_row_index__rawn", "_row_index__mean", "_row_index__std", ...]; PROJECT */103 COLUMNS<p></p>    PLAN 3:<p></p>       WITH_COLUMNS:<p></p>       [col("n (missing)").cast(Int16), col("min").strict_cast(Float64), col("max").strict_cast(Float64)] <p></p>        SELECT [col("Variable"), col("n"), col("n (missing)"), col("mean"), col("std"), col("min"), col("max")]<p></p>           WITH_COLUMNS:<p></p>           ["month".alias("Variable")] <p></p>            SELECT [col("std"), col("n"), col("n (missing)"), col("mean"), col("max"), col("min")]<p></p>              SELECT [col("___index___"), col("month_std").alias("std"), col("month_rawn").alias("n"), col("month_rawn_missing").alias("n (missing)"), col("month_mean").alias("mean"), col("month_max").alias("max"), col("month_min").alias("min")]<p></p>                SELECT [col("___index___"), col("month_std"), col("month_rawn"), col("month_rawn_missing"), col("month_mean"), col("month_max"), col("month_min")]<p></p>                  DF ["___index___", "_row_index__rawn", "_row_index__mean", "_row_index__std", ...]; PROJECT */103 COLUMNS<p></p>    PLAN 4:<p></p>       WITH_COLUMNS:<p></p>       [col("n (missing)").cast(Int16), col("min").strict_cast(Float64), col("max").strict_cast(Float64)] <p></p>        SELECT [col("Variable"), col("n"), col("n (missing)"), col("mean"), col("std"), col("min"), col("max")]<p></p>           WITH_COLUMNS:<p></p>           ["var2".alias("Variable")] <p></p>            SELECT [col("std"), col("n"), col("n (missing)"), col("mean"), col("max"), col("min")]<p></p>              SELECT [col("___index___"), col("var2_std").alias("std"), col("var2_rawn").alias("n"), col("var2_rawn_missing").alias("n (missing)"), col("var2_mean").alias("mean"), col("var2_max").alias("max"), col("var2_min").alias("min")]<p></p>                SELECT [col("___index___"), col("var2_std"), col("var2_rawn"), col("var2_rawn_missing"), col("var2_mean"), col("var2_max"), col("var2_min")]<p></p>                  DF ["___index___", "_row_index__rawn", "_row_index__mean", "_row_index__std", ...]; PROJECT */103 COLUMNS<p></p>    PLAN 5:<p></p>       WITH_COLUMNS:<p></p>       [col("n (missing)").cast(Int16), col("min").strict_cast(Float64), col("max").strict_cast(Float64)] <p></p>        SELECT [col("Variable"), col("n"), col("n (missing)"), col("mean"), col("std"), col("min"), col("max")]<p></p>           WITH_COLUMNS:<p></p>           ["var3".alias("Variable")] <p></p>            SELECT [col("std"), col("n"), col("n (missing)"), col("mean"), col("max"), col("min")]<p></p>              SELECT [col("___index___"), col("var3_std").alias("std"), col("var3_rawn").alias("n"), col("var3_rawn_missing").alias("n (missing)"), col("var3_mean").alias("mean"), col("var3_max").alias("max"), col("var3_min").alias("min")]<p></p>                SELECT [col("___index___"), col("var3_std"), col("var3_rawn"), col("var3_rawn_missing"), col("var3_mean"), col("var3_max"), col("var3_min")]<p></p>                  DF ["___index___", "_row_index__rawn", "_row_index__mean", "_row_index__std", ...]; PROJECT */103 COLUMNS<p></p>    PLAN 6:<p></p>       WITH_COLUMNS:<p></p>       [col("n (missing)").cast(Int16)] <p></p>        SELECT [col("Variable"), col("n"), col("n (missing)"), col("mean"), col("std"), col("min"), col("max")]<p></p>           WITH_COLUMNS:<p></p>           ["var4".alias("Variable")] <p></p>            SELECT [col("std"), col("n"), col("n (missing)"), col("mean"), col("max"), col("min")]<p></p>              SELECT [col("___index___"), col("var4_std").alias("std"), col("var4_rawn").alias("n"), col("var4_rawn_missing").alias("n (missing)"), col("var4_mean").alias("mean"), col("var4_max").alias("max"), col("var4_min").alias("min")]<p></p>                SELECT [col("___index___"), col("var4_std"), col("var4_rawn"), col("var4_rawn_missing"), col("var4_mean"), col("var4_max"), col("var4_min")]<p></p>                  DF ["___index___", "_row_index__rawn", "_row_index__mean", "_row_index__std", ...]; PROJECT */103 COLUMNS<p></p>    PLAN 7:<p></p>       WITH_COLUMNS:<p></p>       [col("n (missing)").cast(Int16)] <p></p>        SELECT [col("Variable"), col("n"), col("n (missing)"), col("mean"), col("std"), col("min"), col("max")]<p></p>           WITH_COLUMNS:<p></p>           ["unrelated_1".alias("Variable")] <p></p>            SELECT [col("std"), col("n"), col("n (missing)"), col("mean"), col("max"), col("min")]<p></p>              SELECT [col("___index___"), col("unrelated_1_std").alias("std"), col("unrelated_1_rawn").alias("n"), col("unrelated_1_rawn_missing").alias("n (missing)"), col("unrelated_1_mean").alias("mean"), col("unrelated_1_max").alias("max"), col("unrelated_1_min").alias("min")]<p></p>                SELECT [col("___index___"), col("unrelated_1_std"), col("unrelated_1_rawn"), col("unrelated_1_rawn_missing"), col("unrelated_1_mean"), col("unrelated_1_max"), col("unrelated_1_min")]<p></p>                  DF ["___index___", "_row_index__rawn", "_row_index__mean", "_row_index__std", ...]; PROJECT */103 COLUMNS<p></p>    PLAN 8:<p></p>       WITH_COLUMNS:<p></p>       [col("n (missing)").cast(Int16)] <p></p>        SELECT [col("Variable"), col("n"), col("n (missing)"), col("mean"), col("std"), col("min"), col("max")]<p></p>           WITH_COLUMNS:<p></p>           ["unrelated_2".alias("Variable")] <p></p>            SELECT [col("std"), col("n"), col("n (missing)"), col("mean"), col("max"), col("min")]<p></p>              SELECT [col("___index___"), col("unrelated_2_std").alias("std"), col("unrelated_2_rawn").alias("n"), col("unrelated_2_rawn_missing").alias("n (missing)"), col("unrelated_2_mean").alias("mean"), col("unrelated_2_max").alias("max"), col("unrelated_2_min").alias("min")]<p></p>                SELECT [col("___index___"), col("unrelated_2_std"), col("unrelated_2_rawn"), col("unrelated_2_rawn_missing"), col("unrelated_2_mean"), col("unrelated_2_max"), col("unrelated_2_min")]<p></p>                  DF ["___index___", "_row_index__rawn", "_row_index__mean", "_row_index__std", ...]; PROJECT */103 COLUMNS<p></p>    PLAN 9:<p></p>       WITH_COLUMNS:<p></p>       [col("n (missing)").cast(Int16)] <p></p>        SELECT [col("Variable"), col("n"), col("n (missing)"), col("mean"), col("std"), col("min"), col("max")]<p></p>           WITH_COLUMNS:<p></p>           ["unrelated_3".alias("Variable")] <p></p>            SELECT [col("std"), col("n"), col("n (missing)"), col("mean"), col("max"), col("min")]<p></p>              SELECT [col("___index___"), col("unrelated_3_std").alias("std"), col("unrelated_3_rawn").alias("n"), col("unrelated_3_rawn_missing").alias("n (missing)"), col("unrelated_3_mean").alias("mean"), col("unrelated_3_max").alias("max"), col("unrelated_3_min").alias("min")]<p></p>                SELECT [col("___index___"), col("unrelated_3_std"), col("unrelated_3_rawn"), col("unrelated_3_rawn_missing"), col("unrelated_3_mean"), col("unrelated_3_max"), col("unrelated_3_min")]<p></p>                  DF ["___index___", "_row_index__rawn", "_row_index__mean", "_row_index__std", ...]; PROJECT */103 COLUMNS<p></p>    PLAN 10:<p></p>       WITH_COLUMNS:<p></p>       [col("n (missing)").cast(Int16)] <p></p>        SELECT [col("Variable"), col("n"), col("n (missing)"), col("mean"), col("std"), col("min"), col("max")]<p></p>           WITH_COLUMNS:<p></p>           ["unrelated_4".alias("Variable")] <p></p>            SELECT [col("std"), col("n"), col("n (missing)"), col("mean"), col("max"), col("min")]<p></p>              SELECT [col("___index___"), col("unrelated_4_std").alias("std"), col("unrelated_4_rawn").alias("n"), col("unrelated_4_rawn_missing").alias("n (missing)"), col("unrelated_4_mean").alias("mean"), col("unrelated_4_max").alias("max"), col("unrelated_4_min").alias("min")]<p></p>                SELECT [col("___index___"), col("unrelated_4_std"), col("unrelated_4_rawn"), col("unrelated_4_rawn_missing"), col("unrelated_4_mean"), col("unrelated_4_max"), col("unrelated_4_min")]<p></p>                  DF ["___index___", "_row_index__rawn", "_row_index__mean", "_row_index__std", ...]; PROJECT */103 COLUMNS<p></p>    PLAN 11:<p></p>       WITH_COLUMNS:<p></p>       [col("n (missing)").cast(Int16)] <p></p>        SELECT [col("Variable"), col("n"), col("n (missing)"), col("mean"), col("std"), col("min"), col("max")]<p></p>           WITH_COLUMNS:<p></p>           ["unrelated_5".alias("Variable")] <p></p>            SELECT [col("std"), col("n"), col("n (missing)"), col("mean"), col("max"), col("min")]<p></p>              SELECT [col("___index___"), col("unrelated_5_std").alias("std"), col("unrelated_5_rawn").alias("n"), col("unrelated_5_rawn_missing").alias("n (missing)"), col("unrelated_5_mean").alias("mean"), col("unrelated_5_max").alias("max"), col("unrelated_5_min").alias("min")]<p></p>                SELECT [col("___index___"), col("unrelated_5_std"), col("unrelated_5_rawn"), col("unrelated_5_rawn_missing"), col("unrelated_5_mean"), col("unrelated_5_max"), col("unrelated_5_min")]<p></p>                  DF ["___index___", "_row_index__rawn", "_row_index__mean", "_row_index__std", ...]; PROJECT */103 COLUMNS<p></p>    PLAN 12:<p></p>      SELECT [col("Variable"), col("n"), col("n (missing)"), col("mean"), col("std"), col("min"), col("max")]<p></p>         WITH_COLUMNS:<p></p>         ["var_gbm2".alias("Variable")] <p></p>          SELECT [col("std"), col("n"), col("n (missing)"), col("mean"), col("max"), col("min")]<p></p>            SELECT [col("___index___"), col("var_gbm2_std").alias("std"), col("var_gbm2_rawn").alias("n"), col("var_gbm2_rawn_missing").alias("n (missing)"), col("var_gbm2_mean").alias("mean"), col("var_gbm2_max").alias("max"), col("var_gbm2_min").alias("min")]<p></p>              SELECT [col("___index___"), col("var_gbm2_std"), col("var_gbm2_rawn"), col("var_gbm2_rawn_missing"), col("var_gbm2_mean"), col("var_gbm2_max"), col("var_gbm2_min")]<p></p>                DF ["___index___", "_row_index__rawn", "_row_index__mean", "_row_index__std", ...]; PROJECT */103 COLUMNS<p></p>    PLAN 13:<p></p>      SELECT [col("Variable"), col("n"), col("n (missing)"), col("mean"), col("std"), col("min"), col("max")]<p></p>         WITH_COLUMNS:<p></p>         ["var_gbm3".alias("Variable")] <p></p>          SELECT [col("std"), col("n"), col("n (missing)"), col("mean"), col("max"), col("min")]<p></p>            SELECT [col("___index___"), col("var_gbm3_std").alias("std"), col("var_gbm3_rawn").alias("n"), col("var_gbm3_rawn_missing").alias("n (missing)"), col("var_gbm3_mean").alias("mean"), col("var_gbm3_max").alias("max"), col("var_gbm3_min").alias("min")]<p></p>              SELECT [col("___index___"), col("var_gbm3_std"), col("var_gbm3_rawn"), col("var_gbm3_rawn_missing"), col("var_gbm3_mean"), col("var_gbm3_max"), col("var_gbm3_min")]<p></p>                DF ["___index___", "_row_index__rawn", "_row_index__mean", "_row_index__std", ...]; PROJECT */103 COLUMNS<p></p>    PLAN 14:<p></p>       WITH_COLUMNS:<p></p>       [col("n (missing)").cast(Int16)] <p></p>        SELECT [col("Variable"), col("n"), col("n (missing)"), col("mean"), col("std"), col("min"), col("max")]<p></p>           WITH_COLUMNS:<p></p>           ["repeat_1".alias("Variable")] <p></p>            SELECT [col("std"), col("n"), col("n (missing)"), col("mean"), col("max"), col("min")]<p></p>              SELECT [col("___index___"), col("repeat_1_std").alias("std"), col("repeat_1_rawn").alias("n"), col("repeat_1_rawn_missing").alias("n (missing)"), col("repeat_1_mean").alias("mean"), col("repeat_1_max").alias("max"), col("repeat_1_min").alias("min")]<p></p>                SELECT [col("___index___"), col("repeat_1_std"), col("repeat_1_rawn"), col("repeat_1_rawn_missing"), col("repeat_1_mean"), col("repeat_1_max"), col("repeat_1_min")]<p></p>                  DF ["___index___", "_row_index__rawn", "_row_index__mean", "_row_index__std", ...]; PROJECT */103 COLUMNS<p></p>    PLAN 15:<p></p>       WITH_COLUMNS:<p></p>       [col("n (missing)").cast(Int16), col("min").strict_cast(Float64), col("max").strict_cast(Float64)] <p></p>        SELECT [col("Variable"), col("n"), col("n (missing)"), col("mean"), col("std"), col("min"), col("max")]<p></p>           WITH_COLUMNS:<p></p>           ["var5".alias("Variable")] <p></p>            SELECT [col("std"), col("n"), col("n (missing)"), col("mean"), col("max"), col("min")]<p></p>              SELECT [col("___index___"), col("var5_std").alias("std"), col("var5_rawn").alias("n"), col("var5_rawn_missing").alias("n (missing)"), col("var5_mean").alias("mean"), col("var5_max").alias("max"), col("var5_min").alias("min")]<p></p>                SELECT [col("___index___"), col("var5_std"), col("var5_rawn"), col("var5_rawn_missing"), col("var5_mean"), col("var5_max"), col("var5_min")]<p></p>                  DF ["___index___", "_row_index__rawn", "_row_index__mean", "_row_index__std", ...]; PROJECT */103 COLUMNS<p></p>    PLAN 16:<p></p>       WITH_COLUMNS:<p></p>       [col("min").strict_cast(Float64), col("max").strict_cast(Float64)] <p></p>        SELECT [col("Variable"), col("n"), col("n (missing)"), col("mean"), col("std"), col("min"), col("max")]<p></p>           WITH_COLUMNS:<p></p>           ["var_gbm1".alias("Variable")] <p></p>            SELECT [col("std"), col("n"), col("n (missing)"), col("mean"), col("max"), col("min")]<p></p>              SELECT [col("___index___"), col("var_gbm1_std").alias("std"), col("var_gbm1_rawn").alias("n"), col("var_gbm1_rawn_missing").alias("n (missing)"), col("var_gbm1_mean").alias("mean"), col("var_gbm1_max").alias("max"), col("var_gbm1_min").alias("min")]<p></p>                SELECT [col("___index___"), col("var_gbm1_std"), col("var_gbm1_rawn"), col("var_gbm1_rawn_missing"), col("var_gbm1_mean"), col("var_gbm1_max"), col("var_gbm1_min")]<p></p>                  DF ["___index___", "_row_index__rawn", "_row_index__mean", "_row_index__std", ...]; PROJECT */103 COLUMNS<p></p>  END UNION</div>
+<div>SELECT [col("Variable"), col("n"), col("n (missing)"), col("mean"), col("std"), col("min"), col("max")]<p></p>  UNION<p></p>    PLAN 0:<p></p>       WITH_COLUMNS:<p></p>       [col("n (missing)").cast(Int16), col("min").strict_cast(Float64), col("max").strict_cast(Float64)] <p></p>        SELECT [col("Variable"), col("n"), col("n (missing)"), col("mean"), col("std"), col("min"), col("max")]<p></p>           WITH_COLUMNS:<p></p>           ["_row_index_".alias("Variable")] <p></p>            SELECT [col("mean"), col("std"), col("n (missing)"), col("n"), col("min"), col("max")]<p></p>              SELECT [col("___index___"), col("_row_index__mean").alias("mean"), col("_row_index__std").alias("std"), col("_row_index__rawn_missing").alias("n (missing)"), col("_row_index__rawn").alias("n"), col("_row_index__min").alias("min"), col("_row_index__max").alias("max")]<p></p>                SELECT [col("___index___"), col("_row_index__mean"), col("_row_index__std"), col("_row_index__rawn_missing"), col("_row_index__rawn"), col("_row_index__min"), col("_row_index__max")]<p></p>                  DF ["___index___", "_row_index__rawn", "_row_index__mean", "_row_index__std", ...]; PROJECT */103 COLUMNS<p></p>    PLAN 1:<p></p>       WITH_COLUMNS:<p></p>       [col("n (missing)").cast(Int16), col("min").strict_cast(Float64), col("max").strict_cast(Float64)] <p></p>        SELECT [col("Variable"), col("n"), col("n (missing)"), col("mean"), col("std"), col("min"), col("max")]<p></p>           WITH_COLUMNS:<p></p>           ["index".alias("Variable")] <p></p>            SELECT [col("mean"), col("std"), col("n (missing)"), col("n"), col("min"), col("max")]<p></p>              SELECT [col("___index___"), col("index_mean").alias("mean"), col("index_std").alias("std"), col("index_rawn_missing").alias("n (missing)"), col("index_rawn").alias("n"), col("index_min").alias("min"), col("index_max").alias("max")]<p></p>                SELECT [col("___index___"), col("index_mean"), col("index_std"), col("index_rawn_missing"), col("index_rawn"), col("index_min"), col("index_max")]<p></p>                  DF ["___index___", "_row_index__rawn", "_row_index__mean", "_row_index__std", ...]; PROJECT */103 COLUMNS<p></p>    PLAN 2:<p></p>       WITH_COLUMNS:<p></p>       [col("n (missing)").cast(Int16), col("min").strict_cast(Float64), col("max").strict_cast(Float64)] <p></p>        SELECT [col("Variable"), col("n"), col("n (missing)"), col("mean"), col("std"), col("min"), col("max")]<p></p>           WITH_COLUMNS:<p></p>           ["year".alias("Variable")] <p></p>            SELECT [col("mean"), col("std"), col("n (missing)"), col("n"), col("min"), col("max")]<p></p>              SELECT [col("___index___"), col("year_mean").alias("mean"), col("year_std").alias("std"), col("year_rawn_missing").alias("n (missing)"), col("year_rawn").alias("n"), col("year_min").alias("min"), col("year_max").alias("max")]<p></p>                SELECT [col("___index___"), col("year_mean"), col("year_std"), col("year_rawn_missing"), col("year_rawn"), col("year_min"), col("year_max")]<p></p>                  DF ["___index___", "_row_index__rawn", "_row_index__mean", "_row_index__std", ...]; PROJECT */103 COLUMNS<p></p>    PLAN 3:<p></p>       WITH_COLUMNS:<p></p>       [col("n (missing)").cast(Int16), col("min").strict_cast(Float64), col("max").strict_cast(Float64)] <p></p>        SELECT [col("Variable"), col("n"), col("n (missing)"), col("mean"), col("std"), col("min"), col("max")]<p></p>           WITH_COLUMNS:<p></p>           ["month".alias("Variable")] <p></p>            SELECT [col("mean"), col("std"), col("n (missing)"), col("n"), col("min"), col("max")]<p></p>              SELECT [col("___index___"), col("month_mean").alias("mean"), col("month_std").alias("std"), col("month_rawn_missing").alias("n (missing)"), col("month_rawn").alias("n"), col("month_min").alias("min"), col("month_max").alias("max")]<p></p>                SELECT [col("___index___"), col("month_mean"), col("month_std"), col("month_rawn_missing"), col("month_rawn"), col("month_min"), col("month_max")]<p></p>                  DF ["___index___", "_row_index__rawn", "_row_index__mean", "_row_index__std", ...]; PROJECT */103 COLUMNS<p></p>    PLAN 4:<p></p>       WITH_COLUMNS:<p></p>       [col("n (missing)").cast(Int16), col("min").strict_cast(Float64), col("max").strict_cast(Float64)] <p></p>        SELECT [col("Variable"), col("n"), col("n (missing)"), col("mean"), col("std"), col("min"), col("max")]<p></p>           WITH_COLUMNS:<p></p>           ["var2".alias("Variable")] <p></p>            SELECT [col("mean"), col("std"), col("n (missing)"), col("n"), col("min"), col("max")]<p></p>              SELECT [col("___index___"), col("var2_mean").alias("mean"), col("var2_std").alias("std"), col("var2_rawn_missing").alias("n (missing)"), col("var2_rawn").alias("n"), col("var2_min").alias("min"), col("var2_max").alias("max")]<p></p>                SELECT [col("___index___"), col("var2_mean"), col("var2_std"), col("var2_rawn_missing"), col("var2_rawn"), col("var2_min"), col("var2_max")]<p></p>                  DF ["___index___", "_row_index__rawn", "_row_index__mean", "_row_index__std", ...]; PROJECT */103 COLUMNS<p></p>    PLAN 5:<p></p>       WITH_COLUMNS:<p></p>       [col("n (missing)").cast(Int16), col("min").strict_cast(Float64), col("max").strict_cast(Float64)] <p></p>        SELECT [col("Variable"), col("n"), col("n (missing)"), col("mean"), col("std"), col("min"), col("max")]<p></p>           WITH_COLUMNS:<p></p>           ["var3".alias("Variable")] <p></p>            SELECT [col("mean"), col("std"), col("n (missing)"), col("n"), col("min"), col("max")]<p></p>              SELECT [col("___index___"), col("var3_mean").alias("mean"), col("var3_std").alias("std"), col("var3_rawn_missing").alias("n (missing)"), col("var3_rawn").alias("n"), col("var3_min").alias("min"), col("var3_max").alias("max")]<p></p>                SELECT [col("___index___"), col("var3_mean"), col("var3_std"), col("var3_rawn_missing"), col("var3_rawn"), col("var3_min"), col("var3_max")]<p></p>                  DF ["___index___", "_row_index__rawn", "_row_index__mean", "_row_index__std", ...]; PROJECT */103 COLUMNS<p></p>    PLAN 6:<p></p>       WITH_COLUMNS:<p></p>       [col("n (missing)").cast(Int16)] <p></p>        SELECT [col("Variable"), col("n"), col("n (missing)"), col("mean"), col("std"), col("min"), col("max")]<p></p>           WITH_COLUMNS:<p></p>           ["var4".alias("Variable")] <p></p>            SELECT [col("mean"), col("std"), col("n (missing)"), col("n"), col("min"), col("max")]<p></p>              SELECT [col("___index___"), col("var4_mean").alias("mean"), col("var4_std").alias("std"), col("var4_rawn_missing").alias("n (missing)"), col("var4_rawn").alias("n"), col("var4_min").alias("min"), col("var4_max").alias("max")]<p></p>                SELECT [col("___index___"), col("var4_mean"), col("var4_std"), col("var4_rawn_missing"), col("var4_rawn"), col("var4_min"), col("var4_max")]<p></p>                  DF ["___index___", "_row_index__rawn", "_row_index__mean", "_row_index__std", ...]; PROJECT */103 COLUMNS<p></p>    PLAN 7:<p></p>       WITH_COLUMNS:<p></p>       [col("n (missing)").cast(Int16)] <p></p>        SELECT [col("Variable"), col("n"), col("n (missing)"), col("mean"), col("std"), col("min"), col("max")]<p></p>           WITH_COLUMNS:<p></p>           ["unrelated_1".alias("Variable")] <p></p>            SELECT [col("mean"), col("std"), col("n (missing)"), col("n"), col("min"), col("max")]<p></p>              SELECT [col("___index___"), col("unrelated_1_mean").alias("mean"), col("unrelated_1_std").alias("std"), col("unrelated_1_rawn_missing").alias("n (missing)"), col("unrelated_1_rawn").alias("n"), col("unrelated_1_min").alias("min"), col("unrelated_1_max").alias("max")]<p></p>                SELECT [col("___index___"), col("unrelated_1_mean"), col("unrelated_1_std"), col("unrelated_1_rawn_missing"), col("unrelated_1_rawn"), col("unrelated_1_min"), col("unrelated_1_max")]<p></p>                  DF ["___index___", "_row_index__rawn", "_row_index__mean", "_row_index__std", ...]; PROJECT */103 COLUMNS<p></p>    PLAN 8:<p></p>       WITH_COLUMNS:<p></p>       [col("n (missing)").cast(Int16)] <p></p>        SELECT [col("Variable"), col("n"), col("n (missing)"), col("mean"), col("std"), col("min"), col("max")]<p></p>           WITH_COLUMNS:<p></p>           ["unrelated_2".alias("Variable")] <p></p>            SELECT [col("mean"), col("std"), col("n (missing)"), col("n"), col("min"), col("max")]<p></p>              SELECT [col("___index___"), col("unrelated_2_mean").alias("mean"), col("unrelated_2_std").alias("std"), col("unrelated_2_rawn_missing").alias("n (missing)"), col("unrelated_2_rawn").alias("n"), col("unrelated_2_min").alias("min"), col("unrelated_2_max").alias("max")]<p></p>                SELECT [col("___index___"), col("unrelated_2_mean"), col("unrelated_2_std"), col("unrelated_2_rawn_missing"), col("unrelated_2_rawn"), col("unrelated_2_min"), col("unrelated_2_max")]<p></p>                  DF ["___index___", "_row_index__rawn", "_row_index__mean", "_row_index__std", ...]; PROJECT */103 COLUMNS<p></p>    PLAN 9:<p></p>       WITH_COLUMNS:<p></p>       [col("n (missing)").cast(Int16)] <p></p>        SELECT [col("Variable"), col("n"), col("n (missing)"), col("mean"), col("std"), col("min"), col("max")]<p></p>           WITH_COLUMNS:<p></p>           ["unrelated_3".alias("Variable")] <p></p>            SELECT [col("mean"), col("std"), col("n (missing)"), col("n"), col("min"), col("max")]<p></p>              SELECT [col("___index___"), col("unrelated_3_mean").alias("mean"), col("unrelated_3_std").alias("std"), col("unrelated_3_rawn_missing").alias("n (missing)"), col("unrelated_3_rawn").alias("n"), col("unrelated_3_min").alias("min"), col("unrelated_3_max").alias("max")]<p></p>                SELECT [col("___index___"), col("unrelated_3_mean"), col("unrelated_3_std"), col("unrelated_3_rawn_missing"), col("unrelated_3_rawn"), col("unrelated_3_min"), col("unrelated_3_max")]<p></p>                  DF ["___index___", "_row_index__rawn", "_row_index__mean", "_row_index__std", ...]; PROJECT */103 COLUMNS<p></p>    PLAN 10:<p></p>       WITH_COLUMNS:<p></p>       [col("n (missing)").cast(Int16)] <p></p>        SELECT [col("Variable"), col("n"), col("n (missing)"), col("mean"), col("std"), col("min"), col("max")]<p></p>           WITH_COLUMNS:<p></p>           ["unrelated_4".alias("Variable")] <p></p>            SELECT [col("mean"), col("std"), col("n (missing)"), col("n"), col("min"), col("max")]<p></p>              SELECT [col("___index___"), col("unrelated_4_mean").alias("mean"), col("unrelated_4_std").alias("std"), col("unrelated_4_rawn_missing").alias("n (missing)"), col("unrelated_4_rawn").alias("n"), col("unrelated_4_min").alias("min"), col("unrelated_4_max").alias("max")]<p></p>                SELECT [col("___index___"), col("unrelated_4_mean"), col("unrelated_4_std"), col("unrelated_4_rawn_missing"), col("unrelated_4_rawn"), col("unrelated_4_min"), col("unrelated_4_max")]<p></p>                  DF ["___index___", "_row_index__rawn", "_row_index__mean", "_row_index__std", ...]; PROJECT */103 COLUMNS<p></p>    PLAN 11:<p></p>       WITH_COLUMNS:<p></p>       [col("n (missing)").cast(Int16)] <p></p>        SELECT [col("Variable"), col("n"), col("n (missing)"), col("mean"), col("std"), col("min"), col("max")]<p></p>           WITH_COLUMNS:<p></p>           ["unrelated_5".alias("Variable")] <p></p>            SELECT [col("mean"), col("std"), col("n (missing)"), col("n"), col("min"), col("max")]<p></p>              SELECT [col("___index___"), col("unrelated_5_mean").alias("mean"), col("unrelated_5_std").alias("std"), col("unrelated_5_rawn_missing").alias("n (missing)"), col("unrelated_5_rawn").alias("n"), col("unrelated_5_min").alias("min"), col("unrelated_5_max").alias("max")]<p></p>                SELECT [col("___index___"), col("unrelated_5_mean"), col("unrelated_5_std"), col("unrelated_5_rawn_missing"), col("unrelated_5_rawn"), col("unrelated_5_min"), col("unrelated_5_max")]<p></p>                  DF ["___index___", "_row_index__rawn", "_row_index__mean", "_row_index__std", ...]; PROJECT */103 COLUMNS<p></p>    PLAN 12:<p></p>      SELECT [col("Variable"), col("n"), col("n (missing)"), col("mean"), col("std"), col("min"), col("max")]<p></p>         WITH_COLUMNS:<p></p>         ["var_gbm2".alias("Variable")] <p></p>          SELECT [col("mean"), col("std"), col("n (missing)"), col("n"), col("min"), col("max")]<p></p>            SELECT [col("___index___"), col("var_gbm2_mean").alias("mean"), col("var_gbm2_std").alias("std"), col("var_gbm2_rawn_missing").alias("n (missing)"), col("var_gbm2_rawn").alias("n"), col("var_gbm2_min").alias("min"), col("var_gbm2_max").alias("max")]<p></p>              SELECT [col("___index___"), col("var_gbm2_mean"), col("var_gbm2_std"), col("var_gbm2_rawn_missing"), col("var_gbm2_rawn"), col("var_gbm2_min"), col("var_gbm2_max")]<p></p>                DF ["___index___", "_row_index__rawn", "_row_index__mean", "_row_index__std", ...]; PROJECT */103 COLUMNS<p></p>    PLAN 13:<p></p>      SELECT [col("Variable"), col("n"), col("n (missing)"), col("mean"), col("std"), col("min"), col("max")]<p></p>         WITH_COLUMNS:<p></p>         ["var_gbm3".alias("Variable")] <p></p>          SELECT [col("mean"), col("std"), col("n (missing)"), col("n"), col("min"), col("max")]<p></p>            SELECT [col("___index___"), col("var_gbm3_mean").alias("mean"), col("var_gbm3_std").alias("std"), col("var_gbm3_rawn_missing").alias("n (missing)"), col("var_gbm3_rawn").alias("n"), col("var_gbm3_min").alias("min"), col("var_gbm3_max").alias("max")]<p></p>              SELECT [col("___index___"), col("var_gbm3_mean"), col("var_gbm3_std"), col("var_gbm3_rawn_missing"), col("var_gbm3_rawn"), col("var_gbm3_min"), col("var_gbm3_max")]<p></p>                DF ["___index___", "_row_index__rawn", "_row_index__mean", "_row_index__std", ...]; PROJECT */103 COLUMNS<p></p>    PLAN 14:<p></p>       WITH_COLUMNS:<p></p>       [col("n (missing)").cast(Int16)] <p></p>        SELECT [col("Variable"), col("n"), col("n (missing)"), col("mean"), col("std"), col("min"), col("max")]<p></p>           WITH_COLUMNS:<p></p>           ["repeat_1".alias("Variable")] <p></p>            SELECT [col("mean"), col("std"), col("n (missing)"), col("n"), col("min"), col("max")]<p></p>              SELECT [col("___index___"), col("repeat_1_mean").alias("mean"), col("repeat_1_std").alias("std"), col("repeat_1_rawn_missing").alias("n (missing)"), col("repeat_1_rawn").alias("n"), col("repeat_1_min").alias("min"), col("repeat_1_max").alias("max")]<p></p>                SELECT [col("___index___"), col("repeat_1_mean"), col("repeat_1_std"), col("repeat_1_rawn_missing"), col("repeat_1_rawn"), col("repeat_1_min"), col("repeat_1_max")]<p></p>                  DF ["___index___", "_row_index__rawn", "_row_index__mean", "_row_index__std", ...]; PROJECT */103 COLUMNS<p></p>    PLAN 15:<p></p>       WITH_COLUMNS:<p></p>       [col("n (missing)").cast(Int16), col("min").strict_cast(Float64), col("max").strict_cast(Float64)] <p></p>        SELECT [col("Variable"), col("n"), col("n (missing)"), col("mean"), col("std"), col("min"), col("max")]<p></p>           WITH_COLUMNS:<p></p>           ["var5".alias("Variable")] <p></p>            SELECT [col("mean"), col("std"), col("n (missing)"), col("n"), col("min"), col("max")]<p></p>              SELECT [col("___index___"), col("var5_mean").alias("mean"), col("var5_std").alias("std"), col("var5_rawn_missing").alias("n (missing)"), col("var5_rawn").alias("n"), col("var5_min").alias("min"), col("var5_max").alias("max")]<p></p>                SELECT [col("___index___"), col("var5_mean"), col("var5_std"), col("var5_rawn_missing"), col("var5_rawn"), col("var5_min"), col("var5_max")]<p></p>                  DF ["___index___", "_row_index__rawn", "_row_index__mean", "_row_index__std", ...]; PROJECT */103 COLUMNS<p></p>    PLAN 16:<p></p>       WITH_COLUMNS:<p></p>       [col("min").strict_cast(Float64), col("max").strict_cast(Float64)] <p></p>        SELECT [col("Variable"), col("n"), col("n (missing)"), col("mean"), col("std"), col("min"), col("max")]<p></p>           WITH_COLUMNS:<p></p>           ["var_gbm1".alias("Variable")] <p></p>            SELECT [col("mean"), col("std"), col("n (missing)"), col("n"), col("min"), col("max")]<p></p>              SELECT [col("___index___"), col("var_gbm1_mean").alias("mean"), col("var_gbm1_std").alias("std"), col("var_gbm1_rawn_missing").alias("n (missing)"), col("var_gbm1_rawn").alias("n"), col("var_gbm1_min").alias("min"), col("var_gbm1_max").alias("max")]<p></p>                SELECT [col("___index___"), col("var_gbm1_mean"), col("var_gbm1_std"), col("var_gbm1_rawn_missing"), col("var_gbm1_rawn"), col("var_gbm1_min"), col("var_gbm1_max")]<p></p>                  DF ["___index___", "_row_index__rawn", "_row_index__mean", "_row_index__std", ...]; PROJECT */103 COLUMNS<p></p>  END UNION</div>
 </div>
 </div>
 </div>
 </div>
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=585e7e59">
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=ff7a644b">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -7762,7 +7762,7 @@ a.anchor-link {
 </div>
 </div>
 </div>
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=f55687a4">
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=cbbd8e7d">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -7806,7 +7806,7 @@ a.anchor-link {
 </div>
 </div>
 </div>
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=cf0af7e3">
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=6a2a802b">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -8079,7 +8079,7 @@ a.anchor-link {
 </div>
 </div>
 </div>
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=49e6cf5d">
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=044b4665">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -8119,13 +8119,13 @@ a.anchor-link {
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>Removing existing directory /home/jrothbaum/Coding/claude_code/survey_kit/.scratch/temp_files/py_srmi_test_gbm.srmi
+<pre>Removing existing directory C:\Users\jonro\OneDrive\Documents\Coding\survey_kit\.scratch\temp_files/py_srmi_test_gbm.srmi
 </pre>
 </div>
 </div>
 </div>
 </div>
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=19c6d810">
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=44a4e47e">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -8193,48 +8193,6 @@ a.anchor-link {
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>[LightGBM] [Fatal] Reducing `min_data_in_leaf` with `feature_pre_filter=true` may cause unexpected behaviour for features that were pre-filtered by the larger `min_data_in_leaf`.
-You need to set `feature_pre_filter=false` to dynamically change the `min_data_in_leaf`.
-</pre>
-</div>
-</div>
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>[LightGBM] [Fatal] Reducing `min_data_in_leaf` with `feature_pre_filter=true` may cause unexpected behaviour for features that were pre-filtered by the larger `min_data_in_leaf`.
-You need to set `feature_pre_filter=false` to dynamically change the `min_data_in_leaf`.
-[LightGBM] [Fatal] Reducing `min_data_in_leaf` with `feature_pre_filter=true` may cause unexpected behaviour for features that were pre-filtered by the larger `min_data_in_leaf`.
-You need to set `feature_pre_filter=false` to dynamically change the `min_data_in_leaf`.
-</pre>
-</div>
-</div>
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>[LightGBM] [Fatal] Reducing `min_data_in_leaf` with `feature_pre_filter=true` may cause unexpected behaviour for features that were pre-filtered by the larger `min_data_in_leaf`.
-You need to set `feature_pre_filter=false` to dynamically change the `min_data_in_leaf`.
-</pre>
-</div>
-</div>
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>[LightGBM] [Fatal] Reducing `min_data_in_leaf` with `feature_pre_filter=true` may cause unexpected behaviour for features that were pre-filtered by the larger `min_data_in_leaf`.
-You need to set `feature_pre_filter=false` to dynamically change the `min_data_in_leaf`.
-</pre>
-</div>
-</div>
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>[LightGBM] [Fatal] Reducing `min_data_in_leaf` with `feature_pre_filter=true` may cause unexpected behaviour for features that were pre-filtered by the larger `min_data_in_leaf`.
-You need to set `feature_pre_filter=false` to dynamically change the `min_data_in_leaf`.
-</pre>
-</div>
-</div>
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
 <pre>Tuner: 50 trials finished
 </pre>
 </div>
@@ -8249,7 +8207,7 @@ You need to set `feature_pre_filter=false` to dynamically change the `min_data_i
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>Tuner: best params = {'num_leaves': 235, 'max_depth': 172, 'min_data_in_leaf': 28, 'num_iterations': 177, 'bagging_fraction': 0.6678936879865209, 'bagging_freq': 1}
+<pre>Tuner: best params = {'num_leaves': 235, 'max_depth': 172, 'min_data_in_leaf': 28, 'num_iterations': 177, 'bagging_fraction': 0.667893687986521, 'bagging_freq': 1}
 </pre>
 </div>
 </div>
@@ -8257,48 +8215,6 @@ You need to set `feature_pre_filter=false` to dynamically change the `min_data_i
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
 <pre>TUNING COMPLETE
-</pre>
-</div>
-</div>
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>[LightGBM] [Fatal] Reducing `min_data_in_leaf` with `feature_pre_filter=true` may cause unexpected behaviour for features that were pre-filtered by the larger `min_data_in_leaf`.
-You need to set `feature_pre_filter=false` to dynamically change the `min_data_in_leaf`.
-</pre>
-</div>
-</div>
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>[LightGBM] [Fatal] Reducing `min_data_in_leaf` with `feature_pre_filter=true` may cause unexpected behaviour for features that were pre-filtered by the larger `min_data_in_leaf`.
-You need to set `feature_pre_filter=false` to dynamically change the `min_data_in_leaf`.
-</pre>
-</div>
-</div>
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>[LightGBM] [Fatal] Reducing `min_data_in_leaf` with `feature_pre_filter=true` may cause unexpected behaviour for features that were pre-filtered by the larger `min_data_in_leaf`.
-You need to set `feature_pre_filter=false` to dynamically change the `min_data_in_leaf`.
-[LightGBM] [Fatal] Reducing `min_data_in_leaf` with `feature_pre_filter=true` may cause unexpected behaviour for features that were pre-filtered by the larger `min_data_in_leaf`.
-You need to set `feature_pre_filter=false` to dynamically change the `min_data_in_leaf`.
-</pre>
-</div>
-</div>
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>[LightGBM] [Fatal] Reducing `min_data_in_leaf` with `feature_pre_filter=true` may cause unexpected behaviour for features that were pre-filtered by the larger `min_data_in_leaf`.
-You need to set `feature_pre_filter=false` to dynamically change the `min_data_in_leaf`.
-</pre>
-</div>
-</div>
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>[LightGBM] [Fatal] Reducing `min_data_in_leaf` with `feature_pre_filter=true` may cause unexpected behaviour for features that were pre-filtered by the larger `min_data_in_leaf`.
-You need to set `feature_pre_filter=false` to dynamically change the `min_data_in_leaf`.
 </pre>
 </div>
 </div>
@@ -8333,54 +8249,6 @@ You need to set `feature_pre_filter=false` to dynamically change the `min_data_i
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>[LightGBM] [Fatal] Reducing `min_data_in_leaf` with `feature_pre_filter=true` may cause unexpected behaviour for features that were pre-filtered by the larger `min_data_in_leaf`.
-You need to set `feature_pre_filter=false` to dynamically change the `min_data_in_leaf`.
-</pre>
-</div>
-</div>
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>[LightGBM] [Fatal] Reducing `min_data_in_leaf` with `feature_pre_filter=true` may cause unexpected behaviour for features that were pre-filtered by the larger `min_data_in_leaf`.
-You need to set `feature_pre_filter=false` to dynamically change the `min_data_in_leaf`.
-</pre>
-</div>
-</div>
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>[LightGBM] [Fatal] Reducing `min_data_in_leaf` with `feature_pre_filter=true` may cause unexpected behaviour for features that were pre-filtered by the larger `min_data_in_leaf`.
-You need to set `feature_pre_filter=false` to dynamically change the `min_data_in_leaf`.
-</pre>
-</div>
-</div>
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>[LightGBM] [Fatal] Reducing `min_data_in_leaf` with `feature_pre_filter=true` may cause unexpected behaviour for features that were pre-filtered by the larger `min_data_in_leaf`.
-You need to set `feature_pre_filter=false` to dynamically change the `min_data_in_leaf`.
-</pre>
-</div>
-</div>
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>[LightGBM] [Fatal] Reducing `min_data_in_leaf` with `feature_pre_filter=true` may cause unexpected behaviour for features that were pre-filtered by the larger `min_data_in_leaf`.
-You need to set `feature_pre_filter=false` to dynamically change the `min_data_in_leaf`.
-</pre>
-</div>
-</div>
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>[LightGBM] [Fatal] Reducing `min_data_in_leaf` with `feature_pre_filter=true` may cause unexpected behaviour for features that were pre-filtered by the larger `min_data_in_leaf`.
-You need to set `feature_pre_filter=false` to dynamically change the `min_data_in_leaf`.
-</pre>
-</div>
-</div>
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
 <pre>Tuner: 50 trials finished
 </pre>
 </div>
@@ -8409,14 +8277,14 @@ You need to set `feature_pre_filter=false` to dynamically change the `min_data_i
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>Removing existing directory /home/jrothbaum/Coding/claude_code/survey_kit/.scratch/temp_files/py_srmi_test_gbm.srmi/1.srmi.implicate
+<pre>Removing existing directory C:\Users\jonro\OneDrive\Documents\Coding\survey_kit\.scratch\temp_files/py_srmi_test_gbm.srmi/1.srmi.implicate
 </pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>Removing existing directory /home/jrothbaum/Coding/claude_code/survey_kit/.scratch/temp_files/py_srmi_test_gbm.srmi/2.srmi.implicate
+<pre>Removing existing directory C:\Users\jonro\OneDrive\Documents\Coding\survey_kit\.scratch\temp_files/py_srmi_test_gbm.srmi/2.srmi.implicate
 </pre>
 </div>
 </div>
@@ -8430,7 +8298,7 @@ You need to set `feature_pre_filter=false` to dynamically change the `min_data_i
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>Running lightgbm model with parameters: {'objective': 'binary', 'num_leaves': 235, 'min_data_in_leaf': 28, 'boosting': 'gbdt', 'verbose': -1, 'metric': 'rmse', 'min_data_per_group': 25, 'num_threads': 1, 'max_depth': 172, 'bagging_fraction': 0.6678936879865209, 'bagging_freq': 1, 'seed': 1205842559}
+<pre>Running lightgbm model with parameters: {'objective': 'binary', 'num_leaves': 235, 'min_data_in_leaf': 28, 'boosting': 'gbdt', 'verbose': -1, 'metric': 'rmse', 'min_data_per_group': 25, 'num_threads': 1, 'max_depth': 172, 'bagging_fraction': 0.667893687986521, 'bagging_freq': 1, 'seed': 1205842559}
 </pre>
 </div>
 </div>
@@ -8898,7 +8766,7 @@ Calling square_var
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>Model:     var_gbm3=f(var3, var4, var5, unrelated_1, unrelated_2, unrelated_3, unrelated_4, unrelated_5, repeat_1, var_gbm1, var_gbm2, bbweight__1)
+<pre>Model:     var_gbm3=f(var3, var4, var5, unrelated_1, unrelated_2, unrelated_3, unrelated_4, unrelated_5, repeat_1, var_gbm2, var_gbm1, bbweight__1)
 </pre>
 </div>
 </div>
@@ -8956,7 +8824,7 @@ Calling square_var
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>Model:     var_gbm3=f(var3, var4, var5, unrelated_1, unrelated_2, unrelated_3, unrelated_4, unrelated_5, repeat_1, var_gbm1, var_gbm2, bbweight__1)
+<pre>Model:     var_gbm3=f(var3, var4, var5, unrelated_1, unrelated_2, unrelated_3, unrelated_4, unrelated_5, repeat_1, var_gbm2, var_gbm1, bbweight__1)
 </pre>
 </div>
 </div>
@@ -9014,7 +8882,7 @@ Calling square_var
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>Model:     var_gbm3=f(var3, var4, var5, unrelated_1, unrelated_2, unrelated_3, unrelated_4, unrelated_5, repeat_1, var_gbm1, var_gbm2, bbweight__1)
+<pre>Model:     var_gbm3=f(var3, var4, var5, unrelated_1, unrelated_2, unrelated_3, unrelated_4, unrelated_5, repeat_1, var_gbm2, var_gbm1, bbweight__1)
 </pre>
 </div>
 </div>
@@ -9088,7 +8956,7 @@ Calling square_var
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>Model:     var_gbm3=f(var3, var4, var5, unrelated_1, unrelated_2, unrelated_3, unrelated_4, unrelated_5, repeat_1, var_gbm1, var_gbm2, bbweight__1)
+<pre>Model:     var_gbm3=f(var3, var4, var5, unrelated_1, unrelated_2, unrelated_3, unrelated_4, unrelated_5, repeat_1, var_gbm2, var_gbm1, bbweight__1)
 </pre>
 </div>
 </div>
@@ -9264,7 +9132,7 @@ Calling square_var
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>Removing existing directory /home/jrothbaum/Coding/claude_code/survey_kit/.scratch/temp_files/py_srmi_test_gbm.srmi/1.srmi.implicate
+<pre>Removing existing directory C:\Users\jonro\OneDrive\Documents\Coding\survey_kit\.scratch\temp_files/py_srmi_test_gbm.srmi/1.srmi.implicate
 </pre>
 </div>
 </div>
@@ -9278,7 +9146,7 @@ Calling square_var
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>Running lightgbm model with parameters: {'objective': 'binary', 'num_leaves': 235, 'min_data_in_leaf': 28, 'boosting': 'gbdt', 'verbose': -1, 'metric': 'rmse', 'min_data_per_group': 25, 'num_threads': 1, 'max_depth': 172, 'bagging_fraction': 0.6678936879865209, 'bagging_freq': 1, 'seed': 3105532915}
+<pre>Running lightgbm model with parameters: {'objective': 'binary', 'num_leaves': 235, 'min_data_in_leaf': 28, 'boosting': 'gbdt', 'verbose': -1, 'metric': 'rmse', 'min_data_per_group': 25, 'num_threads': 1, 'max_depth': 172, 'bagging_fraction': 0.667893687986521, 'bagging_freq': 1, 'seed': 3105532915}
 </pre>
 </div>
 </div>
@@ -9292,7 +9160,7 @@ Calling square_var
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>Model:     var_gbm1=f(var3, var4, var5, unrelated_1, unrelated_2, unrelated_3, unrelated_4, unrelated_5, repeat_1, var_gbm2, var_gbm3, bbweight__1)
+<pre>Model:     var_gbm1=f(var3, var4, var5, unrelated_1, unrelated_2, unrelated_3, unrelated_4, unrelated_5, repeat_1, var_gbm3, var_gbm2, bbweight__1)
 </pre>
 </div>
 </div>
@@ -9317,15 +9185,15 @@ Calling square_var
 │     Feature ┆    Gain ┆ Frequency ┆           Model ┆  Model ┆          Impute ┆ Impute │
 │             ┆         ┆           ┆ share (missing) ┆   mean ┆ share (missing) ┆   mean │
 ╞═════════════╪═════════╪═══════════╪═════════════════╪════════╪═════════════════╪════════╡
-│    var_gbm3 ┆  0.6473 ┆   0.02208 ┆               0 ┆ -2.214 ┆               0 ┆ -1.751 │
-│    var_gbm2 ┆  0.1026 ┆   0.02405 ┆               0 ┆ -2.241 ┆               0 ┆ -1.768 │
-│        var4 ┆ 0.03928 ┆    0.1502 ┆               0 ┆ 0.5057 ┆               0 ┆ 0.5103 │
-│ unrelated_4 ┆ 0.03772 ┆    0.1394 ┆               0 ┆ 0.5007 ┆               0 ┆ 0.5004 │
-│ unrelated_3 ┆ 0.03703 ┆    0.1344 ┆               0 ┆ 0.4992 ┆               0 ┆ 0.4968 │
-│ unrelated_2 ┆ 0.03693 ┆    0.1403 ┆               0 ┆ 0.5001 ┆               0 ┆ 0.5019 │
+│    var_gbm3 ┆  0.6473 ┆   0.02289 ┆               0 ┆ -2.214 ┆               0 ┆ -1.751 │
+│    var_gbm2 ┆  0.1026 ┆   0.02327 ┆               0 ┆ -2.241 ┆               0 ┆ -1.768 │
+│        var4 ┆ 0.03928 ┆    0.1497 ┆               0 ┆ 0.5057 ┆               0 ┆ 0.5103 │
+│ unrelated_4 ┆ 0.03772 ┆    0.1398 ┆               0 ┆ 0.5007 ┆               0 ┆ 0.5004 │
+│ unrelated_3 ┆ 0.03703 ┆    0.1345 ┆               0 ┆ 0.4992 ┆               0 ┆ 0.4968 │
+│ unrelated_2 ┆ 0.03693 ┆    0.1406 ┆               0 ┆ 0.5001 ┆               0 ┆ 0.5019 │
 │ unrelated_5 ┆ 0.03676 ┆    0.1371 ┆               0 ┆ 0.4988 ┆               0 ┆ 0.5053 │
-│ unrelated_1 ┆  0.0362 ┆    0.1354 ┆               0 ┆ 0.5024 ┆               0 ┆ 0.5015 │
-│        var3 ┆ 0.02619 ┆    0.1169 ┆               0 ┆  25.11 ┆               0 ┆  25.05 │
+│ unrelated_1 ┆  0.0362 ┆    0.1356 ┆               0 ┆ 0.5024 ┆               0 ┆ 0.5015 │
+│        var3 ┆ 0.02619 ┆    0.1164 ┆               0 ┆  25.11 ┆               0 ┆  25.05 │
 └─────────────┴─────────┴───────────┴─────────────────┴────────┴─────────────────┴────────┘
 </pre>
 </div>
@@ -9505,7 +9373,7 @@ Calling square_var
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>Model:     var_gbm2=f(var3, var4, var5, unrelated_1, unrelated_2, unrelated_3, unrelated_4, unrelated_5, repeat_1, var_gbm1, var_gbm3, bbweight__1)
+<pre>Model:     var_gbm2=f(var3, var4, var5, unrelated_1, unrelated_2, unrelated_3, unrelated_4, unrelated_5, repeat_1, var_gbm3, var_gbm1, bbweight__1)
 </pre>
 </div>
 </div>
@@ -9749,7 +9617,7 @@ Calling square_var
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>Model:     var_gbm3=f(var3, var4, var5, unrelated_1, unrelated_2, unrelated_3, unrelated_4, unrelated_5, repeat_1, var_gbm1, var_gbm2, bbweight__1)
+<pre>Model:     var_gbm3=f(var3, var4, var5, unrelated_1, unrelated_2, unrelated_3, unrelated_4, unrelated_5, repeat_1, var_gbm2, var_gbm1, bbweight__1)
 </pre>
 </div>
 </div>
@@ -9807,7 +9675,7 @@ Calling square_var
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>Model:     var_gbm3=f(var3, var4, var5, unrelated_1, unrelated_2, unrelated_3, unrelated_4, unrelated_5, repeat_1, var_gbm1, var_gbm2, bbweight__1)
+<pre>Model:     var_gbm3=f(var3, var4, var5, unrelated_1, unrelated_2, unrelated_3, unrelated_4, unrelated_5, repeat_1, var_gbm2, var_gbm1, bbweight__1)
 </pre>
 </div>
 </div>
@@ -9865,7 +9733,7 @@ Calling square_var
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>Model:     var_gbm3=f(var3, var4, var5, unrelated_1, unrelated_2, unrelated_3, unrelated_4, unrelated_5, repeat_1, var_gbm1, var_gbm2, bbweight__1)
+<pre>Model:     var_gbm3=f(var3, var4, var5, unrelated_1, unrelated_2, unrelated_3, unrelated_4, unrelated_5, repeat_1, var_gbm2, var_gbm1, bbweight__1)
 </pre>
 </div>
 </div>
@@ -9939,7 +9807,7 @@ Calling square_var
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>Model:     var_gbm3=f(var3, var4, var5, unrelated_1, unrelated_2, unrelated_3, unrelated_4, unrelated_5, repeat_1, var_gbm1, var_gbm2, bbweight__1)
+<pre>Model:     var_gbm3=f(var3, var4, var5, unrelated_1, unrelated_2, unrelated_3, unrelated_4, unrelated_5, repeat_1, var_gbm2, var_gbm1, bbweight__1)
 </pre>
 </div>
 </div>
@@ -10151,7 +10019,7 @@ Final Estimates by Iteration
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>Removing existing directory /home/jrothbaum/Coding/claude_code/survey_kit/.scratch/temp_files/py_srmi_test_gbm.srmi/1.srmi.implicate
+<pre>Removing existing directory C:\Users\jonro\OneDrive\Documents\Coding\survey_kit\.scratch\temp_files/py_srmi_test_gbm.srmi/1.srmi.implicate
 </pre>
 </div>
 </div>
@@ -10165,7 +10033,7 @@ Final Estimates by Iteration
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>Running lightgbm model with parameters: {'objective': 'binary', 'num_leaves': 235, 'min_data_in_leaf': 28, 'boosting': 'gbdt', 'verbose': -1, 'metric': 'rmse', 'min_data_per_group': 25, 'num_threads': 1, 'max_depth': 172, 'bagging_fraction': 0.6678936879865209, 'bagging_freq': 1, 'seed': 2356231858}
+<pre>Running lightgbm model with parameters: {'objective': 'binary', 'num_leaves': 235, 'min_data_in_leaf': 28, 'boosting': 'gbdt', 'verbose': -1, 'metric': 'rmse', 'min_data_per_group': 25, 'num_threads': 1, 'max_depth': 172, 'bagging_fraction': 0.667893687986521, 'bagging_freq': 1, 'seed': 2356231858}
 </pre>
 </div>
 </div>
@@ -10633,7 +10501,7 @@ Calling square_var
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>Model:     var_gbm3=f(var3, var4, var5, unrelated_1, unrelated_2, unrelated_3, unrelated_4, unrelated_5, repeat_1, var_gbm1, var_gbm2, bbweight__1)
+<pre>Model:     var_gbm3=f(var3, var4, var5, unrelated_1, unrelated_2, unrelated_3, unrelated_4, unrelated_5, repeat_1, var_gbm2, var_gbm1, bbweight__1)
 </pre>
 </div>
 </div>
@@ -10691,7 +10559,7 @@ Calling square_var
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>Model:     var_gbm3=f(var3, var4, var5, unrelated_1, unrelated_2, unrelated_3, unrelated_4, unrelated_5, repeat_1, var_gbm1, var_gbm2, bbweight__1)
+<pre>Model:     var_gbm3=f(var3, var4, var5, unrelated_1, unrelated_2, unrelated_3, unrelated_4, unrelated_5, repeat_1, var_gbm2, var_gbm1, bbweight__1)
 </pre>
 </div>
 </div>
@@ -10749,7 +10617,7 @@ Calling square_var
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>Model:     var_gbm3=f(var3, var4, var5, unrelated_1, unrelated_2, unrelated_3, unrelated_4, unrelated_5, repeat_1, var_gbm1, var_gbm2, bbweight__1)
+<pre>Model:     var_gbm3=f(var3, var4, var5, unrelated_1, unrelated_2, unrelated_3, unrelated_4, unrelated_5, repeat_1, var_gbm2, var_gbm1, bbweight__1)
 </pre>
 </div>
 </div>
@@ -10823,7 +10691,7 @@ Calling square_var
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>Model:     var_gbm3=f(var3, var4, var5, unrelated_1, unrelated_2, unrelated_3, unrelated_4, unrelated_5, repeat_1, var_gbm1, var_gbm2, bbweight__1)
+<pre>Model:     var_gbm3=f(var3, var4, var5, unrelated_1, unrelated_2, unrelated_3, unrelated_4, unrelated_5, repeat_1, var_gbm2, var_gbm1, bbweight__1)
 </pre>
 </div>
 </div>
@@ -10999,7 +10867,7 @@ Calling square_var
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>Removing existing directory /home/jrothbaum/Coding/claude_code/survey_kit/.scratch/temp_files/py_srmi_test_gbm.srmi/2.srmi.implicate
+<pre>Removing existing directory C:\Users\jonro\OneDrive\Documents\Coding\survey_kit\.scratch\temp_files/py_srmi_test_gbm.srmi/2.srmi.implicate
 </pre>
 </div>
 </div>
@@ -11013,7 +10881,7 @@ Calling square_var
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>Running lightgbm model with parameters: {'objective': 'binary', 'num_leaves': 235, 'min_data_in_leaf': 28, 'boosting': 'gbdt', 'verbose': -1, 'metric': 'rmse', 'min_data_per_group': 25, 'num_threads': 1, 'max_depth': 172, 'bagging_fraction': 0.6678936879865209, 'bagging_freq': 1, 'seed': 46688280}
+<pre>Running lightgbm model with parameters: {'objective': 'binary', 'num_leaves': 235, 'min_data_in_leaf': 28, 'boosting': 'gbdt', 'verbose': -1, 'metric': 'rmse', 'min_data_per_group': 25, 'num_threads': 1, 'max_depth': 172, 'bagging_fraction': 0.667893687986521, 'bagging_freq': 1, 'seed': 46688280}
 </pre>
 </div>
 </div>
@@ -11027,7 +10895,7 @@ Calling square_var
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>Model:     var_gbm1=f(var3, var4, var5, unrelated_1, unrelated_2, unrelated_3, unrelated_4, unrelated_5, repeat_1, var_gbm2, var_gbm3, bbweight__1)
+<pre>Model:     var_gbm1=f(var3, var4, var5, unrelated_1, unrelated_2, unrelated_3, unrelated_4, unrelated_5, repeat_1, var_gbm3, var_gbm2, bbweight__1)
 </pre>
 </div>
 </div>
@@ -11052,15 +10920,15 @@ Calling square_var
 │     Feature ┆    Gain ┆ Frequency ┆           Model ┆  Model ┆          Impute ┆ Impute │
 │             ┆         ┆           ┆ share (missing) ┆   mean ┆ share (missing) ┆   mean │
 ╞═════════════╪═════════╪═══════════╪═════════════════╪════════╪═════════════════╪════════╡
-│    var_gbm3 ┆  0.6317 ┆   0.02713 ┆               0 ┆  -2.27 ┆               0 ┆ -1.886 │
-│    var_gbm2 ┆  0.1294 ┆   0.02448 ┆               0 ┆ -2.233 ┆               0 ┆ -1.868 │
-│ unrelated_5 ┆ 0.03763 ┆     0.141 ┆               0 ┆ 0.4988 ┆               0 ┆ 0.5053 │
+│    var_gbm3 ┆  0.6317 ┆   0.02784 ┆               0 ┆  -2.27 ┆               0 ┆ -1.886 │
+│    var_gbm2 ┆  0.1294 ┆   0.02369 ┆               0 ┆ -2.233 ┆               0 ┆ -1.868 │
+│ unrelated_5 ┆ 0.03763 ┆    0.1409 ┆               0 ┆ 0.4988 ┆               0 ┆ 0.5053 │
 │ unrelated_2 ┆ 0.03622 ┆    0.1411 ┆               0 ┆ 0.5001 ┆               0 ┆ 0.5019 │
-│ unrelated_3 ┆  0.0356 ┆    0.1372 ┆               0 ┆ 0.4992 ┆               0 ┆ 0.4968 │
-│ unrelated_4 ┆ 0.03534 ┆    0.1392 ┆               0 ┆ 0.5007 ┆               0 ┆ 0.5004 │
-│ unrelated_1 ┆ 0.03398 ┆    0.1325 ┆               0 ┆ 0.5024 ┆               0 ┆ 0.5015 │
-│        var4 ┆ 0.03279 ┆    0.1416 ┆               0 ┆ 0.5057 ┆               0 ┆ 0.5103 │
-│        var3 ┆ 0.02735 ┆    0.1158 ┆               0 ┆  25.11 ┆               0 ┆  25.05 │
+│ unrelated_3 ┆  0.0356 ┆     0.137 ┆               0 ┆ 0.4992 ┆               0 ┆ 0.4968 │
+│ unrelated_4 ┆ 0.03534 ┆    0.1395 ┆               0 ┆ 0.5007 ┆               0 ┆ 0.5004 │
+│ unrelated_1 ┆ 0.03398 ┆    0.1327 ┆               0 ┆ 0.5024 ┆               0 ┆ 0.5015 │
+│        var4 ┆ 0.03279 ┆     0.141 ┆               0 ┆ 0.5057 ┆               0 ┆ 0.5103 │
+│        var3 ┆ 0.02735 ┆    0.1164 ┆               0 ┆  25.11 ┆               0 ┆  25.05 │
 └─────────────┴─────────┴───────────┴─────────────────┴────────┴─────────────────┴────────┘
 </pre>
 </div>
@@ -11240,7 +11108,7 @@ Calling square_var
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>Model:     var_gbm2=f(var3, var4, var5, unrelated_1, unrelated_2, unrelated_3, unrelated_4, unrelated_5, repeat_1, var_gbm1, var_gbm3, bbweight__1)
+<pre>Model:     var_gbm2=f(var3, var4, var5, unrelated_1, unrelated_2, unrelated_3, unrelated_4, unrelated_5, repeat_1, var_gbm3, var_gbm1, bbweight__1)
 </pre>
 </div>
 </div>
@@ -11484,7 +11352,7 @@ Calling square_var
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>Model:     var_gbm3=f(var3, var4, var5, unrelated_1, unrelated_2, unrelated_3, unrelated_4, unrelated_5, repeat_1, var_gbm1, var_gbm2, bbweight__1)
+<pre>Model:     var_gbm3=f(var3, var4, var5, unrelated_1, unrelated_2, unrelated_3, unrelated_4, unrelated_5, repeat_1, var_gbm2, var_gbm1, bbweight__1)
 </pre>
 </div>
 </div>
@@ -11542,7 +11410,7 @@ Calling square_var
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>Model:     var_gbm3=f(var3, var4, var5, unrelated_1, unrelated_2, unrelated_3, unrelated_4, unrelated_5, repeat_1, var_gbm1, var_gbm2, bbweight__1)
+<pre>Model:     var_gbm3=f(var3, var4, var5, unrelated_1, unrelated_2, unrelated_3, unrelated_4, unrelated_5, repeat_1, var_gbm2, var_gbm1, bbweight__1)
 </pre>
 </div>
 </div>
@@ -11600,7 +11468,7 @@ Calling square_var
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>Model:     var_gbm3=f(var3, var4, var5, unrelated_1, unrelated_2, unrelated_3, unrelated_4, unrelated_5, repeat_1, var_gbm1, var_gbm2, bbweight__1)
+<pre>Model:     var_gbm3=f(var3, var4, var5, unrelated_1, unrelated_2, unrelated_3, unrelated_4, unrelated_5, repeat_1, var_gbm2, var_gbm1, bbweight__1)
 </pre>
 </div>
 </div>
@@ -11674,7 +11542,7 @@ Calling square_var
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>Model:     var_gbm3=f(var3, var4, var5, unrelated_1, unrelated_2, unrelated_3, unrelated_4, unrelated_5, repeat_1, var_gbm1, var_gbm2, bbweight__1)
+<pre>Model:     var_gbm3=f(var3, var4, var5, unrelated_1, unrelated_2, unrelated_3, unrelated_4, unrelated_5, repeat_1, var_gbm2, var_gbm1, bbweight__1)
 </pre>
 </div>
 </div>
@@ -11886,7 +11754,7 @@ Final Estimates by Iteration
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>Removing existing directory /home/jrothbaum/Coding/claude_code/survey_kit/.scratch/temp_files/py_srmi_test_gbm.srmi/2.srmi.implicate
+<pre>Removing existing directory C:\Users\jonro\OneDrive\Documents\Coding\survey_kit\.scratch\temp_files/py_srmi_test_gbm.srmi/2.srmi.implicate
 </pre>
 </div>
 </div>
@@ -11913,7 +11781,7 @@ Final Estimates by Iteration
 </div>
 </div>
 </div>
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=f70233ea">
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=b4110200">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -11941,7 +11809,7 @@ Final Estimates by Iteration
 </div>
 </div>
 </div>
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=a4ba543f">
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=cf59c89d">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -12035,8 +11903,8 @@ Look at the imputes
 │ unrelated_4 ┆ 10,000 ┆           0 ┆  0.5007 ┆  0.2887 ┆ 0.0001329 ┆  0.2501 ┆  0.5005 ┆  0.7518 ┆     1.0 │
 │ unrelated_5 ┆ 10,000 ┆           0 ┆  0.4988 ┆   0.289 ┆  0.000071 ┆  0.2496 ┆  0.4968 ┆  0.7498 ┆  0.9999 │
 │    repeat_1 ┆ 10,000 ┆           0 ┆  0.5024 ┆  0.2884 ┆ 0.0001191 ┆  0.2527 ┆  0.5036 ┆   0.753 ┆     1.0 │
-│    var_gbm2 ┆ 10,000 ┆           0 ┆  -2.253 ┆   9.958 ┆    -55.35 ┆  -1.614 ┆     0.0 ┆     0.0 ┆   26.21 │
 │    var_gbm3 ┆ 10,000 ┆           0 ┆  -2.231 ┆   9.836 ┆    -55.35 ┆  -1.777 ┆     0.0 ┆     0.0 ┆   26.21 │
+│    var_gbm2 ┆ 10,000 ┆           0 ┆  -2.253 ┆   9.958 ┆    -55.35 ┆  -1.614 ┆     0.0 ┆     0.0 ┆   26.21 │
 │   var_gbm12 ┆ 10,000 ┆           0 ┆  -2.253 ┆   9.958 ┆    -55.35 ┆  -1.614 ┆     0.0 ┆     0.0 ┆   26.21 │
 │ var_gbm2_sq ┆ 10,000 ┆           0 ┆   104.2 ┆   267.4 ┆       0.0 ┆     0.0 ┆     0.0 ┆   72.04 ┆ 3,064.0 │
 │        var5 ┆ 10,000 ┆           0 ┆  0.4999 ┆     0.5 ┆       0.0 ┆     0.0 ┆     0.0 ┆     1.0 ┆     1.0 │
@@ -12064,8 +11932,8 @@ Look at the imputes
 │ unrelated_4 ┆ 10,000 ┆           0 ┆  0.5007 ┆  0.2887 ┆ 0.0001329 ┆  0.2501 ┆  0.5005 ┆  0.7518 ┆     1.0 │
 │ unrelated_5 ┆ 10,000 ┆           0 ┆  0.4988 ┆   0.289 ┆  0.000071 ┆  0.2496 ┆  0.4968 ┆  0.7498 ┆  0.9999 │
 │    repeat_1 ┆ 10,000 ┆           0 ┆  0.5024 ┆  0.2884 ┆ 0.0001191 ┆  0.2527 ┆  0.5036 ┆   0.753 ┆     1.0 │
-│    var_gbm2 ┆ 10,000 ┆           0 ┆  -2.254 ┆   9.969 ┆    -55.35 ┆   -1.69 ┆     0.0 ┆     0.0 ┆   26.21 │
 │    var_gbm3 ┆ 10,000 ┆           0 ┆  -2.266 ┆   9.927 ┆    -55.35 ┆  -1.584 ┆     0.0 ┆     0.0 ┆   26.21 │
+│    var_gbm2 ┆ 10,000 ┆           0 ┆  -2.254 ┆   9.969 ┆    -55.35 ┆   -1.69 ┆     0.0 ┆     0.0 ┆   26.21 │
 │   var_gbm12 ┆ 10,000 ┆           0 ┆  -2.254 ┆   9.969 ┆    -55.35 ┆   -1.69 ┆     0.0 ┆     0.0 ┆   26.21 │
 │ var_gbm2_sq ┆ 10,000 ┆           0 ┆   104.4 ┆   266.8 ┆       0.0 ┆     0.0 ┆     0.0 ┆   71.95 ┆ 3,064.0 │
 │        var5 ┆ 10,000 ┆           0 ┆  0.4999 ┆     0.5 ┆       0.0 ┆     0.0 ┆     0.0 ┆     1.0 ┆     1.0 │
@@ -12102,8 +11970,8 @@ Look at the imputes | var_gbm1 == 0
 │ unrelated_4 ┆ 4,800 ┆           0 ┆  0.5016 ┆  0.2901 ┆ 0.0001414 ┆  0.2501 ┆  0.4996 ┆  0.7558 ┆  0.9999 │
 │ unrelated_5 ┆ 4,800 ┆           0 ┆   0.504 ┆  0.2906 ┆  0.000071 ┆  0.2534 ┆  0.5049 ┆  0.7537 ┆  0.9998 │
 │    repeat_1 ┆ 4,800 ┆           0 ┆  0.5054 ┆  0.2869 ┆ 0.0001191 ┆  0.2613 ┆  0.5037 ┆   0.756 ┆     1.0 │
-│    var_gbm2 ┆ 4,800 ┆           0 ┆     0.0 ┆     0.0 ┆       0.0 ┆     0.0 ┆     0.0 ┆     0.0 ┆     0.0 │
 │    var_gbm3 ┆ 4,800 ┆           0 ┆     0.0 ┆     0.0 ┆       0.0 ┆     0.0 ┆     0.0 ┆     0.0 ┆     0.0 │
+│    var_gbm2 ┆ 4,800 ┆           0 ┆     0.0 ┆     0.0 ┆       0.0 ┆     0.0 ┆     0.0 ┆     0.0 ┆     0.0 │
 │   var_gbm12 ┆ 4,800 ┆           0 ┆     0.0 ┆     0.0 ┆       0.0 ┆     0.0 ┆     0.0 ┆     0.0 ┆     0.0 │
 │ var_gbm2_sq ┆ 4,800 ┆           0 ┆     0.0 ┆     0.0 ┆       0.0 ┆     0.0 ┆     0.0 ┆     0.0 ┆     0.0 │
 │        var5 ┆ 4,800 ┆           0 ┆  0.7947 ┆   0.404 ┆       0.0 ┆     1.0 ┆     1.0 ┆     1.0 ┆     1.0 │
@@ -12131,8 +11999,8 @@ Look at the imputes | var_gbm1 == 0
 │ unrelated_4 ┆ 4,800 ┆           0 ┆  0.4995 ┆  0.2903 ┆ 0.0001414 ┆  0.2466 ┆  0.4982 ┆  0.7551 ┆  0.9999 │
 │ unrelated_5 ┆ 4,800 ┆           0 ┆   0.504 ┆   0.291 ┆  0.000071 ┆  0.2523 ┆  0.5013 ┆   0.756 ┆  0.9999 │
 │    repeat_1 ┆ 4,800 ┆           0 ┆  0.5031 ┆  0.2849 ┆ 0.0001191 ┆  0.2625 ┆  0.5044 ┆  0.7479 ┆     1.0 │
-│    var_gbm2 ┆ 4,800 ┆           0 ┆     0.0 ┆     0.0 ┆       0.0 ┆     0.0 ┆     0.0 ┆     0.0 ┆     0.0 │
 │    var_gbm3 ┆ 4,800 ┆           0 ┆     0.0 ┆     0.0 ┆       0.0 ┆     0.0 ┆     0.0 ┆     0.0 ┆     0.0 │
+│    var_gbm2 ┆ 4,800 ┆           0 ┆     0.0 ┆     0.0 ┆       0.0 ┆     0.0 ┆     0.0 ┆     0.0 ┆     0.0 │
 │   var_gbm12 ┆ 4,800 ┆           0 ┆     0.0 ┆     0.0 ┆       0.0 ┆     0.0 ┆     0.0 ┆     0.0 ┆     0.0 │
 │ var_gbm2_sq ┆ 4,800 ┆           0 ┆     0.0 ┆     0.0 ┆       0.0 ┆     0.0 ┆     0.0 ┆     0.0 ┆     0.0 │
 │        var5 ┆ 4,800 ┆           0 ┆  0.7927 ┆  0.4054 ┆       0.0 ┆     1.0 ┆     1.0 ┆     1.0 ┆     1.0 │
@@ -12169,8 +12037,8 @@ Look at the imputes | var_gbm1 == 1
 │ unrelated_4 ┆ 5,200 ┆           0 ┆  0.4998 ┆  0.2874 ┆ 0.0001329 ┆  0.2508 ┆  0.5011 ┆  0.7492 ┆     1.0 │
 │ unrelated_5 ┆ 5,200 ┆           0 ┆  0.4939 ┆  0.2875 ┆ 0.0001807 ┆  0.2439 ┆  0.4883 ┆  0.7467 ┆  0.9999 │
 │    repeat_1 ┆ 5,200 ┆           0 ┆  0.4997 ┆  0.2897 ┆ 0.0002485 ┆  0.2486 ┆  0.5036 ┆  0.7506 ┆  0.9998 │
-│    var_gbm2 ┆ 5,200 ┆           0 ┆   -4.33 ┆   13.48 ┆    -55.35 ┆  -12.01 ┆ -0.7496 ┆   5.186 ┆   26.21 │
 │    var_gbm3 ┆ 5,200 ┆           0 ┆  -4.289 ┆   13.31 ┆    -55.35 ┆  -11.74 ┆  -1.019 ┆   5.153 ┆   26.21 │
+│    var_gbm2 ┆ 5,200 ┆           0 ┆   -4.33 ┆   13.48 ┆    -55.35 ┆  -12.01 ┆ -0.7496 ┆   5.186 ┆   26.21 │
 │   var_gbm12 ┆ 5,200 ┆           0 ┆   -4.33 ┆   13.48 ┆    -55.35 ┆  -12.01 ┆ -0.7496 ┆   5.186 ┆   26.21 │
 │ var_gbm2_sq ┆ 5,200 ┆           0 ┆   200.3 ┆   343.7 ┆       0.0 ┆    9.33 ┆   63.08 ┆   213.2 ┆ 3,064.0 │
 │        var5 ┆ 5,200 ┆           0 ┆  0.2281 ┆  0.4197 ┆       0.0 ┆     0.0 ┆     0.0 ┆     0.0 ┆     1.0 │
@@ -12198,8 +12066,8 @@ Look at the imputes | var_gbm1 == 1
 │ unrelated_4 ┆ 5,200 ┆           0 ┆  0.5017 ┆  0.2872 ┆ 0.0001329 ┆  0.2551 ┆  0.5036 ┆  0.7501 ┆     1.0 │
 │ unrelated_5 ┆ 5,200 ┆           0 ┆  0.4939 ┆  0.2871 ┆ 0.0001807 ┆  0.2452 ┆  0.4903 ┆  0.7452 ┆  0.9994 │
 │    repeat_1 ┆ 5,200 ┆           0 ┆  0.5018 ┆  0.2916 ┆ 0.0002485 ┆  0.2478 ┆  0.5008 ┆  0.7572 ┆  0.9998 │
-│    var_gbm2 ┆ 5,200 ┆           0 ┆  -4.326 ┆   13.48 ┆    -55.35 ┆  -11.78 ┆ -0.8498 ┆   5.395 ┆   26.21 │
 │    var_gbm3 ┆ 5,200 ┆           0 ┆  -4.349 ┆   13.42 ┆    -55.35 ┆  -11.78 ┆ -0.8137 ┆   5.182 ┆   26.21 │
+│    var_gbm2 ┆ 5,200 ┆           0 ┆  -4.326 ┆   13.48 ┆    -55.35 ┆  -11.78 ┆ -0.8498 ┆   5.395 ┆   26.21 │
 │   var_gbm12 ┆ 5,200 ┆           0 ┆  -4.326 ┆   13.48 ┆    -55.35 ┆  -11.78 ┆ -0.8498 ┆   5.395 ┆   26.21 │
 │ var_gbm2_sq ┆ 5,200 ┆           0 ┆   200.5 ┆   342.6 ┆       0.0 ┆   10.42 ┆   63.37 ┆   209.5 ┆ 3,064.0 │
 │        var5 ┆ 5,200 ┆           0 ┆  0.2307 ┆  0.4213 ┆       0.0 ┆     0.0 ┆     0.0 ┆     0.0 ┆     1.0 │

@@ -197,7 +197,7 @@ logger.info("mi_ses_from_stata uses under the hood for the replicates= case abov
 logger.info("\n\nSummary / troubleshooting checklist for getting this working:")
 logger.info("  1. check_stata_setup(stata_path=...) - confirms pystata and")
 logger.info("     polars_readstat both import; doesn't guarantee config.init()")
-logger.info("     succeeds (e.g. an expired license would still fail there).")
+logger.info("     succeeds too.")
 logger.info("  2. If a command errors immediately with just a bare 'r(####);' and no")
 logger.info("     explanation, pass quietly=False to stata_adapter/run_stata_model/")
 logger.info("     run_stata_results to see Stata's own error text in the console.")

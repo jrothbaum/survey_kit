@@ -55,8 +55,7 @@ def check_stata_setup(stata_path: str | None = None) -> dict:
         Keys: stata_path, utilities_dir, utilities_found, pystata_importable,
         polars_readstat_importable, missing (list of (what, how_to_fix)
         tuples - empty if everything looks ready, though pystata importing
-        successfully doesn't guarantee `config.init()` will succeed too,
-        e.g. an expired license would still fail at that step).
+        successfully doesn't guarantee `config.init()` will succeed too).
     """
     if stata_path is None:
         stata_path = config.stata_path or None
