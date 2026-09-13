@@ -21,7 +21,7 @@ iterations.
 
 ## Example
 
-<iframe src="../../tutorials/srmi/diagnostics/convergence_trace.html"
+<iframe src="../../../tutorials/srmi/diagnostics/convergence_trace.html"
     style="width: 100%; height: 700px; border: none;">
 </iframe>
 
@@ -34,6 +34,6 @@ iterations.
 
 === "Log"
     [View in separate window](../../tutorials/srmi/diagnostics_convergence.html){:target="_blank"}
-    <iframe src="../../tutorials/srmi/diagnostics_convergence.html"
+    <iframe src="../../../tutorials/srmi/diagnostics_convergence.html"
         style="width: 100%; height: 800px; border: none;">
     </iframe>

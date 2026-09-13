@@ -25,11 +25,11 @@ fairer test of whether the imputation is behaving the way the data actually supp
 
 ## Example
 
-<iframe src="../../tutorials/srmi/diagnostics/quality_density.html"
+<iframe src="../../../tutorials/srmi/diagnostics/quality_density.html"
     style="width: 100%; height: 650px; border: none;">
 </iframe>
 
-<iframe src="../../tutorials/srmi/diagnostics/propensity_density.html"
+<iframe src="../../../tutorials/srmi/diagnostics/propensity_density.html"
     style="width: 100%; height: 650px; border: none;">
 </iframe>
 
@@ -42,6 +42,6 @@ fairer test of whether the imputation is behaving the way the data actually supp
 
 === "Log"
     [View in separate window](../../tutorials/srmi/diagnostics_quality_propensity.html){:target="_blank"}
-    <iframe src="../../tutorials/srmi/diagnostics_quality_propensity.html"
+    <iframe src="../../../tutorials/srmi/diagnostics_quality_propensity.html"
         style="width: 100%; height: 800px; border: none;">
     </iframe>

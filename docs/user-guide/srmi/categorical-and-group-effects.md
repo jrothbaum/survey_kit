@@ -44,6 +44,6 @@ group effects for a continuous variable, override its model - see
 
 === "Log"
     [View in separate window](../../tutorials/srmi/simple_model_categorical_and_group.html){:target="_blank"}
-    <iframe src="../../tutorials/srmi/simple_model_categorical_and_group.html"
+    <iframe src="../../../tutorials/srmi/simple_model_categorical_and_group.html"
         style="width: 100%; height: 800px; border: none;">
     </iframe>

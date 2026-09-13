@@ -32,7 +32,7 @@ logger.info('    from survey_kit.statistics._stata_interop import check_stata_se
 logger.info('    check_stata_setup(stata_path=r"C:\\Program Files\\Stata18")')
 logger.info("")
 logger.info("Requires `pip install survey-kit[stata]` (polars_readstat, for writing")
-logger.info(".dta files) plus a licensed Stata 17+ install for pystata itself.")
+logger.info(".dta files) plus Stata 17+ for pystata itself.")
 
 
 

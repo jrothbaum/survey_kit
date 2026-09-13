@@ -23,7 +23,7 @@ anything, and override any part of it - later pages in this section show how.
 
 === "Log"
     [View in separate window](../../tutorials/srmi/simple_model_getting_started.html){:target="_blank"}
-    <iframe src="../../tutorials/srmi/simple_model_getting_started.html"
+    <iframe src="../../../tutorials/srmi/simple_model_getting_started.html"
         style="width: 100%; height: 800px; border: none;">
     </iframe>
 

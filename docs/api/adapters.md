@@ -104,7 +104,7 @@ Requires R itself plus rpy2/rpy2-arrow (`pip install survey-kit[r]`). `r_feols`/
 
 ## Stata (pystata)
 
-Requires a licensed Stata 17+ install plus `pip install survey-kit[stata]`. `stata_adapter` (and its `mi_ses_from_stata` shortcut) runs any e-class command as a plain string - there's no separate named-wrapper-per-estimator layer to route around the way fixest has, since any Stata command already works by just changing the `command` string. `stata_results_adapter` reaches any r()/e() result rather than the fixed e(b)/e(V)/r(table) triplet, and is what `mi_ses_from_stata`'s `replicates=` option uses under the hood for replicate-weight bootstrapping.
+Requires Stata 17+ plus `pip install survey-kit[stata]`. `stata_adapter` (and its `mi_ses_from_stata` shortcut) runs any e-class command as a plain string - there's no separate named-wrapper-per-estimator layer to route around the way fixest has, since any Stata command already works by just changing the `command` string. `stata_results_adapter` reaches any r()/e() result rather than the fixed e(b)/e(V)/r(table) triplet, and is what `mi_ses_from_stata`'s `replicates=` option uses under the hood for replicate-weight bootstrapping.
 
 ::: survey_kit.statistics.adapters.stata_adapter
     options:

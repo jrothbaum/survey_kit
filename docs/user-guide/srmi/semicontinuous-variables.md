@@ -25,6 +25,6 @@ too, using the same predictor list.
 
 === "Log"
     [View in separate window](../../tutorials/srmi/simple_model_semicontinuous.html){:target="_blank"}
-    <iframe src="../../tutorials/srmi/simple_model_semicontinuous.html"
+    <iframe src="../../../tutorials/srmi/simple_model_semicontinuous.html"
         style="width: 100%; height: 800px; border: none;">
     </iframe>

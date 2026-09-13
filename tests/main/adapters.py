@@ -349,7 +349,7 @@ else:
 
 #   ---------------------------------------------------------------------
 #   Stata - guarded, skips cleanly if pystata isn't importable (it isn't
-#   on PyPI - only ships inside a licensed Stata 17+ install).
+#   on PyPI - only ships inside Stata 17+).
 #   ---------------------------------------------------------------------
 _stata_setup = check_stata_setup()
 if _stata_setup.get("pystata_importable") and _stata_setup.get("polars_readstat_importable"):
@@ -367,8 +367,8 @@ if _stata_setup.get("pystata_importable") and _stata_setup.get("polars_readstat_
     )
 else:
     logger.info(
-        "pystata not importable in this environment (needs a licensed "
-        "Stata 17+ install - see check_stata_setup()) - skipping "
+        "pystata not importable in this environment (needs a "
+        "Stata 17+ - see check_stata_setup()) - skipping "
         f"mi_ses_from_stata checks ({_stata_setup.get('missing')})"
     )
 

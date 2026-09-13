@@ -54,7 +54,7 @@ See the [Regression Adapters API reference](../api/adapters.md) for the full par
 
     === "Log"
         [View in separate window](../tutorials/statistics/basic_python_adapters.html){:target="_blank"}
-        <iframe src="../tutorials/statistics/basic_python_adapters.html"
+        <iframe src="../../tutorials/statistics/basic_python_adapters.html"
             style="width: 100%; height: 800px; border: none;">
         </iframe>
 
@@ -68,12 +68,12 @@ See the [Regression Adapters API reference](../api/adapters.md) for the full par
 
     === "Log"
         [View in separate window](../tutorials/statistics/basic_r.html){:target="_blank"}
-        <iframe src="../tutorials/statistics/basic_r.html"
+        <iframe src="../../tutorials/statistics/basic_r.html"
             style="width: 100%; height: 800px; border: none;">
         </iframe>
 
 === "Stata"
-    Requires a licensed Stata 17+ install plus `pip install survey-kit[stata]`. Check your setup cheaply with `from survey_kit.statistics._stata_interop import check_stata_setup; check_stata_setup(stata_path=r"C:\Program Files\Stata18")`.
+    Requires Stata 17+ plus `pip install survey-kit[stata]`. Check your setup cheaply with `from survey_kit.statistics._stata_interop import check_stata_setup; check_stata_setup(stata_path=r"C:\Program Files\Stata18")`.
 
     === "Code"
         ```python
@@ -81,8 +81,7 @@ See the [Regression Adapters API reference](../api/adapters.md) for the full par
         ```
 
     === "Log"
-        Rendered by running this tutorial on a machine with a licensed Stata install - [view in separate window](../tutorials/statistics/basic_stata.html){:target="_blank"} if available.
-        <iframe src="../tutorials/statistics/basic_stata.html"
+        <iframe src="../../tutorials/statistics/basic_stata.html"
             style="width: 100%; height: 800px; border: none;">
         </iframe>
 
@@ -100,7 +99,7 @@ Each language's tutorial above only covers the named adapters (`statsmodels_adap
 
     === "Log"
         [View in separate window](../tutorials/statistics/r_arbitrary_estimators.html){:target="_blank"}
-        <iframe src="../tutorials/statistics/r_arbitrary_estimators.html"
+        <iframe src="../../tutorials/statistics/r_arbitrary_estimators.html"
             style="width: 100%; height: 800px; border: none;">
         </iframe>
 
@@ -113,7 +112,7 @@ Each language's tutorial above only covers the named adapters (`statsmodels_adap
         ```
 
     === "Log"
-        Rendered by running this tutorial on a machine with a licensed Stata install - [view in separate window](../tutorials/statistics/stata_arbitrary_estimators.html){:target="_blank"} if available.
-        <iframe src="../tutorials/statistics/stata_arbitrary_estimators.html"
+        [view in separate window](../tutorials/statistics/stata_arbitrary_estimators.html){:target="_blank"} if available.
+        <iframe src="../../tutorials/statistics/stata_arbitrary_estimators.html"
             style="width: 100%; height: 800px; border: none;">
         </iframe>

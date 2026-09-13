@@ -18,7 +18,7 @@ The tutorials below build everything by hand, one model family at a time.
 
     === "Log"
         [View in separate window](../../tutorials/srmi/hotdeck.html){:target="_blank"}
-        <iframe src="../../tutorials/srmi/hotdeck.html" 
+        <iframe src="../../../tutorials/srmi/hotdeck.html" 
             style="width: 100%; height: 800px; border: none;">
         </iframe>
 
@@ -32,7 +32,7 @@ The tutorials below build everything by hand, one model family at a time.
 
     === "Log"
         [View in separate window](../../tutorials/srmi/regression.html){:target="_blank"}
-        <iframe src="../../tutorials/srmi/regression.html" 
+        <iframe src="../../../tutorials/srmi/regression.html" 
             style="width: 100%; height: 800px; border: none;">
         </iframe>
 
@@ -46,7 +46,7 @@ The tutorials below build everything by hand, one model family at a time.
 
     === "Log"
         [View in separate window](../../tutorials/srmi/gbm.html){:target="_blank"}
-        <iframe src="../../tutorials/srmi/gbm.html" 
+        <iframe src="../../../tutorials/srmi/gbm.html" 
             style="width: 100%; height: 800px; border: none;">
         </iframe>
 
@@ -62,6 +62,6 @@ The tutorials below build everything by hand, one model family at a time.
 
     === "Log"
         [View in separate window](../../tutorials/srmi/tabular_ml.html){:target="_blank"}
-        <iframe src="../../tutorials/srmi/tabular_ml.html" 
+        <iframe src="../../../tutorials/srmi/tabular_ml.html" 
             style="width: 100%; height: 800px; border: none;">
         </iframe>

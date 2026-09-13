@@ -44,6 +44,6 @@ Override with `model={Variable.Class...: ...}`. Two ways to do it:
 
 === "Log"
     [View in separate window](../../tutorials/srmi/simple_model_variable_types.html){:target="_blank"}
-    <iframe src="../../tutorials/srmi/simple_model_variable_types.html"
+    <iframe src="../../../tutorials/srmi/simple_model_variable_types.html"
         style="width: 100%; height: 800px; border: none;">
     </iframe>

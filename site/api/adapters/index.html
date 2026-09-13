@@ -8542,7 +8542,7 @@ Default is None.</p>
     </div>
 
 </div><h2 id="stata-pystata">Stata (pystata)<a class="headerlink" href="#stata-pystata" title="Permanent link">&para;</a></h2>
-<p>Requires a licensed Stata 17+ install plus <code>pip install survey-kit[stata]</code>. <code>stata_adapter</code> (and its <code>mi_ses_from_stata</code> shortcut) runs any e-class command as a plain string - there's no separate named-wrapper-per-estimator layer to route around the way fixest has, since any Stata command already works by just changing the <code>command</code> string. <code>stata_results_adapter</code> reaches any r()/e() result rather than the fixed e(b)/e(V)/r(table) triplet, and is what <code>mi_ses_from_stata</code>'s <code>replicates=</code> option uses under the hood for replicate-weight bootstrapping.</p>
+<p>Requires Stata 17+ plus <code>pip install survey-kit[stata]</code>. <code>stata_adapter</code> (and its <code>mi_ses_from_stata</code> shortcut) runs any e-class command as a plain string - there's no separate named-wrapper-per-estimator layer to route around the way fixest has, since any Stata command already works by just changing the <code>command</code> string. <code>stata_results_adapter</code> reaches any r()/e() result rather than the fixed e(b)/e(V)/r(table) triplet, and is what <code>mi_ses_from_stata</code>'s <code>replicates=</code> option uses under the hood for replicate-weight bootstrapping.</p>
 
 
 <div class="doc doc-object doc-function">
@@ -8674,7 +8674,7 @@ are read back, e.g.
                 <p><code>_stata_interop.require_pystata</code> - stata_path (your Stata install
 directory) is only needed if pystata's utilities folder isn't
 already on sys.path; edition ("be"/"se"/"mp") only if it can't be
-auto-detected from your license. Only used on the first call in a
+auto-detected. Only used on the first call in a
 process - Stata stays initialized afterward, like a package import.</p>
               </div>
             </td>
@@ -8694,7 +8694,7 @@ process - Stata stays initialized afterward, like a package import.</p>
                 <p><code>_stata_interop.require_pystata</code> - stata_path (your Stata install
 directory) is only needed if pystata's utilities folder isn't
 already on sys.path; edition ("be"/"se"/"mp") only if it can't be
-auto-detected from your license. Only used on the first call in a
+auto-detected. Only used on the first call in a
 process - Stata stays initialized afterward, like a package import.</p>
               </div>
             </td>
@@ -8925,7 +8925,7 @@ diagnostic snapshot only, never combined across implicates.</p>
 <a id="__codelineno-0-2103" name="__codelineno-0-2103"></a><span class="sd">        `_stata_interop.require_pystata` - stata_path (your Stata install</span>
 <a id="__codelineno-0-2104" name="__codelineno-0-2104"></a><span class="sd">        directory) is only needed if pystata&#39;s utilities folder isn&#39;t</span>
 <a id="__codelineno-0-2105" name="__codelineno-0-2105"></a><span class="sd">        already on sys.path; edition (&quot;be&quot;/&quot;se&quot;/&quot;mp&quot;) only if it can&#39;t be</span>
-<a id="__codelineno-0-2106" name="__codelineno-0-2106"></a><span class="sd">        auto-detected from your license. Only used on the first call in a</span>
+<a id="__codelineno-0-2106" name="__codelineno-0-2106"></a><span class="sd">        auto-detected. Only used on the first call in a</span>
 <a id="__codelineno-0-2107" name="__codelineno-0-2107"></a><span class="sd">        process - Stata stays initialized afterward, like a package import.</span>
 <a id="__codelineno-0-2108" name="__codelineno-0-2108"></a><span class="sd">    reuse_data : if True, skip re-exporting/re-`use`-ing df when it&#39;s the</span>
 <a id="__codelineno-0-2109" name="__codelineno-0-2109"></a><span class="sd">        same object (by identity) as a previous reuse_data=True call -</span>

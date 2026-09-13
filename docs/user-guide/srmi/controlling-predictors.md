@@ -32,6 +32,6 @@ only want to touch one or two columns in a much wider dataframe.
 
 === "Log"
     [View in separate window](../../tutorials/srmi/simple_model_controlling_predictors.html){:target="_blank"}
-    <iframe src="../../tutorials/srmi/simple_model_controlling_predictors.html"
+    <iframe src="../../../tutorials/srmi/simple_model_controlling_predictors.html"
         style="width: 100%; height: 800px; border: none;">
     </iframe>

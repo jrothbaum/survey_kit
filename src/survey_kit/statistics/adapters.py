@@ -2103,7 +2103,7 @@ def stata_adapter(
         `_stata_interop.require_pystata` - stata_path (your Stata install
         directory) is only needed if pystata's utilities folder isn't
         already on sys.path; edition ("be"/"se"/"mp") only if it can't be
-        auto-detected from your license. Only used on the first call in a
+        auto-detected. Only used on the first call in a
         process - Stata stays initialized afterward, like a package import.
     reuse_data : if True, skip re-exporting/re-`use`-ing df when it's the
         same object (by identity) as a previous reuse_data=True call -

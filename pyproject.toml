@@ -56,7 +56,7 @@ pyfixest = ["pyfixest>=0.40.1"]
 #   the pyfixest extra above for fixed-effects regression if it covers what
 #   you need - it mirrors fixest's own syntax with no R dependency at all.
 r = ["rpy2>=3.6.7", "rpy2-arrow>=0.1.3"]
-#   Stata-based adapter - also requires a licensed Stata 17+ install for its
+#   Stata-based adapter - also requires Stata 17+ for its
 #   bundled `pystata` package, which isn't on PyPI (see
 #   survey_kit.statistics._stata_interop.check_stata_setup()).
 stata = ["polars_readstat>=0.21.1"]
