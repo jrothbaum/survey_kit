@@ -28,7 +28,6 @@ Full documentation: [https://jrothbaum.github.io/survey_kit/](https://jrothbaum.
 ## Support
 
 - [Issues](https://github.com/jrothbaum/survey_kit/issues)
-- [Discussions](https://github.com/jrothbaum/survey_kit/discussions)
 
 ## License
 
