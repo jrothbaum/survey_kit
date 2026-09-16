@@ -848,7 +848,7 @@ def _append_to_mi(
         for i in range(0, n_implicates):
             if type(stat_item) is ReplicateStats:
                 rep_stats = stat_item
-            elif type(stat_item) is StatCalculator:
+            elif isinstance(stat_item, StatCalculator):
                 rep_stats = stat_item.replicate_stats
 
             implicate_stats.append(rep_stats)

@@ -3,34 +3,36 @@ Adapters that let common Python regression/estimation packages be used as
 the `delegate` in
 [`mi_ses_from_function`][survey_kit.statistics.multiple_imputation.mi_ses_from_function],
 so their per-implicate coefficient estimates and standard errors get
-combined into proper multiple-imputation standard errors via Rubin's rules -
-with no dependency on StatCalculator/ReplicateStats.
+combined into proper multiple-imputation standard errors via Rubin's rules.
 
 None of the underlying packages are hard dependencies of survey_kit - each
 adapter imports its package lazily and raises a clear ImportError naming the
 `uv add` command if it isn't installed.
 
-Every adapter returns the same shape, normalized regardless of what the
-underlying package natively calls things:
-
-    (df_estimates, df_ses, df_vcov, df_tidy)
+Every adapter returns the same normalized shape, regardless of what the
+underlying package natively calls things: an
+[`AdapterStats`][survey_kit.statistics.adapter_stats.AdapterStats] (a
+StatCalculator subclass - it works everywhere a StatCalculator does:
+`.print()`, `.compare()`, `mi_ses_from_function`/MultipleImputation,
+survey_kit.plot's line()/coefplot()/stacked_bar()/combine(), save/load) -
+built from:
 
 - df_estimates / df_ses: one row per term, with the term-identifier column
   named `join_on_name` (default "Variable") and the coefficient/SE column
   named `value_name` (default "estimate") - matching survey_kit's own
   join_on convention used everywhere else in this library.
 - df_vcov: the term-by-term covariance matrix in the long/pairwise form
-  [`MultipleImputation`][survey_kit.statistics.multiple_imputation.MultipleImputation]
-  expects (join_on columns suffixed "_1"/"_2" plus one value column), or
-  None when the package doesn't compute one (e.g. polars_ds). This is what
-  lets `.compare()` compute a correct joint standard error for a contrast
-  between two terms of the same fit instead of assuming independence.
+  AdapterStats/ReplicateStats expect (join_on columns suffixed "_1"/"_2"
+  plus one value column), or None when the package doesn't compute one
+  (e.g. polars_ds). This is what lets `.compare()` compute a correct joint
+  standard error for a contrast between two terms of the same fit instead
+  of assuming independence.
 - df_tidy: the underlying package's own native coefficient/summary table
   for this one fit (whatever columns it naturally has - estimate, SE, t/z,
   p-value, CI, R², ...), held as-is rather than normalized. This is a
-  per-implicate diagnostic snapshot only - MultipleImputation does NOT
-  combine it across implicates (a single implicate's own t-stats/p-values
-  aren't valid MI inference), it just stays accessible via
+  per-fit diagnostic snapshot only - MultipleImputation does NOT combine it
+  across implicates (a single implicate's own t-stats/p-values aren't
+  valid MI inference), it just stays accessible via
   `mi_result.implicate_stats[i].df_tidy`.
 """
 
@@ -39,6 +41,25 @@ from __future__ import annotations
 import polars as pl
 
 from .. import logger
+from .adapter_stats import AdapterStats
+
+
+def _adapter_stats(
+    df_estimates: pl.DataFrame,
+    df_ses: pl.DataFrame,
+    df_vcov: pl.DataFrame | None,
+    df_tidy: pl.DataFrame | None,
+    join_on_name: str,
+) -> AdapterStats:
+    """Every adapter's own final step - wraps its normalized parts into the shared return type."""
+    return AdapterStats(
+        df_estimates=df_estimates,
+        df_ses=df_ses,
+        variable_ids=join_on_name,
+        df_vcov=df_vcov,
+        df_tidy=df_tidy,
+        display=False,
+    )
 
 
 def _coef_table_from_series(
@@ -53,9 +74,7 @@ def _coef_table_from_series(
     return df_estimates, df_ses
 
 
-def _vcov_table_from_frame(
-    cov_df, join_on_name: str, value_name: str
-) -> pl.DataFrame:
+def _vcov_table_from_frame(cov_df, join_on_name: str, value_name: str) -> pl.DataFrame:
     terms = list(cov_df.index)
     records = [
         {
@@ -148,11 +167,11 @@ def _mi_ses_replicates_delegate(
     Build an `mi_ses_from_function` delegate (called once per implicate)
     that instead runs `adapter` once per replicate weight column via
     `StatCalculator.from_function`, taking just its point estimates
-    (element 0 of the (df_estimates, df_ses, df_vcov, df_tidy) tuple every
-    adapter in this module returns) - the SE then comes from the spread of
-    estimates across replicates rather than the adapter's own df_ses/
-    df_vcov, the same replicate-weight-bootstrap approach
-    `stata_results_adapter` uses for Stata.
+    (the df_estimates of the AdapterStats every adapter in this module
+    returns) - the SE then comes from the spread of estimates across
+    replicates rather than the adapter's own df_ses/df_vcov, the same
+    replicate-weight-bootstrap approach `stata_results_adapter` uses for
+    Stata.
 
     `convert`, if given (e.g. `_to_pandas`, `_to_polars`,
     `_r_interop.dataframe_to_r`), converts df once per implicate - on the
@@ -180,7 +199,7 @@ def _mi_ses_replicates_delegate(
                 if not converted:
                     converted["df"] = convert(df)
                 df = converted["df"]
-            return adapter(df, weight=weight, **base_arguments)[0]
+            return adapter(df, weight=weight, **base_arguments).df_estimates
 
         return StatCalculator.from_function(
             delegate=_point_estimate,
@@ -205,7 +224,7 @@ def statsmodels_adapter(
     cov_kwds: dict | None = None,
     model_kwargs: dict | None = None,
     fit_kwargs: dict | None = None,
-) -> tuple[pl.DataFrame, pl.DataFrame, pl.DataFrame, pl.DataFrame]:
+) -> AdapterStats:
     """
     Fit an OLS/WLS regression with statsmodels and return its coefficient
     table in survey_kit's normalized (df_estimates, df_ses, df_vcov,
@@ -238,7 +257,7 @@ def statsmodels_adapter(
 
     Returns
     -------
-    tuple[pl.DataFrame, pl.DataFrame, pl.DataFrame, pl.DataFrame]
+    AdapterStats
         (df_estimates, df_ses, df_vcov, df_tidy) - df_vcov is always
         populated here since statsmodels computes it for free alongside
         .bse. df_tidy is statsmodels' own coefficient table
@@ -281,7 +300,7 @@ def statsmodels_adapter(
         results.summary2().tables[1].reset_index(names=join_on_name)
     )
 
-    return (df_estimates, df_ses, df_vcov, df_tidy)
+    return _adapter_stats(df_estimates, df_ses, df_vcov, df_tidy, join_on_name)
 
 
 def mi_ses_from_statsmodels(
@@ -351,7 +370,12 @@ def mi_ses_from_statsmodels(
 
     if replicates is None:
         delegate = statsmodels_adapter
-        arguments = {**base_arguments, "weight": weight, "cov_type": cov_type, "cov_kwds": cov_kwds}
+        arguments = {
+            **base_arguments,
+            "weight": weight,
+            "cov_type": cov_type,
+            "cov_kwds": cov_kwds,
+        }
     else:
         if weight:
             logger.warning(
@@ -400,7 +424,7 @@ def linearmodels_adapter(
     cov_kwds: dict | None = None,
     model_kwargs: dict | None = None,
     fit_kwargs: dict | None = None,
-) -> tuple[pl.DataFrame, pl.DataFrame, pl.DataFrame, pl.DataFrame]:
+) -> AdapterStats:
     """
     Fit a linearmodels model (IV/panel) and return its coefficient table in
     survey_kit's normalized (df_estimates, df_ses, df_vcov, df_tidy) shape.
@@ -444,7 +468,7 @@ def linearmodels_adapter(
 
     Returns
     -------
-    tuple[pl.DataFrame, pl.DataFrame, pl.DataFrame, pl.DataFrame]
+    AdapterStats
         (df_estimates, df_ses, df_vcov, df_tidy) - df_vcov is always
         populated here since linearmodels computes it for free alongside
         .std_errors. df_tidy assembles estimate/std_error/statistic/
@@ -500,7 +524,7 @@ def linearmodels_adapter(
         results.conf_int(),
     )
 
-    return (df_estimates, df_ses, df_vcov, df_tidy)
+    return _adapter_stats(df_estimates, df_ses, df_vcov, df_tidy, join_on_name)
 
 
 def mi_ses_from_linearmodels(
@@ -567,7 +591,12 @@ def mi_ses_from_linearmodels(
 
     if replicates is None:
         delegate = linearmodels_adapter
-        arguments = {**base_arguments, "weight": weight, "cov_type": cov_type, "cov_kwds": cov_kwds}
+        arguments = {
+            **base_arguments,
+            "weight": weight,
+            "cov_type": cov_type,
+            "cov_kwds": cov_kwds,
+        }
     else:
         if weight:
             logger.warning(
@@ -608,7 +637,7 @@ def pyfixest_adapter(
     join_on_name: str = "Variable",
     value_name: str = "estimate",
     **kwargs,
-) -> tuple[pl.DataFrame, pl.DataFrame, pl.DataFrame | None, pl.DataFrame]:
+) -> AdapterStats:
     """
     Fit a pyfixest regression and return its coefficient table in
     survey_kit's normalized (df_estimates, df_ses, df_vcov, df_tidy) shape.
@@ -647,7 +676,7 @@ def pyfixest_adapter(
 
     Returns
     -------
-    tuple[pl.DataFrame, pl.DataFrame, pl.DataFrame | None, pl.DataFrame]
+    AdapterStats
         (df_estimates, df_ses, df_vcov, df_tidy). df_vcov is populated from
         the fitted model's internal covariance matrix when its shape
         matches the coefficient vector, else None (with a warning) rather
@@ -717,7 +746,7 @@ def pyfixest_adapter(
 
     df_tidy = pl.from_pandas(fit.tidy().reset_index(names=join_on_name))
 
-    return (df_estimates, df_ses, df_vcov, df_tidy)
+    return _adapter_stats(df_estimates, df_ses, df_vcov, df_tidy, join_on_name)
 
 
 class mi_ses_from_pyfixest:
@@ -996,7 +1025,7 @@ def polars_ds_adapter(
     value_name: str = "estimate",
     std_err: str = "hc3",
     null_policy: str = "raise",
-) -> tuple[pl.DataFrame, pl.DataFrame, None, pl.DataFrame]:
+) -> AdapterStats:
     """
     Fit an OLS/WLS regression with polars_ds's `lin_reg_report` and return
     its coefficient table in survey_kit's normalized (df_estimates, df_ses,
@@ -1035,8 +1064,8 @@ def polars_ds_adapter(
 
     Returns
     -------
-    tuple[pl.DataFrame, pl.DataFrame, None, pl.DataFrame]
-        (df_estimates, df_ses, None, df_tidy) - df_tidy is polars_ds's full
+    AdapterStats
+        df_vcov is always None here - df_tidy is polars_ds's full
         `lin_reg_report` output as-is (features/beta/se/t/p/CI/r2/adj_r2),
         just with its term column renamed to join_on_name - a diagnostic
         snapshot only, never combined across implicates.
@@ -1093,7 +1122,7 @@ def polars_ds_adapter(
     )
     df_tidy = report.rename({"features": join_on_name})
 
-    return (df_estimates, df_ses, None, df_tidy)
+    return _adapter_stats(df_estimates, df_ses, None, df_tidy, join_on_name)
 
 
 def mi_ses_from_polars_ds(
@@ -1199,7 +1228,7 @@ def r_lm_adapter(
     join_on_name: str = "Variable",
     value_name: str = "estimate",
     **r_kwargs,
-) -> tuple[pl.DataFrame, pl.DataFrame, pl.DataFrame, pl.DataFrame]:
+) -> AdapterStats:
     """
     Fit a base-R lm()/glm() model and return its coefficient table in
     survey_kit's normalized (df_estimates, df_ses, df_vcov, df_tidy) shape.
@@ -1237,7 +1266,7 @@ def r_lm_adapter(
 
     Returns
     -------
-    tuple[pl.DataFrame, pl.DataFrame, pl.DataFrame, pl.DataFrame]
+    AdapterStats
         (df_estimates, df_ses, df_vcov, df_tidy) - df_vcov is always
         populated here since vcov() is free alongside coef() in R. df_tidy
         is R's own `summary(fit)$coefficients` (Estimate/Std. Error/t or z
@@ -1272,7 +1301,7 @@ def r_lm_adapter(
     df_vcov = _r.vcov_table(vcov, join_on_name, value_name)
     df_tidy = _r.matrix_table(tidy, join_on_name)
 
-    return (df_estimates, df_ses, df_vcov, df_tidy)
+    return _adapter_stats(df_estimates, df_ses, df_vcov, df_tidy, join_on_name)
 
 
 def r_fixest_adapter(
@@ -1285,7 +1314,7 @@ def r_fixest_adapter(
     join_on_name: str = "Variable",
     value_name: str = "estimate",
     **r_kwargs,
-) -> tuple[pl.DataFrame, pl.DataFrame, pl.DataFrame, pl.DataFrame]:
+) -> AdapterStats:
     """
     Fit any fixest regression and return its coefficient table in
     survey_kit's normalized (df_estimates, df_ses, df_vcov, df_tidy) shape.
@@ -1335,7 +1364,7 @@ def r_fixest_adapter(
 
     Returns
     -------
-    tuple[pl.DataFrame, pl.DataFrame, pl.DataFrame]
+    AdapterStats
         (df_estimates, df_ses, df_vcov) - df_vcov is always populated here
         since vcov() is free alongside coef() in fixest's results.
     """
@@ -1354,7 +1383,7 @@ def _fixest_fit(
     join_on_name: str,
     value_name: str,
     r_kwargs: dict,
-) -> tuple[pl.DataFrame, pl.DataFrame, pl.DataFrame, pl.DataFrame]:
+) -> AdapterStats:
     """
     Shared core behind r_fixest_adapter and the r_feols/feglm/fepois/femlm
     wrappers. Returns (df_estimates, df_ses, df_vcov, df_tidy) - df_tidy is
@@ -1390,7 +1419,7 @@ def _fixest_fit(
     df_vcov = _r.vcov_table(vcov_r, join_on_name, value_name)
     df_tidy = _r.matrix_table(tidy, join_on_name)
 
-    return (df_estimates, df_ses, df_vcov, df_tidy)
+    return _adapter_stats(df_estimates, df_ses, df_vcov, df_tidy, join_on_name)
 
 
 def _fixest_named_kwargs(
@@ -1470,37 +1499,41 @@ def r_feols(
     join_on_name: str = "Variable",
     value_name: str = "estimate",
     **r_kwargs,
-) -> tuple[pl.DataFrame, pl.DataFrame, pl.DataFrame, pl.DataFrame]:
+) -> AdapterStats:
     """
-    fixest::feols() (linear regression, with fixed effects) with arguments
-    mirroring fixest's own. See `r_fixest_adapter` for the fully generic
-    `func=` version (feNmlm, feglm.fit, ...) and the general conversion
-    rules; this is the same thing with feols's common arguments spelled out.
+        fixest::feols() (linear regression, with fixed effects) with arguments
+        mirroring fixest's own. See `r_fixest_adapter` for the fully generic
+        `func=` version (feNmlm, feglm.fit, ...) and the general conversion
+        rules; this is the same thing with feols's common arguments spelled out.
 
-    Parameters
-    ----------
-    df : the merged implicate data (supplied by mi_ses_from_function).
-    formula : fixest formula string, e.g. "y ~ x1 + x2 | firm" for a fit
-        with a firm fixed effect.
-    weight : column name for weighted estimation, or None. Passed as
-        `weights=~column` (fixest needs a formula here, not a plain string).
-    vcov : "hetero" (robust, the default), "iid" (classical), or a one-sided
-        formula string like "~firm" for cluster-robust SEs.
-{params}
-    join_on_name : name of the term-identifier column in the output.
-        Default is "Variable".
-    value_name : name of the coefficient/SE/covariance value column in the
-        output. Default is "estimate".
+        Parameters
+        ----------
+        df : the merged implicate data (supplied by mi_ses_from_function).
+        formula : fixest formula string, e.g. "y ~ x1 + x2 | firm" for a fit
+            with a firm fixed effect.
+        weight : column name for weighted estimation, or None. Passed as
+            `weights=~column` (fixest needs a formula here, not a plain string).
+        vcov : "hetero" (robust, the default), "iid" (classical), or a one-sided
+            formula string like "~firm" for cluster-robust SEs.
+    {params}
+        join_on_name : name of the term-identifier column in the output.
+            Default is "Variable".
+        value_name : name of the coefficient/SE/covariance value column in the
+            output. Default is "estimate".
 
-    Returns
-    -------
-    tuple[pl.DataFrame, pl.DataFrame, pl.DataFrame]
-        (df_estimates, df_ses, df_vcov, df_tidy) - df_tidy is fixest's own
-        coeftable() (Estimate/Std. Error/t value/Pr(>|t|)), a diagnostic
-        snapshot only, never combined across implicates.
+        Returns
+        -------
+        AdapterStats
+            (df_estimates, df_ses, df_vcov, df_tidy) - df_tidy is fixest's own
+            coeftable() (Estimate/Std. Error/t value/Pr(>|t|)), a diagnostic
+            snapshot only, never combined across implicates.
     """
-    r_kwargs = _fixest_named_kwargs(cluster, panel_id, ssc, fixef, lean, notes, verbose, r_kwargs)
-    return _fixest_fit(df, "feols", formula, weight, None, vcov, join_on_name, value_name, r_kwargs)
+    r_kwargs = _fixest_named_kwargs(
+        cluster, panel_id, ssc, fixef, lean, notes, verbose, r_kwargs
+    )
+    return _fixest_fit(
+        df, "feols", formula, weight, None, vcov, join_on_name, value_name, r_kwargs
+    )
 
 
 def r_feglm(
@@ -1519,42 +1552,46 @@ def r_feglm(
     join_on_name: str = "Variable",
     value_name: str = "estimate",
     **r_kwargs,
-) -> tuple[pl.DataFrame, pl.DataFrame, pl.DataFrame, pl.DataFrame]:
+) -> AdapterStats:
     """
-    fixest::feglm() (GLM, with fixed effects) with arguments mirroring
-    fixest's own. See `r_fixest_adapter` for the fully generic `func=`
-    version and the general conversion rules.
+        fixest::feglm() (GLM, with fixed effects) with arguments mirroring
+        fixest's own. See `r_fixest_adapter` for the fully generic `func=`
+        version and the general conversion rules.
 
-    Parameters
-    ----------
-    df : the merged implicate data (supplied by mi_ses_from_function).
-    formula : fixest formula string, e.g. "y ~ x1 + x2 | firm".
-    family : a plain R family name, e.g. "binomial", "poisson" - passed as a
-        quoted string (fixest resolves it to the family function itself).
-        For a non-default link function, wrap the full expression in
-        [`RRaw`][survey_kit.statistics._r_interop.RRaw], e.g.
-        `family=RRaw('binomial(link="probit")')`. Default is "gaussian"
-        (matching feglm's own default) - for a pure Poisson fit,
-        `r_fepois` is faster and doesn't need this.
-    weight : column name for weighted estimation, or None. Passed as
-        `weights=~column`.
-    vcov : "hetero" (robust, the default), "iid" (classical), or a one-sided
-        formula string like "~firm" for cluster-robust SEs.
-{params}
-    join_on_name : name of the term-identifier column in the output.
-        Default is "Variable".
-    value_name : name of the coefficient/SE/covariance value column in the
-        output. Default is "estimate".
+        Parameters
+        ----------
+        df : the merged implicate data (supplied by mi_ses_from_function).
+        formula : fixest formula string, e.g. "y ~ x1 + x2 | firm".
+        family : a plain R family name, e.g. "binomial", "poisson" - passed as a
+            quoted string (fixest resolves it to the family function itself).
+            For a non-default link function, wrap the full expression in
+            [`RRaw`][survey_kit.statistics._r_interop.RRaw], e.g.
+            `family=RRaw('binomial(link="probit")')`. Default is "gaussian"
+            (matching feglm's own default) - for a pure Poisson fit,
+            `r_fepois` is faster and doesn't need this.
+        weight : column name for weighted estimation, or None. Passed as
+            `weights=~column`.
+        vcov : "hetero" (robust, the default), "iid" (classical), or a one-sided
+            formula string like "~firm" for cluster-robust SEs.
+    {params}
+        join_on_name : name of the term-identifier column in the output.
+            Default is "Variable".
+        value_name : name of the coefficient/SE/covariance value column in the
+            output. Default is "estimate".
 
-    Returns
-    -------
-    tuple[pl.DataFrame, pl.DataFrame, pl.DataFrame]
-        (df_estimates, df_ses, df_vcov, df_tidy) - df_tidy is fixest's own
-        coeftable() (Estimate/Std. Error/t value/Pr(>|t|)), a diagnostic
-        snapshot only, never combined across implicates.
+        Returns
+        -------
+        AdapterStats
+            (df_estimates, df_ses, df_vcov, df_tidy) - df_tidy is fixest's own
+            coeftable() (Estimate/Std. Error/t value/Pr(>|t|)), a diagnostic
+            snapshot only, never combined across implicates.
     """
-    r_kwargs = _fixest_named_kwargs(cluster, panel_id, ssc, fixef, lean, notes, verbose, r_kwargs)
-    return _fixest_fit(df, "feglm", formula, weight, family, vcov, join_on_name, value_name, r_kwargs)
+    r_kwargs = _fixest_named_kwargs(
+        cluster, panel_id, ssc, fixef, lean, notes, verbose, r_kwargs
+    )
+    return _fixest_fit(
+        df, "feglm", formula, weight, family, vcov, join_on_name, value_name, r_kwargs
+    )
 
 
 def r_fepois(
@@ -1572,35 +1609,39 @@ def r_fepois(
     join_on_name: str = "Variable",
     value_name: str = "estimate",
     **r_kwargs,
-) -> tuple[pl.DataFrame, pl.DataFrame, pl.DataFrame, pl.DataFrame]:
+) -> AdapterStats:
     """
-    fixest::fepois() (Poisson regression, with fixed effects) with arguments
-    mirroring fixest's own. See `r_fixest_adapter` for the fully generic
-    `func=` version and the general conversion rules.
+        fixest::fepois() (Poisson regression, with fixed effects) with arguments
+        mirroring fixest's own. See `r_fixest_adapter` for the fully generic
+        `func=` version and the general conversion rules.
 
-    Parameters
-    ----------
-    df : the merged implicate data (supplied by mi_ses_from_function).
-    formula : fixest formula string, e.g. "y ~ x1 + x2 | firm".
-    weight : column name for weighted estimation, or None. Passed as
-        `weights=~column`.
-    vcov : "hetero" (robust, the default), "iid" (classical), or a one-sided
-        formula string like "~firm" for cluster-robust SEs.
-{params}
-    join_on_name : name of the term-identifier column in the output.
-        Default is "Variable".
-    value_name : name of the coefficient/SE/covariance value column in the
-        output. Default is "estimate".
+        Parameters
+        ----------
+        df : the merged implicate data (supplied by mi_ses_from_function).
+        formula : fixest formula string, e.g. "y ~ x1 + x2 | firm".
+        weight : column name for weighted estimation, or None. Passed as
+            `weights=~column`.
+        vcov : "hetero" (robust, the default), "iid" (classical), or a one-sided
+            formula string like "~firm" for cluster-robust SEs.
+    {params}
+        join_on_name : name of the term-identifier column in the output.
+            Default is "Variable".
+        value_name : name of the coefficient/SE/covariance value column in the
+            output. Default is "estimate".
 
-    Returns
-    -------
-    tuple[pl.DataFrame, pl.DataFrame, pl.DataFrame]
-        (df_estimates, df_ses, df_vcov, df_tidy) - df_tidy is fixest's own
-        coeftable() (Estimate/Std. Error/t value/Pr(>|t|)), a diagnostic
-        snapshot only, never combined across implicates.
+        Returns
+        -------
+        AdapterStats
+            (df_estimates, df_ses, df_vcov, df_tidy) - df_tidy is fixest's own
+            coeftable() (Estimate/Std. Error/t value/Pr(>|t|)), a diagnostic
+            snapshot only, never combined across implicates.
     """
-    r_kwargs = _fixest_named_kwargs(cluster, panel_id, ssc, fixef, lean, notes, verbose, r_kwargs)
-    return _fixest_fit(df, "fepois", formula, weight, None, vcov, join_on_name, value_name, r_kwargs)
+    r_kwargs = _fixest_named_kwargs(
+        cluster, panel_id, ssc, fixef, lean, notes, verbose, r_kwargs
+    )
+    return _fixest_fit(
+        df, "fepois", formula, weight, None, vcov, join_on_name, value_name, r_kwargs
+    )
 
 
 def r_femlm(
@@ -1618,38 +1659,42 @@ def r_femlm(
     join_on_name: str = "Variable",
     value_name: str = "estimate",
     **r_kwargs,
-) -> tuple[pl.DataFrame, pl.DataFrame, pl.DataFrame, pl.DataFrame]:
+) -> AdapterStats:
     """
-    fixest::femlm() (max-likelihood: Poisson/negative binomial/logit/
-    Gaussian, with fixed effects) with arguments mirroring fixest's own.
-    See `r_fixest_adapter` for the fully generic `func=` version and the
-    general conversion rules. Note: femlm has no `weights=` argument
-    (unlike feols/feglm/fepois).
+        fixest::femlm() (max-likelihood: Poisson/negative binomial/logit/
+        Gaussian, with fixed effects) with arguments mirroring fixest's own.
+        See `r_fixest_adapter` for the fully generic `func=` version and the
+        general conversion rules. Note: femlm has no `weights=` argument
+        (unlike feols/feglm/fepois).
 
-    Parameters
-    ----------
-    df : the merged implicate data (supplied by mi_ses_from_function).
-    formula : fixest formula string, e.g. "y ~ x1 + x2 | firm".
-    family : one of "poisson" (default), "negbin", "logit", "gaussian" -
-        a plain string (femlm, unlike feglm, only accepts one of these four
-        exact names - there's no link-function customization here).
-    vcov : "hetero" (robust, the default), "iid" (classical), or a one-sided
-        formula string like "~firm" for cluster-robust SEs.
-{params}
-    join_on_name : name of the term-identifier column in the output.
-        Default is "Variable".
-    value_name : name of the coefficient/SE/covariance value column in the
-        output. Default is "estimate".
+        Parameters
+        ----------
+        df : the merged implicate data (supplied by mi_ses_from_function).
+        formula : fixest formula string, e.g. "y ~ x1 + x2 | firm".
+        family : one of "poisson" (default), "negbin", "logit", "gaussian" -
+            a plain string (femlm, unlike feglm, only accepts one of these four
+            exact names - there's no link-function customization here).
+        vcov : "hetero" (robust, the default), "iid" (classical), or a one-sided
+            formula string like "~firm" for cluster-robust SEs.
+    {params}
+        join_on_name : name of the term-identifier column in the output.
+            Default is "Variable".
+        value_name : name of the coefficient/SE/covariance value column in the
+            output. Default is "estimate".
 
-    Returns
-    -------
-    tuple[pl.DataFrame, pl.DataFrame, pl.DataFrame]
-        (df_estimates, df_ses, df_vcov, df_tidy) - df_tidy is fixest's own
-        coeftable() (Estimate/Std. Error/t value/Pr(>|t|)), a diagnostic
-        snapshot only, never combined across implicates.
+        Returns
+        -------
+        AdapterStats
+            (df_estimates, df_ses, df_vcov, df_tidy) - df_tidy is fixest's own
+            coeftable() (Estimate/Std. Error/t value/Pr(>|t|)), a diagnostic
+            snapshot only, never combined across implicates.
     """
-    r_kwargs = _fixest_named_kwargs(cluster, panel_id, ssc, fixef, lean, notes, verbose, r_kwargs)
-    return _fixest_fit(df, "femlm", formula, None, family, vcov, join_on_name, value_name, r_kwargs)
+    r_kwargs = _fixest_named_kwargs(
+        cluster, panel_id, ssc, fixef, lean, notes, verbose, r_kwargs
+    )
+    return _fixest_fit(
+        df, "femlm", formula, None, family, vcov, join_on_name, value_name, r_kwargs
+    )
 
 
 for _fn in (r_feols, r_feglm, r_fepois, r_femlm):
@@ -1744,7 +1789,12 @@ class mi_ses_from_r_fixest:
 
         if replicates is None:
             delegate = r_feols
-            arguments = {**base_arguments, "weight": weight, "vcov": vcov, "cluster": cluster}
+            arguments = {
+                **base_arguments,
+                "weight": weight,
+                "vcov": vcov,
+                "cluster": cluster,
+            }
         else:
             if weight:
                 logger.warning(
@@ -1847,7 +1897,12 @@ class mi_ses_from_r_fixest:
 
         if replicates is None:
             delegate = r_feglm
-            arguments = {**base_arguments, "weight": weight, "vcov": vcov, "cluster": cluster}
+            arguments = {
+                **base_arguments,
+                "weight": weight,
+                "vcov": vcov,
+                "cluster": cluster,
+            }
         else:
             if weight:
                 logger.warning(
@@ -1947,7 +2002,12 @@ class mi_ses_from_r_fixest:
 
         if replicates is None:
             delegate = r_fepois
-            arguments = {**base_arguments, "weight": weight, "vcov": vcov, "cluster": cluster}
+            arguments = {
+                **base_arguments,
+                "weight": weight,
+                "vcov": vcov,
+                "cluster": cluster,
+            }
         else:
             if weight:
                 logger.warning(
@@ -2069,7 +2129,7 @@ def stata_adapter(
     stata_path: str | None = None,
     reuse_data: bool = False,
     quietly: bool = True,
-) -> tuple[pl.DataFrame, pl.DataFrame, pl.DataFrame, pl.DataFrame]:
+) -> AdapterStats:
     """
     Run an arbitrary Stata e-class estimation command (regress, logit,
     xtreg, areg, svy: ..., or anything from an installed community package)
@@ -2120,7 +2180,7 @@ def stata_adapter(
 
     Returns
     -------
-    tuple[pl.DataFrame, pl.DataFrame, pl.DataFrame, pl.DataFrame]
+    AdapterStats
         (df_estimates, df_ses, df_vcov, df_tidy) - df_vcov from e(V).
         df_tidy is Stata's own r(table) (the matrix `ci`/`test`/etc. use
         internally: b/se/t-or-z/p-value/CI, transposed to one row per term)
@@ -2167,7 +2227,7 @@ def stata_adapter(
         tidy_data[stat_name] = table_arr[i, :].tolist()
     df_tidy = pl.DataFrame(tidy_data)
 
-    return (df_estimates, df_ses, df_vcov, df_tidy)
+    return _adapter_stats(df_estimates, df_ses, df_vcov, df_tidy, join_on_name)
 
 
 def mi_ses_from_stata(

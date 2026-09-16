@@ -2,13 +2,11 @@
 
 ## What Is It
 
-`survey_kit.statistics.adapters` wraps regression packages - four pure-Python (statsmodels, linearmodels, pyfixest, polars_ds), R (via rpy2/fixest), and Stata (via pystata) - behind one normalized shape:
+`survey_kit.statistics.adapters` wraps regression packages - four pure-Python (statsmodels, linearmodels, pyfixest, polars_ds), R (via rpy2/fixest), and Stata (via pystata) - behind one normalized return type:
 
-```python
-(df_estimates, df_ses, df_vcov, df_tidy)
-```
+[`AdapterStats`](../api/adapters.md#adapterstats) - a [`StatCalculator`](../api/basic_standard_errors.md) subclass built directly from the adapter's own `df_estimates`/`df_ses` (plus `df_vcov`/`df_tidy` when the package provides them), rather than from raw microdata. Being a real `StatCalculator` means it already works everywhere one does with no extra step: `.print()`, `.compare()` (using `df_vcov` for a correct joint SE when available), [`survey_kit.plot`](../api/plot.md), save/load, and - since [`mi_ses_from_function`](../api/multiple_imputation.md) reads whatever a delegate returns generically - plugging straight into multiple imputation.
 
-so every estimator plugs into the same downstream machinery ([`mi_ses_from_function`](../api/multiple_imputation.md), [`StatCalculator.from_function`](../api/basic_standard_errors.md)) with no special-casing for which package produced the numbers. Each adapter also has a matching `mi_ses_from_<package>(...)` shortcut that runs it across multiple-imputation implicates directly - the adapter's own arguments (formula, weight, vcov, ...) come through as plain keywords instead of being packed into an `arguments={}` dict, so your IDE shows the right parameters for the one you're actually calling.
+so every estimator plugs into the same downstream machinery with no special-casing for which package produced the numbers. Each adapter also has a matching `mi_ses_from_<package>(...)` shortcut that runs it across multiple-imputation implicates directly - the adapter's own arguments (formula, weight, vcov, ...) come through as plain keywords instead of being packed into an `arguments={}` dict, so your IDE shows the right parameters for the one you're actually calling.
 
 ## Why Use It
 
@@ -21,7 +19,7 @@ The adapters handle the fiddly parts of wiring a regression package into `mi_ses
 
 ## Key Features
 
-- **Same shape everywhere** - `(df_estimates, df_ses, df_vcov, df_tidy)` regardless of package.
+- **Same return type everywhere** - an [`AdapterStats`](../api/adapters.md#adapterstats) regardless of package, so it's a real `StatCalculator` with `.print()`/`.compare()`/plotting/save-load already working.
 - **`mi_ses_from_<package>` shortcuts** - one call combines across implicates via Rubin's rules.
 - **Replicate-weight bootstrapping** - `replicates=` on every `mi_ses_from_*` that has a weight argument to substitute a column into.
 - **No hard dependencies** - none of statsmodels/linearmodels/pyfixest/polars_ds/rpy2/pystata are required by survey_kit itself; each adapter raises a clear, actionable error (with the install command) only if you actually call it without the package installed.

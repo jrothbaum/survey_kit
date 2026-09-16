@@ -1536,13 +1536,13 @@ def mi_ses_from_function(
     >>> print("Degrees of freedom:", mi_results.df_df)
     >>> print("Missing information rate:", mi_results.df_rate_of_missing_information)
 
-    With a custom analysis function - any delegate returning
-    ``(df_estimates, df_ses)`` (or a third item, ``df_vcov``, see Notes) is
-    combined via Rubin's rules exactly like the StatCalculator case above,
-    with no dependency on StatCalculator/ReplicateStats at all:
+    With a custom analysis function - any delegate returning a
+    StatCalculator (or subclass - see AdapterStats below) is combined via
+    Rubin's rules exactly like the StatCalculator case above:
 
     >>> import polars as pl
     >>> import statsmodels.formula.api as smf
+    >>> from survey_kit.statistics.adapter_stats import AdapterStats
     >>>
     >>> def regression_analysis(df, weight="", formula="income ~ age"):
     ...     '''Fit a (weighted) OLS and return its coefficient table'''
@@ -1551,7 +1551,7 @@ def mi_ses_from_function(
     ...
     ...     df_estimates = pl.DataFrame({"Variable": results.params.index, "estimate": results.params.values})
     ...     df_ses = pl.DataFrame({"Variable": results.bse.index, "estimate": results.bse.values})
-    ...     return (df_estimates, df_ses)
+    ...     return AdapterStats(df_estimates, df_ses, variable_ids="Variable", display=False)
     >>>
     >>> mi_custom = mi_ses_from_function(
     ...     delegate=regression_analysis,
@@ -1588,17 +1588,18 @@ def mi_ses_from_function(
     3. Combine using Rubin's rules for MI inference
     4. Calculate degrees of freedom and missing information rates
 
-    For delegate functions that return a tuple/list, expects either:
-    - (df_estimates, df_ses), or
-    - (df_estimates, df_ses, df_vcov) - df_vcov is the per-implicate
-      variance-covariance matrix (long/pairwise form: join_on columns
-      suffixed "_1"/"_2" plus one value column matching the single stat
-      column in df_estimates), combined across implicates via the matrix
-      form of Rubin's rules and stored as the resulting
-      [`MultipleImputation.df_vcov`][survey_kit.statistics.multiple_imputation.MultipleImputation].
-      Needed for `.compare()`/contrasts between two rows of the same result
-      to get a correct joint standard error instead of assuming
-      independence; pass None here (or omit the item) if unavailable.
+    delegate must return a StatCalculator (or subclass - see
+    [`AdapterStats`][survey_kit.statistics.adapter_stats.AdapterStats] for
+    building one directly from df_estimates/df_ses, without needing raw
+    microdata/replicate weights at all). If it also populates df_vcov (the
+    per-implicate variance-covariance matrix - long/pairwise form: join_on
+    columns suffixed "_1"/"_2" plus one value column matching the single
+    stat column in df_estimates), that's combined across implicates via
+    the matrix form of Rubin's rules and stored as the resulting
+    [`MultipleImputation.df_vcov`][survey_kit.statistics.multiple_imputation.MultipleImputation] -
+    needed for `.compare()`/contrasts between two rows of the same result
+    to get a correct joint standard error instead of assuming
+    independence.
 
     See Also
     --------
@@ -1796,60 +1797,41 @@ def _mi_ses_from_function_one_implicate(
     arguments[df_argument_name] = dfi
     out = delegate(**arguments)
 
-    imp_statsi = None
-    if type(out) is StatCalculator:
-        if len(rounding.cols_n) == 0 and len(out.rounding.cols_n):
-            rounding.cols_n = out.rounding.cols_n
-
-        if len(rounding.cols_round) == 0 and len(out.rounding.cols_round):
-            rounding.cols_round = out.rounding.cols_round
-        if out.replicates is None:
-            bootstrap = out.bootstrap
-        else:
-            bootstrap = out.replicates.bootstrap
-        imp_statsi = ReplicateStats(
-            df_estimates=out.df_estimates,
-            df_ses=out.df_ses,
-            df_replicates=out.df_replicates,
-            bootstrap=bootstrap,
+    if not isinstance(out, StatCalculator):
+        message = (
+            f"delegate returned a {type(out).__name__}; expected a StatCalculator "
+            "(or a subclass, e.g. AdapterStats - see survey_kit.statistics."
+            "adapter_stats). Every adapter in survey_kit.statistics.adapters, and "
+            "StatCalculator.from_function, already return one of these - if you're "
+            "writing your own delegate, build an AdapterStats from your "
+            "df_estimates/df_ses (+ optional df_vcov/df_tidy) instead of returning "
+            "them directly."
         )
+        logger.error(message)
+        raise Exception(message)
 
-    elif type(out) is list or type(out) is tuple:
-        #   Generic delegate contract: (df_estimates, df_ses), optionally
-        #   followed by df_vcov and/or df_tidy - either or both may be None
-        #   so adapters can always return a uniform-length tuple whether or
-        #   not their underlying package computes a covariance matrix.
-        #   df_tidy is the package's own native coefficient/summary table
-        #   for this implicate, held as-is on the resulting ReplicateStats
-        #   (see its docstring) - never combined across implicates.
-        if len(out) not in (2, 3, 4):
-            message = (
-                f"delegate returned a {type(out).__name__} of length {len(out)}; "
-                "expected (df_estimates, df_ses[, df_vcov[, df_tidy]])."
-            )
-            logger.error(message)
-            raise Exception(message)
+    if len(rounding.cols_n) == 0 and len(out.rounding.cols_n):
+        rounding.cols_n = out.rounding.cols_n
 
-        df_estimates = out[0]
-        df_ses = out[1]
-        df_vcov = out[2] if len(out) >= 3 else None
-        df_tidy = out[3] if len(out) >= 4 else None
-
-        for name, dfi in (("df_estimates", df_estimates), ("df_ses", df_ses)):
-            missing = [c for c in join_on if c not in safe_columns(dfi)]
-            if missing:
-                message = f"delegate's {name} is missing join_on column(s) {missing}"
-                logger.error(message)
-                raise Exception(message)
-
-        imp_statsi = ReplicateStats(
-            df_estimates=df_estimates,
-            df_ses=df_ses,
-            df_replicates=None,
-            bootstrap=False,
-            df_vcov=df_vcov,
-            df_tidy=df_tidy,
-        )
+    if len(rounding.cols_round) == 0 and len(out.rounding.cols_round):
+        rounding.cols_round = out.rounding.cols_round
+    if out.replicates is None:
+        bootstrap = out.bootstrap
+    else:
+        bootstrap = out.replicates.bootstrap
+    imp_statsi = ReplicateStats(
+        df_estimates=out.df_estimates,
+        df_ses=out.df_ses,
+        df_replicates=out.df_replicates,
+        bootstrap=bootstrap,
+        #   AdapterStats (a StatCalculator subclass - see
+        #   adapter_stats.py) is the only kind of StatCalculator that
+        #   ever populates these; a plain StatCalculator's
+        #   replicate_stats never has them set, so this is a no-op
+        #   for that case.
+        df_vcov=out.replicate_stats.df_vcov,
+        df_tidy=out.replicate_stats.df_tidy,
+    )
 
     if path_save != "":
         imp_statsi.save(path_save)

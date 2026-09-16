@@ -1,6 +1,16 @@
 # Regression Adapters
 
-Every adapter below returns the same normalized shape - `(df_estimates, df_ses, df_vcov, df_tidy)` - so [`mi_ses_from_function`](multiple_imputation.md) and [`StatCalculator.from_function`](basic_standard_errors.md) treat any of them identically. Each also has a matching `mi_ses_from_<package>(...)` shortcut that runs it across multiple-imputation implicates directly, taking the adapter's own arguments as keywords instead of an `arguments={}` dict - see [Using the Regression Adapters](../user-guide/adapters.md) for a walkthrough.
+Every adapter below returns the same normalized type - [`AdapterStats`](#adapterstats) - so [`mi_ses_from_function`](multiple_imputation.md) treats any of them identically (it requires a `StatCalculator`, which `AdapterStats` is). Each also has a matching `mi_ses_from_<package>(...)` shortcut that runs it across multiple-imputation implicates directly, taking the adapter's own arguments as keywords instead of an `arguments={}` dict - see [Using the Regression Adapters](../user-guide/adapters.md) for a walkthrough.
+
+## AdapterStats
+
+The shared return type - a [`StatCalculator`](basic_standard_errors.md) subclass built directly from `df_estimates`/`df_ses` (plus `df_vcov`/`df_tidy` when available), with no raw microdata or replicate weights involved. Use this directly if you're wiring up your own delegate for a package with no named adapter below (see [Rolling Your Own](../user-guide/adapters.md#rolling-your-own)) - build one from your own `df_estimates`/`df_ses` and it's already a valid `mi_ses_from_function` delegate.
+
+::: survey_kit.statistics.adapter_stats.AdapterStats
+    options:
+        show_root_heading: true
+        show_root_full_path: false
+        heading_level: 3
 
 ## Pure Python (statsmodels, linearmodels, pyfixest, polars_ds)
 

@@ -28,13 +28,11 @@ load_dotenv()
 # %%
 logger.info("Before running any cell here, point survey_kit at your Stata install and")
 logger.info("check what's importable:")
-logger.info('    from survey_kit.statistics._stata_interop import check_stata_setup')
+logger.info("    from survey_kit.statistics._stata_interop import check_stata_setup")
 logger.info('    check_stata_setup(stata_path=r"C:\\Program Files\\Stata18")')
 logger.info("")
 logger.info("Requires `pip install survey-kit[stata]` (polars_readstat, for writing")
 logger.info(".dta files) plus Stata 17+ for pystata itself.")
-
-
 
 
 # %%
@@ -42,11 +40,13 @@ df_implicates = make_implicates()
 
 
 # %%
-logger.info("\n\nPart 1: mi_ses_from_stata - mi_ses_from_function(delegate=stata_adapter,")
+logger.info(
+    "\n\nPart 1: mi_ses_from_stata - mi_ses_from_function(delegate=stata_adapter,"
+)
 logger.info("...), with stata_adapter's own arguments (command, edition, stata_path,")
 logger.info("...) taken directly instead of packed into an arguments={} dict. Returns")
 logger.info("the same shape every other adapter in survey_kit.statistics.adapters")
-logger.info("does under the hood: (df_estimates, df_ses, df_vcov, df_tidy), combined")
+logger.info("does: an AdapterStats (df_estimates/df_ses/df_vcov/df_tidy), combined")
 logger.info("across implicates via Rubin's rules.")
 logger.info("")
 logger.info("Data goes into Stata as a .dta file written by polars_readstat, not")
@@ -91,7 +91,7 @@ logger.info("estimates across replicates IS the SE, computed in Python by")
 logger.info("survey_kit's own Replicates/StatCalculator machinery. Stata's own")
 logger.info("replicate-estimation commands are usually faster/more idiomatic if")
 logger.info("you're already set up for them - this is for matching SEs computed the")
-logger.info("same way elsewhere in a project instead. `command` needs a \"{weight}\"")
+logger.info('same way elsewhere in a project instead. `command` needs a "{weight}"')
 logger.info("placeholder here, unlike the e(V)-based calls above.")
 
 N_REPLICATES = 20
@@ -99,7 +99,9 @@ N_REPLICATES = 20
 mi_boot = mi_ses_from_stata(
     df_implicates=with_bootstrap_weights(df_implicates, n_replicates=N_REPLICATES),
     command="regress y x1 x2 [pw={weight}]",
-    replicates=Replicates(weight_stub="replicate_", n_replicates=N_REPLICATES, bootstrap=True),
+    replicates=Replicates(
+        weight_stub="replicate_", n_replicates=N_REPLICATES, bootstrap=True
+    ),
     round_output=False,
 )
 mi_boot.print(round_output=False)
@@ -107,14 +109,13 @@ mi_boot.print(round_output=False)
 
 # %%
 logger.info("\n\nPart 2: calling this like any other delegate, standalone on one")
-logger.info("dataset with no MI at all:")
-(df_estimates, df_ses, df_vcov, df_tidy) = stata_adapter(
-    df_implicates[0], command="regress y x1 x2",
-)
-logger.info(df_estimates)
-logger.info(df_ses)
+logger.info("dataset with no MI at all - stata_adapter() returns an AdapterStats")
+logger.info("(a StatCalculator subclass), so it already works with .print(),")
+logger.info(".compare(), survey_kit.plot, save/load - no extra step:")
+stata_single = stata_adapter(df_implicates[0], command="regress y x1 x2")
+stata_single.print()
 logger.info("df_tidy is Stata's own r(table), transposed to one row per term:")
-logger.info(df_tidy)
+logger.info(stata_single.replicate_stats.df_tidy)
 
 
 # %%

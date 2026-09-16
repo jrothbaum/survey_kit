@@ -6,6 +6,7 @@ import polars as pl
 from survey_kit import logger
 from survey_kit.statistics.multiple_imputation import mi_ses_from_function
 from survey_kit.statistics.adapters import r_feols, mi_ses_from_r_fixest
+from survey_kit.statistics.adapter_stats import AdapterStats
 from survey_kit.statistics import _r_interop as _r
 from survey_kit.statistics.replicates import Replicates
 from sample_data import make_implicates, with_bootstrap_weights
@@ -13,10 +14,13 @@ from sample_data import make_implicates, with_bootstrap_weights
 
 # %%
 logger.info("Every regression adapter in survey_kit.statistics.adapters is a plain")
-logger.info("function returning (df_estimates, df_ses[, df_vcov[, df_tidy]]).")
-logger.info("mi_ses_from_function() calls it once per implicate and combines the")
-logger.info("results via Rubin's rules - there's no special-casing for which package")
-logger.info("produced the estimates.")
+logger.info("function returning an AdapterStats (a StatCalculator subclass built")
+logger.info("directly from df_estimates/df_ses, optionally df_vcov/df_tidy too - see")
+logger.info("survey_kit.statistics.adapter_stats). mi_ses_from_function() calls it")
+logger.info("once per implicate and combines the results via Rubin's rules - there's")
+logger.info("no special-casing for which package produced the estimates, and no")
+logger.info("other return shape is accepted (build an AdapterStats even for a")
+logger.info("one-off custom delegate, as Part 2 below does).")
 logger.info("")
 logger.info("This tutorial has two parts:")
 logger.info("  1. A quick reminder of using a *named* R adapter (r_feols).")
@@ -95,9 +99,10 @@ logger.info("                                 tables")
 logger.info("")
 logger.info("No R call string to build, no RRaw escaping, no scratch global-env")
 logger.info("variable - `fit` below is already a plain Python reference to the")
-logger.info("fitted R object. Wrap that in a plain function and it's already a valid")
-logger.info("mi_ses_from_function delegate - no need to add it to adapters.py unless")
-logger.info("you want to reuse it elsewhere.")
+logger.info("fitted R object. Wrap that in a plain function that builds and returns")
+logger.info("an AdapterStats and it's already a valid mi_ses_from_function delegate")
+logger.info("- no need to add it to adapters.py unless you want to reuse it")
+logger.info("elsewhere.")
 
 
 def rlm_adapter(
@@ -105,7 +110,7 @@ def rlm_adapter(
     formula: str,
     join_on_name: str = "Variable",
     value_name: str = "estimate",
-):
+) -> AdapterStats:
     mass = _r.get_library("MASS")
 
     fit = mass.rlm(_r.formula(formula), data=_r.dataframe_to_r(df))
@@ -115,14 +120,15 @@ def rlm_adapter(
     df_ses = _r.ses_from_vcov(vcov, join_on_name, value_name)
     df_vcov = _r.vcov_table(vcov, join_on_name, value_name)
 
-    return (df_estimates, df_ses, df_vcov)
+    return AdapterStats(
+        df_estimates, df_ses, variable_ids=join_on_name, df_vcov=df_vcov, display=False
+    )
 
 
 # %%
 logger.info("\n\nUse it exactly like any other delegate - standalone on one dataset:")
-(df_estimates, df_ses, df_vcov) = rlm_adapter(df_implicates[0], formula="y ~ x1 + x2")
-logger.info(df_estimates)
-logger.info(df_ses)
+rlm_result = rlm_adapter(df_implicates[0], formula="y ~ x1 + x2")
+rlm_result.print()
 
 # %%
 logger.info("\n\n...or across implicates, combined via Rubin's rules:")
@@ -247,7 +253,7 @@ def quantreg_adapter(
     tau: float = 0.5,
     join_on_name: str = "Variable",
     value_name: str = "estimate",
-):
+) -> AdapterStats:
     qr = _r.get_library("quantreg")
 
     fit = qr.rq(_r.formula(formula), data=_r.dataframe_to_r(df), tau=tau)
@@ -265,7 +271,10 @@ def quantreg_adapter(
     df_estimates = df_tidy.select(join_on_name, pl.col("Value").alias(value_name))
     df_ses = df_tidy.select(join_on_name, pl.col("Std. Error").alias(value_name))
 
-    return (df_estimates, df_ses, None, df_tidy)
+    #   No vcov here (rq() doesn't have one - see above).
+    return AdapterStats(
+        df_estimates, df_ses, variable_ids=join_on_name, df_tidy=df_tidy, display=False
+    )
 
 
 # %%
@@ -297,7 +306,8 @@ logger.info("     package, call its function directly as a Python attribute (for
 logger.info("     via formula(), data via dataframe_to_r() - everything else is a")
 logger.info("     plain keyword argument, converted by rpy2 automatically), then")
 logger.info("     extract_fit(fit) plus coef_table/ses_from_vcov/vcov_table/")
-logger.info("     matrix_table to normalize the result.")
+logger.info("     matrix_table to normalize the result, and build an AdapterStats")
+logger.info("     from the pieces (that's the one shape mi_ses_from_function accepts).")
 logger.info("  3. That function is already a valid mi_ses_from_function delegate, and")
 logger.info("     already usable standalone on a single dataset with no MI at all.")
 logger.info("")

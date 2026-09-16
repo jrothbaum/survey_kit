@@ -33,16 +33,17 @@ y = 1 + 2 * x1 - 1.5 * x2 + rng.normal(size=n) * 0.4
 df = pl.DataFrame({"x1": x1, "x2": x2, "y": y})
 
 # %%
-logger.info("\n\nOn one dataset, standalone - no MI at all:")
-(df_estimates, df_ses, df_vcov, df_tidy) = stata_adapter(
-    df, command="regress y x1 x2"
-)
-logger.info(df_estimates)
-logger.info(df_ses)
+logger.info("\n\nOn one dataset, standalone - no MI at all. stata_adapter() returns")
+logger.info("an AdapterStats (a StatCalculator subclass), so it already works with")
+logger.info(".print(), .compare(), survey_kit.plot, save/load - no extra step:")
+stata_result = stata_adapter(df, command="regress y x1 x2")
+stata_result.print()
 
 
 # %%
-logger.info("\n\nThat's it for the basics. For multiple imputation (mi_ses_from_stata),")
+logger.info(
+    "\n\nThat's it for the basics. For multiple imputation (mi_ses_from_stata),"
+)
 logger.info("weighted/survey designs, other commands (svy:/xtreg/areg/logit/a")
 logger.info("community-installed ado/...), replicate-weight bootstrapping, or pulling")
 logger.info("back custom r()/e() results via stata_results_adapter instead of the")

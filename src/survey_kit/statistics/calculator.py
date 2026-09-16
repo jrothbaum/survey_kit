@@ -47,6 +47,85 @@ from ..serializable import Serializable
 from .. import logger
 
 
+def _restrict_vcov_to_terms(
+    df_vcov: pl.DataFrame, index_cols: list[str], surviving_terms: pl.DataFrame
+) -> tuple[pl.DataFrame, str]:
+    """
+    df_vcov's rows restricted to term-pairs where BOTH sides survive
+    (are present in surviving_terms - e.g. after compare()'s own row
+    join, in case either object had terms the other didn't) - returns
+    (restricted df_vcov, its own value column name, whatever it's
+    called).
+    """
+    id1_cols = [f"{c}_1" for c in index_cols]
+    id2_cols = [f"{c}_2" for c in index_cols]
+    value_col = next(c for c in df_vcov.columns if c not in id1_cols + id2_cols)
+
+    keep1 = surviving_terms.rename({c: f"{c}_1" for c in index_cols})
+    keep2 = surviving_terms.rename({c: f"{c}_2" for c in index_cols})
+
+    restricted = (
+        df_vcov.join(keep1, on=id1_cols, how="inner")
+        .join(keep2, on=id2_cols, how="inner")
+        .select(id1_cols + id2_cols + [value_col])
+    )
+    return restricted, value_col
+
+
+def _difference_vcov(
+    vcov1: pl.DataFrame,
+    vcov2: pl.DataFrame | None,
+    index_cols: list[str],
+    surviving_terms: pl.DataFrame,
+    value_col_name: str,
+    same_object: bool,
+) -> pl.DataFrame:
+    """
+    Vcov(b-a) = Vcov(a) + Vcov(b) under independence between the two
+    objects being compared (still assumed - there's no cross-object
+    covariance available without more information than either side has
+    on its own) - this keeps each side's OWN term-by-term covariance
+    (e.g. Cov(x1,x2) within one fit) instead of discarding it, so a
+    later .compare() on two rows of *this* result still gets a correct
+    joint SE. Exact self-comparison (same_object=True) is trivially all
+    zero instead - both operands are identical, so every entry of
+    Vcov(a-a) is exactly 0, not the (wrongly) nonzero sum this formula
+    would otherwise give from adding a vcov to itself.
+    """
+    id1_cols = [f"{c}_1" for c in index_cols]
+    id2_cols = [f"{c}_2" for c in index_cols]
+
+    v1, v1_value_col = _restrict_vcov_to_terms(vcov1, index_cols, surviving_terms)
+    v1 = v1.rename({v1_value_col: "___v1___"})
+
+    if same_object:
+        return v1.with_columns(
+            (pl.col("___v1___") * 0.0).alias(value_col_name)
+        ).select(id1_cols + id2_cols + [value_col_name])
+
+    v2, v2_value_col = _restrict_vcov_to_terms(vcov2, index_cols, surviving_terms)
+    v2 = v2.rename({v2_value_col: "___v2___"})
+    return (
+        v1.join(v2, on=id1_cols + id2_cols, how="inner")
+        .with_columns((pl.col("___v1___") + pl.col("___v2___")).alias(value_col_name))
+        .select(id1_cols + id2_cols + [value_col_name])
+    )
+
+
+def _vcov_diagonal_se(
+    df_vcov: pl.DataFrame, index_cols: list[str], value_col_name: str
+) -> pl.DataFrame:
+    """{index_cols: term, value_col_name: se} from a vcov's own diagonal (term_1 == term_2) - se = sqrt(variance)."""
+    diag_expr = pl.all_horizontal(
+        [pl.col(f"{c}_1") == pl.col(f"{c}_2") for c in index_cols]
+    )
+    diag = df_vcov.filter(diag_expr)
+    return diag.select(
+        [pl.col(f"{c}_1").alias(c) for c in index_cols]
+        + [pl.col(value_col_name).sqrt().alias(value_col_name)]
+    )
+
+
 class StatCalculator(Serializable):
     """
     A comprehensive class for calculating statistical estimates with optional replicate weights.
@@ -210,25 +289,31 @@ class StatCalculator(Serializable):
             self.df = None
 
     def copy(self):
-        sc_copy = StatCalculator(
-            df=self.df,
-            statistics=copy(self.statistics),
-            weight=self.weight,
-            scale_wgts_to=0,
-            replicates=copy(self.replicates),
-            by=copy(self.by),
-            display=self.display,
-            display_all_vars=self.display_all_vars,
-            display_max_vars=self.display_max_vars,
-            round_output=False,
-            allow_slow_pandas=self.allow_slow_pandas,
-            calculate=False,
-        )
+        #   A dict-copy of an object.__new__ instance, not
+        #   StatCalculator(...) reconstructed from scratch - the latter
+        #   silently discarded the actual subclass on every chainable
+        #   method (filter/select/with_columns/sort/drop/rename/scale_by/
+        #   pipe all start from self.copy()), since a subclass like
+        #   AdapterStats has its own __init__ signature entirely
+        #   (df_estimates/df_ses/... positional, no df=/statistics=/
+        #   calculate= at all) that StatCalculator(...) can't be called
+        #   with instead. object.__new__(type(self)) + copying __dict__
+        #   preserves whatever the real class is without invoking any
+        #   constructor at all.
+        sc_copy = object.__new__(type(self))
+        sc_copy.__dict__.update(self.__dict__)
 
-        sc_copy.scale_wgts_to = self.scale_wgts_to
+        #   Independent copies of the mutable pieces, so mutating the
+        #   copy (the whole point of calling this) can't reach back into
+        #   self - matches what reconstructing via StatCalculator(...)
+        #   used to do explicitly.
+        sc_copy.statistics = copy(self.statistics)
+        sc_copy.replicates = copy(self.replicates)
+        sc_copy.by = copy(self.by)
         sc_copy.rounding = copy(self.rounding)
         sc_copy.replicate_stats = self.replicate_stats.copy()
-        sc_copy.variable_ids = self.variable_ids
+        sc_copy.variable_ids = list(self.variable_ids)
+        sc_copy.round_output = False
 
         return sc_copy
 
@@ -1122,9 +1207,13 @@ class StatCalculator(Serializable):
                 compare_list_columns=compare_list_columns,
             )
 
-            sm_compare = StatCalculator(
-                df=None, statistics=self.statistics, by=self.by, calculate=False
-            )
+            #   self.copy() (not StatCalculator(...) built from scratch) so
+            #   this preserves the actual subclass (e.g. AdapterStats).
+            #   df_tidy is cleared below (it's each fit's own native
+            #   snapshot - nothing to combine); df_vcov is recomputed
+            #   further down when possible instead of being cleared.
+            sm_compare = self.copy()
+            sm_compare.replicate_stats.df_tidy = None
 
             cols_index = self.variable_ids + self.summarize_vars
             cols_nonindex = safe_columns(df1.drop(cols_index))
@@ -1164,6 +1253,138 @@ class StatCalculator(Serializable):
             )
             df_ratio = (df_difference) / df_joined.select(cols_nonindex)
 
+            #   An SE for the difference/ratio, when both sides actually
+            #   have one (e.g. two AdapterStats, or any StatCalculator
+            #   with df_ses populated) - assumes self and compare_to are
+            #   independent (no cross-object covariance is available to
+            #   do otherwise; the special case of comparing two
+            #   correlated ROWS of the SAME fit is what compare_list_
+            #   variables is for, a different code path entirely).
+            #
+            #   When both sides also have a df_vcov (only meaningful for
+            #   a single value column - see AdapterStats/adapter_stats.py),
+            #   the difference's own vcov is Vcov(a)+Vcov(b) (still under
+            #   the same independence assumption, but now keeping each
+            #   side's own term-by-term covariance instead of losing it)
+            #   and its SE comes from that vcov's diagonal, so the two
+            #   stay consistent with each other by construction. Ratio
+            #   has no equivalent full-vcov treatment here (the
+            #   multivariate delta method needed is a lot more involved
+            #   for comparatively little payoff) - just its own SE, via
+            #   the univariate delta method, same as the no-vcov case.
+            same_object = compare_to is self
+            single_value_col = cols_nonindex[0] if len(cols_nonindex) == 1 else None
+            vcov1 = self.replicate_stats.df_vcov
+            vcov2 = compare_to.replicate_stats.df_vcov
+
+            df_vcov_difference = None
+            if single_value_col is not None and vcov1 is not None and (
+                same_object or vcov2 is not None
+            ):
+                df_vcov_difference = _difference_vcov(
+                    vcov1=NarwhalsType(vcov1).to_polars().lazy().collect(),
+                    vcov2=(
+                        None
+                        if same_object
+                        else NarwhalsType(vcov2).to_polars().lazy().collect()
+                    ),
+                    index_cols=cols_index,
+                    surviving_terms=df_joined.select(cols_index),
+                    value_col_name=single_value_col,
+                    same_object=same_object,
+                )
+            sm_compare.replicate_stats.df_vcov = (
+                nw_type1.from_polars(df_vcov_difference)
+                if df_vcov_difference is not None
+                else None
+            )
+
+            df_ses_difference = None
+            df_ses_ratio = None
+            if df_vcov_difference is not None:
+                #   Joined back onto df_joined's own row order by key,
+                #   not relied on to already match it positionally - a
+                #   vcov's rows are laid out as term-pairs, in whatever
+                #   order the source table used, not necessarily
+                #   df_joined's.
+                df_ses_difference = (
+                    df_joined.select(cols_index)
+                    .join(
+                        _vcov_diagonal_se(
+                            df_vcov_difference, cols_index, single_value_col
+                        ),
+                        on=cols_index,
+                        how="left",
+                    )
+                    .select(cols_nonindex)
+                )
+
+            if self.df_ses is not None and compare_to.df_ses is not None:
+                if same_object:
+                    #   Exact self-comparison: the difference/ratio are
+                    #   both trivially constant (0), so their SE is
+                    #   exactly 0 too - not the nonzero value the
+                    #   independence formula below would otherwise
+                    #   (wrongly) imply for what's mathematically an
+                    #   exact match.
+                    #   pl.lit(0.0) alone in a select() has no row-count
+                    #   to broadcast against and collapses to a single
+                    #   row regardless of df_difference's own height -
+                    #   multiplying the real column by 0 keeps every row.
+                    zeros = df_difference.select(
+                        [(pl.col(coli) * 0.0).alias(coli) for coli in cols_nonindex]
+                    )
+                    if df_ses_difference is None:
+                        df_ses_difference = zeros
+                    df_ses_ratio = zeros
+                else:
+                    nw_se1 = NarwhalsType(self.df_ses)
+                    nw_se2 = NarwhalsType(compare_to.df_ses)
+                    se1 = nw_se1.to_polars().lazy().collect()
+                    se2 = nw_se2.to_polars().lazy().collect()
+                    se_joined = se1.join(
+                        se2.select(cols_index + cols_nonindex),
+                        on=cols_index,
+                        how="inner",
+                        suffix="_2",
+                    )
+                    se1_only = se_joined.select(cols_nonindex)
+                    se2_only = se_joined.select(
+                        [pl.col(f"{coli}_2").alias(coli) for coli in cols_nonindex]
+                    )
+
+                    #   Var(a-b) = Var(a) + Var(b) under independence -
+                    #   only used if the vcov-diagonal version above
+                    #   wasn't available.
+                    if df_ses_difference is None:
+                        df_ses_difference = pl.DataFrame(
+                            {
+                                coli: (
+                                    se1_only[coli] ** 2 + se2_only[coli] ** 2
+                                ).sqrt()
+                                for coli in cols_nonindex
+                            }
+                        )
+
+                    #   Delta method for est2/est1 (ratio_minus_1 just
+                    #   subtracts a constant afterward - doesn't change
+                    #   the variance), independence assumed same as above.
+                    est1 = df_joined.select(cols_nonindex)
+                    est2 = df_joined.select(
+                        [pl.col(f"{coli}_2").alias(coli) for coli in cols_nonindex]
+                    )
+                    df_ses_ratio = pl.DataFrame(
+                        {
+                            coli: (
+                                (se2_only[coli] ** 2) / (est1[coli] ** 2)
+                                + (est2[coli] ** 2)
+                                * (se1_only[coli] ** 2)
+                                / (est1[coli] ** 4)
+                            ).sqrt()
+                            for coli in cols_nonindex
+                        }
+                    )
+
             if difference:
                 sm_diff = sm_compare
 
@@ -1175,6 +1396,13 @@ class StatCalculator(Serializable):
                         [df_joined.select(cols_index), df_difference], how="horizontal"
                     )
                 )
+                if df_ses_difference is not None:
+                    sm_diff.df_ses = nw_type1.from_polars(
+                        pl.concat(
+                            [df_joined.select(cols_index), df_ses_difference],
+                            how="horizontal",
+                        )
+                    )
 
                 outputs["difference"] = sm_diff
 
@@ -1191,6 +1419,13 @@ class StatCalculator(Serializable):
                         [df_joined.select(cols_index), df_ratio], how="horizontal"
                     )
                 )
+                if df_ses_ratio is not None:
+                    sm_ratio.df_ses = nw_type1.from_polars(
+                        pl.concat(
+                            [df_joined.select(cols_index), df_ses_ratio],
+                            how="horizontal",
+                        )
+                    )
 
                 outputs["ratio"] = sm_ratio
 
@@ -1485,14 +1720,13 @@ class StatCalculator(Serializable):
         self, factor: float, columns: list[str] | str | None = None
     ) -> StatCalculator:
         if columns is None:
-            #   Any columns that aren't the join_on ones
+            #   Any columns that aren't the index ones
             columns = (
-                nw.from_native(self.df_estimates.columns)
-                .lazy()
-                .collect_schema()
-                .names()
+                nw.from_native(self.df_estimates).lazy().collect_schema().names()
             )
-            columns = list(set(columns).difference(self.join_on))
+            columns = list(
+                set(columns).difference(self.variable_ids + self.summarize_vars)
+            )
 
         return self.with_columns(with_expr=nw.col(columns) * factor)
 

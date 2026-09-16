@@ -14,14 +14,17 @@ logger.info("    check_r_setup(['fixest'])")
 
 # %%
 df_implicates = make_implicates()
-logger.info(f"\n\nSample data: {len(df_implicates)} implicates, {df_implicates[0].height}")
+logger.info(
+    f"\n\nSample data: {len(df_implicates)} implicates, {df_implicates[0].height}"
+)
 logger.info("rows each (y = 1 + 2*x1 - 1.5*x2 + noise) - see sample_data.py.")
 
 # %%
-logger.info("\n\nOn one dataset, standalone - no MI at all:")
-(df_estimates, df_ses, df_vcov, df_tidy) = r_feols(df_implicates[0], formula="y ~ x1 + x2")
-logger.info(df_estimates)
-logger.info(df_ses)
+logger.info("\n\nOn one dataset, standalone - no MI at all. r_feols() returns an")
+logger.info("AdapterStats (a StatCalculator subclass), so it already works with")
+logger.info(".print(), .compare(), survey_kit.plot, save/load - no extra step:")
+r_result = r_feols(df_implicates[0], formula="y ~ x1 + x2")
+r_result.print()
 
 
 # %%
