@@ -294,6 +294,8 @@
       
         
       
+        
+      
     
     
     
@@ -655,6 +657,29 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../user-guide/plot/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Plotting
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
@@ -672,6 +697,8 @@
   
     
     
+      
+        
       
         
       
@@ -950,6 +977,29 @@
   
   <span class="md-ellipsis">
     Regression Adapters
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../plot/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Plotting
     
   </span>
   
@@ -1438,28 +1488,28 @@ degrees of freedom, and other MI diagnostics.</p>
 <a id="__codelineno-0-33" name="__codelineno-0-33" href="#__codelineno-0-33"></a><span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Degrees of freedom:&quot;</span><span class="p">,</span> <span class="n">mi_results</span><span class="o">.</span><span class="n">df_df</span><span class="p">)</span>
 <a id="__codelineno-0-34" name="__codelineno-0-34" href="#__codelineno-0-34"></a><span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Missing information rate:&quot;</span><span class="p">,</span> <span class="n">mi_results</span><span class="o">.</span><span class="n">df_rate_of_missing_information</span><span class="p">)</span>
 </code></pre></div>
-    <p>With a custom analysis function - any delegate returning
-<code>(df_estimates, df_ses)</code> (or a third item, <code>df_vcov</code>, see Notes) is
-combined via Rubin's rules exactly like the StatCalculator case above,
-with no dependency on StatCalculator/ReplicateStats at all:</p>
+    <p>With a custom analysis function - any delegate returning a
+StatCalculator (or subclass - see AdapterStats below) is combined via
+Rubin's rules exactly like the StatCalculator case above:</p>
     <div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span><span class="w"> </span><span class="nn">polars</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pl</span>
 <a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span><span class="w"> </span><span class="nn">statsmodels.formula.api</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">smf</span>
-<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="gp">&gt;&gt;&gt;</span>
-<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="gp">&gt;&gt;&gt; </span><span class="k">def</span><span class="w"> </span><span class="nf">regression_analysis</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="n">weight</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="n">formula</span><span class="o">=</span><span class="s2">&quot;income ~ age&quot;</span><span class="p">):</span>
-<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="gp">... </span><span class="w">    </span><span class="sd">&#39;&#39;&#39;Fit a (weighted) OLS and return its coefficient table&#39;&#39;&#39;</span>
-<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="gp">... </span>    <span class="n">model</span> <span class="o">=</span> <span class="n">smf</span><span class="o">.</span><span class="n">wls</span><span class="p">(</span><span class="n">formula</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="n">df</span><span class="p">,</span> <span class="n">weights</span><span class="o">=</span><span class="n">df</span><span class="p">[</span><span class="n">weight</span><span class="p">])</span> <span class="k">if</span> <span class="n">weight</span> <span class="k">else</span> <span class="n">smf</span><span class="o">.</span><span class="n">ols</span><span class="p">(</span><span class="n">formula</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="n">df</span><span class="p">)</span>
-<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="gp">... </span>    <span class="n">results</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">cov_type</span><span class="o">=</span><span class="s2">&quot;HC3&quot;</span><span class="p">)</span>
-<a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a><span class="gp">...</span>
-<a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a><span class="gp">... </span>    <span class="n">df_estimates</span> <span class="o">=</span> <span class="n">pl</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">({</span><span class="s2">&quot;Variable&quot;</span><span class="p">:</span> <span class="n">results</span><span class="o">.</span><span class="n">params</span><span class="o">.</span><span class="n">index</span><span class="p">,</span> <span class="s2">&quot;estimate&quot;</span><span class="p">:</span> <span class="n">results</span><span class="o">.</span><span class="n">params</span><span class="o">.</span><span class="n">values</span><span class="p">})</span>
-<a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a><span class="gp">... </span>    <span class="n">df_ses</span> <span class="o">=</span> <span class="n">pl</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">({</span><span class="s2">&quot;Variable&quot;</span><span class="p">:</span> <span class="n">results</span><span class="o">.</span><span class="n">bse</span><span class="o">.</span><span class="n">index</span><span class="p">,</span> <span class="s2">&quot;estimate&quot;</span><span class="p">:</span> <span class="n">results</span><span class="o">.</span><span class="n">bse</span><span class="o">.</span><span class="n">values</span><span class="p">})</span>
-<a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a><span class="gp">... </span>    <span class="k">return</span> <span class="p">(</span><span class="n">df_estimates</span><span class="p">,</span> <span class="n">df_ses</span><span class="p">)</span>
-<a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a><span class="gp">&gt;&gt;&gt;</span>
-<a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a><span class="gp">&gt;&gt;&gt; </span><span class="n">mi_custom</span> <span class="o">=</span> <span class="n">mi_ses_from_function</span><span class="p">(</span>
-<a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a><span class="gp">... </span>    <span class="n">delegate</span><span class="o">=</span><span class="n">regression_analysis</span><span class="p">,</span>
-<a id="__codelineno-0-15" name="__codelineno-0-15" href="#__codelineno-0-15"></a><span class="gp">... </span>    <span class="n">df_implicates</span><span class="o">=</span><span class="n">srmi</span><span class="o">.</span><span class="n">df_implicates</span><span class="p">,</span>
-<a id="__codelineno-0-16" name="__codelineno-0-16" href="#__codelineno-0-16"></a><span class="gp">... </span>    <span class="n">arguments</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;weight&quot;</span><span class="p">:</span> <span class="s2">&quot;survey_weight&quot;</span><span class="p">,</span> <span class="s2">&quot;formula&quot;</span><span class="p">:</span> <span class="s2">&quot;income ~ age&quot;</span><span class="p">},</span>
-<a id="__codelineno-0-17" name="__codelineno-0-17" href="#__codelineno-0-17"></a><span class="gp">... </span>    <span class="n">join_on</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;Variable&quot;</span><span class="p">]</span>
-<a id="__codelineno-0-18" name="__codelineno-0-18" href="#__codelineno-0-18"></a><span class="gp">... </span><span class="p">)</span>
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span><span class="w"> </span><span class="nn">survey_kit.statistics.adapter_stats</span><span class="w"> </span><span class="kn">import</span> <span class="n">AdapterStats</span>
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="gp">&gt;&gt;&gt;</span>
+<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="gp">&gt;&gt;&gt; </span><span class="k">def</span><span class="w"> </span><span class="nf">regression_analysis</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="n">weight</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="n">formula</span><span class="o">=</span><span class="s2">&quot;income ~ age&quot;</span><span class="p">):</span>
+<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="gp">... </span><span class="w">    </span><span class="sd">&#39;&#39;&#39;Fit a (weighted) OLS and return its coefficient table&#39;&#39;&#39;</span>
+<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="gp">... </span>    <span class="n">model</span> <span class="o">=</span> <span class="n">smf</span><span class="o">.</span><span class="n">wls</span><span class="p">(</span><span class="n">formula</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="n">df</span><span class="p">,</span> <span class="n">weights</span><span class="o">=</span><span class="n">df</span><span class="p">[</span><span class="n">weight</span><span class="p">])</span> <span class="k">if</span> <span class="n">weight</span> <span class="k">else</span> <span class="n">smf</span><span class="o">.</span><span class="n">ols</span><span class="p">(</span><span class="n">formula</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="n">df</span><span class="p">)</span>
+<a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a><span class="gp">... </span>    <span class="n">results</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">cov_type</span><span class="o">=</span><span class="s2">&quot;HC3&quot;</span><span class="p">)</span>
+<a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a><span class="gp">...</span>
+<a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a><span class="gp">... </span>    <span class="n">df_estimates</span> <span class="o">=</span> <span class="n">pl</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">({</span><span class="s2">&quot;Variable&quot;</span><span class="p">:</span> <span class="n">results</span><span class="o">.</span><span class="n">params</span><span class="o">.</span><span class="n">index</span><span class="p">,</span> <span class="s2">&quot;estimate&quot;</span><span class="p">:</span> <span class="n">results</span><span class="o">.</span><span class="n">params</span><span class="o">.</span><span class="n">values</span><span class="p">})</span>
+<a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a><span class="gp">... </span>    <span class="n">df_ses</span> <span class="o">=</span> <span class="n">pl</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">({</span><span class="s2">&quot;Variable&quot;</span><span class="p">:</span> <span class="n">results</span><span class="o">.</span><span class="n">bse</span><span class="o">.</span><span class="n">index</span><span class="p">,</span> <span class="s2">&quot;estimate&quot;</span><span class="p">:</span> <span class="n">results</span><span class="o">.</span><span class="n">bse</span><span class="o">.</span><span class="n">values</span><span class="p">})</span>
+<a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a><span class="gp">... </span>    <span class="k">return</span> <span class="n">AdapterStats</span><span class="p">(</span><span class="n">df_estimates</span><span class="p">,</span> <span class="n">df_ses</span><span class="p">,</span> <span class="n">variable_ids</span><span class="o">=</span><span class="s2">&quot;Variable&quot;</span><span class="p">,</span> <span class="n">display</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+<a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a><span class="gp">&gt;&gt;&gt;</span>
+<a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a><span class="gp">&gt;&gt;&gt; </span><span class="n">mi_custom</span> <span class="o">=</span> <span class="n">mi_ses_from_function</span><span class="p">(</span>
+<a id="__codelineno-0-15" name="__codelineno-0-15" href="#__codelineno-0-15"></a><span class="gp">... </span>    <span class="n">delegate</span><span class="o">=</span><span class="n">regression_analysis</span><span class="p">,</span>
+<a id="__codelineno-0-16" name="__codelineno-0-16" href="#__codelineno-0-16"></a><span class="gp">... </span>    <span class="n">df_implicates</span><span class="o">=</span><span class="n">srmi</span><span class="o">.</span><span class="n">df_implicates</span><span class="p">,</span>
+<a id="__codelineno-0-17" name="__codelineno-0-17" href="#__codelineno-0-17"></a><span class="gp">... </span>    <span class="n">arguments</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;weight&quot;</span><span class="p">:</span> <span class="s2">&quot;survey_weight&quot;</span><span class="p">,</span> <span class="s2">&quot;formula&quot;</span><span class="p">:</span> <span class="s2">&quot;income ~ age&quot;</span><span class="p">},</span>
+<a id="__codelineno-0-18" name="__codelineno-0-18" href="#__codelineno-0-18"></a><span class="gp">... </span>    <span class="n">join_on</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;Variable&quot;</span><span class="p">]</span>
+<a id="__codelineno-0-19" name="__codelineno-0-19" href="#__codelineno-0-19"></a><span class="gp">... </span><span class="p">)</span>
 </code></pre></div>
     <p>See <a class="autorefs autorefs-internal" title="statsmodels_adapter" href="../adapters/#survey_kit.statistics.adapters.statsmodels_adapter"><code>survey_kit.statistics.adapters.statsmodels_adapter</code></a>
 and its siblings (linearmodels/pyfixest/polars_ds/R/Stata) for
@@ -1488,17 +1538,18 @@ this function the same way the example above does by hand.</p>
 2. Collect estimates and SEs from each implicate
 3. Combine using Rubin's rules for MI inference
 4. Calculate degrees of freedom and missing information rates</p>
-<p>For delegate functions that return a tuple/list, expects either:
-- (df_estimates, df_ses), or
-- (df_estimates, df_ses, df_vcov) - df_vcov is the per-implicate
-  variance-covariance matrix (long/pairwise form: join_on columns
-  suffixed "_1"/"_2" plus one value column matching the single stat
-  column in df_estimates), combined across implicates via the matrix
-  form of Rubin's rules and stored as the resulting
-  <a class="autorefs autorefs-internal" title="MultipleImputation" href="#survey_kit.statistics.multiple_imputation.MultipleImputation"><code>MultipleImputation.df_vcov</code></a>.
-  Needed for <code>.compare()</code>/contrasts between two rows of the same result
-  to get a correct joint standard error instead of assuming
-  independence; pass None here (or omit the item) if unavailable.</p>
+<p>delegate must return a StatCalculator (or subclass - see
+<a class="autorefs autorefs-internal" title="AdapterStats" href="../adapters/#survey_kit.statistics.adapter_stats.AdapterStats"><code>AdapterStats</code></a> for
+building one directly from df_estimates/df_ses, without needing raw
+microdata/replicate weights at all). If it also populates df_vcov (the
+per-implicate variance-covariance matrix - long/pairwise form: join_on
+columns suffixed "_1"/"_2" plus one value column matching the single
+stat column in df_estimates), that's combined across implicates via
+the matrix form of Rubin's rules and stored as the resulting
+<a class="autorefs autorefs-internal" title="MultipleImputation" href="#survey_kit.statistics.multiple_imputation.MultipleImputation"><code>MultipleImputation.df_vcov</code></a> -
+needed for <code>.compare()</code>/contrasts between two rows of the same result
+to get a correct joint standard error instead of assuming
+independence.</p>
 </details>
 
 <details class="see-also" open>
@@ -1508,7 +1559,7 @@ this function the same way the example above does by hand.</p>
 </details>
 
             <details class="quote">
-              <summary>Source code in <code>src\survey_kit\statistics\multiple_imputation.py</code></summary>
+              <summary>Source code in <code>src/survey_kit/statistics/multiple_imputation.py</code></summary>
               <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-1435">1435</a></span>
 <span class="normal"><a href="#__codelineno-0-1436">1436</a></span>
 <span class="normal"><a href="#__codelineno-0-1437">1437</a></span>
@@ -1717,7 +1768,8 @@ this function the same way the example above does by hand.</p>
 <span class="normal"><a href="#__codelineno-0-1640">1640</a></span>
 <span class="normal"><a href="#__codelineno-0-1641">1641</a></span>
 <span class="normal"><a href="#__codelineno-0-1642">1642</a></span>
-<span class="normal"><a href="#__codelineno-0-1643">1643</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-1435" name="__codelineno-0-1435"></a><span class="k">def</span><span class="w"> </span><span class="nf">mi_ses_from_function</span><span class="p">(</span>
+<span class="normal"><a href="#__codelineno-0-1643">1643</a></span>
+<span class="normal"><a href="#__codelineno-0-1644">1644</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-1435" name="__codelineno-0-1435"></a><span class="k">def</span><span class="w"> </span><span class="nf">mi_ses_from_function</span><span class="p">(</span>
 <a id="__codelineno-0-1436" name="__codelineno-0-1436"></a>    <span class="n">delegate</span><span class="p">:</span> <span class="n">Callable</span><span class="p">,</span>
 <a id="__codelineno-0-1437" name="__codelineno-0-1437"></a>    <span class="n">join_on</span><span class="p">:</span> <span class="nb">list</span><span class="p">,</span>
 <a id="__codelineno-0-1438" name="__codelineno-0-1438"></a>    <span class="n">path_srmi</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span><span class="p">,</span>
@@ -1821,13 +1873,13 @@ this function the same way the example above does by hand.</p>
 <a id="__codelineno-0-1536" name="__codelineno-0-1536"></a><span class="sd">    &gt;&gt;&gt; print(&quot;Degrees of freedom:&quot;, mi_results.df_df)</span>
 <a id="__codelineno-0-1537" name="__codelineno-0-1537"></a><span class="sd">    &gt;&gt;&gt; print(&quot;Missing information rate:&quot;, mi_results.df_rate_of_missing_information)</span>
 <a id="__codelineno-0-1538" name="__codelineno-0-1538"></a>
-<a id="__codelineno-0-1539" name="__codelineno-0-1539"></a><span class="sd">    With a custom analysis function - any delegate returning</span>
-<a id="__codelineno-0-1540" name="__codelineno-0-1540"></a><span class="sd">    ``(df_estimates, df_ses)`` (or a third item, ``df_vcov``, see Notes) is</span>
-<a id="__codelineno-0-1541" name="__codelineno-0-1541"></a><span class="sd">    combined via Rubin&#39;s rules exactly like the StatCalculator case above,</span>
-<a id="__codelineno-0-1542" name="__codelineno-0-1542"></a><span class="sd">    with no dependency on StatCalculator/ReplicateStats at all:</span>
-<a id="__codelineno-0-1543" name="__codelineno-0-1543"></a>
-<a id="__codelineno-0-1544" name="__codelineno-0-1544"></a><span class="sd">    &gt;&gt;&gt; import polars as pl</span>
-<a id="__codelineno-0-1545" name="__codelineno-0-1545"></a><span class="sd">    &gt;&gt;&gt; import statsmodels.formula.api as smf</span>
+<a id="__codelineno-0-1539" name="__codelineno-0-1539"></a><span class="sd">    With a custom analysis function - any delegate returning a</span>
+<a id="__codelineno-0-1540" name="__codelineno-0-1540"></a><span class="sd">    StatCalculator (or subclass - see AdapterStats below) is combined via</span>
+<a id="__codelineno-0-1541" name="__codelineno-0-1541"></a><span class="sd">    Rubin&#39;s rules exactly like the StatCalculator case above:</span>
+<a id="__codelineno-0-1542" name="__codelineno-0-1542"></a>
+<a id="__codelineno-0-1543" name="__codelineno-0-1543"></a><span class="sd">    &gt;&gt;&gt; import polars as pl</span>
+<a id="__codelineno-0-1544" name="__codelineno-0-1544"></a><span class="sd">    &gt;&gt;&gt; import statsmodels.formula.api as smf</span>
+<a id="__codelineno-0-1545" name="__codelineno-0-1545"></a><span class="sd">    &gt;&gt;&gt; from survey_kit.statistics.adapter_stats import AdapterStats</span>
 <a id="__codelineno-0-1546" name="__codelineno-0-1546"></a><span class="sd">    &gt;&gt;&gt;</span>
 <a id="__codelineno-0-1547" name="__codelineno-0-1547"></a><span class="sd">    &gt;&gt;&gt; def regression_analysis(df, weight=&quot;&quot;, formula=&quot;income ~ age&quot;):</span>
 <a id="__codelineno-0-1548" name="__codelineno-0-1548"></a><span class="sd">    ...     &#39;&#39;&#39;Fit a (weighted) OLS and return its coefficient table&#39;&#39;&#39;</span>
@@ -1836,7 +1888,7 @@ this function the same way the example above does by hand.</p>
 <a id="__codelineno-0-1551" name="__codelineno-0-1551"></a><span class="sd">    ...</span>
 <a id="__codelineno-0-1552" name="__codelineno-0-1552"></a><span class="sd">    ...     df_estimates = pl.DataFrame({&quot;Variable&quot;: results.params.index, &quot;estimate&quot;: results.params.values})</span>
 <a id="__codelineno-0-1553" name="__codelineno-0-1553"></a><span class="sd">    ...     df_ses = pl.DataFrame({&quot;Variable&quot;: results.bse.index, &quot;estimate&quot;: results.bse.values})</span>
-<a id="__codelineno-0-1554" name="__codelineno-0-1554"></a><span class="sd">    ...     return (df_estimates, df_ses)</span>
+<a id="__codelineno-0-1554" name="__codelineno-0-1554"></a><span class="sd">    ...     return AdapterStats(df_estimates, df_ses, variable_ids=&quot;Variable&quot;, display=False)</span>
 <a id="__codelineno-0-1555" name="__codelineno-0-1555"></a><span class="sd">    &gt;&gt;&gt;</span>
 <a id="__codelineno-0-1556" name="__codelineno-0-1556"></a><span class="sd">    &gt;&gt;&gt; mi_custom = mi_ses_from_function(</span>
 <a id="__codelineno-0-1557" name="__codelineno-0-1557"></a><span class="sd">    ...     delegate=regression_analysis,</span>
@@ -1873,59 +1925,60 @@ this function the same way the example above does by hand.</p>
 <a id="__codelineno-0-1588" name="__codelineno-0-1588"></a><span class="sd">    3. Combine using Rubin&#39;s rules for MI inference</span>
 <a id="__codelineno-0-1589" name="__codelineno-0-1589"></a><span class="sd">    4. Calculate degrees of freedom and missing information rates</span>
 <a id="__codelineno-0-1590" name="__codelineno-0-1590"></a>
-<a id="__codelineno-0-1591" name="__codelineno-0-1591"></a><span class="sd">    For delegate functions that return a tuple/list, expects either:</span>
-<a id="__codelineno-0-1592" name="__codelineno-0-1592"></a><span class="sd">    - (df_estimates, df_ses), or</span>
-<a id="__codelineno-0-1593" name="__codelineno-0-1593"></a><span class="sd">    - (df_estimates, df_ses, df_vcov) - df_vcov is the per-implicate</span>
-<a id="__codelineno-0-1594" name="__codelineno-0-1594"></a><span class="sd">      variance-covariance matrix (long/pairwise form: join_on columns</span>
-<a id="__codelineno-0-1595" name="__codelineno-0-1595"></a><span class="sd">      suffixed &quot;_1&quot;/&quot;_2&quot; plus one value column matching the single stat</span>
-<a id="__codelineno-0-1596" name="__codelineno-0-1596"></a><span class="sd">      column in df_estimates), combined across implicates via the matrix</span>
-<a id="__codelineno-0-1597" name="__codelineno-0-1597"></a><span class="sd">      form of Rubin&#39;s rules and stored as the resulting</span>
-<a id="__codelineno-0-1598" name="__codelineno-0-1598"></a><span class="sd">      [`MultipleImputation.df_vcov`][survey_kit.statistics.multiple_imputation.MultipleImputation].</span>
-<a id="__codelineno-0-1599" name="__codelineno-0-1599"></a><span class="sd">      Needed for `.compare()`/contrasts between two rows of the same result</span>
-<a id="__codelineno-0-1600" name="__codelineno-0-1600"></a><span class="sd">      to get a correct joint standard error instead of assuming</span>
-<a id="__codelineno-0-1601" name="__codelineno-0-1601"></a><span class="sd">      independence; pass None here (or omit the item) if unavailable.</span>
-<a id="__codelineno-0-1602" name="__codelineno-0-1602"></a>
-<a id="__codelineno-0-1603" name="__codelineno-0-1603"></a><span class="sd">    See Also</span>
-<a id="__codelineno-0-1604" name="__codelineno-0-1604"></a><span class="sd">    --------</span>
-<a id="__codelineno-0-1605" name="__codelineno-0-1605"></a><span class="sd">    [`StatCalculator`][survey_kit.statistics.calculator.StatCalculator] : Main class for statistical calculations</span>
-<a id="__codelineno-0-1606" name="__codelineno-0-1606"></a><span class="sd">    [`MultipleImputation`][survey_kit.statistics.multiple_imputation.MultipleImputation] : Class for MI results</span>
-<a id="__codelineno-0-1607" name="__codelineno-0-1607"></a><span class="sd">    &quot;&quot;&quot;</span>
-<a id="__codelineno-0-1608" name="__codelineno-0-1608"></a>
-<a id="__codelineno-0-1609" name="__codelineno-0-1609"></a>    <span class="c1">#   Don&#39;t edit the arguments dictionary</span>
-<a id="__codelineno-0-1610" name="__codelineno-0-1610"></a>    <span class="n">arguments</span> <span class="o">=</span> <span class="n">copy</span><span class="p">(</span><span class="n">arguments</span><span class="p">)</span>
-<a id="__codelineno-0-1611" name="__codelineno-0-1611"></a>    <span class="k">if</span> <span class="n">parallel</span><span class="p">:</span>
-<a id="__codelineno-0-1612" name="__codelineno-0-1612"></a>        <span class="k">if</span> <span class="n">path_srmi</span> <span class="o">!=</span> <span class="s2">&quot;&quot;</span><span class="p">:</span>
-<a id="__codelineno-0-1613" name="__codelineno-0-1613"></a>            <span class="n">n_implicates</span> <span class="o">=</span> <span class="n">SRMI</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">path_srmi</span><span class="p">)</span><span class="o">.</span><span class="n">replication</span><span class="o">.</span><span class="n">n_implicates</span>
-<a id="__codelineno-0-1614" name="__codelineno-0-1614"></a>        <span class="k">else</span><span class="p">:</span>
-<a id="__codelineno-0-1615" name="__codelineno-0-1615"></a>            <span class="n">n_implicates</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">df_implicates</span><span class="p">)</span>
-<a id="__codelineno-0-1616" name="__codelineno-0-1616"></a>        <span class="k">if</span> <span class="n">parallel_inputs</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-<a id="__codelineno-0-1617" name="__codelineno-0-1617"></a>            <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Defaulting to shell for parallel estimation&quot;</span><span class="p">)</span>
-<a id="__codelineno-0-1618" name="__codelineno-0-1618"></a>            <span class="n">parallel_inputs</span> <span class="o">=</span> <span class="n">CallInputs</span><span class="p">(</span>
-<a id="__codelineno-0-1619" name="__codelineno-0-1619"></a>                <span class="n">call_type</span><span class="o">=</span><span class="n">CallTypes</span><span class="o">.</span><span class="n">shell</span><span class="p">,</span> <span class="n">n_cpu</span><span class="o">=</span><span class="nb">int</span><span class="p">(</span><span class="n">config</span><span class="o">.</span><span class="n">cpus</span> <span class="o">/</span> <span class="n">n_implicates</span><span class="p">)</span>
-<a id="__codelineno-0-1620" name="__codelineno-0-1620"></a>            <span class="p">)</span>
-<a id="__codelineno-0-1621" name="__codelineno-0-1621"></a>
-<a id="__codelineno-0-1622" name="__codelineno-0-1622"></a>        <span class="k">del</span> <span class="n">n_implicates</span>
-<a id="__codelineno-0-1623" name="__codelineno-0-1623"></a>        <span class="n">arguments</span> <span class="o">=</span> <span class="nb">locals</span><span class="p">()</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
-<a id="__codelineno-0-1624" name="__codelineno-0-1624"></a>
-<a id="__codelineno-0-1625" name="__codelineno-0-1625"></a>        <span class="n">implicate_stats</span> <span class="o">=</span> <span class="n">_mi_ses_from_function_parallel</span><span class="p">(</span><span class="o">**</span><span class="n">arguments</span><span class="p">)</span>
-<a id="__codelineno-0-1626" name="__codelineno-0-1626"></a>
-<a id="__codelineno-0-1627" name="__codelineno-0-1627"></a>    <span class="k">else</span><span class="p">:</span>
-<a id="__codelineno-0-1628" name="__codelineno-0-1628"></a>        <span class="n">arguments</span> <span class="o">=</span> <span class="nb">locals</span><span class="p">()</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
-<a id="__codelineno-0-1629" name="__codelineno-0-1629"></a>
-<a id="__codelineno-0-1630" name="__codelineno-0-1630"></a>        <span class="k">del</span> <span class="n">arguments</span><span class="p">[</span><span class="s2">&quot;parallel&quot;</span><span class="p">]</span>
-<a id="__codelineno-0-1631" name="__codelineno-0-1631"></a>        <span class="k">del</span> <span class="n">arguments</span><span class="p">[</span><span class="s2">&quot;parallel_inputs&quot;</span><span class="p">]</span>
-<a id="__codelineno-0-1632" name="__codelineno-0-1632"></a>        <span class="n">implicate_stats</span> <span class="o">=</span> <span class="n">_mi_ses_from_function_sequential</span><span class="p">(</span><span class="o">**</span><span class="n">arguments</span><span class="p">)</span>
-<a id="__codelineno-0-1633" name="__codelineno-0-1633"></a>
-<a id="__codelineno-0-1634" name="__codelineno-0-1634"></a>    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">implicate_stats</span><span class="p">):</span>
-<a id="__codelineno-0-1635" name="__codelineno-0-1635"></a>        <span class="n">mi_stats</span> <span class="o">=</span> <span class="n">MultipleImputation</span><span class="p">(</span>
-<a id="__codelineno-0-1636" name="__codelineno-0-1636"></a>            <span class="n">implicate_stats</span><span class="o">=</span><span class="n">implicate_stats</span><span class="p">,</span> <span class="n">join_on</span><span class="o">=</span><span class="n">join_on</span><span class="p">,</span> <span class="n">rounding</span><span class="o">=</span><span class="n">rounding</span>
-<a id="__codelineno-0-1637" name="__codelineno-0-1637"></a>        <span class="p">)</span>
-<a id="__codelineno-0-1638" name="__codelineno-0-1638"></a>        <span class="n">mi_stats</span><span class="o">.</span><span class="n">calculate</span><span class="p">()</span>
-<a id="__codelineno-0-1639" name="__codelineno-0-1639"></a>
-<a id="__codelineno-0-1640" name="__codelineno-0-1640"></a>        <span class="k">return</span> <span class="n">mi_stats</span>
-<a id="__codelineno-0-1641" name="__codelineno-0-1641"></a>
-<a id="__codelineno-0-1642" name="__codelineno-0-1642"></a>    <span class="k">else</span><span class="p">:</span>
-<a id="__codelineno-0-1643" name="__codelineno-0-1643"></a>        <span class="k">return</span> <span class="kc">None</span>
+<a id="__codelineno-0-1591" name="__codelineno-0-1591"></a><span class="sd">    delegate must return a StatCalculator (or subclass - see</span>
+<a id="__codelineno-0-1592" name="__codelineno-0-1592"></a><span class="sd">    [`AdapterStats`][survey_kit.statistics.adapter_stats.AdapterStats] for</span>
+<a id="__codelineno-0-1593" name="__codelineno-0-1593"></a><span class="sd">    building one directly from df_estimates/df_ses, without needing raw</span>
+<a id="__codelineno-0-1594" name="__codelineno-0-1594"></a><span class="sd">    microdata/replicate weights at all). If it also populates df_vcov (the</span>
+<a id="__codelineno-0-1595" name="__codelineno-0-1595"></a><span class="sd">    per-implicate variance-covariance matrix - long/pairwise form: join_on</span>
+<a id="__codelineno-0-1596" name="__codelineno-0-1596"></a><span class="sd">    columns suffixed &quot;_1&quot;/&quot;_2&quot; plus one value column matching the single</span>
+<a id="__codelineno-0-1597" name="__codelineno-0-1597"></a><span class="sd">    stat column in df_estimates), that&#39;s combined across implicates via</span>
+<a id="__codelineno-0-1598" name="__codelineno-0-1598"></a><span class="sd">    the matrix form of Rubin&#39;s rules and stored as the resulting</span>
+<a id="__codelineno-0-1599" name="__codelineno-0-1599"></a><span class="sd">    [`MultipleImputation.df_vcov`][survey_kit.statistics.multiple_imputation.MultipleImputation] -</span>
+<a id="__codelineno-0-1600" name="__codelineno-0-1600"></a><span class="sd">    needed for `.compare()`/contrasts between two rows of the same result</span>
+<a id="__codelineno-0-1601" name="__codelineno-0-1601"></a><span class="sd">    to get a correct joint standard error instead of assuming</span>
+<a id="__codelineno-0-1602" name="__codelineno-0-1602"></a><span class="sd">    independence.</span>
+<a id="__codelineno-0-1603" name="__codelineno-0-1603"></a>
+<a id="__codelineno-0-1604" name="__codelineno-0-1604"></a><span class="sd">    See Also</span>
+<a id="__codelineno-0-1605" name="__codelineno-0-1605"></a><span class="sd">    --------</span>
+<a id="__codelineno-0-1606" name="__codelineno-0-1606"></a><span class="sd">    [`StatCalculator`][survey_kit.statistics.calculator.StatCalculator] : Main class for statistical calculations</span>
+<a id="__codelineno-0-1607" name="__codelineno-0-1607"></a><span class="sd">    [`MultipleImputation`][survey_kit.statistics.multiple_imputation.MultipleImputation] : Class for MI results</span>
+<a id="__codelineno-0-1608" name="__codelineno-0-1608"></a><span class="sd">    &quot;&quot;&quot;</span>
+<a id="__codelineno-0-1609" name="__codelineno-0-1609"></a>
+<a id="__codelineno-0-1610" name="__codelineno-0-1610"></a>    <span class="c1">#   Don&#39;t edit the arguments dictionary</span>
+<a id="__codelineno-0-1611" name="__codelineno-0-1611"></a>    <span class="n">arguments</span> <span class="o">=</span> <span class="n">copy</span><span class="p">(</span><span class="n">arguments</span><span class="p">)</span>
+<a id="__codelineno-0-1612" name="__codelineno-0-1612"></a>    <span class="k">if</span> <span class="n">parallel</span><span class="p">:</span>
+<a id="__codelineno-0-1613" name="__codelineno-0-1613"></a>        <span class="k">if</span> <span class="n">path_srmi</span> <span class="o">!=</span> <span class="s2">&quot;&quot;</span><span class="p">:</span>
+<a id="__codelineno-0-1614" name="__codelineno-0-1614"></a>            <span class="n">n_implicates</span> <span class="o">=</span> <span class="n">SRMI</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">path_srmi</span><span class="p">)</span><span class="o">.</span><span class="n">replication</span><span class="o">.</span><span class="n">n_implicates</span>
+<a id="__codelineno-0-1615" name="__codelineno-0-1615"></a>        <span class="k">else</span><span class="p">:</span>
+<a id="__codelineno-0-1616" name="__codelineno-0-1616"></a>            <span class="n">n_implicates</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">df_implicates</span><span class="p">)</span>
+<a id="__codelineno-0-1617" name="__codelineno-0-1617"></a>        <span class="k">if</span> <span class="n">parallel_inputs</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+<a id="__codelineno-0-1618" name="__codelineno-0-1618"></a>            <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Defaulting to shell for parallel estimation&quot;</span><span class="p">)</span>
+<a id="__codelineno-0-1619" name="__codelineno-0-1619"></a>            <span class="n">parallel_inputs</span> <span class="o">=</span> <span class="n">CallInputs</span><span class="p">(</span>
+<a id="__codelineno-0-1620" name="__codelineno-0-1620"></a>                <span class="n">call_type</span><span class="o">=</span><span class="n">CallTypes</span><span class="o">.</span><span class="n">shell</span><span class="p">,</span> <span class="n">n_cpu</span><span class="o">=</span><span class="nb">int</span><span class="p">(</span><span class="n">config</span><span class="o">.</span><span class="n">cpus</span> <span class="o">/</span> <span class="n">n_implicates</span><span class="p">)</span>
+<a id="__codelineno-0-1621" name="__codelineno-0-1621"></a>            <span class="p">)</span>
+<a id="__codelineno-0-1622" name="__codelineno-0-1622"></a>
+<a id="__codelineno-0-1623" name="__codelineno-0-1623"></a>        <span class="k">del</span> <span class="n">n_implicates</span>
+<a id="__codelineno-0-1624" name="__codelineno-0-1624"></a>        <span class="n">arguments</span> <span class="o">=</span> <span class="nb">locals</span><span class="p">()</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+<a id="__codelineno-0-1625" name="__codelineno-0-1625"></a>
+<a id="__codelineno-0-1626" name="__codelineno-0-1626"></a>        <span class="n">implicate_stats</span> <span class="o">=</span> <span class="n">_mi_ses_from_function_parallel</span><span class="p">(</span><span class="o">**</span><span class="n">arguments</span><span class="p">)</span>
+<a id="__codelineno-0-1627" name="__codelineno-0-1627"></a>
+<a id="__codelineno-0-1628" name="__codelineno-0-1628"></a>    <span class="k">else</span><span class="p">:</span>
+<a id="__codelineno-0-1629" name="__codelineno-0-1629"></a>        <span class="n">arguments</span> <span class="o">=</span> <span class="nb">locals</span><span class="p">()</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+<a id="__codelineno-0-1630" name="__codelineno-0-1630"></a>
+<a id="__codelineno-0-1631" name="__codelineno-0-1631"></a>        <span class="k">del</span> <span class="n">arguments</span><span class="p">[</span><span class="s2">&quot;parallel&quot;</span><span class="p">]</span>
+<a id="__codelineno-0-1632" name="__codelineno-0-1632"></a>        <span class="k">del</span> <span class="n">arguments</span><span class="p">[</span><span class="s2">&quot;parallel_inputs&quot;</span><span class="p">]</span>
+<a id="__codelineno-0-1633" name="__codelineno-0-1633"></a>        <span class="n">implicate_stats</span> <span class="o">=</span> <span class="n">_mi_ses_from_function_sequential</span><span class="p">(</span><span class="o">**</span><span class="n">arguments</span><span class="p">)</span>
+<a id="__codelineno-0-1634" name="__codelineno-0-1634"></a>
+<a id="__codelineno-0-1635" name="__codelineno-0-1635"></a>    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">implicate_stats</span><span class="p">):</span>
+<a id="__codelineno-0-1636" name="__codelineno-0-1636"></a>        <span class="n">mi_stats</span> <span class="o">=</span> <span class="n">MultipleImputation</span><span class="p">(</span>
+<a id="__codelineno-0-1637" name="__codelineno-0-1637"></a>            <span class="n">implicate_stats</span><span class="o">=</span><span class="n">implicate_stats</span><span class="p">,</span> <span class="n">join_on</span><span class="o">=</span><span class="n">join_on</span><span class="p">,</span> <span class="n">rounding</span><span class="o">=</span><span class="n">rounding</span>
+<a id="__codelineno-0-1638" name="__codelineno-0-1638"></a>        <span class="p">)</span>
+<a id="__codelineno-0-1639" name="__codelineno-0-1639"></a>        <span class="n">mi_stats</span><span class="o">.</span><span class="n">calculate</span><span class="p">()</span>
+<a id="__codelineno-0-1640" name="__codelineno-0-1640"></a>
+<a id="__codelineno-0-1641" name="__codelineno-0-1641"></a>        <span class="k">return</span> <span class="n">mi_stats</span>
+<a id="__codelineno-0-1642" name="__codelineno-0-1642"></a>
+<a id="__codelineno-0-1643" name="__codelineno-0-1643"></a>    <span class="k">else</span><span class="p">:</span>
+<a id="__codelineno-0-1644" name="__codelineno-0-1644"></a>        <span class="k">return</span> <span class="kc">None</span>
 </code></pre></div></td></tr></table></div>
             </details>
     </div>
@@ -2229,7 +2282,7 @@ Used for combining estimates. Default is None (empty list).</p>
 
 
               <details class="quote">
-                <summary>Source code in <code>src\survey_kit\statistics\multiple_imputation.py</code></summary>
+                <summary>Source code in <code>src/survey_kit/statistics/multiple_imputation.py</code></summary>
                 <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-156"> 156</a></span>
 <span class="normal"><a href="#__codelineno-0-157"> 157</a></span>
 <span class="normal"><a href="#__codelineno-0-158"> 158</a></span>
@@ -4861,7 +4914,7 @@ missing information. Implements the standard MI combining formulas.</p>
 </details>
 
             <details class="quote">
-              <summary>Source code in <code>src\survey_kit\statistics\multiple_imputation.py</code></summary>
+              <summary>Source code in <code>src/survey_kit/statistics/multiple_imputation.py</code></summary>
               <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-327">327</a></span>
 <span class="normal"><a href="#__codelineno-0-328">328</a></span>
 <span class="normal"><a href="#__codelineno-0-329">329</a></span>
@@ -5681,7 +5734,7 @@ MI standard errors for the comparisons.</p>
 
 
             <details class="quote">
-              <summary>Source code in <code>src\survey_kit\statistics\multiple_imputation.py</code></summary>
+              <summary>Source code in <code>src/survey_kit/statistics/multiple_imputation.py</code></summary>
               <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-630">630</a></span>
 <span class="normal"><a href="#__codelineno-0-631">631</a></span>
 <span class="normal"><a href="#__codelineno-0-632">632</a></span>
@@ -5940,7 +5993,7 @@ The default is "horizontal".</p>
 
 
             <details class="quote">
-              <summary>Source code in <code>src\survey_kit\statistics\multiple_imputation.py</code></summary>
+              <summary>Source code in <code>src/survey_kit/statistics/multiple_imputation.py</code></summary>
               <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-1225">1225</a></span>
 <span class="normal"><a href="#__codelineno-0-1226">1226</a></span>
 <span class="normal"><a href="#__codelineno-0-1227">1227</a></span>
@@ -6153,7 +6206,7 @@ The default is "horizontal".</p>
 
 
             <details class="quote">
-              <summary>Source code in <code>src\survey_kit\statistics\multiple_imputation.py</code></summary>
+              <summary>Source code in <code>src/survey_kit/statistics/multiple_imputation.py</code></summary>
               <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-1189">1189</a></span>
 <span class="normal"><a href="#__codelineno-0-1190">1190</a></span>
 <span class="normal"><a href="#__codelineno-0-1191">1191</a></span>
@@ -6303,7 +6356,7 @@ Default is self.rounding configuration.</p>
 
 
             <details class="quote">
-              <summary>Source code in <code>src\survey_kit\statistics\multiple_imputation.py</code></summary>
+              <summary>Source code in <code>src/survey_kit/statistics/multiple_imputation.py</code></summary>
               <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-756">756</a></span>
 <span class="normal"><a href="#__codelineno-0-757">757</a></span>
 <span class="normal"><a href="#__codelineno-0-758">758</a></span>
@@ -6513,7 +6566,7 @@ Default is self.rounding.</p>
 
 
             <details class="quote">
-              <summary>Source code in <code>src\survey_kit\statistics\multiple_imputation.py</code></summary>
+              <summary>Source code in <code>src/survey_kit/statistics/multiple_imputation.py</code></summary>
               <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-712">712</a></span>
 <span class="normal"><a href="#__codelineno-0-713">713</a></span>
 <span class="normal"><a href="#__codelineno-0-714">714</a></span>
@@ -6781,7 +6834,7 @@ Default is False</p>
 
 
             <details class="quote">
-              <summary>Source code in <code>src\survey_kit\statistics\multiple_imputation.py</code></summary>
+              <summary>Source code in <code>src/survey_kit/statistics/multiple_imputation.py</code></summary>
               <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-805"> 805</a></span>
 <span class="normal"><a href="#__codelineno-0-806"> 806</a></span>
 <span class="normal"><a href="#__codelineno-0-807"> 807</a></span>
