@@ -12,7 +12,6 @@ from scipy.stats import norm
 
 from ..utilities.inputs import list_input
 from ..utilities.dataframe import (
-    lazy_backend,
     join_wrapper,
     concat_wrapper,
     NarwhalsType,
@@ -406,8 +405,25 @@ class ReplicateStats(Serializable):
         #   Don't edit the underlying object
         self = self.copy()
 
+        def _match_eagerness(df: IntoFrameT, result: IntoFrameT) -> IntoFrameT:
+            #   join_wrapper()/concat_wrapper() run their work through a
+            #   narwhals .lazy() pipeline internally - for a bare native
+            #   df (not already narwhals-wrapped, the normal case here),
+            #   they hand that lazy result straight back rather than
+            #   collecting, so an eager df would otherwise silently come
+            #   back lazy. Re-collect to match df's own eager/lazy-ness
+            #   instead (a no-op if df was already lazy).
+            if isinstance(nw.from_native(df), nw.LazyFrame):
+                return result
+            return nw.from_native(result).lazy().collect().to_native()
+
         def _concat_df(df: IntoFrameT, df_join: IntoFrameT) -> IntoFrameT:
-            nw_type = NarwhalsType(df)
+            #   AdapterStats (and any StatCalculator not built from
+            #   replicate weights) has df_replicates=None - nothing to
+            #   join/stack there, so pass that attribute through as None
+            #   rather than crashing on it.
+            if df is None or df_join is None:
+                return None
 
             if how == "horizontal":
                 columns = safe_columns(df)
@@ -417,20 +433,18 @@ class ReplicateStats(Serializable):
                 else:
                     replicate_col = []
 
-                df_return = lazy_backend(
-                    join_wrapper(
-                        df,
-                        df_join,
-                        left_on=join_on_self + replicate_col,
-                        right_on=join_on_concat + replicate_col,
-                        how="left",
-                    ),
-                    nw_type,
+                result = join_wrapper(
+                    df,
+                    df_join,
+                    on=None,
+                    left_on=join_on_self + replicate_col,
+                    right_on=join_on_concat + replicate_col,
+                    how="left",
                 )
-
-                return df_return
+                return _match_eagerness(df, result)
             elif how == "vertical":
-                return concat_wrapper([df, df_join], how="diagonal")
+                result = concat_wrapper([df, df_join], how="diagonal")
+                return _match_eagerness(df, result)
 
         for dfi in self._df_attributes:
             setattr(

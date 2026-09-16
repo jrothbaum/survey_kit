@@ -3,6 +3,8 @@ from __future__ import annotations
 import narwhals as nw
 from narwhals.typing import IntoFrameT
 
+from .. import logger
+from ..utilities.dataframe import concat_wrapper
 from .calculator import StatCalculator
 from .replicates import ReplicateStats
 
@@ -33,11 +35,28 @@ class AdapterStats(StatCalculator):
     df_estimates/df_ses/df_replicates (df_vcov didn't exist before this
     class), so a plain filter()/rename() would otherwise just drop it
     (with a warning) rather than correctly narrow/rename it.
-    with_columns()/drop()/pipe()/concat_with() still drop it - those
-    operate on value columns or arbitrary user logic, where there's no
-    safe, generic way to know whether/how df_vcov (tied to one specific
-    coefficient column) should follow along; select() doesn't touch it
-    for the same reason as those, not because it was overlooked.
+    with_columns()/drop()/pipe() operate on value columns or arbitrary
+    user logic, where there's no safe, generic way to know whether/how
+    df_vcov/df_tidy (tied to one specific coefficient column, or to the
+    source package's own unrelated shape) should follow along - rather
+    than silently dropping either one, these raise ValueError instead
+    when df_vcov/df_tidy is set, so a caller finds out immediately
+    rather than discovering it missing later. Clear the one(s) you
+    don't need first (e.g. `obj.replicate_stats.df_vcov = None`) to use
+    these methods anyway. select() doesn't touch df_vcov/df_tidy at all
+    (for the same reason as those three - not because it was
+    overlooked) but also doesn't raise, since narrowing *which*
+    estimate columns are kept has no "selected columns" concept for
+    either one to begin with.
+
+    concat_with() also raises for df_tidy (same reasoning as above) and
+    for df_vcov on a horizontal concat (it adds a new value column,
+    breaking df_vcov's single-value-column precondition) - but on a
+    vertical concat with both sides carrying a df_vcov over disjoint
+    terms, it stacks them block-diagonally instead of dropping either
+    one, logging a warning that cross-object covariance is assumed
+    zero/unknown (the same independence assumption .compare() already
+    makes between two separate objects).
 
     .compare() (inherited from StatCalculator) computes a difference/
     ratio SE from df_ses under an independence assumption between the
@@ -202,6 +221,143 @@ class AdapterStats(StatCalculator):
                 else original_vcov
             )
         return self
+
+    def with_columns(self, with_expr: nw.Expr | list[nw.Expr]) -> AdapterStats:
+        self._raise_if_vcov_or_tidy("with_columns")
+        return super().with_columns(with_expr)
+
+    def drop(
+        self, drop_expr: nw.Expr | list[nw.Expr] | str | list[str]
+    ) -> AdapterStats:
+        self._raise_if_vcov_or_tidy("drop")
+        return super().drop(drop_expr)
+
+    def pipe(self, function, *args, **kwargs) -> AdapterStats:
+        self._raise_if_vcov_or_tidy("pipe")
+        return super().pipe(function, *args, **kwargs)
+
+    def concat_with(
+        self, sc_concat: StatCalculator, how: str = "horizontal"
+    ) -> AdapterStats:
+        #   df_tidy never has a generic story here regardless of `how` -
+        #   its own id column(s), if any, aren't guaranteed to match
+        #   variable_ids (see the class docstring), so there's no way to
+        #   tell which of its rows would even correspond to which
+        #   post-concat row.
+        other_replicate_stats = getattr(sc_concat, "replicate_stats", None)
+        self_vcov = self.replicate_stats.df_vcov
+        other_vcov = getattr(other_replicate_stats, "df_vcov", None)
+        if self.replicate_stats.df_tidy is not None or (
+            getattr(other_replicate_stats, "df_tidy", None) is not None
+        ):
+            raise ValueError(
+                "AdapterStats.concat_with(): df_tidy can't be reshaped "
+                "generically and won't be silently dropped - clear it on "
+                "whichever side has it first (e.g. "
+                "self.replicate_stats.df_tidy = None) if you don't need it."
+            )
+
+        if how == "horizontal":
+            #   A horizontal concat adds a *new value column* from
+            #   sc_concat - df_vcov only ever describes one value
+            #   column's own covariance (see the class docstring), so
+            #   even under a block-independence assumption there's no
+            #   single-value-column schema left to put the result in.
+            if self_vcov is not None or other_vcov is not None:
+                raise ValueError(
+                    "AdapterStats.concat_with(how='horizontal'): can't "
+                    "carry df_vcov through a horizontal concat (it adds a "
+                    "new value column, and df_vcov only describes one "
+                    "value column's own covariance) - clear it on "
+                    "whichever side has it first (e.g. "
+                    "self.replicate_stats.df_vcov = None) if you don't "
+                    "need it."
+                )
+            return super().concat_with(sc_concat, how=how)
+
+        #   how == "vertical": stacking rows is compatible with df_vcov
+        #   as long as both sides have one (or neither) and their terms
+        #   are disjoint - concatenate the two long tables block-
+        #   diagonally, with cross-covariance between a self term and a
+        #   sc_concat term treated as unknown/zero (the same
+        #   independence assumption StatCalculator.compare() already
+        #   makes between two separate objects).
+        if self_vcov is None and other_vcov is None:
+            return super().concat_with(sc_concat, how=how)
+
+        if (self_vcov is None) != (other_vcov is None):
+            raise ValueError(
+                "AdapterStats.concat_with(how='vertical'): only one side "
+                "has a df_vcov - stacking would either silently drop it "
+                "or leave the other side's terms with no covariance "
+                "information at all. Clear it on whichever side has it "
+                "(e.g. self.replicate_stats.df_vcov = None) if you don't "
+                "need it."
+            )
+
+        if self.variable_ids != sc_concat.variable_ids:
+            raise ValueError(
+                "AdapterStats.concat_with(how='vertical'): self and "
+                "sc_concat have different variable_ids - can't line up "
+                "df_vcov's {id}_1/{id}_2 columns between them."
+            )
+
+        self_terms = (
+            nw.from_native(self.df_estimates).lazy().select(self.variable_ids).unique()
+        )
+        other_terms = (
+            nw.from_native(sc_concat.df_estimates)
+            .lazy()
+            .select(self.variable_ids)
+            .unique()
+        )
+        overlap = self_terms.join(
+            other_terms, on=self.variable_ids, how="inner"
+        ).collect()
+        if overlap.shape[0] > 0:
+            raise ValueError(
+                "AdapterStats.concat_with(how='vertical'): self and "
+                "sc_concat share at least one variable_ids value - "
+                "stacking their df_vcov block-diagonally would be "
+                "ambiguous for those shared terms (which side's "
+                "covariance would apply?). Rename the overlapping terms "
+                "on one side first if you need to keep both."
+            )
+
+        logger.warning(
+            "AdapterStats.concat_with(how='vertical'): stacking df_vcov "
+            "from two objects block-diagonally - self's and sc_concat's "
+            "terms are assumed uncorrelated (no cross-covariance is known "
+            "or represented), so a joint SE computed afterward across a "
+            "self term and a sc_concat term will be wrong; joint SEs "
+            "within either original object's own terms remain correct."
+        )
+        new_vcov = concat_wrapper([self_vcov, other_vcov], how="diagonal")
+
+        result = super().concat_with(sc_concat, how=how)
+        result.replicate_stats.df_vcov = new_vcov
+        return result
+
+    def _raise_if_vcov_or_tidy(self, method_name: str) -> None:
+        present = [
+            name
+            for name, value in (
+                ("df_vcov", self.replicate_stats.df_vcov),
+                ("df_tidy", self.replicate_stats.df_tidy),
+            )
+            if value is not None
+        ]
+        if not present:
+            return
+
+        joined = " and ".join(present)
+        raise ValueError(
+            f"AdapterStats.{method_name}() can't reshape {joined} generically "
+            f"(there's no safe, generic way to know whether/how it should "
+            f"follow along) and won't silently drop it - clear it first (e.g. "
+            f"self.replicate_stats.df_vcov = None) if you don't need it, or "
+            f"use filter()/rename() instead, which keep df_vcov in sync."
+        )
 
 
 def _vcov_semi_join(

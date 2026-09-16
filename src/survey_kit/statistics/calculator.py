@@ -1829,10 +1829,11 @@ class StatCalculator(Serializable):
 
         self = self.copy()
 
-        self.replicate_stats.concat_with(
+        self.replicate_stats = self.replicate_stats.concat_with(
             rs_concat=sc_concat.replicate_stats,
             join_on_self=self.variable_ids,
             join_on_concat=sc_concat.variable_ids,
+            how=how,
         )
 
         return self
