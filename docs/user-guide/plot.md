@@ -33,7 +33,7 @@ See the [Plotting API reference](../api/plot.md) for the full parameter list of 
 === "line() / quantiles()"
     `quantiles()` for a stat item's own quantile columns, `line()` for any other set of columns. Covers confidence intervals and the group dropdown (`group_by`).
 
-    [quantiles()](../tutorials/plot/figures/quantiles.html){:target="_blank"} ·
+    **Figures:** [quantiles()](../tutorials/plot/figures/quantiles.html){:target="_blank"} ·
     [with CI](../tutorials/plot/figures/quantiles_ci_area.html){:target="_blank"} ·
     [grouped](../tutorials/plot/figures/quantiles_grouped.html){:target="_blank"} ·
     [line()](../tutorials/plot/figures/line_selected_quantiles.html){:target="_blank"}
@@ -45,7 +45,7 @@ See the [Plotting API reference](../api/plot.md) for the full parameter list of 
 === "coefplot()"
     A disclosure-review-style point-and-whisker chart, with and without `series=` for multiple offset points per row.
 
-    [with series](../tutorials/plot/figures/coefplot.html){:target="_blank"} ·
+    **Figures:** [with series](../tutorials/plot/figures/coefplot.html){:target="_blank"} ·
     [single series](../tutorials/plot/figures/coefplot_single_series.html){:target="_blank"}
 
     ```python
@@ -55,7 +55,7 @@ See the [Plotting API reference](../api/plot.md) for the full parameter list of 
 === "stacked_bar()"
     Layers/categories can mix positive and negative values - each bar stacks positive layers right of zero and negative ones left, with the total label landing on whichever side its net value falls on.
 
-    [all-negative](../tutorials/plot/figures/stacked_bar.html){:target="_blank"} ·
+    **Figures:** [all-negative](../tutorials/plot/figures/stacked_bar.html){:target="_blank"} ·
     [mixed sign](../tutorials/plot/figures/stacked_bar_mixed_sign.html){:target="_blank"}
 
     ```python
@@ -65,7 +65,7 @@ See the [Plotting API reference](../api/plot.md) for the full parameter list of 
 === "combine()"
     Two independent runs, each with and without a confidence band. Covers a 2-level tree (Run -> CI), a 3-level one (Run -> CI -> Year), labeling each level, and putting a level on its own row.
 
-    [2 levels](../tutorials/plot/figures/combine.html){:target="_blank"} ·
+    **Figures:** [2 levels](../tutorials/plot/figures/combine.html){:target="_blank"} ·
     [3 levels](../tutorials/plot/figures/combine_3_levels.html){:target="_blank"}
 
     ```python
@@ -75,7 +75,7 @@ See the [Plotting API reference](../api/plot.md) for the full parameter list of 
 === "combine() + shared legend state"
     `coefplot()`/`stacked_bar()` have no group dropdown of their own, but their legend clicks are still shared by trace name - isolating a series/layer in one branch and switching to a sibling with the same name shows it isolated there too.
 
-    [coefplot()](../tutorials/plot/figures/combine_two_coefplots.html){:target="_blank"} ·
+    **Figures:** [coefplot()](../tutorials/plot/figures/combine_two_coefplots.html){:target="_blank"} ·
     [stacked_bar()](../tutorials/plot/figures/combine_two_stacked_bars.html){:target="_blank"}
 
     ```python
