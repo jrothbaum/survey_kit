@@ -725,15 +725,6 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#why-use-it" class="md-nav__link">
-    <span class="md-ellipsis">
-      Why Use It
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
   <a href="#key-features" class="md-nav__link">
     <span class="md-ellipsis">
       Key Features
@@ -1043,15 +1034,6 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#why-use-it" class="md-nav__link">
-    <span class="md-ellipsis">
-      Why Use It
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
   <a href="#key-features" class="md-nav__link">
     <span class="md-ellipsis">
       Key Features
@@ -1108,26 +1090,16 @@
 
 <h1 id="plotting">Plotting<a class="headerlink" href="#plotting" title="Permanent link">&para;</a></h1>
 <h2 id="what-is-it">What Is It<a class="headerlink" href="#what-is-it" title="Permanent link">&para;</a></h2>
-<p><code>survey_kit.plot</code> builds interactive <a href="https://plotly.com/python/">plotly</a> figures directly from a <a href="../../api/basic_standard_errors/"><code>StatCalculator</code></a>'s or <a href="../../api/multiple_imputation/"><code>MultipleImputation</code></a>'s own <code>df_estimates</code>/CI columns - there's no separate reshaping step to do yourself, and it works the same way whether the object came from raw microdata, replicate weights, or a <a href="../adapters/">regression adapter</a> (any <code>AdapterStats</code> is a <code>StatCalculator</code>).</p>
-<p>Four core plot functions - <a href="../../api/plot/#survey_kit.plot.line"><code>line</code></a>, <a href="../../api/plot/#survey_kit.plot.quantiles"><code>quantiles</code></a>, <a href="../../api/plot/#survey_kit.plot.coefplot"><code>coefplot</code></a>, <a href="../../api/plot/#survey_kit.plot.stacked_bar"><code>stacked_bar</code></a> - each return a plain <code>plotly.graph_objects.Figure</code>, so anything that works on a plotly figure (<code>fig.update_layout(...)</code>, <code>fig.write_html(...)</code>, embedding in a notebook or a web page) works here too. <a href="../../api/plot/#survey_kit.plot.combine"><code>combine</code></a> puts several such figures into a single page, switched between with nested dropdowns.</p>
-<h2 id="why-use-it">Why Use It<a class="headerlink" href="#why-use-it" title="Permanent link">&para;</a></h2>
-<ul>
-<li><strong>No manual reshaping</strong> - point a plot function at a <code>StatCalculator</code>/<code>MultipleImputation</code>/<code>AdapterStats</code> and it finds the right columns itself (quantile columns for <code>quantiles()</code>, a <code>column=</code> for <code>coefplot()</code>/<code>stacked_bar()</code>, any set of columns for <code>line()</code>).</li>
-<li><strong>DRB rounding by default</strong> - values are rounded per Census disclosure-review rules before plotting (<code>round_output=True</code>), so a figure never shows an unrounded number a raw table wouldn't.</li>
-<li><strong>A group dropdown, not just a legend</strong> - every <code>line()</code>/<code>quantiles()</code>/<code>coefplot()</code> figure gets a compact dropdown for switching which group of series is shown, with per-series state (on/off, isolated) preserved across group switches - see <code>group_by</code> below and <a href="../../api/plot/#survey_kit.plot.add_group_dropdown"><code>add_group_dropdown</code></a>.</li>
-<li><strong>Confidence intervals built in</strong> - <code>ci_level=</code> on <code>line()</code>/<code>quantiles()</code>/<code>coefplot()</code> draws error bars or (<code>ci_area=True</code>) a shaded band, computed from the stat item's own CI machinery.</li>
-<li><strong>Arbitrary-depth combining</strong> - <code>combine()</code> nests any number of dropdown levels (not just two), and remembers each level's last choice independently when you switch a shallower one.</li>
-<li><strong>Any plotly kwarg still works</strong> - every plot function takes a <code>layout: dict</code> applied last via <code>fig.update_layout(**layout)</code>, so custom formatting doesn't require dropping down to plotly yourself.</li>
-</ul>
+<p><code>survey_kit.plot</code> builds interactive <a href="https://plotly.com/python/">plotly</a> figures directly from a <a href="../../api/basic_standard_errors/"><code>StatCalculator</code></a>'s or <a href="../../api/multiple_imputation/"><code>MultipleImputation</code></a>'s own estimates - no manual reshaping. <a href="../../api/plot/#survey_kit.plot.combine"><code>combine</code></a> puts several figures on one page, switched between with dropdowns.</p>
 <h2 id="key-features">Key Features<a class="headerlink" href="#key-features" title="Permanent link">&para;</a></h2>
 <ul>
-<li><strong><code>line()</code></strong> - the general building block: one line per series across any set of <code>df_estimates</code> columns (e.g. one column per year, or per quantile). Numeric-looking column names (<code>"2016"</code>, <code>"q10"</code>) are placed on a real numeric x-axis automatically.</li>
-<li><strong><code>quantiles()</code></strong> - <code>line()</code> specialized to a stat item's own quantile-stat columns (<code>q10</code>, <code>q25</code>, ... or <code>median</code>), plotted across percentile 0-100.</li>
-<li><strong><code>coefplot()</code></strong> - the classic disclosure-review chart: one row per category, a point-and-whisker per row (and, with <code>series=</code>, several offset points per row for comparing e.g. multiple years), with optional <code>headers=</code> section dividers.</li>
-<li><strong><code>stacked_bar()</code></strong> - several <code>StatCalculator</code>/<code>MultipleImputation</code> objects that share a category axis, stacked to show how they add up to a <code>total_key</code> total shown as a text label.</li>
-<li><strong><code>combine()</code></strong> - nests whole figures under as many dropdown levels as the dict you pass it has, preserving each leaf figure's own internal group dropdown. Label each level (<code>label=["Run:", "CI:"]</code>), put a level on its own row of the control bar (a <code>"\n"</code> in that level's label), and a level with only one option (e.g. a branch that's a bare figure, not a dict) shows no dropdown at all.</li>
-<li><strong><code>group_by</code></strong> - splits each series label on a separator so related series (e.g. two historical years vs. a recent one) land in the same dropdown entry instead of getting one each.</li>
-<li><strong>Shared legend state across figures</strong> - isolating/toggling a series by name on one figure's legend carries over to any sibling figure with a same-named series once <code>combine()</code> switches to it (or once it's shown at all) - works the same way for <code>line()</code>/<code>quantiles()</code>'s group dropdown and for <code>coefplot()</code>/<code>stacked_bar()</code>'s plain legend, even though only the former has a dropdown of its own.</li>
+<li><strong>No manual reshaping</strong> - point a plot function at a <code>StatCalculator</code>/<code>MultipleImputation</code>/<code>AdapterStats</code> and it finds the right columns itself.</li>
+<li><strong>DRB rounding by default</strong> - values are rounded per Census disclosure-review rules before plotting.</li>
+<li><strong>A group dropdown, not just a legend</strong> - <code>line()</code>/<code>quantiles()</code>/<code>coefplot()</code> can group series into a compact dropdown (<code>group_by</code>) instead of a long legend.</li>
+<li><strong>Confidence intervals built in</strong> - <code>ci_level=</code> draws error bars or, with <code>ci_area=True</code>, a shaded band.</li>
+<li><strong><code>combine()</code></strong> - nests any number of dropdown levels, remembering each level's last choice. Label each level (<code>label=["Run:", "CI:"]</code>), or put a level on its own row with a <code>"\n"</code> in its label.</li>
+<li><strong>Shared legend state</strong> - isolating a series by name on one figure carries over to any other figure with a same-named series, once it's shown.</li>
+<li><strong>Still a plain plotly figure</strong> - every function takes a <code>layout: dict</code> applied via <code>fig.update_layout(**layout)</code>, and returns something you can call any plotly method on.</li>
 </ul>
 <h2 id="when-to-use-what">When to Use What<a class="headerlink" href="#when-to-use-what" title="Permanent link">&para;</a></h2>
 <table>
@@ -1135,34 +1107,28 @@
 <tr>
 <th>Use Case</th>
 <th>Tool</th>
-<th>Why</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td>Any set of <code>df_estimates</code> columns plotted against each other (e.g. by year)</td>
+<td>Any set of columns plotted against each other</td>
 <td><code>line()</code></td>
-<td>The general building block every other plot function is built from</td>
 </tr>
 <tr>
-<td>A stat item's own quantile columns across percentile 0-100</td>
+<td>A stat item's own quantile columns, percentile 0-100</td>
 <td><code>quantiles()</code></td>
-<td>Finds <code>q10</code>/<code>q25</code>/... itself, no column list to write out</td>
 </tr>
 <tr>
 <td>One row per category with a CI whisker (disclosure-review style)</td>
 <td><code>coefplot()</code></td>
-<td>Built for exactly this chart shape, including multi-series offsets and section headers</td>
 </tr>
 <tr>
 <td>Several stat items that should sum to a shown total</td>
 <td><code>stacked_bar()</code></td>
-<td>Stacks layers and checks/labels the total for you</td>
 </tr>
 <tr>
-<td>Comparing runs/vintages, or any other switchable set of whole figures</td>
+<td>Switching between whole figures (runs, vintages, scenarios)</td>
 <td><code>combine()</code></td>
-<td>Nested dropdowns, arbitrarily deep, with state preserved across switches</td>
 </tr>
 </tbody>
 </table>
@@ -1172,10 +1138,11 @@
 <div class="tabbed-set tabbed-alternate" data-tabs="1:5"><input checked="checked" id="__tabbed_1_1" name="__tabbed_1" type="radio" /><input id="__tabbed_1_2" name="__tabbed_1" type="radio" /><input id="__tabbed_1_3" name="__tabbed_1" type="radio" /><input id="__tabbed_1_4" name="__tabbed_1" type="radio" /><input id="__tabbed_1_5" name="__tabbed_1" type="radio" /><div class="tabbed-labels"><label for="__tabbed_1_1">line() / quantiles()</label><label for="__tabbed_1_2">coefplot()</label><label for="__tabbed_1_3">stacked_bar()</label><label for="__tabbed_1_4">combine()</label><label for="__tabbed_1_5">combine() + shared legend state</label></div>
 <div class="tabbed-content">
 <div class="tabbed-block">
-<p>The two column-plotting functions - <code>quantiles()</code> for a stat item's own quantile columns, <code>line()</code> for any other set of columns (including plain numeric-named ones like a year). Covers confidence intervals (error bars or a shaded band) and the group dropdown (<code>group_by</code>).</p>
-<div class="tabbed-set tabbed-alternate" data-tabs="2:5"><input checked="checked" id="__tabbed_2_1" name="__tabbed_2" type="radio" /><input id="__tabbed_2_2" name="__tabbed_2" type="radio" /><input id="__tabbed_2_3" name="__tabbed_2" type="radio" /><input id="__tabbed_2_4" name="__tabbed_2" type="radio" /><input id="__tabbed_2_5" name="__tabbed_2" type="radio" /><div class="tabbed-labels"><label for="__tabbed_2_1">Code</label><label for="__tabbed_2_2">Log: quantiles()</label><label for="__tabbed_2_3">Log: with CI</label><label for="__tabbed_2_4">Log: grouped</label><label for="__tabbed_2_5">Log: line()</label></div>
-<div class="tabbed-content">
-<div class="tabbed-block">
+<p><code>quantiles()</code> for a stat item's own quantile columns, <code>line()</code> for any other set of columns. Covers confidence intervals and the group dropdown (<code>group_by</code>).</p>
+<p><a href="../../tutorials/plot/figures/quantiles.html" target="_blank">quantiles()</a> ·
+<a href="../../tutorials/plot/figures/quantiles_ci_area.html" target="_blank">with CI</a> ·
+<a href="../../tutorials/plot/figures/quantiles_grouped.html" target="_blank">grouped</a> ·
+<a href="../../tutorials/plot/figures/line_selected_quantiles.html" target="_blank">line()</a></p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
 <a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="kn">import</span><span class="w"> </span><span class="nn">polars</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pl</span>
 <a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>
@@ -1317,37 +1284,9 @@
 </code></pre></div>
 </div>
 <div class="tabbed-block">
-<p><a href="../../tutorials/plot/figures/quantiles.html" target="_blank">View in separate window</a>
-<iframe src="../../tutorials/plot/figures/quantiles.html"
-    style="width: 100%; height: 800px; border: none;">
-</iframe></p>
-</div>
-<div class="tabbed-block">
-<p><a href="../../tutorials/plot/figures/quantiles_ci_area.html" target="_blank">View in separate window</a>
-<iframe src="../../tutorials/plot/figures/quantiles_ci_area.html"
-    style="width: 100%; height: 800px; border: none;">
-</iframe></p>
-</div>
-<div class="tabbed-block">
-<p><a href="../../tutorials/plot/figures/quantiles_grouped.html" target="_blank">View in separate window</a>
-<iframe src="../../tutorials/plot/figures/quantiles_grouped.html"
-    style="width: 100%; height: 800px; border: none;">
-</iframe></p>
-</div>
-<div class="tabbed-block">
-<p><a href="../../tutorials/plot/figures/line_selected_quantiles.html" target="_blank">View in separate window</a>
-<iframe src="../../tutorials/plot/figures/line_selected_quantiles.html"
-    style="width: 100%; height: 800px; border: none;">
-</iframe></p>
-</div>
-</div>
-</div>
-</div>
-<div class="tabbed-block">
-<p>A disclosure-review-style point-and-whisker chart, with and without a <code>series=</code> for multiple offset points per row.</p>
-<div class="tabbed-set tabbed-alternate" data-tabs="3:3"><input checked="checked" id="__tabbed_3_1" name="__tabbed_3" type="radio" /><input id="__tabbed_3_2" name="__tabbed_3" type="radio" /><input id="__tabbed_3_3" name="__tabbed_3" type="radio" /><div class="tabbed-labels"><label for="__tabbed_3_1">Code</label><label for="__tabbed_3_2">Log: with series</label><label for="__tabbed_3_3">Log: single series</label></div>
-<div class="tabbed-content">
-<div class="tabbed-block">
+<p>A disclosure-review-style point-and-whisker chart, with and without <code>series=</code> for multiple offset points per row.</p>
+<p><a href="../../tutorials/plot/figures/coefplot.html" target="_blank">with series</a> ·
+<a href="../../tutorials/plot/figures/coefplot_single_series.html" target="_blank">single series</a></p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
 <a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="kn">import</span><span class="w"> </span><span class="nn">narwhals</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">nw</span>
 <a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="kn">import</span><span class="w"> </span><span class="nn">polars</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pl</span>
@@ -1461,25 +1400,9 @@
 </code></pre></div>
 </div>
 <div class="tabbed-block">
-<p><a href="../../tutorials/plot/figures/coefplot.html" target="_blank">View in separate window</a>
-<iframe src="../../tutorials/plot/figures/coefplot.html"
-    style="width: 100%; height: 800px; border: none;">
-</iframe></p>
-</div>
-<div class="tabbed-block">
-<p><a href="../../tutorials/plot/figures/coefplot_single_series.html" target="_blank">View in separate window</a>
-<iframe src="../../tutorials/plot/figures/coefplot_single_series.html"
-    style="width: 100%; height: 800px; border: none;">
-</iframe></p>
-</div>
-</div>
-</div>
-</div>
-<div class="tabbed-block">
-<p>Several <code>StatCalculator</code> objects (one per age group, plus an overall total) stacked into one bar per category, with the total shown as a text label. Layers/categories may mix positive and negative values (second tab below) - each bar stacks its positive layers right of zero and its negative ones left, and the total label lands on whichever side its own net value falls on.</p>
-<div class="tabbed-set tabbed-alternate" data-tabs="4:3"><input checked="checked" id="__tabbed_4_1" name="__tabbed_4" type="radio" /><input id="__tabbed_4_2" name="__tabbed_4" type="radio" /><input id="__tabbed_4_3" name="__tabbed_4" type="radio" /><div class="tabbed-labels"><label for="__tabbed_4_1">Code</label><label for="__tabbed_4_2">Log: all-negative</label><label for="__tabbed_4_3">Log: mixed sign</label></div>
-<div class="tabbed-content">
-<div class="tabbed-block">
+<p>Layers/categories can mix positive and negative values - each bar stacks positive layers right of zero and negative ones left, with the total label landing on whichever side its net value falls on.</p>
+<p><a href="../../tutorials/plot/figures/stacked_bar.html" target="_blank">all-negative</a> ·
+<a href="../../tutorials/plot/figures/stacked_bar_mixed_sign.html" target="_blank">mixed sign</a></p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
 <a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="kn">import</span><span class="w"> </span><span class="nn">polars</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pl</span>
 <a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>
@@ -1634,25 +1557,9 @@
 </code></pre></div>
 </div>
 <div class="tabbed-block">
-<p><a href="../../tutorials/plot/figures/stacked_bar.html" target="_blank">View in separate window</a>
-<iframe src="../../tutorials/plot/figures/stacked_bar.html"
-    style="width: 100%; height: 800px; border: none;">
-</iframe></p>
-</div>
-<div class="tabbed-block">
-<p><a href="../../tutorials/plot/figures/stacked_bar_mixed_sign.html" target="_blank">View in separate window</a>
-<iframe src="../../tutorials/plot/figures/stacked_bar_mixed_sign.html"
-    style="width: 100%; height: 800px; border: none;">
-</iframe></p>
-</div>
-</div>
-</div>
-</div>
-<div class="tabbed-block">
-<p>Two independent runs, each plotted with and without a confidence band - a 2-level dropdown tree (Run -&gt; CI). Also covers nesting a third level (Run -&gt; CI -&gt; Year), labeling each level (<code>label=["Run:", "\nCI:", "\nYear:"]</code>), and putting each level on its own row of the control bar (the <code>"\n"</code> prefix).</p>
-<div class="tabbed-set tabbed-alternate" data-tabs="5:3"><input checked="checked" id="__tabbed_5_1" name="__tabbed_5" type="radio" /><input id="__tabbed_5_2" name="__tabbed_5" type="radio" /><input id="__tabbed_5_3" name="__tabbed_5" type="radio" /><div class="tabbed-labels"><label for="__tabbed_5_1">Code</label><label for="__tabbed_5_2">Log: 2 levels</label><label for="__tabbed_5_3">Log: 3 levels</label></div>
-<div class="tabbed-content">
-<div class="tabbed-block">
+<p>Two independent runs, each with and without a confidence band. Covers a 2-level tree (Run -&gt; CI), a 3-level one (Run -&gt; CI -&gt; Year), labeling each level, and putting a level on its own row.</p>
+<p><a href="../../tutorials/plot/figures/combine.html" target="_blank">2 levels</a> ·
+<a href="../../tutorials/plot/figures/combine_3_levels.html" target="_blank">3 levels</a></p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
 <a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="kn">import</span><span class="w"> </span><span class="nn">narwhals</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">nw</span>
 <a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="kn">import</span><span class="w"> </span><span class="nn">polars</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pl</span>
@@ -1795,25 +1702,9 @@
 </code></pre></div>
 </div>
 <div class="tabbed-block">
-<p><a href="../../tutorials/plot/figures/combine.html" target="_blank">View in separate window</a>
-<iframe src="../../tutorials/plot/figures/combine.html"
-    style="width: 100%; height: 800px; border: none;">
-</iframe></p>
-</div>
-<div class="tabbed-block">
-<p><a href="../../tutorials/plot/figures/combine_3_levels.html" target="_blank">View in separate window</a>
-<iframe src="../../tutorials/plot/figures/combine_3_levels.html"
-    style="width: 100%; height: 800px; border: none;">
-</iframe></p>
-</div>
-</div>
-</div>
-</div>
-<div class="tabbed-block">
-<p><code>coefplot()</code>/<code>stacked_bar()</code> have no group dropdown of their own, but (like <code>line()</code>/<code>quantiles()</code>) their legend clicks are shared by trace name across figures - isolating a series/layer in one branch and switching to a sibling branch with the same name shows it isolated there too, without touching that sibling's own legend. Two examples, one per plot type, each with two branches sharing the same trace names.</p>
-<div class="tabbed-set tabbed-alternate" data-tabs="6:4"><input checked="checked" id="__tabbed_6_1" name="__tabbed_6" type="radio" /><input id="__tabbed_6_2" name="__tabbed_6" type="radio" /><input id="__tabbed_6_3" name="__tabbed_6" type="radio" /><input id="__tabbed_6_4" name="__tabbed_6" type="radio" /><div class="tabbed-labels"><label for="__tabbed_6_1">Code: coefplot()</label><label for="__tabbed_6_2">Log: coefplot()</label><label for="__tabbed_6_3">Code: stacked_bar()</label><label for="__tabbed_6_4">Log: stacked_bar()</label></div>
-<div class="tabbed-content">
-<div class="tabbed-block">
+<p><code>coefplot()</code>/<code>stacked_bar()</code> have no group dropdown of their own, but their legend clicks are still shared by trace name - isolating a series/layer in one branch and switching to a sibling with the same name shows it isolated there too.</p>
+<p><a href="../../tutorials/plot/figures/combine_two_coefplots.html" target="_blank">coefplot()</a> ·
+<a href="../../tutorials/plot/figures/combine_two_stacked_bars.html" target="_blank">stacked_bar()</a></p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
 <a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="kn">import</span><span class="w"> </span><span class="nn">polars</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pl</span>
 <a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>
@@ -1915,14 +1806,6 @@
 <a id="__codelineno-4-99" name="__codelineno-4-99" href="#__codelineno-4-99"></a><span class="n">combined</span><span class="o">.</span><span class="n">write_html</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">path_docs_figures</span><span class="p">,</span> <span class="s2">&quot;combine_two_coefplots.html&quot;</span><span class="p">))</span>
 <a id="__codelineno-4-100" name="__codelineno-4-100" href="#__codelineno-4-100"></a><span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">path_docs_figures</span><span class="p">,</span> <span class="s2">&quot;combine_two_coefplots.html&quot;</span><span class="p">))</span>
 </code></pre></div>
-</div>
-<div class="tabbed-block">
-<p><a href="../../tutorials/plot/figures/combine_two_coefplots.html" target="_blank">View in separate window</a>
-<iframe src="../../tutorials/plot/figures/combine_two_coefplots.html"
-    style="width: 100%; height: 800px; border: none;">
-</iframe></p>
-</div>
-<div class="tabbed-block">
 <div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
 <a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="kn">import</span><span class="w"> </span><span class="nn">polars</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pl</span>
 <a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>
@@ -2028,15 +1911,6 @@
 <a id="__codelineno-5-103" name="__codelineno-5-103" href="#__codelineno-5-103"></a><span class="n">combined</span><span class="o">.</span><span class="n">write_html</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">path_docs_figures</span><span class="p">,</span> <span class="s2">&quot;combine_two_stacked_bars.html&quot;</span><span class="p">))</span>
 <a id="__codelineno-5-104" name="__codelineno-5-104" href="#__codelineno-5-104"></a><span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">path_docs_figures</span><span class="p">,</span> <span class="s2">&quot;combine_two_stacked_bars.html&quot;</span><span class="p">))</span>
 </code></pre></div>
-</div>
-<div class="tabbed-block">
-<p><a href="../../tutorials/plot/figures/combine_two_stacked_bars.html" target="_blank">View in separate window</a>
-<iframe src="../../tutorials/plot/figures/combine_two_stacked_bars.html"
-    style="width: 100%; height: 800px; border: none;">
-</iframe></p>
-</div>
-</div>
-</div>
 </div>
 </div>
 </div>
