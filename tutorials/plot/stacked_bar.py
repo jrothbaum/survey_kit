@@ -105,3 +105,47 @@ fig_stacked_bar = plot.stacked_bar(
 fig_stacked_bar.write_html(
     os.path.join(path_docs_figures, "stacked_bar.html"), include_plotlyjs="directory"
 )
+
+# %%
+logger.info(
+    "Layers aren't required to share a sign, and neither are whole "
+    "categories - three cases side by side here: 'no_ss' keeps its "
+    "negative (poverty-reducing) values for two age groups but flips "
+    "positive for 'Under 18', so that one bar stacks in both directions at "
+    "once (a block right of zero alongside blocks left of it); 'no_housing' "
+    "is flipped positive for every age group, an all-plus bar entirely to "
+    "the right; 'no_snap'/'no_ctc' stay all-negative, as before. Each "
+    "total label lands on whichever side its own net sum ends up on."
+)
+df_mixed = df.with_columns(
+    pl.when(pl.col("age_group") == "Under 18")
+    .then(-pl.col("impact_no_ss"))
+    .otherwise(pl.col("impact_no_ss"))
+    .alias("impact_no_ss"),
+    (-pl.col("impact_no_housing")).alias("impact_no_housing"),
+)
+items_mixed = {
+    label: StatCalculator(
+        df_mixed.filter(pl.col("age_group") == label),
+        statistics=stats,
+        weight="weight_0",
+        replicates=replicates,
+    )
+    for label in age_groups
+}
+items_mixed["Overall"] = StatCalculator(
+    df_mixed, statistics=stats, weight="weight_0", replicates=replicates
+)
+fig_stacked_bar_mixed = plot.stacked_bar(
+    items_mixed,
+    column="sum",
+    total_key="Overall",
+    rename=rename,
+    order=list(rename.values()),
+    label_round_digits=0,
+    x_axis_title="Change in number of people in poverty",
+)
+fig_stacked_bar_mixed.write_html(
+    os.path.join(path_docs_figures, "stacked_bar_mixed_sign.html"),
+    include_plotlyjs="directory",
+)

@@ -6,6 +6,8 @@ import re
 import shutil
 from io import StringIO
 
+from ._dropdown import DEFAULT_LEFT_MARGIN_PX
+
 
 def combine(
     tree: dict[str, object],
@@ -13,6 +15,7 @@ def combine(
     width: int | None = None,
     height: int | None = 700,
     layout: dict | None = None,
+    dropdowns_padding_left: int = DEFAULT_LEFT_MARGIN_PX,
 ) -> "CombinedFigure":
     """
     Combine several figures (from line()/quantiles()/coefplot()/
@@ -43,7 +46,10 @@ def combine(
         "View:". Pass a list to label (or skip, with None or "") each
         level individually, e.g. ["Run:", "CI:"] for a 2-level tree, or
         ["Run:", None, "Year:"] to leave the middle level unlabeled in
-        a 3-level one.
+        a 3-level one. A "\\n" anywhere in a level's label (it's stripped
+        from the displayed text) starts that level's whole control -
+        label and dropdown together - on a new row of the control bar,
+        e.g. ["Run:", "\\nCI:", "\\nYear:"] puts each level on its own row.
     width, height : int | None, optional
         Applied to every leaf figure before rendering. height default
         700; width default None (each figure's own autosize setting is
@@ -56,6 +62,16 @@ def combine(
         you built yourself before handing it to combine(), you can
         always fig.update_layout(...) an individual one beforehand
         instead, if only that one needs something different.
+    dropdowns_padding_left : int, optional
+        Left padding (px) on the label/dropdown table, default 15 - also
+        applied to any leaf's own internal group dropdown (see
+        add_group_dropdown), so the two line up instead of each floating
+        at a different offset. This is cosmetic spacing for the dropdowns
+        (and text) themselves, not an attempt to line them up with a
+        figure's plotted data area - that area's left edge floats with
+        each figure's own axis-label width (via Plotly's automargin) and
+        can differ leaf to leaf, so no fixed padding here would track it
+        correctly anyway.
 
     Returns
     -------
@@ -65,7 +81,14 @@ def combine(
         plot functions there's nothing to .show() directly in a
         notebook; open the saved HTML instead.
     """
-    return CombinedFigure(tree, label=label, width=width, height=height, layout=layout)
+    return CombinedFigure(
+        tree,
+        label=label,
+        width=width,
+        height=height,
+        layout=layout,
+        dropdowns_padding_left=dropdowns_padding_left,
+    )
 
 
 class CombinedFigure:
@@ -76,12 +99,14 @@ class CombinedFigure:
         width: int | None = None,
         height: int | None = 700,
         layout: dict | None = None,
+        dropdowns_padding_left: int = DEFAULT_LEFT_MARGIN_PX,
     ):
         self.tree = tree
         self.label = label
         self.width = width
         self.height = height
         self.layout = layout
+        self.dropdowns_padding_left = dropdowns_padding_left
 
     def write_html(
         self, path: str, include_plotlyjs: str = "directory", **kwargs
@@ -126,7 +151,13 @@ class CombinedFigure:
 
             js_template = getattr(leaf, "_dropdown_js_template", None)
             if js_template is not None:
-                js = js_template.replace("PLOT_ID", plot_id)
+                #   Force this leaf's own group-dropdown widget (if shown)
+                #   to the same left offset as our own outer table - see
+                #   DEFAULT_LEFT_MARGIN_PX - rather than the leaf's default
+                #   of chasing its own (leaf-dependent) axis margin.
+                js = js_template.replace("PLOT_ID", plot_id).replace(
+                    "LEFT_MARGIN_PX", str(self.dropdowns_padding_left)
+                )
                 meta = getattr(leaf, "_dropdown_metadata", "{}")
                 meta_tag = f'<script id="plot-dropdown-metadata-{plot_id}" type="application/json">{meta}</script>'
                 fragment = f"{fragment}\n<script>{js}</script>\n{meta_tag}"
@@ -157,6 +188,7 @@ class CombinedFigure:
             div_to_container=div_to_container,
             max_depth=max_depth,
             labels=labels,
+            dropdowns_padding_left=self.dropdowns_padding_left,
         )
 
         if include_plotlyjs == "directory":
@@ -230,7 +262,11 @@ def _tree_to_js(node, div_ids: dict, path: tuple = ()) -> dict:
 
 
 def _combine_js(
-    tree: dict, div_to_container: dict, max_depth: int, labels: list[str]
+    tree: dict,
+    div_to_container: dict,
+    max_depth: int,
+    labels: list[str],
+    dropdowns_padding_left: int,
 ) -> str:
     tree_js = json.dumps(tree)
     div_to_container_js = json.dumps(div_to_container)
@@ -368,14 +404,21 @@ def _combine_js(
         //   took over - the correct leaf was still shown (that path came
         //   from `currentPath` directly), but the dropdown widget itself
         //   displayed the wrong value.
-        var wrapper = selects[depth].wrapper;
+        var cells = selects[depth].cells;
         var select = selects[depth].select;
         var node = childrenAt(fullPath.slice(0, depth));
-        if (node === null) {{
-            wrapper.style.display = 'none';
+        //   No control at all when there's nothing to choose between - a
+        //   single-option level (node.order.length === 1) is inert the
+        //   same way add_group_dropdown skips its own widget for a single
+        //   group; node === null means this depth doesn't exist on the
+        //   current branch at all (uneven-depth trees).
+        if (node === null || node.order.length <= 1) {{
+            cells[0].style.display = 'none';
+            cells[1].style.display = 'none';
             return;
         }}
-        wrapper.style.display = 'flex';
+        cells[0].style.display = '';
+        cells[1].style.display = '';
         select.innerHTML = '';
         node.order.forEach(function(k) {{
             var opt = document.createElement('option');
@@ -411,34 +454,52 @@ def _combine_js(
     }}
 
     function buildControls() {{
-        var bar = document.createElement('div');
-        bar.style.display = 'flex';
-        bar.style.flexWrap = 'wrap';
-        bar.style.alignItems = 'center';
-        bar.style.gap = '12px';
-        bar.style.padding = '4px 0 8px 8px';
+        //   A <table> rather than a flex bar so that when a "\\n" break
+        //   puts each level on its own <tr>, every row's label <td> and
+        //   select <td> share the same two table columns - the browser
+        //   then auto-sizes column 1 to the widest label, which is what
+        //   left-aligns every dropdown in column 2 regardless of how long
+        //   the label text next to it is.
+        var bar = document.createElement('table');
+        bar.style.borderCollapse = 'collapse';
+        bar.style.margin = '4px 0 8px {dropdowns_padding_left}px';
         bar.style.fontFamily = 'sans-serif';
         bar.style.fontSize = '12px';
 
+        var row = document.createElement('tr');
+        bar.appendChild(row);
+
         for (var d = 0; d < maxDepth; d++) {{
             (function(depth) {{
-                var wrapper = document.createElement('div');
-                wrapper.style.display = 'flex';
-                wrapper.style.alignItems = 'center';
-                wrapper.style.gap = '6px';
+                var rawLabel = levelLabels[depth] || '';
+                if (rawLabel.indexOf('\\n') !== -1) {{
+                    //   A "\\n" anywhere in this level's label means "start
+                    //   this whole control (label + dropdown together) on a
+                    //   new row" - not a line break within the label text
+                    //   itself, which is why it's stripped out below.
+                    row = document.createElement('tr');
+                    bar.appendChild(row);
+                    rawLabel = rawLabel.split('\\n').join('');
+                }}
 
-                var labelEl = document.createElement('span');
-                labelEl.textContent = levelLabels[depth] || '';
+                var labelTd = document.createElement('td');
+                labelTd.style.padding = '2px 6px 2px 0';
+                labelTd.style.whiteSpace = 'nowrap';
+                labelTd.textContent = rawLabel;
+
+                var selectTd = document.createElement('td');
+                selectTd.style.padding = '2px 12px 2px 0';
+                selectTd.style.textAlign = 'left';
 
                 var select = document.createElement('select');
                 select.style.fontSize = '12px';
                 select.style.fontFamily = 'sans-serif';
                 select.addEventListener('change', function() {{ onChange(depth, select.value); }});
 
-                wrapper.appendChild(labelEl);
-                wrapper.appendChild(select);
-                bar.appendChild(wrapper);
-                selects.push({{wrapper: wrapper, select: select}});
+                selectTd.appendChild(select);
+                row.appendChild(labelTd);
+                row.appendChild(selectTd);
+                selects.push({{cells: [labelTd, selectTd], select: select}});
             }})(d);
         }}
 

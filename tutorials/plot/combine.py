@@ -89,9 +89,12 @@ tree = {
 logger.info(
     "Every leaf here already has its own (inert, single-group) dropdown from "
     "quantiles() - combine() adds the 'Run A'/'Run B' and 'With CI'/'No CI' "
-    "switches on top, in one page."
+    "switches on top, in one page. layout={'margin': {'t': 30}} trims Plotly's "
+    "default top margin (~100px of otherwise-blank space above the plot, "
+    "reserved for a title none of these figures use) - a stopgap until "
+    "quantiles()/line() default to something less white-spacey on their own."
 )
-combined = plot.combine(tree, label="Run:")
+combined = plot.combine(tree, label=["Run:", "CI:"], layout={"margin": {"t": 30}})
 combined.write_html(os.path.join(path_docs_figures, "combine.html"))
 
 # %%
@@ -126,5 +129,11 @@ tree_deep = {
     },
 }
 
-combined_deep = plot.combine(tree_deep, label="Run:")
+combined_deep = plot.combine(
+    tree_deep,
+    label=["Run:", "\nCI:", "\nYear:"],
+    dropdowns_padding_left=50,
+    layout={"margin": {"t": 30}},
+)
 combined_deep.write_html(os.path.join(path_docs_figures, "combine_3_levels.html"))
+logger.info(os.path.join(path_docs_figures, "combine_3_levels.html"))

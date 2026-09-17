@@ -4,7 +4,7 @@ import narwhals as nw
 import polars as pl
 
 from ._colors import default_colors, default_dashes
-from ._dropdown import add_group_dropdown
+from ._dropdown import add_group_dropdown, attach_shared_legend_state
 from ._reshape import (
     apply_rename,
     long_frame,
@@ -383,6 +383,14 @@ def coefplot(
     don't overlap) - matches the classic disclosure-review chart of
     "estimate +/- CI, one row per subgroup, one color per year/source".
 
+    Has no group dropdown of its own (there's nothing to switch between -
+    every series is always shown), but single/double-click toggle/isolate
+    on the legend is still shared by trace name with any other
+    line()/quantiles()/coefplot()/stacked_bar() figure on the same page
+    (see add_group_dropdown) - isolating "2018" here and switching to a
+    sibling figure inside combine() that also has a "2018" series shows
+    it isolated there too.
+
     Parameters
     ----------
     stat_item : StatCalculator | MultipleImputation
@@ -580,7 +588,7 @@ def coefplot(
 
     if layout:
         fig.update_layout(**layout)
-    return fig
+    return attach_shared_legend_state(fig)
 
 
 def stacked_bar(
@@ -611,7 +619,17 @@ def stacked_bar(
     layer of the stack (e.g. one age group's contribution), stacked per
     category. A shared blue gradient (lightest first) colors the layers
     in dict order, since these are typically ordered meaningfully (e.g.
-    smallest to largest group).
+    smallest to largest group). Layers, and categories, may mix positive
+    and negative values freely - each bar stacks its positive layers to
+    the right of zero and its negative ones to the left, and a total_key
+    label lands on whichever side its own net value falls on.
+
+    Has no group dropdown of its own, but single/double-click toggle/
+    isolate on the legend is shared by trace (layer) name with any other
+    line()/quantiles()/coefplot()/stacked_bar() figure on the same page
+    (see add_group_dropdown) - isolating "Under 18" here and switching to
+    a sibling figure inside combine() that also has an "Under 18" layer
+    shows it isolated there too.
 
     Parameters
     ----------
@@ -725,12 +743,19 @@ def stacked_bar(
                 display_value = round(display_value, label_round_digits)
             shift = 15 if value >= 0 else -15
             if horizontal:
+                #   xanchor pins the text's near edge (not its center) to
+                #   the shifted point, so the label extends outward, away
+                #   from the bar, instead of straddling it - without this,
+                #   the default center anchor put roughly half of a
+                #   negative-value label even further left than intended,
+                #   overlapping the category axis labels.
                 fig.add_annotation(
                     x=value,
                     y=cat,
                     text=str(display_value),
                     showarrow=False,
                     xshift=shift,
+                    xanchor="left" if value >= 0 else "right",
                 )
             else:
                 fig.add_annotation(
@@ -739,10 +764,35 @@ def stacked_bar(
                     text=str(display_value),
                     showarrow=False,
                     yshift=shift,
+                    yanchor="bottom" if value >= 0 else "top",
                 )
 
     if height is None:
         height = len(category_order) * 35 + 400
+
+    if value_axis_range is None and total_key is not None:
+        #   Without this, a total label sits right at (or past) the axis's
+        #   own auto-computed edge - rangemode="tozero" only guarantees 0 is
+        #   included, not any headroom past the data's own extreme, so the
+        #   most extreme total's label had nowhere to go but into the
+        #   category axis's own label area. The bound has to come from the
+        #   actual plotted stack extents (each category's positive layers
+        #   summed separately from its negative ones, matching how
+        #   barmode="stack" itself splits mixed-sign layers on either side
+        #   of zero), not just total_key's own values - a category can have
+        #   a layer that reaches further than its net total does (e.g. one
+        #   positive layer partly offsetting two negative ones), and
+        #   bounding on the total alone would clip that layer's bar.
+        pos_extents, neg_extents = [0.0], [0.0]
+        for cat in category_order:
+            layer_vals = [values_by_key[k].get(cat) for k in stack_keys]
+            pos_extents.append(sum(v for v in layer_vals if v is not None and v > 0))
+            neg_extents.append(sum(v for v in layer_vals if v is not None and v < 0))
+        total_values = [v for v in values_by_key[total_key].values() if v is not None]
+        lo = min(neg_extents + total_values)
+        hi = max(pos_extents + total_values)
+        pad = max(abs(lo), abs(hi)) * 0.12
+        value_axis_range = [lo - pad if lo < 0 else lo, hi + pad if hi > 0 else hi]
 
     value_axis = dict(
         range=value_axis_range,
@@ -776,7 +826,7 @@ def stacked_bar(
 
     if layout:
         fig.update_layout(**layout)
-    return fig
+    return attach_shared_legend_state(fig)
 
 
 def _blue_gradient(n: int) -> list[str]:

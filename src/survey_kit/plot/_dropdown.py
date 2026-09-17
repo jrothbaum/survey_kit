@@ -8,6 +8,13 @@ import shutil
 import types
 from io import StringIO
 
+#   Standalone default for this widget's left offset (see buildSelectWidget's
+#   "LEFT_MARGIN_PX" placeholder below) - also combine()'s own default
+#   dropdowns_padding_left, so a leaf's own dropdown lines up with
+#   combine()'s outer table out of the box, without either one reading the
+#   other's rendered position at runtime.
+DEFAULT_LEFT_MARGIN_PX = 15
+
 
 def add_group_dropdown(
     fig,
@@ -118,6 +125,34 @@ def add_group_dropdown(
     fig._companions = companions or {}
 
     return _attach_dropdown_js(fig, show_widget=len(groups) > 1)
+
+
+def attach_shared_legend_state(fig) -> "plotly.graph_objects.Figure":  # noqa: F821
+    """
+    Wire a figure's legend into the same name-keyed shared toggle/isolate
+    state as add_group_dropdown (single click toggles a trace, double
+    click isolates it, both tracked by trace name in
+    window.__survey_kit_name_visible__) - without adding a group dropdown
+    widget or touching layout (legend position, width, height). Used by
+    coefplot()/stacked_bar(), which have no groups of their own to switch
+    between but should still pick up a same-named trace's isolate/toggle
+    state when combine() switches to a sibling figure, the same way a
+    line()/quantiles() figure already does.
+
+    Parameters
+    ----------
+    fig : plotly.graph_objects.Figure
+        Modified in place (and also returned, for chaining).
+
+    Returns
+    -------
+    plotly.graph_objects.Figure
+    """
+    fig._group_map = {"all": list(range(len(fig.data)))}
+    fig._default_group = "all"
+    fig._dropdown_label = ""
+    fig._companions = {}
+    return _attach_dropdown_js(fig, show_widget=False)
 
 
 def _attach_dropdown_js(fig, show_widget: bool) -> "plotly.graph_objects.Figure":  # noqa: F821
@@ -246,12 +281,17 @@ def _attach_dropdown_js(fig, show_widget: bool) -> "plotly.graph_objects.Figure"
     }}
 
     function buildSelectWidget() {{
-        var leftMargin = (gd.layout.margin && gd.layout.margin.l) ? gd.layout.margin.l : 80;
-
+        //   "LEFT_MARGIN_PX" is a placeholder (like "PLOT_ID" above) -
+        //   left as literal text here and resolved by whichever write_html
+        //   actually renders this figure: this file's own (standalone) to
+        //   DEFAULT_LEFT_MARGIN_PX, or combine()'s to its own configured
+        //   dropdowns_padding_left, so a leaf's own dropdown always lines
+        //   up with whatever left offset is in play instead of chasing
+        //   this figure's own (leaf-dependent) axis margin.
         var wrapper = document.createElement('div');
         wrapper.style.position = 'absolute';
         wrapper.style.top = '4px';
-        wrapper.style.left = leftMargin + 'px';
+        wrapper.style.left = 'LEFT_MARGIN_PXpx';
         wrapper.style.zIndex = '1000';
         wrapper.style.display = 'flex';
         wrapper.style.alignItems = 'center';
@@ -312,7 +352,9 @@ def _attach_dropdown_js(fig, show_widget: bool) -> "plotly.graph_objects.Figure"
         div_id_match = re.search(r'<div id="([^"]+)" class="plotly-graph-div"', html)
         if div_id_match:
             plot_id = div_id_match.group(1)
-            js = self._dropdown_js_template.replace("PLOT_ID", plot_id)
+            js = self._dropdown_js_template.replace("PLOT_ID", plot_id).replace(
+                "LEFT_MARGIN_PX", str(DEFAULT_LEFT_MARGIN_PX)
+            )
             meta_tag = f'<script id="plot-dropdown-metadata-{plot_id}" type="application/json">{self._dropdown_metadata}</script>'
             html = html.replace(
                 "</body>", f"<script>{js}</script>\n{meta_tag}\n</body>"

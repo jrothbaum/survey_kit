@@ -1049,15 +1049,6 @@
   
 </li>
         
-          <li class="md-nav__item">
-  <a href="#survey_kit.imputation.parameters.Parameters.RegressionModel--twosampleregression-3" class="md-nav__link">
-    <span class="md-ellipsis">
-      TwoSampleRegression = 3
-    </span>
-  </a>
-  
-</li>
-        
       </ul>
     </nav>
   
@@ -1148,6 +1139,15 @@
   <a href="#survey_kit.imputation.parameters.Parameters.StatMatch" class="md-nav__link">
     <span class="md-ellipsis">
       StatMatch
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#survey_kit.imputation.parameters.Parameters.TwoSampleRegression" class="md-nav__link">
+    <span class="md-ellipsis">
+      TwoSampleRegression
     </span>
   </a>
   
@@ -1719,15 +1719,6 @@
   
 </li>
         
-          <li class="md-nav__item">
-  <a href="#survey_kit.imputation.parameters.Parameters.RegressionModel--twosampleregression-3" class="md-nav__link">
-    <span class="md-ellipsis">
-      TwoSampleRegression = 3
-    </span>
-  </a>
-  
-</li>
-        
       </ul>
     </nav>
   
@@ -1818,6 +1809,15 @@
   <a href="#survey_kit.imputation.parameters.Parameters.StatMatch" class="md-nav__link">
     <span class="md-ellipsis">
       StatMatch
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#survey_kit.imputation.parameters.Parameters.TwoSampleRegression" class="md-nav__link">
+    <span class="md-ellipsis">
+      TwoSampleRegression
     </span>
   </a>
   
@@ -4273,7 +4273,6 @@ leaf = 2</p>
         <p>OLS = 0</p>
 <h4 id="survey_kit.imputation.parameters.Parameters.RegressionModel--probit-1">Probit = 1<a class="headerlink" href="#survey_kit.imputation.parameters.Parameters.RegressionModel--probit-1" title="Permanent link">&para;</a></h4>
 <p>Logit = 2</p>
-<h4 id="survey_kit.imputation.parameters.Parameters.RegressionModel--twosampleregression-3">TwoSampleRegression = 3<a class="headerlink" href="#survey_kit.imputation.parameters.Parameters.RegressionModel--twosampleregression-3" title="Permanent link">&para;</a></h4>
 
 
 
@@ -6302,6 +6301,406 @@ but then also impute hours worked and weeks worked with it.</p>
             <td>
               <div class="doc-md-description">
                 <p>stat match parameter dictionary</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h3 id="survey_kit.imputation.parameters.Parameters.TwoSampleRegression" class="doc doc-heading">
+            <span class="doc doc-object-name doc-function-name">TwoSampleRegression</span>
+
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-staticmethod"><code>staticmethod</code></small>
+  </span>
+
+<a href="#survey_kit.imputation.parameters.Parameters.TwoSampleRegression" class="headerlink" title="Permanent link">&para;</a></h3>
+<div class="doc-signature highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nf">TwoSampleRegression</span><span class="p">(</span>
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>    <span class="n">model</span><span class="p">:</span> <span class="s2">&quot;Parameters.RegressionModel&quot;</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>    <span class="n">is_boolean</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>    <span class="n">bins</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">10</span><span class="p">,</span>
+<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>    <span class="n">bin_by</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">|</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>    <span class="n">percentile_cuts</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>    <span class="n">save_percentile_cuts</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+<a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>    <span class="n">round_impute_var_digits</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">4</span><span class="p">,</span>
+<a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>    <span class="n">continuous_qtiles_y_cuts</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+<a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a>    <span class="n">continuous_qtiles_interpolate_by_bin</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+<a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a>    <span class="n">min_n_x_var</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span>
+<a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a>    <span class="n">draw_error</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+<a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a>    <span class="n">random_share</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">1.0</span><span class="p">,</span>
+<a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a>    <span class="n">save_disclosure_support</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+<a id="__codelineno-0-15" name="__codelineno-0-15" href="#__codelineno-0-15"></a>    <span class="n">path_save</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span><span class="p">,</span>
+<a id="__codelineno-0-16" name="__codelineno-0-16" href="#__codelineno-0-16"></a>    <span class="n">path_load</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span><span class="p">,</span>
+<a id="__codelineno-0-17" name="__codelineno-0-17" href="#__codelineno-0-17"></a>    <span class="n">load_from_save</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+<a id="__codelineno-0-18" name="__codelineno-0-18" href="#__codelineno-0-18"></a><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span>
+</code></pre></div>
+
+    <div class="doc doc-contents ">
+
+        <p>Parameters for two-sample regression imputation.</p>
+<p>Fits a regression (OLS/Logit) on one sample, then imputes a
+(possibly different) sample by binning the predicted yhat into
+percentile groups and drawing from the EMPIRICAL distribution of y
+within each bin - never a value predicted directly by the model.
+Unlike pmm/leaf error draws, nothing is donated from one recipient
+row to another; every draw comes from the model sample's own
+observed y values (or residuals, if draw_error=True), aggregated
+per bin.</p>
+<p>The fitted model (coefficients, bin cutoffs, per-bin distribution)
+can be persisted to disk (path_save) and reloaded later
+(path_load/load_from_save) to impute a genuinely separate sample
+that was never in memory at the same time as the model sample -
+the "two-sample" in the name. Persistence is plain CSV/JSON files
+in a variable-specific folder (never pickle - not reliably
+portable across machines/environments/library versions - and
+never a bundled archive either, so every file can be opened
+directly without an extraction step), so model= must resolve to
+numeric-only predictors (a plain column list, or a formula with
+no C(...)/factor terms) - a fitted categorical encoding has no
+portable plain-text representation. Pre-encode any categorical
+predictor into numeric/dummy columns yourself first.</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>model</code>
+            </td>
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="RegressionModel (survey_kit.imputation.parameters.Parameters.RegressionModel)" href="#survey_kit.imputation.parameters.Parameters.RegressionModel">RegressionModel</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>OLS or Logit, by default RegressionModel.OLS (Logit if
+is_boolean=True and model isn't passed explicitly).</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>is_boolean</code>
+            </td>
+            <td>
+                  <code><span title="bool">bool</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Whether impute_var is binary, by default False. Controls both
+the default model choice and the draw mechanism: bin-level
+P(y=1) + a Bernoulli draw, instead of a bin-level empirical
+quantile distribution.</p>
+              </div>
+            </td>
+            <td>
+                  <code>False</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>bins</code>
+            </td>
+            <td>
+                  <code><span title="int">int</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Number of percentile bins to split predicted yhat into, by
+default 10 - each bin gets its own P(y=1) (boolean) or
+empirical quantile distribution (continuous) to draw from.</p>
+              </div>
+            </td>
+            <td>
+                  <code>10</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>bin_by</code>
+            </td>
+            <td>
+                  <code><span title="list">list</span>[<span title="str">str</span>] | <span title="str">str</span> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Additional grouping columns - compute a separate distribution
+per (bin_by, prediction bin) cell instead of per prediction
+bin alone, by default None.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>percentile_cuts</code>
+            </td>
+            <td>
+                  <code><span title="list">list</span>[<span title="float">float</span>] | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Explicit bin cut points (0-100 scale) instead of <code>bins</code> evenly
+spaced ones, by default None.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>save_percentile_cuts</code>
+            </td>
+            <td>
+                  <code><span title="bool">bool</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Freeze the bin cutoffs the first time they're computed under
+path_save, reusing the same cutoffs on every later call (e.g.
+across SRMI's repeated iterations) instead of recomputing them
+fresh each time - keeps disclosure-reviewed bin boundaries
+stable while the regression and distribution still refit every
+call. Independent of load_from_save, which freezes everything.
+By default False.</p>
+              </div>
+            </td>
+            <td>
+                  <code>False</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>round_impute_var_digits</code>
+            </td>
+            <td>
+                  <code><span title="int">int</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Digits to DRB-round (see utilities.rounding.drb_round_table)
+the predicted score and impute_var to before computing bin
+cutoffs/distributions and before persisting them, by default
+4.</p>
+              </div>
+            </td>
+            <td>
+                  <code>4</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>continuous_qtiles_y_cuts</code>
+            </td>
+            <td>
+                  <code><span title="list">list</span>[<span title="float">float</span>] | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Quantile levels (0-1 scale) of the empirical y (or residual)
+distribution to compute per bin, later interpolated between to
+draw a value - see utilities.draw_from_quantiles. By default
+[0.1, 0.25, 0.5, 0.75, 0.9] if None.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>continuous_qtiles_interpolate_by_bin</code>
+            </td>
+            <td>
+                  <code><span title="bool">bool</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Compute the Census-style interpolation interval
+(Statistics(quantile_interpolated=True)) separately within
+each bin instead of once globally, by default False - more
+accurate when bins vary a lot in spread, at the cost of time.</p>
+              </div>
+            </td>
+            <td>
+                  <code>False</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>min_n_x_var</code>
+            </td>
+            <td>
+                  <code><span title="int">int</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Minimum non-zero observations required per predictor to keep
+it in the model, by default 0 (no restriction) - for
+disclosure, same as _build_model_matrix's min_n_x_var.</p>
+              </div>
+            </td>
+            <td>
+                  <code>0</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>draw_error</code>
+            </td>
+            <td>
+                  <code><span title="bool">bool</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Draw from the bin's empirical distribution of residuals
+(yhat - y) and add the draw to yhat, instead of drawing
+directly from the bin's empirical distribution of y itself.
+Only meaningful when is_boolean=False. By default False.</p>
+              </div>
+            </td>
+            <td>
+                  <code>False</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>random_share</code>
+            </td>
+            <td>
+                  <code><span title="float">float</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Fraction of the model sample to fit on, by default 1.0.</p>
+              </div>
+            </td>
+            <td>
+                  <code>1.0</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>save_disclosure_support</code>
+            </td>
+            <td>
+                  <code><span title="bool">bool</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Also persist a disclosure-review audit trail alongside the
+model (only when path_save is set): the exact record count in
+every (bin_by, prediction bin) cell the distribution was
+built from, and how many model+recipient records land
+exactly on each bin cutoff (relevant when the underlying data
+has heaping/rounding). Never affects the fitted model, the
+cutoffs, or the draw itself - purely an extra file for a
+human reviewer to check cell sizes with. By default False -
+these are real record counts, so leave this off unless
+someone is actually going to review them.</p>
+              </div>
+            </td>
+            <td>
+                  <code>False</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>path_save</code>
+            </td>
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Directory to persist the fitted model/cutoffs/distribution to
+(as plain files under f"{path_save}/{impute_var}/"), by
+default "" (don't persist).</p>
+              </div>
+            </td>
+            <td>
+                  <code>&#39;&#39;</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>path_load</code>
+            </td>
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Directory to load a previously-persisted model from when
+load_from_save=True, by default "" (falls back to path_save).</p>
+              </div>
+            </td>
+            <td>
+                  <code>&#39;&#39;</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>load_from_save</code>
+            </td>
+            <td>
+                  <code><span title="bool">bool</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Skip fitting entirely and impute purely from a previously
+persisted model (path_load/path_save) - the model sample
+doesn't need to be present in this run at all. By default
+False.</p>
+              </div>
+            </td>
+            <td>
+                  <code>False</code>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    <p><span class="doc-section-title">Returns:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="dict">dict</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Two-sample regression parameter dictionary</p>
               </div>
             </td>
           </tr>

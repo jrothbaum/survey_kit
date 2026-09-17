@@ -21,8 +21,9 @@ Four core plot functions - [`line`](../api/plot.md#survey_kit.plot.line), [`quan
 - **`quantiles()`** - `line()` specialized to a stat item's own quantile-stat columns (`q10`, `q25`, ... or `median`), plotted across percentile 0-100.
 - **`coefplot()`** - the classic disclosure-review chart: one row per category, a point-and-whisker per row (and, with `series=`, several offset points per row for comparing e.g. multiple years), with optional `headers=` section dividers.
 - **`stacked_bar()`** - several `StatCalculator`/`MultipleImputation` objects that share a category axis, stacked to show how they add up to a `total_key` total shown as a text label.
-- **`combine()`** - nests whole figures under as many dropdown levels as the dict you pass it has, preserving each leaf figure's own internal group dropdown.
+- **`combine()`** - nests whole figures under as many dropdown levels as the dict you pass it has, preserving each leaf figure's own internal group dropdown. Label each level (`label=["Run:", "CI:"]`), put a level on its own row of the control bar (a `"\n"` in that level's label), and a level with only one option (e.g. a branch that's a bare figure, not a dict) shows no dropdown at all.
 - **`group_by`** - splits each series label on a separator so related series (e.g. two historical years vs. a recent one) land in the same dropdown entry instead of getting one each.
+- **Shared legend state across figures** - isolating/toggling a series by name on one figure's legend carries over to any sibling figure with a same-named series once `combine()` switches to it (or once it's shown at all) - works the same way for `line()`/`quantiles()`'s group dropdown and for `coefplot()`/`stacked_bar()`'s plain legend, even though only the former has a dropdown of its own.
 
 ## When to Use What
 
@@ -48,9 +49,27 @@ See the [Plotting API reference](../api/plot.md) for the full parameter list of 
         --8<-- "tutorials/plot/line_and_quantiles.py"
         ```
 
-    === "Log"
-        [View in separate window](../tutorials/plot/line_and_quantiles.html){:target="_blank"}
-        <iframe src="../../tutorials/plot/line_and_quantiles.html"
+    === "Log: quantiles()"
+        [View in separate window](../tutorials/plot/figures/quantiles.html){:target="_blank"}
+        <iframe src="../../tutorials/plot/figures/quantiles.html"
+            style="width: 100%; height: 800px; border: none;">
+        </iframe>
+
+    === "Log: with CI"
+        [View in separate window](../tutorials/plot/figures/quantiles_ci_area.html){:target="_blank"}
+        <iframe src="../../tutorials/plot/figures/quantiles_ci_area.html"
+            style="width: 100%; height: 800px; border: none;">
+        </iframe>
+
+    === "Log: grouped"
+        [View in separate window](../tutorials/plot/figures/quantiles_grouped.html){:target="_blank"}
+        <iframe src="../../tutorials/plot/figures/quantiles_grouped.html"
+            style="width: 100%; height: 800px; border: none;">
+        </iframe>
+
+    === "Log: line()"
+        [View in separate window](../tutorials/plot/figures/line_selected_quantiles.html){:target="_blank"}
+        <iframe src="../../tutorials/plot/figures/line_selected_quantiles.html"
             style="width: 100%; height: 800px; border: none;">
         </iframe>
 
@@ -62,36 +81,79 @@ See the [Plotting API reference](../api/plot.md) for the full parameter list of 
         --8<-- "tutorials/plot/coefplot.py"
         ```
 
-    === "Log"
-        [View in separate window](../tutorials/plot/coefplot.html){:target="_blank"}
-        <iframe src="../../tutorials/plot/coefplot.html"
+    === "Log: with series"
+        [View in separate window](../tutorials/plot/figures/coefplot.html){:target="_blank"}
+        <iframe src="../../tutorials/plot/figures/coefplot.html"
+            style="width: 100%; height: 800px; border: none;">
+        </iframe>
+
+    === "Log: single series"
+        [View in separate window](../tutorials/plot/figures/coefplot_single_series.html){:target="_blank"}
+        <iframe src="../../tutorials/plot/figures/coefplot_single_series.html"
             style="width: 100%; height: 800px; border: none;">
         </iframe>
 
 === "stacked_bar()"
-    Several `StatCalculator` objects (one per age group, plus an overall total) stacked into one bar per category, with the total shown as a text label.
+    Several `StatCalculator` objects (one per age group, plus an overall total) stacked into one bar per category, with the total shown as a text label. Layers/categories may mix positive and negative values (second tab below) - each bar stacks its positive layers right of zero and its negative ones left, and the total label lands on whichever side its own net value falls on.
 
     === "Code"
         ```python
         --8<-- "tutorials/plot/stacked_bar.py"
         ```
 
-    === "Log"
-        [View in separate window](../tutorials/plot/stacked_bar.html){:target="_blank"}
-        <iframe src="../../tutorials/plot/stacked_bar.html"
+    === "Log: all-negative"
+        [View in separate window](../tutorials/plot/figures/stacked_bar.html){:target="_blank"}
+        <iframe src="../../tutorials/plot/figures/stacked_bar.html"
+            style="width: 100%; height: 800px; border: none;">
+        </iframe>
+
+    === "Log: mixed sign"
+        [View in separate window](../tutorials/plot/figures/stacked_bar_mixed_sign.html){:target="_blank"}
+        <iframe src="../../tutorials/plot/figures/stacked_bar_mixed_sign.html"
             style="width: 100%; height: 800px; border: none;">
         </iframe>
 
 === "combine()"
-    Two independent runs, each plotted with and without a confidence band - a 3-level dropdown tree (Run -> CI). Also covers nesting a third level (Run -> CI -> Year).
+    Two independent runs, each plotted with and without a confidence band - a 2-level dropdown tree (Run -> CI). Also covers nesting a third level (Run -> CI -> Year), labeling each level (`label=["Run:", "\nCI:", "\nYear:"]`), and putting each level on its own row of the control bar (the `"\n"` prefix).
 
     === "Code"
         ```python
         --8<-- "tutorials/plot/combine.py"
         ```
 
-    === "Log"
-        [View in separate window](../tutorials/plot/combine.html){:target="_blank"}
-        <iframe src="../../tutorials/plot/combine.html"
+    === "Log: 2 levels"
+        [View in separate window](../tutorials/plot/figures/combine.html){:target="_blank"}
+        <iframe src="../../tutorials/plot/figures/combine.html"
+            style="width: 100%; height: 800px; border: none;">
+        </iframe>
+
+    === "Log: 3 levels"
+        [View in separate window](../tutorials/plot/figures/combine_3_levels.html){:target="_blank"}
+        <iframe src="../../tutorials/plot/figures/combine_3_levels.html"
+            style="width: 100%; height: 800px; border: none;">
+        </iframe>
+
+=== "combine() + shared legend state"
+    `coefplot()`/`stacked_bar()` have no group dropdown of their own, but (like `line()`/`quantiles()`) their legend clicks are shared by trace name across figures - isolating a series/layer in one branch and switching to a sibling branch with the same name shows it isolated there too, without touching that sibling's own legend. Two examples, one per plot type, each with two branches sharing the same trace names.
+
+    === "Code: coefplot()"
+        ```python
+        --8<-- "tutorials/plot/combine_two_coefplots.py"
+        ```
+
+    === "Log: coefplot()"
+        [View in separate window](../tutorials/plot/figures/combine_two_coefplots.html){:target="_blank"}
+        <iframe src="../../tutorials/plot/figures/combine_two_coefplots.html"
+            style="width: 100%; height: 800px; border: none;">
+        </iframe>
+
+    === "Code: stacked_bar()"
+        ```python
+        --8<-- "tutorials/plot/combine_two_stacked_bars.py"
+        ```
+
+    === "Log: stacked_bar()"
+        [View in separate window](../tutorials/plot/figures/combine_two_stacked_bars.html){:target="_blank"}
+        <iframe src="../../tutorials/plot/figures/combine_two_stacked_bars.html"
             style="width: 100%; height: 800px; border: none;">
         </iframe>
