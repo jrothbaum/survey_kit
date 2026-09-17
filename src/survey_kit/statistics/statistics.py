@@ -338,16 +338,18 @@ class Statistics:
 
         cols_by = []
         for keyi, valuei in summary_tables.items():
-            cols_by.extend(
-                list(
-                    set(
-                        summary_tables[keyi].lazy().collect_schema().names()
-                    ).difference(stat_cols_final + cols_by)
-                )
-            )
+            #   Order-preserving difference (matches this table's own
+            #   schema order) rather than list(set(...).difference(...)),
+            #   which would reorder based on Python's per-process string
+            #   hash randomization, breaking determinism/replicability
+            #   across runs - cols_by's order feeds directly into
+            #   keep_order/output_table.sort() below.
+            table_cols = summary_tables[keyi].lazy().collect_schema().names()
+            already_have = set(stat_cols_final + cols_by)
+            cols_by.extend([c for c in table_cols if c not in already_have])
             cols_by.remove("Variable")
 
-        cols_dedupped = list(set(stat_cols_final))
+        cols_dedupped = list(dict.fromkeys(stat_cols_final))
         if len(cols_dedupped) != len(stat_cols_final):
             stat_cols_final = _columns_original_order(
                 columns_unordered=cols_dedupped, columns_ordered=stat_cols_final
@@ -365,8 +367,11 @@ class Statistics:
             output_table.drop(["Variable"] + summarize_vars)
         )
 
-        rounding.cols_round = list(set(rounding.cols_round + cols_round))
-        rounding.cols_n = list(set(rounding.cols_n + cols_n))
+        #   Dedupe preserving order - list(set(...)) would reorder based
+        #   on Python's per-process string hash randomization, breaking
+        #   determinism/replicability across runs.
+        rounding.cols_round = list(dict.fromkeys(rounding.cols_round + cols_round))
+        rounding.cols_n = list(dict.fromkeys(rounding.cols_n + cols_n))
 
         return lazy_backend(output_table, nw_type)
 
@@ -415,7 +420,7 @@ class Statistics:
 
         try:
             return suffix
-        except:
+        except UnboundLocalError:
             message = f"{Statistic} is not a valid statistic"
             logger.error(message)
             raise Exception(message)
@@ -433,8 +438,12 @@ class Statistics:
             # "n (not 0), weighted"
         ]
         columns = df.lazy().collect_schema().names()
-        cols_n = list(set(cols_n).intersection(columns))
-        cols_round = list(set(columns).difference(cols_n))
+        #   Order-preserving filter/difference (not list(set(...)),
+        #   which would reorder based on Python's per-process string
+        #   hash randomization, breaking determinism/replicability
+        #   across runs).
+        cols_n = [c for c in cols_n if c in columns]
+        cols_round = [c for c in columns if c not in cols_n]
 
         return (cols_round, cols_n)
 
@@ -518,7 +527,10 @@ def column_stats_builder(
 
             collisti = columns_from_list(df=df, columns=coli_original)
             if cols_exclude is not None:
-                collisti = list(set(collisti).difference(cols_exclude))
+                #   Order-preserving difference (not list(set(...)),
+                #   which would reorder based on Python's per-process
+                #   string hash randomization).
+                collisti = [c for c in collisti if c not in cols_exclude]
 
             if modifier != "":
                 collisti = [f"{coli}|{modifier}" for coli in collisti]
@@ -527,7 +539,10 @@ def column_stats_builder(
         cols = final_cols
     else:
         if len(cols_exclude):
-            cols = list(set(cols_include).difference(cols_exclude))
+            #   Order-preserving difference (not list(set(...)), which
+            #   would reorder based on Python's per-process string hash
+            #   randomization).
+            cols = [c for c in cols_include if c not in cols_exclude]
         else:
             cols = cols_include
 

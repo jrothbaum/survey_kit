@@ -1,9 +1,7 @@
 from __future__ import annotations
 
-import os
 import polars as pl
 import narwhals as nw
-import narwhals.selectors as cs
 from narwhals.typing import IntoFrameT
 from enum import Enum
 from copy import deepcopy
@@ -1232,15 +1230,15 @@ class Variable(Serializable):
 
         final_functions = []
         for fi in functions:
-            if type(fi) == nw.Expr:
+            if type(fi) is nw.Expr:
                 final_functions.append(Variable.PrePost.NarwhalsExpression(fi))
-            elif type(fi) == pl.Expr:
+            elif type(fi) is pl.Expr:
                 final_functions.append(Variable.PrePost.PolarsExpression(fi))
             elif type(fi) is list:
                 for fi_sub in fi:
-                    if type(fi_sub) == nw.Expr:
+                    if type(fi_sub) is nw.Expr:
                         final_functions.append(Variable.PrePost.NarwhalsExpression(fi_sub))
-                    elif type(fi_sub) == pl.Expr:
+                    elif type(fi_sub) is pl.Expr:
                         final_functions.append(Variable.PrePost.PolarsExpression(fi_sub))
                     else:
                         final_functions.append(fi_sub)
@@ -1278,11 +1276,17 @@ class Variable(Serializable):
                         if item != "":
                             final_list.append(item)
                     elif type(self.parameters["model_list"][modeli]) is list:
-                        item = list(
-                            set(self.parameters["model_list"][modeli]).difference(
-                                exclude_list
-                            )
-                        )
+                        #   Order-preserving difference (matches this
+                        #   model_list entry's own predictor order)
+                        #   rather than list(set(...)), which would
+                        #   reorder based on Python's per-process
+                        #   string hash randomization - this feeds the
+                        #   model's own predictor column order.
+                        item = [
+                            v
+                            for v in self.parameters["model_list"][modeli]
+                            if v not in exclude_list
+                        ]
 
                         if len(item) > 0:
                             final_list.append(item)
@@ -1579,7 +1583,9 @@ class Variable(Serializable):
         """
 
         impute_type = (
-            compress_df(df=nw.from_native(df).select(self.impute_var).to_native())
+            nw.from_native(
+                compress_df(df=nw.from_native(df).select(self.impute_var).to_native())
+            )
             .lazy()
             .collect_schema()[self.impute_var]
         )
@@ -1607,12 +1613,20 @@ class Variable(Serializable):
         full_models = []
         for modi in self.parameters["model_list"]:
             full_models.extend(modi)
-        full_models = list(set(full_models))
+        #   Dedupe preserving order - list(set(...)) would reorder based
+        #   on Python's per-process string hash randomization, breaking
+        #   determinism across separate runs even with a fixed seed.
+        full_models = list(dict.fromkeys(full_models))
         full_donate = [self.impute_var]
         if self.parameters["donate_list"] is not None:
             full_donate.extend(self.parameters["donate_list"])
 
-        donates_in_models = set(full_donate).intersection(full_models)
+        #   Order-preserving intersection (not set(...).intersection(...)),
+        #   which would reorder based on Python's per-process string
+        #   hash randomization - only used in a log message below, kept
+        #   deterministic for readability/consistency.
+        full_models_set = set(full_models)
+        donates_in_models = [v for v in full_donate if v in full_models_set]
 
         if len(donates_in_models):
             logger.info(

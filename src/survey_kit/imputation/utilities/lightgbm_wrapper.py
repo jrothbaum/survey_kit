@@ -33,7 +33,10 @@ from ...utilities.dataframe import (
     lazy_backend,
 )
 from ...utilities.random import set_seed, generate_seed
-from .tuning import HyperparameterSpace, Tuner, Objective
+#   Objective isn't used in this file's own code - see the module-level
+#   comment near the bottom of this file for why it's re-exported
+#   anyway ("as Objective" makes that explicit to linters).
+from .tuning import Tuner, Objective as Objective
 
 from ... import logger
 
@@ -132,7 +135,12 @@ class Survey_kit_Lightgbm:
     def set_parameters(self, **kwargs):
         valid_options = list(Survey_kit_Lightgbm._feature_characteristics())
 
-        invalid_passed = list(set(list(kwargs.keys())).difference(valid_options))
+        #   Order-preserving (matches kwargs' own order) rather than
+        #   list(set(...)) - purely cosmetic here (only used to build
+        #   the error message below), but a set() roundtrip would still
+        #   make the message's ordering vary run-to-run based on
+        #   Python's per-process string hash randomization.
+        invalid_passed = [k for k in kwargs.keys() if k not in valid_options]
 
         if len(invalid_passed) > 0:
             message = f"Invalid option(s) passed: {', '.join(invalid_passed)}\n"
@@ -874,6 +882,18 @@ class Survey_kit_Lightgbm:
 
         non_tunable_lists = ["categorical_feature"]
 
+        #   Not set by default (see _parameters_defaults) - a fixed seed
+        #   alone isn't enough for bit-for-bit reproducibility once
+        #   num_threads > 1, since parallel histogram-building can
+        #   combine floating-point partial sums in a different order
+        #   run-to-run. LightGBM's own docs recommend deterministic=True
+        #   plus force_row_wise/force_col_wise for that. Left opt-in
+        #   here rather than defaulted on - it costs real training
+        #   speed (gives up some of LightGBM's own parallel
+        #   optimizations), a trade-off only the caller can make for
+        #   their own run.
+        non_tunable_bools = ["deterministic", "force_row_wise", "force_col_wise"]
+
         if feature == "":
             d_out = {}
             d_out.update({feature: [int, True] for feature in tunable_ints})
@@ -890,6 +910,8 @@ class Survey_kit_Lightgbm:
 
                 d_out.update({feature: [list, False] for feature in non_tunable_lists})
 
+                d_out.update({feature: [bool, False] for feature in non_tunable_bools})
+
             return d_out
         else:
             if feature in tunable_ints:
@@ -902,6 +924,8 @@ class Survey_kit_Lightgbm:
                 return [float, False]
             elif feature in non_tunable_ints:
                 return [int, False]
+            elif feature in non_tunable_bools:
+                return [bool, False]
             elif feature in non_tunable_lists:
                 return [list, False]
             else:
@@ -921,7 +945,7 @@ class Survey_kit_Lightgbm:
             try:
                 cpus = int(omp_num_threads)
                 params["num_threads"] = max(1, cpus)
-            except:
+            except ValueError:
                 pass
 
         params["seed"] = random.randint(1, 2**32 - 1)

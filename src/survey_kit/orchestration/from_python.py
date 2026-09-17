@@ -137,7 +137,13 @@ def FunctionFromPython(
         if indict is None:
             indict = {}
 
-        present = set(findlist).intersection(indict.keys())
+        #   Order-preserving (matches findlist's own order) rather than
+        #   iterating a raw set(...).intersection(...) - a set()
+        #   roundtrip reorders based on Python's per-process string hash
+        #   randomization, and listout below is built by iterating this
+        #   directly, so that would silently vary the resulting
+        #   inputs/outputs order run-to-run.
+        present = [p for p in findlist if p in indict.keys()]
 
         listout = []
         for parami in present:

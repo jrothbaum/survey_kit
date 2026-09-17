@@ -437,7 +437,11 @@ class StatCalculator(Serializable):
                     self.variable_ids + self.summarize_vars
                 ).columns
                 cols_now = dfi.drop(self.variable_ids + self.summarize_vars).columns
-                cols_match = list(set(cols_prior).intersection(cols_now))
+                #   Order-preserving intersection - list(set(...)) would
+                #   reorder based on Python's per-process string hash
+                #   randomization, breaking determinism/replicability
+                #   across runs even with a fixed seed.
+                cols_match = [c for c in cols_prior if c in cols_now]
 
                 n_rows = df_collected.select(nw.len()).collect().item()
                 df_collected = (
@@ -471,7 +475,9 @@ class StatCalculator(Serializable):
                 )
 
                 if len(cols_match):
-                    cols_new = list(set(cols_now).difference(cols_prior))
+                    #   Order-preserving difference - see the cols_match
+                    #   comment just above.
+                    cols_new = [c for c in cols_now if c not in cols_prior]
                     cols_select = cols_prior + cols_new
                     with_coalesce = [
                         nw.coalesce(nw.col(coli, f"{coli}_right"))
@@ -1095,7 +1101,7 @@ class StatCalculator(Serializable):
         def p_value_lambda(t, col_t):
             try:
                 return p_value(t[col_t])
-            except:
+            except Exception:
                 return None
 
         for coli in cols_stats:
@@ -1680,7 +1686,10 @@ class StatCalculator(Serializable):
             .collect_schema()
             .names()
         )
-        add_join_on = list(set(self.variable_ids).difference(cols_keep))
+        #   Order-preserving difference - list(set(...)) would reorder
+        #   based on Python's per-process string hash randomization,
+        #   breaking determinism/replicability across runs.
+        add_join_on = [v for v in self.variable_ids if v not in cols_keep]
         cols_keep = add_join_on + cols_keep
 
         self = self.copy()
@@ -1724,9 +1733,13 @@ class StatCalculator(Serializable):
             columns = (
                 nw.from_native(self.df_estimates).lazy().collect_schema().names()
             )
-            columns = list(
-                set(columns).difference(self.variable_ids + self.summarize_vars)
-            )
+            #   Order-preserving difference (matches df_estimates' own
+            #   schema order) rather than list(set(...)), which would
+            #   reorder based on Python's per-process string hash
+            #   randomization, breaking determinism/replicability
+            #   across runs.
+            exclude = set(self.variable_ids + self.summarize_vars)
+            columns = [c for c in columns if c not in exclude]
 
         return self.with_columns(with_expr=nw.col(columns) * factor)
 

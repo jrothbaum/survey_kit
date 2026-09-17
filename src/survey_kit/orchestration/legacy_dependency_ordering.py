@@ -6,9 +6,6 @@
 from __future__ import annotations
 from typing import TYPE_CHECKING
 
-import os
-import logging
-
 if TYPE_CHECKING:
     from .function import Function
 
@@ -99,12 +96,16 @@ class LegacyOrdering:
         return (alread_loaded, loadlist, remaining)
 
     def find_parents(self, function: Function = None):
-        parents = set()
+        #   Order-preserving accumulation (dict.fromkeys, not a set) -
+        #   a plain set() would return its members in an order that
+        #   depends on Python's per-process hash randomization rather
+        #   than the deterministic order they were discovered in.
+        parents = {}
 
         for inputi in function.inputs:
             if inputi in self.d_output_source_dict:
                 for parenti in self.d_output_source_dict[inputi]:
                     if parenti != function:
-                        parents.add(parenti)
+                        parents[parenti] = None
 
-        return list(parents)
+        return list(parents.keys())

@@ -1,7 +1,7 @@
 from __future__ import annotations
-from typing import Optional, Callable
+from typing import Callable
 
-import os
+import logging
 import narwhals as nw
 import narwhals.selectors as cs
 from narwhals.typing import IntoFrameT
@@ -388,8 +388,11 @@ class MultipleImputation(Serializable):
 
         cols_non_stats = self.join_on + [implicate_name, col_sort]
         cols_stats = safe_columns(df_estimates_stacked)
+        #   Order-preserving difference (not list(set(...)), which
+        #   would reorder based on Python's per-process string hash
+        #   randomization).
         cols_stats = _columns_original_order(
-            columns_unordered=list(set(cols_stats).difference(cols_non_stats)),
+            columns_unordered=[c for c in cols_stats if c not in cols_non_stats],
             columns_ordered=cols_stats,
         )
 
@@ -582,7 +585,7 @@ class MultipleImputation(Serializable):
         def p_value_lambda(t, col_t, col_df):
             try:
                 return p_value(t[col_t], t[col_df])
-            except:
+            except Exception:
                 return None
 
         nw_type = NarwhalsType(df_p)
@@ -1127,7 +1130,10 @@ class MultipleImputation(Serializable):
                 if checki in safe_columns(self.df_p):
                     select_df_p.append(checki)
 
-        add_join_on = list(set(self.join_on).difference(cols_keep))
+        #   Order-preserving difference - list(set(...)) would reorder
+        #   based on Python's per-process string hash randomization,
+        #   breaking determinism/replicability across runs.
+        add_join_on = [v for v in self.join_on if v not in cols_keep]
         cols_keep = add_join_on + cols_keep
 
         for dfi in self._df_attributes:
@@ -1179,10 +1185,12 @@ class MultipleImputation(Serializable):
         self, factor: float, columns: list[str] | str | None = None
     ) -> MultipleImputation:
         if columns is None:
-            #   Any columns that aren't the join_on ones
-            columns = list(
-                set(safe_columns(self.df_estimates)).difference(self.join_on)
-            )
+            #   Any columns that aren't the join_on ones - order-
+            #   preserving (matches df_estimates' own schema order)
+            #   rather than list(set(...)), which would reorder based
+            #   on Python's per-process string hash randomization.
+            join_on = set(self.join_on)
+            columns = [c for c in safe_columns(self.df_estimates) if c not in join_on]
 
         return self.with_columns(with_expr=nw.col(columns) * factor)
 

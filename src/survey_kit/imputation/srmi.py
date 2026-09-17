@@ -1,5 +1,4 @@
 from __future__ import annotations
-from typing import Optional, Callable
 import os
 import numpy as np
 import polars as pl
@@ -14,7 +13,6 @@ from pathlib import Path
 from ..utilities.inputs import create_folders_if_needed
 
 from ..utilities.dataframe import (
-    lazy_backend,
     safe_height,
     drop_if_exists,
     join_list,
@@ -398,6 +396,22 @@ class SRMI(Serializable):
         self.df = df
         if df is not None:
             self.nw_type = NarwhalsType(df)
+            #   Run entirely in polars internally regardless of the
+            #   caller's own backend (pandas/pyarrow/...) - self.nw_type
+            #   above remembers that original backend so df_implicates/
+            #   df_implicates_with_appended_cols/df_implicates_by_index
+            #   can convert back to it when handing results out. Every
+            #   NarwhalsType(df).to_polars()/.from_polars() round trip
+            #   throughout impute.py's per-variable/iteration/implicate
+            #   machinery is already a no-op once its input is already
+            #   polars, so this one conversion is what makes all of
+            #   those free instead of real conversions repeated on every
+            #   call. Also incidentally fixes two pre-existing bugs
+            #   below (the with_row_index() call on a non-unique custom
+            #   index, and _find_nearest_neighbor_by()'s dict passed to
+            #   from_polars() in impute.py) that only ever worked for a
+            #   polars caller in the first place.
+            self.df = self.nw_type.to_polars()
         else:
             self.nw_type = None
 
@@ -412,13 +426,19 @@ class SRMI(Serializable):
         if len(index) == 0:
             self.index = ["___rownumber"]
 
-            self.df = lazy_backend(
+            #   self.df is already polars by this point (see above) -
+            #   NOT self.nw_type's backend, which still records the
+            #   caller's ORIGINAL one for the final convert-back in
+            #   df_implicates/etc. Do not route this through
+            #   lazy_backend(..., self.nw_type) - that would convert
+            #   straight back to the original backend here instead.
+            self.df = (
                 nw.from_native(self.df)
                 .lazy()
                 .collect()
-                .with_row_index(name=self.index[0]),
-                self.nw_type,
-            ).to_native()
+                .with_row_index(name=self.index[0])
+                .to_native()
+            )
         else:
             #   Needs to be unique
             if safe_height(
@@ -855,7 +875,7 @@ class SRMI(Serializable):
                             )
                         )
 
-            log = run_function_list(
+            run_function_list(
                 function_list=f_implicates,
                 call_input=self.parallel.call_inputs,
                 run_all=True,
@@ -1365,8 +1385,13 @@ class SRMI(Serializable):
                 if len(vari.parameters["donate_list"]):
                     keep_vars.extend(vari.parameters["donate_list"])
 
-        #   remove duplicates
-        keep_vars = list(set(keep_vars))
+        #   Remove duplicates, preserving order - a plain set() roundtrip
+        #   would reorder based on Python's per-process string hash
+        #   randomization, silently breaking determinism/replicability
+        #   across separate runs even with the same seed (this feeds
+        #   _initialize_implicates()'s column selection, i.e. every
+        #   Implicate's own initial column order).
+        keep_vars = list(dict.fromkeys(keep_vars))
         return keep_vars
 
     @property
@@ -1392,9 +1417,30 @@ class SRMI(Serializable):
         keep_vars = self.vars_imputed
         keep_vars.extend(self.index)
 
-        #   remove duplicates
-        keep_vars = list(set(keep_vars))
+        #   Remove duplicates, preserving order - see vars_imputed's own
+        #   comment above on why a plain set() roundtrip isn't safe here.
+        keep_vars = list(dict.fromkeys(keep_vars))
         return keep_vars
+
+    def _to_original_type(self, df: IntoFrameT) -> IntoFrameT:
+        #   self.df/Implicate.df run entirely in polars internally (see
+        #   __init__) - convert back to whatever backend the caller
+        #   originally passed in, right here where results are actually
+        #   read out. self.nw_type is None only if this SRMI was never
+        #   given a df at all, in which case there's nothing to convert.
+        if self.nw_type is None:
+            return df
+
+        converted = self.nw_type.from_polars(df)
+        #   from_polars() returns the native polars object unchanged
+        #   when the original caller's own backend was polars (nothing
+        #   further to do), but hands back a narwhals-wrapped LazyFrame
+        #   for any other backend - collect + unwrap so callers get a
+        #   plain native object back (pandas.DataFrame, pyarrow.Table,
+        #   ...), matching what df_implicates has always returned.
+        if isinstance(converted, (nw.LazyFrame, nw.DataFrame)):
+            return converted.lazy().collect().to_native()
+        return converted
 
     @property
     def df_implicates(self) -> DataFrameList:
@@ -1408,7 +1454,7 @@ class SRMI(Serializable):
         """
         df_out = []
         for impi in self.implicates:
-            df_out.append(impi.df_full(drop_flags=True))
+            df_out.append(self._to_original_type(impi.df_full(drop_flags=True)))
 
         return DataFrameList(df_out)
 
@@ -1428,15 +1474,21 @@ class SRMI(Serializable):
         """
         df_out = []
         for impi in self.implicates:
-            df_out.append(impi.df_full(drop_flags=True, with_appended_cols=True))
+            df_out.append(
+                self._to_original_type(
+                    impi.df_full(drop_flags=True, with_appended_cols=True)
+                )
+            )
 
         return DataFrameList(df_out)
 
     def df_implicates_by_index(
         self, index: int, drop_flags: bool = False, with_appended_cols: bool = False
     ) -> DataFrameList:
-        return self.implicates[index].df_full(
-            drop_flags=drop_flags, with_appended_cols=with_appended_cols
+        return self._to_original_type(
+            self.implicates[index].df_full(
+                drop_flags=drop_flags, with_appended_cols=with_appended_cols
+            )
         )
 
     def convergence(self, diagnostic: str = "all", parameter: str = "mean") -> IntoFrameT:

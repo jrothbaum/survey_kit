@@ -76,9 +76,11 @@ def calculate_by(
         else:
             columns_to_keep.append(byi)
 
-    #   De-dedup and set in original order from df
+    #   De-dedup and set in original order from df - order-preserving
+    #   dedupe (not list(set(...)), which would reorder based on
+    #   Python's per-process string hash randomization).
     columns_to_keep = _columns_original_order(
-        list(set(columns_to_keep)), df.collect_schema().names()
+        list(dict.fromkeys(columns_to_keep)), df.collect_schema().names()
     )
 
     #   Summary stats on booleans don't really work in polars or R
@@ -289,8 +291,6 @@ class _ColumnStatInformation:
 def _summary_by_column_stat(
     column: str = "", statistic: str = "", weight: str = ""
 ) -> _ColumnStatInformation:
-    original_column = column
-
     #   Aliases
     if statistic == "median":
         statistic = "q50"
@@ -403,7 +403,7 @@ def stat_suffix(statistic: str = "", modifier: str = "") -> str:
 
     try:
         return suffix
-    except:
+    except UnboundLocalError:
         message = f"{statistic} is not a valid statistic"
         logger.error(message)
         raise Exception(message)
@@ -796,15 +796,19 @@ def _batched_simple_stats(
     nw_type = NarwhalsType(df)
     df_polars = nw_type.to_polars()
 
-    cast_cols = set()
+    #   Order-preserving accumulation (dict.fromkeys, not a set) - a
+    #   plain set() would return its members in an order that depends
+    #   on Python's per-process hash randomization rather than the
+    #   deterministic order they were discovered in.
+    cast_cols = {}
     for coli, stats_list in column_stats.items():
         (_, _, coli_original) = _check_special_modifiers(coli)
         for stati in stats_list:
             info = _summary_by_column_stat(column=coli, statistic=stati, weight="")
             if info.need_sum_cast:
-                cast_cols.add(coli_original)
+                cast_cols[coli_original] = None
     if len(cast_cols):
-        df_polars = safe_sum_cast(df=df_polars, columns=list(cast_cols))
+        df_polars = safe_sum_cast(df=df_polars, columns=list(cast_cols.keys()))
 
     ndf = nw.from_native(df_polars).lazy()
     results = {}

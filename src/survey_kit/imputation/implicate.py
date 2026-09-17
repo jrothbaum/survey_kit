@@ -649,7 +649,11 @@ class Implicate(Serializable):
 
         df = self.df
         columns = safe_columns(df)
-        replace_list = list(set(columns).difference(self.parent.index))
+        #   A plain columns not in index filter, order-preserving (not
+        #   list(set(...).difference(...)) - a set() roundtrip would
+        #   reorder based on Python's per-process string hash
+        #   randomization, breaking determinism across separate runs).
+        replace_list = [c for c in columns if c not in self.parent.index]
 
         drop_list = []
         # Also drop ___imp_missing variables
@@ -679,7 +683,22 @@ class Implicate(Serializable):
                     logger.info(f"     {d_file_prefix[filei]}")
                     appended_prefixes.append(f"{d_file_prefix[filei]}_")
 
-                appended_data = file_list
+                #   These were written by save_appended_cols_to_implicate()
+                #   via a plain sink_parquet() - not through Serializable's
+                #   save/load (no engine metadata recorded alongside), so
+                #   there's no "original type" to restore for them
+                #   specifically. Load as polars, matching self.df/
+                #   self.parent.df, which are themselves polars internally
+                #   (see SRMI.__init__) - join_list needs actual
+                #   dataframes here, not the raw path strings glob() gives
+                #   back. The caller's own original type still comes back
+                #   correctly for the join's overall result, converted at
+                #   the SRMI.df_implicates_with_appended_cols property
+                #   boundary, same as every other df_full() caller.
+                appended_data = [
+                    nw.scan_parquet(filei, backend="polars").to_native()
+                    for filei in file_list
+                ]
 
         return join_list(
             [drop_if_exists(df=self.parent.df, columns=replace_list), df]
@@ -1039,11 +1058,13 @@ class Implicate(Serializable):
 
             logger.info("\n\nFinal Estimates by Iteration")
             drop_list = ["#", "Imputed", "n"]
-            drop_list = list(
-                set(drop_list).intersection(
-                    nw.from_native(df_final).lazy().collect_schema().names()
-                )
+            #   Order-preserving filter (not list(set(...).intersection(...)),
+            #   which would reorder based on Python's per-process string
+            #   hash randomization).
+            df_final_cols = set(
+                nw.from_native(df_final).lazy().collect_schema().names()
             )
+            drop_list = [c for c in drop_list if c in df_final_cols]
 
             stats_calc.df_estimates = (
                 nw.from_native(df_final).select(col_ordered).to_native()

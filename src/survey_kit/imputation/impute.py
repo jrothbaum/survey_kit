@@ -12,7 +12,6 @@ from copy import deepcopy
 from survey_kit_formula import ModelSpec
 
 from ..utilities.logging import set_logging
-from ..utilities.inputs import create_folders_if_needed
 
 
 from ..utilities.dataframe import (
@@ -23,7 +22,6 @@ from ..utilities.dataframe import (
     NarwhalsType,
     drop_if_exists,
     safe_upcast_list,
-    columns_from_list,
     safe_columns,
     winsorize_by_percentiles,
 )
@@ -285,8 +283,13 @@ class Impute:
         if len(self.variable.By) > 0:
             keep_vars.extend(self.variable.By)
 
-        donate_vars = list(set(donate_vars))
-        keep_vars = list(set(keep_vars))
+        #   Dedupe preserving order - list(set(...)) would reorder based
+        #   on Python's per-process string hash randomization, silently
+        #   breaking determinism/replicability across runs even with a
+        #   fixed seed (this feeds the model's own predictor column
+        #   order).
+        donate_vars = list(dict.fromkeys(donate_vars))
+        keep_vars = list(dict.fromkeys(keep_vars))
 
         df_donors = self.df_model(df=df, keep_vars=keep_vars, drop_imputed=True)
         df_recipients = self.df_impute(df=df, keep_vars=keep_vars)
@@ -650,8 +653,13 @@ class Impute:
         if len(self.variable.By) > 0:
             keep_vars.extend(self.variable.By)
 
-        donate_vars = list(set(donate_vars))
-        keep_vars = list(set(keep_vars))
+        #   Dedupe preserving order - list(set(...)) would reorder based
+        #   on Python's per-process string hash randomization, silently
+        #   breaking determinism/replicability across runs even with a
+        #   fixed seed (this feeds the model's own predictor column
+        #   order).
+        donate_vars = list(dict.fromkeys(donate_vars))
+        keep_vars = list(dict.fromkeys(keep_vars))
 
         df_donors = self.df_model(df=df, keep_vars=keep_vars, drop_imputed=True)
         df_recipients = self.df_impute(df=df, keep_vars=keep_vars)
@@ -1400,7 +1408,13 @@ class Impute:
                     y=self.variable.impute_var,
                     formula=self.variable.model,
                     weight=self.weight,
-                    parameters=lgbm_model.parameters,
+                    #   lgbm_model is _lightgbm_simple's own parameter,
+                    #   a normal closure capture - ruff's F821 here is a
+                    #   false positive caused by the `del lgbm_model`
+                    #   later in this same function (after this closure
+                    #   is defined AND called); verified by running the
+                    #   cv_folds>1 path directly, no NameError.
+                    parameters=lgbm_model.parameters,  # noqa: F821
                 )
                 fold_lgbm.parameters["seed"] = generate_seed()
                 fold_lgbm.train(show_eval=False)
@@ -1500,7 +1514,7 @@ class Impute:
                 .lazy()
                 .collect_schema()[self.variable.impute_var]
             )
-            == nw.Boolean
+            is nw.Boolean
         ):
             regmodel = Parameters.RegressionModel.Logit
         else:
@@ -2637,7 +2651,14 @@ class Impute:
                         self.weight
                     ]
                 fold_model.fit(
-                    X=df_model_mm.filter(train_mask),
+                    #   df_model_mm is a normal closure capture from the
+                    #   enclosing function - ruff's F821 on both uses
+                    #   below is a false positive caused by a later
+                    #   `del df_model_mm` in this same function (after
+                    #   this closure is defined AND called); verified by
+                    #   running the cv_folds>1 path directly, no
+                    #   NameError.
+                    X=df_model_mm.filter(train_mask),  # noqa: F821
                     #   y_for_fit, not df_model.select(impute_var) - stays
                     #       net of the prior group intercept, same as the
                     #       main fit above, so cv_folds and group_levels
@@ -2645,7 +2666,7 @@ class Impute:
                     y=y_for_fit.filter(train_mask),
                     **fold_extra_args,
                 )
-                X_holdout = df_model_mm.filter(is_holdout)
+                X_holdout = df_model_mm.filter(is_holdout)  # noqa: F821
                 if regmodel == Parameters.RegressionModel.Logit:
                     return fold_model.predict_proba(X_holdout)[:, 1]
                 else:
@@ -2957,9 +2978,14 @@ class Impute:
 
         #           Those that do
         df_matched = (
-            df_matched.filter(pl.col("___bMatched") == True)
+            #   ___bMatched is an int literal (pl.lit(1)), not boolean -
+            #   filter() requires an actual Boolean expression, so this
+            #   comparison isn't the redundant == True ruff's E712
+            #   originally suggested removing; it's what makes the
+            #   predicate a Boolean at all.
+            df_matched.filter(pl.col("___bMatched") == 1)
             .drop("___bMatched")
-            .drop(list(set(donate_vars).difference(self.index)))
+            .drop([v for v in dict.fromkeys(donate_vars) if v not in self.index])
         )
         del df_donor_matches
 
@@ -3104,7 +3130,11 @@ class Impute:
             )
             .sort(sort_by)
             .with_columns(pl.col(fill_columns).fill_null(strategy="forward"))
-            .filter(pl.col("___recipients") == True)
+            #   ___recipients is an int literal (pl.lit(1)), not
+            #   boolean - filter() requires an actual Boolean
+            #   expression, so this comparison isn't the redundant
+            #   == True ruff's E712 originally suggested removing.
+            .filter(pl.col("___recipients") == 1)
             .drop("___recipients")
         )
 
@@ -3260,8 +3290,9 @@ class Impute:
         donor_keep.extend(self.index)
         d_index_rename = {f"{vari}_right": f"donor_{vari}" for vari in self.index}
 
-        #   Remove any duplicates, just in case
-        donor_keep = list(set(donor_keep))
+        #   Remove any duplicates, just in case - preserving order (see
+        #   comment near the other list(set(...)) fixes in this file).
+        donor_keep = list(dict.fromkeys(donor_keep))
 
         [df_matched, df_donors] = safe_upcast_list([df_matched, df_donors])
         df_matched = (

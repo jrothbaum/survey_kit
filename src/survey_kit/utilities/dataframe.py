@@ -32,7 +32,7 @@ def fill_missing(
     if value is not None:
         try:
             df = df.with_columns(c_missing.fill_null(value))
-        except:
+        except Exception:
             df = df.with_columns(c_numeric.fill_null(value))
     if c_numeric is not None:
         df = df.with_columns(c_numeric.fill_nan(value))
@@ -106,8 +106,14 @@ def columns_from_list(
         if len(cols_exclude):
             all_cols = [coli for coli in all_cols if coli not in cols_exclude]
     if df is not None:
+        #   Dedupe preserving order rather than list(set(...)) - a set()
+        #   roundtrip reorders based on Python's per-process string hash
+        #   randomization. _columns_original_order() below re-sorts by
+        #   schema_names when every column is present there (the usual
+        #   case), which already masks this, but not on the fallback
+        #   path where some column isn't - dedupe safely regardless.
         return _columns_original_order(
-            list(set(all_cols)), columns_ordered=schema_names
+            list(dict.fromkeys(all_cols)), columns_ordered=schema_names
         )
     else:
         return list(dict.fromkeys(all_cols))
@@ -170,7 +176,12 @@ def join_list(
         columns_to_rename_list = []
         for dfi in df_list:
             columnsi = nw.from_native(dfi).lazy().collect_schema().names()
-            columns_to_rename_list.append(list(set(columnsi).difference(on)))
+            #   Order-preserving (matches columnsi's own schema order)
+            #   rather than list(set(...)) - a set() roundtrip would
+            #   reorder based on Python's per-process string hash
+            #   randomization, breaking determinism/replicability
+            #   across runs.
+            columns_to_rename_list.append([c for c in columnsi if c not in on])
 
         for i in range(len(df_list)):
             if len(prefixes):
@@ -281,7 +292,7 @@ def convert_to_backend(df: IntoFrameT | None, nw_type: NarwhalsType) -> IntoFram
             return NarwhalsType.lazy(
                 nw.from_native(nw.from_native(df).lazy().collect().to_arrow()), nw_type
             )
-    except:
+    except Exception:
         pass
     return df
 
@@ -415,7 +426,7 @@ class NarwhalsType(Serializable):
         if isinstance(df, nw.LazyFrame):
             try:
                 return df.lazy(nw_type.backend)
-            except:
+            except Exception:
                 return df
         elif isinstance(df, nw.DataFrame):
             if nw_type is not None:
@@ -429,7 +440,7 @@ class NarwhalsType(Serializable):
                 else:
                     try:
                         return df.lazy(backend=nw_type.backend)
-                    except:
+                    except Exception:
                         return df.lazy()
             else:
                 return df.lazy()
@@ -488,7 +499,7 @@ def safe_upcast_list(
         schemai_to = {
             coli: schema_superset[coli]
             for coli, typei in schemai.items()
-            if type(typei) != schema_superset[coli]
+            if type(typei) is not schema_superset[coli]
         }
 
         if len(schemai_to):
@@ -779,7 +790,12 @@ def drop_if_exists(
 ) -> IntoFrameT:
     columns = list_input(columns)
     columns_exist = df.lazy().collect_schema().names()
-    drop_list = set(columns).intersection(columns_exist)
+    #   Order-preserving intersection (not set(...).intersection(...)),
+    #   which would reorder based on Python's per-process string hash
+    #   randomization - harmless for .drop() itself, kept deterministic
+    #   for consistency/hygiene.
+    columns_exist_set = set(columns_exist)
+    drop_list = [c for c in columns if c in columns_exist_set]
 
     if len(drop_list):
         return df.drop(drop_list)

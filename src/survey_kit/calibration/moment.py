@@ -341,7 +341,11 @@ class Moment(Serializable):
                 droplist.append(interi)
                 droplist.extend(subcols)
 
-            df_by = df_by.drop(list(set(droplist)))
+            #   Dedupe preserving order - list(set(...)) would reorder
+            #   based on Python's per-process string hash
+            #   randomization (harmless for .drop() itself, but kept
+            #   deterministic for consistency/hygiene).
+            df_by = df_by.drop(list(dict.fromkeys(droplist)))
 
         #   Any non-interacted columns (remaining?)
         for coli in lazy_backend(df_by, self.nw_type).collect_schema().names():

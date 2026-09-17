@@ -1062,12 +1062,7 @@ class FormulaBuilder:
 
         #   Separate into subclauses
         sides = formula.split("~")
-        if len(sides) == 2:
-            lhs = sides[0]
-            rhs = sides[1]
-        else:
-            lhs = None
-            rhs = sides[0]
+        rhs = sides[1] if len(sides) == 2 else sides[0]
 
         if true_if_missing:
             return not rhs.replace(" ", "").startswith("0")
@@ -1278,9 +1273,11 @@ class FormulaBuilder:
         for valuei in interactions_dict.values():
             outputs.extend(valuei)
 
-        #   Remove duplicates and return
+        #   Remove duplicates and return - order-preserving (not
+        #   list(set(...)), which would reorder based on Python's
+        #   per-process string hash randomization).
         return _columns_original_order(
-            columns_unordered=list(set(outputs)), columns_ordered=outputs
+            columns_unordered=list(dict.fromkeys(outputs)), columns_ordered=outputs
         )
 
     def expand(self=None, formula: str = ""):
@@ -1598,7 +1595,7 @@ class FormulaBuilder:
     def formula_with_varnames_in_brackets(
         self=None,
         clause: str = "",
-        df: pl.LazyFrame | pl.DataFrame | None = None,
+        df: IntoFrameT | None = None,
         case_insensitive: bool = False,
         append: bool = False,
     ) -> str | FormulaBuilder:
@@ -1612,7 +1609,7 @@ class FormulaBuilder:
         ----------
         clause : str, optional
             Formula clause with {pattern} placeholders. Default is "".
-        df : pl.LazyFrame | pl.DataFrame | None, optional
+        df : IntoFrameT | None, optional
             Dataframe for column lookup. Default is None.
         case_insensitive : bool, optional
             Case-insensitive pattern matching. Default is False.

@@ -338,7 +338,11 @@ class Calibration(Serializable):
             cols_weight = (
                 nw.from_native(m_weight.model_matrix).lazy().collect_schema().names()
             )
-            m_weight.columns = list(set(cols_target).intersection(cols_weight))
+            #   Order-preserving intersection (not list(set(...)),
+            #   which would reorder based on Python's per-process
+            #   string hash randomization, breaking determinism/
+            #   replicability across runs).
+            m_weight.columns = [c for c in cols_target if c in cols_weight]
 
     def combine_moments(self, all: bool = False, sub_moments: bool = True) -> None:
         """

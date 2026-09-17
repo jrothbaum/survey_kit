@@ -80,11 +80,15 @@ def drb_round_table(
         #   Didn't pass anything, round the whole table (except columns_n)
         columns = df.select(cs.numeric()).lazy().collect_schema().names()
 
+        #   Order-preserving (matches columns' own schema order) rather
+        #   than list(set(...)) - a set() roundtrip would reorder based
+        #   on Python's per-process string hash randomization, breaking
+        #   determinism/replicability across runs.
         if len(columns_n):
-            columns = list(set(columns).difference(columns_n))
+            columns = [c for c in columns if c not in columns_n]
 
         if len(columns_exclude):
-            columns = list(set(columns).difference(columns_exclude))
+            columns = [c for c in columns if c not in columns_exclude]
 
     #   Have to be numeric
     columns = df.lazy().select(columns).select(cs.numeric()).collect_schema().names()
