@@ -77,9 +77,9 @@ class FunctionWrapper(Generic[P, R]):
 
     def as_function(
         self,
+        *args: P.args,
         loadutils: FileLoaderUtilities | None = None,
         call_input: CallInputs | None = None,
-        *args: P.args,
         **kwargs: P.kwargs,
     ) -> Function:
         try:

@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 import os
+import json
 import logging
 import narwhals as nw
 import narwhals.selectors as cs
@@ -27,6 +28,7 @@ from ..utilities.dataframe import (
 )
 from ..utilities.compress import compress_df
 from ..utilities.formula_builder import FormulaBuilder
+from ..utilities.inputs import create_folders_if_needed
 
 from ..statistics.basic_calculations import calculate_by
 from ..statistics.statistics import Statistics
@@ -199,8 +201,8 @@ class Impute:
                     df_by[idf] = self.multinomial(df=df_by[idf])
                 elif self.variable.modeltype == Variable.ModelType.OrderedCategorical:
                     df_by[idf] = self.ordered_categorical(df=df_by[idf])
-                # elif self.variable.modeltype == Variable.ModelType.TwoSampleRegression:
-                #     df_by[idf] = self.two_sample_regression(df=df_by[idf])
+                elif self.variable.modeltype == Variable.ModelType.TwoSampleRegression:
+                    df_by[idf] = self.two_sample_regression(df=df_by[idf])
                 self.logging.info("\n\n\n\n")
             if len(df_by) == 1:
                 df = df_by[0]
@@ -1147,6 +1149,330 @@ class Impute:
 
         df = self._merge_imputes_to_df(
             df_imputed=nw_impute_type.from_polars(df_impute_matched),
+            df=df,
+            merge_list=donate_vars,
+        )
+
+        return df
+
+    def two_sample_regression(self, df: IntoFrameT | None = None) -> IntoFrameT:
+        """
+        Perform two-sample regression imputation.
+
+        Fits an OLS/Logit regression on the model (donor) sample, bins the
+        predicted yhat into percentile groups, and imputes by drawing from
+        the EMPIRICAL distribution of impute_var within each bin - a
+        bin-level P(y=1) + Bernoulli draw for is_boolean=True, or a
+        bin-level empirical quantile distribution (interpolated via
+        _draw_interpolated_percentiles/DrawFromQuantileVectors) for
+        continuous impute_var. Unlike pmm/leaf, nothing is ever donated
+        from one recipient row to another - every draw is built from the
+        model sample's own aggregated, per-bin distribution. See
+        Parameters.TwoSampleRegression() for the full parameter list.
+
+        When load_from_save=True, this skips fitting entirely and imputes
+        purely from a previously persisted model (path_load) - the model
+        sample doesn't need to be present in this run at all. That's the
+        actual "two-sample" use case this modeltype is named for: fit
+        once against sample A (path_save), then impute a genuinely
+        separate sample B in a later run that never has sample A in
+        memory - e.g. two disjoint survey/administrative extracts that
+        can't be merged in the same process for confidentiality reasons.
+        The persisted model is plain CSV/JSON files in a variable-specific
+        folder (see _two_sample_save/_two_sample_load) - never pickle,
+        which isn't reliably portable across machines/environments/
+        library versions, and never a bundled archive either, so every
+        file can be opened directly without an extraction step - so
+        model= must resolve to numeric-only predictors (enforced by
+        Variable._validate_two_sample_regression_numeric_only).
+
+        Parameters
+        ----------
+        df : IntoFrameT | None, optional
+            Input dataframe, uses self.df if None
+
+        Returns
+        -------
+        IntoFrameT
+            Dataframe with two-sample-regression-imputed values
+        """
+        if df is None:
+            df = self.df
+
+        params = self.variable.parameters
+        load_from_save = params.get("load_from_save", False)
+        path_save = params.get("path_save", "")
+        path_load = params.get("path_load", "") or path_save
+
+        self.logging.info(
+            f"     Imputation using TwoSampleRegression "
+            f"(load_from_save={load_from_save})"
+        )
+
+        if load_from_save:
+            saved = self._two_sample_load(path_load)
+            predictors = saved["predictors"]
+            bin_by = saved["bin_by"]
+            #   No model sample in this run at all - just predictors +
+            #       impute_var (still needed as a column, even though
+            #       it's presumably all-null in this recipient-only
+            #       sample) + index/bin_by.
+            keep_vars = list(predictors) + [self.variable.impute_var]
+        else:
+            saved = None
+            [_, _, model_vars] = self.variable.process_model(df)
+            #   process_model()'s model_vars always includes impute_var
+            #       itself (the LHS) alongside the real predictors - keep
+            #       that combined list for keep_vars below, but predictors
+            #       (used to .select() an X matrix to fit/predict on)
+            #       needs impute_var excluded.
+            predictors = [v for v in model_vars if v != self.variable.impute_var]
+            bin_by = params["bin_by"]
+            keep_vars = list(model_vars)
+
+        keep_vars = list(dict.fromkeys(keep_vars + self.index + bin_by))
+        if self.weight != "" and self.weight not in keep_vars:
+            keep_vars.append(self.weight)
+        if (
+            self.original_variable.weight != ""
+            and self.original_variable.weight not in keep_vars
+        ):
+            keep_vars.append(self.original_variable.weight)
+
+        df_impute = self.df_impute(df=df, keep_vars=keep_vars)
+        nw_impute_type = NarwhalsType(df_impute)
+
+        if safe_height(df_impute) == 0:
+            self.logging.info("No rows to impute")
+            return df
+
+        df_impute_pl = nw_impute_type.to_polars().lazy().collect()
+
+        if load_from_save:
+            is_boolean = saved["is_boolean"]
+            draw_error = saved["draw_error"]
+            continuous_qtiles_y_cuts = saved["continuous_qtiles_y_cuts"]
+            cuts = saved["cuts"]
+            df_distribution = saved["distribution"]
+
+            predict_impute = self._two_sample_predict(
+                df_pl=df_impute_pl,
+                predictors=predictors,
+                df_betas=saved["betas"],
+                regmodel=saved["model"],
+            )
+            df_impute_pl = df_impute_pl.with_columns(
+                pl.Series("___prediction", predict_impute)
+            )
+            df_impute_pl = self._two_sample_apply_bins(df_impute_pl, cuts)
+
+            nw_model_type = nw_impute_type
+            df_model_pl = df_impute_pl.head(0)
+        else:
+            is_boolean = params["is_boolean"]
+            draw_error = params["draw_error"] and not is_boolean
+            continuous_qtiles_y_cuts = params["continuous_qtiles_y_cuts"]
+            regmodel = params["model"]
+            min_n_x_var = params["min_n_x_var"]
+            random_share = params["random_share"]
+
+            df_model = self.df_model(df=df, keep_vars=keep_vars)
+            nw_model_type = NarwhalsType(df_model)
+
+            if safe_height(df_model) == 0:
+                message = (
+                    f"{self.variable.impute_var}: TwoSampleRegression has "
+                    f"no model-sample rows to fit on (and load_from_save "
+                    f"is False) - nothing to fit."
+                )
+                self.logging.error(message)
+                raise ValueError(message)
+
+            df_model_pl = nw_model_type.to_polars().lazy().collect()
+
+            if random_share < 1:
+                self.logging.info(f"     Using a {random_share} subsample")
+                df_model_pl = df_model_pl.sample(
+                    fraction=random_share, seed=generate_seed()
+                )
+
+            if min_n_x_var:
+                predictors = self._two_sample_min_n_x_var(
+                    df_model_pl=df_model_pl,
+                    predictors=predictors,
+                    min_n_x_var=min_n_x_var,
+                )
+
+            (df_betas, predict_model, predict_impute) = self._two_sample_fit(
+                df_model_pl=df_model_pl,
+                df_impute_pl=df_impute_pl,
+                predictors=predictors,
+                regmodel=regmodel,
+            )
+            df_model_pl = df_model_pl.with_columns(
+                pl.Series("___prediction", predict_model)
+            )
+            df_impute_pl = df_impute_pl.with_columns(
+                pl.Series("___prediction", predict_impute)
+            )
+
+            r_2 = (
+                df_model_pl.select(
+                    pl.corr(self.variable.impute_var, "___prediction")
+                ).item(0, 0)
+                ** 2
+            )
+            self.logging.info(f"R2 = {r_2:0.4f}")
+            print_longer_table(drb_round_table(df_betas), logging=self.logging)
+
+            round_digits = params["round_impute_var_digits"]
+            cuts = self._two_sample_cuts(
+                df_model_pl=df_model_pl,
+                bins=params["bins"],
+                percentile_cuts=params["percentile_cuts"],
+                path_save=path_save,
+                save_percentile_cuts=params["save_percentile_cuts"],
+                round_digits=round_digits,
+            )
+            df_model_pl = self._two_sample_apply_bins(df_model_pl, cuts)
+            df_impute_pl = self._two_sample_apply_bins(df_impute_pl, cuts)
+
+            save_disclosure_support = (
+                params["save_disclosure_support"] and path_save != ""
+            )
+
+            if is_boolean:
+                df_distribution = self._two_sample_distribution_boolean(
+                    df_model_pl=df_model_pl,
+                    bin_by=bin_by,
+                    include_n=save_disclosure_support,
+                )
+            else:
+                y_col = self.variable.impute_var
+                df_model_for_distribution = df_model_pl
+                if draw_error:
+                    y_col = "___error___"
+                    df_model_for_distribution = df_model_pl.with_columns(
+                        (
+                            pl.col("___prediction")
+                            - pl.col(self.variable.impute_var)
+                        ).alias(y_col)
+                    )
+                stats = self._two_sample_quantile_stat_names(continuous_qtiles_y_cuts)
+                df_distribution = self._two_sample_build_distribution(
+                    df_model_pl=df_model_for_distribution.filter(
+                        pl.col(self.variable.impute_var).is_not_null()
+                    ),
+                    y_col=y_col,
+                    stats=stats,
+                    bin_by=bin_by,
+                    interpolate_by_bin=params["continuous_qtiles_interpolate_by_bin"],
+                    include_n=save_disclosure_support,
+                )
+
+            #   Pull the raw record count per cell (if requested) out
+            #       before anything else touches df_distribution - it's
+            #       an audit-only count, not a value to draw from or to
+            #       run through drb_round_table's value-rounding below.
+            bin_counts = None
+            if "n" in df_distribution.columns:
+                bin_counts = df_distribution.select(
+                    bin_by + ["___prediction_cat", "n"]
+                )
+                df_distribution = df_distribution.drop("n")
+
+            if round_digits > 0:
+                dist_value_cols = [
+                    c
+                    for c in df_distribution.columns
+                    if c not in (bin_by + ["___prediction_cat"])
+                ]
+                df_distribution = drb_round_table(
+                    df_distribution, columns=dist_value_cols, digits=round_digits
+                )
+
+            n_at_cuts = None
+            if save_disclosure_support:
+                pooled_predictions = pl.concat(
+                    [
+                        df_model_pl.select("___prediction"),
+                        df_impute_pl.select("___prediction"),
+                    ],
+                    how="vertical",
+                )
+                n_at_cuts = self._two_sample_n_at_cuts(
+                    predictions_pl=pooled_predictions,
+                    cuts=cuts,
+                    round_digits=round_digits,
+                )
+
+            if path_save != "":
+                self._two_sample_save(
+                    path_save=path_save,
+                    predictors=predictors,
+                    df_betas=df_betas,
+                    regmodel=regmodel,
+                    cuts=cuts,
+                    df_distribution=df_distribution,
+                    bin_by=bin_by,
+                    is_boolean=is_boolean,
+                    draw_error=draw_error,
+                    continuous_qtiles_y_cuts=continuous_qtiles_y_cuts,
+                    bin_counts=bin_counts,
+                    n_at_cuts=n_at_cuts,
+                )
+
+        donate_vars = [self.variable.impute_var]
+        rng = RandomNumberGenerator()
+
+        if is_boolean:
+            df_impute_pl = df_impute_pl.join(
+                df_distribution, on=bin_by + ["___prediction_cat"], how="left"
+            )
+            draw = rng.uniform(low=0, high=1, size=safe_height(df_impute_pl))
+            df_impute_pl = df_impute_pl.with_columns(
+                (pl.Series("___draw___", draw) <= pl.col("p_hat")).alias(
+                    self.variable.impute_var
+                )
+            )
+        else:
+            q_cols = self._two_sample_quantile_stat_names(continuous_qtiles_y_cuts)
+            df_impute_pl = df_impute_pl.join(
+                df_distribution, on=bin_by + ["___prediction_cat"], how="left"
+            )
+            [_, draw_values] = self._draw_interpolated_percentiles(
+                df=df_impute_pl.select(q_cols), percentiles=continuous_qtiles_y_cuts
+            )
+            #   _draw_interpolated_percentiles's return isn't guaranteed
+            #       eager - collect before concatenating column-wise
+            #       (row-order aligned, since it was built row-for-row
+            #       from df_impute_pl.select(q_cols) above) rather than
+            #       bracket-indexing it directly, which raises on a
+            #       LazyFrame.
+            draw_nw = nw.from_native(draw_values).lazy().collect()
+            draw_col = draw_nw.collect_schema().names()[0]
+            draw_pl = draw_nw.rename({draw_col: "___y_draw___"}).to_native()
+            df_impute_pl = pl.concat([df_impute_pl, draw_pl], how="horizontal")
+
+            if draw_error:
+                df_impute_pl = df_impute_pl.with_columns(
+                    (pl.col("___prediction") + pl.col("___y_draw___")).alias(
+                        self.variable.impute_var
+                    )
+                )
+            else:
+                df_impute_pl = df_impute_pl.with_columns(
+                    pl.col("___y_draw___").alias(self.variable.impute_var)
+                )
+            df_impute_pl = df_impute_pl.drop("___y_draw___")
+
+        self._post_impute_statistics(
+            df_model=nw_model_type.from_polars(df_model_pl),
+            df_impute=nw_impute_type.from_polars(df_impute_pl),
+            donate_vars=donate_vars,
+        )
+        df = self._merge_imputes_to_df(
+            df_imputed=nw_impute_type.from_polars(df_impute_pl),
             df=df,
             merge_list=donate_vars,
         )
@@ -2784,6 +3110,491 @@ class Impute:
     ##########################################################
     ##########################################################
     #   HELPERS - Regression - END
+    ##########################################################
+    ##########################################################
+
+    ##########################################################
+    ##########################################################
+    #   HELPERS - Two-sample regression - START
+    ##########################################################
+    ##########################################################
+
+    def _two_sample_quantile_stat_names(
+        self, continuous_qtiles_y_cuts: list[float]
+    ) -> list[str]:
+        """
+        Deterministic "q{pct}" stat/column names for continuous
+        two-sample regression's per-bin quantile levels (0-1 scale in,
+        e.g. "q10" out) - shared by every place that needs to agree on
+        these names: the StatCalculator request that builds the
+        distribution table, its persisted CSV column headers, and the
+        join/select used to read them back at draw time (in the same run
+        or reloaded from a saved model, where continuous_qtiles_y_cuts
+        itself is read back from meta.json first, keeping this
+        deterministic across runs too).
+        """
+        return [f"q{a * 100:g}" for a in continuous_qtiles_y_cuts]
+
+    def _two_sample_min_n_x_var(
+        self, df_model_pl: pl.DataFrame, predictors: list[str], min_n_x_var: int
+    ) -> list[str]:
+        """
+        Restrict predictors to those with more than min_n_x_var non-zero
+        observations in the model sample - same disclosure-avoidance
+        restriction _build_model_matrix applies for every other
+        regression-shaped modeltype, ported here since
+        two_sample_regression() fits its own model directly rather than
+        going through _build_model_matrix/_run_regression.
+        """
+        self.logging.info(
+            f"        Restricting to X variables with more than "
+            f"{min_n_x_var} observations != 0"
+        )
+        sc = StatCalculator(
+            df=df_model_pl,
+            statistics=Statistics(stats=["n|not0"], columns=predictors),
+            display=False,
+            round_output=False,
+        )
+        df_n_not0 = nw.from_native(sc.df_estimates).lazy().collect().to_native()
+        kept = df_n_not0.filter(pl.col("n (not 0)") >= min_n_x_var)["Variable"].to_list()
+        dropped = df_n_not0.filter(pl.col("n (not 0)") < min_n_x_var)["Variable"].to_list()
+        if dropped:
+            self.logging.info(f"            Dropping {dropped}")
+        #   Keep predictors' own order (StatCalculator's Variable column
+        #       order need not match it) - feeds df_betas'/the persisted
+        #       model's predictor order below.
+        kept_set = set(kept)
+        return [v for v in predictors if v in kept_set]
+
+    def _two_sample_fit(
+        self,
+        df_model_pl: pl.DataFrame,
+        df_impute_pl: pl.DataFrame,
+        predictors: list[str],
+        regmodel: Parameters.RegressionModel,
+    ) -> tuple[pl.DataFrame, np.ndarray, np.ndarray]:
+        """
+        Fit a plain OLS/Logit on df_model_pl's raw (already numeric,
+        already validated by
+        Variable._validate_two_sample_regression_numeric_only) predictor
+        columns, and predict for both df_model_pl and df_impute_pl.
+        Deliberately NOT _run_regression - that carries cv_folds/
+        group_levels/leaf machinery for same-run donor matching that
+        two-sample regression has no use for (it always draws from an
+        aggregated per-bin distribution, never donates a row), and its
+        model matrix construction goes through ModelSpec, whose fitted
+        encoding can't be persisted as plain CSV/JSON - see
+        Parameters.TwoSampleRegression()'s docstring.
+
+        Returns (df_betas, predict_model, predict_impute) - df_betas has
+        Variable/Beta columns (predictor names plus "_Intercept_"), same
+        convention _run_regression's own df_betas uses.
+        """
+        X_model = df_model_pl.select(predictors).to_numpy()
+        X_impute = df_impute_pl.select(predictors).to_numpy()
+        y_model = df_model_pl[self.variable.impute_var].to_numpy()
+
+        if regmodel == Parameters.RegressionModel.OLS:
+            from sklearn.linear_model import LinearRegression
+
+            model = LinearRegression()
+        elif regmodel == Parameters.RegressionModel.Logit:
+            from sklearn.linear_model import LogisticRegression
+
+            model = LogisticRegression()
+        else:
+            message = (
+                f"TwoSampleRegression: unsupported model {regmodel} - "
+                f"only OLS/Logit are supported."
+            )
+            self.logging.error(message)
+            raise ValueError(message)
+
+        fit_kwargs = {}
+        if self.weight != "":
+            fit_kwargs["sample_weight"] = df_model_pl[self.weight].to_numpy()
+
+        model.fit(X_model, y_model, **fit_kwargs)
+
+        coef = model.coef_[0] if np.ndim(model.coef_) > 1 else model.coef_
+        intercept = (
+            model.intercept_[0] if np.ndim(model.intercept_) > 0 else model.intercept_
+        )
+        df_betas = pl.DataFrame(
+            {
+                "Variable": list(predictors) + ["_Intercept_"],
+                "Beta": [float(v) for v in list(coef)] + [float(intercept)],
+            }
+        )
+
+        if regmodel == Parameters.RegressionModel.Logit:
+            predict_model = model.predict_proba(X_model)[:, 1]
+            predict_impute = model.predict_proba(X_impute)[:, 1]
+        else:
+            predict_model = model.predict(X_model)
+            predict_impute = model.predict(X_impute)
+
+        return (df_betas, predict_model, predict_impute)
+
+    def _two_sample_predict(
+        self,
+        df_pl: pl.DataFrame,
+        predictors: list[str],
+        df_betas: pl.DataFrame,
+        regmodel: Parameters.RegressionModel,
+    ) -> np.ndarray:
+        """
+        Reconstruct yhat purely from a persisted betas table (Variable/
+        Beta, "_Intercept_" for the intercept) and df_pl's own raw
+        predictor columns - the load_from_save path's equivalent of
+        _two_sample_fit's prediction, with no fitted sklearn model or
+        model sample involved at all.
+        """
+        intercept = df_betas.filter(pl.col("Variable") == "_Intercept_")["Beta"][0]
+        xb = pl.lit(intercept)
+        for vari in predictors:
+            beta = df_betas.filter(pl.col("Variable") == vari)["Beta"][0]
+            xb = xb + pl.col(vari) * beta
+
+        prediction = df_pl.select(xb.alias("___prediction")).to_series()
+        if regmodel == Parameters.RegressionModel.Logit:
+            prediction = 1 / (1 + (-prediction).exp())
+
+        return prediction.to_numpy()
+
+    def _two_sample_cuts(
+        self,
+        df_model_pl: pl.DataFrame,
+        bins: int,
+        percentile_cuts: list[float],
+        path_save: str,
+        save_percentile_cuts: bool,
+        round_digits: int,
+    ) -> list[float]:
+        """
+        Percentile cut points on the model sample's ___prediction, either
+        `bins` evenly-spaced ones or explicit percentile_cuts - rounded
+        (DRB-style, round_digits) here, before anything else uses them,
+        since the STRING bin labels _two_sample_apply_bins derives from
+        these values are what both the distribution table and (if
+        path_save is set) the persisted cuts.csv key off of - rounding
+        cuts AFTER binning/persisting would silently desync
+        distribution.csv's labels from cuts.csv's values, breaking the
+        join on reload.
+
+        When save_percentile_cuts, freezes the (already-rounded) cuts the
+        first time they're computed under
+        path_save/{impute_var}_cuts.csv and reuses that same set on every
+        later call (e.g. across SRMI's repeated iterations) instead of
+        recomputing fresh each time - keeps disclosure-reviewed bin
+        boundaries stable while the regression and distribution still
+        refit every call. Independent of load_from_save, which freezes
+        everything (including the fit itself).
+        """
+        cuts_path = (
+            os.path.normpath(f"{path_save}/{self.variable.impute_var}_cuts.csv")
+            if path_save != ""
+            else ""
+        )
+        if save_percentile_cuts and cuts_path != "" and os.path.isfile(cuts_path):
+            self.logging.info(f"     Reusing frozen percentile cutoffs from {cuts_path}")
+            return pl.read_csv(cuts_path)["cut"].to_list()
+
+        cut_pcts = list(percentile_cuts) if percentile_cuts else [
+            i * 100 / bins for i in range(1, bins)
+        ]
+        stats = [f"q{cuti:g}" for cuti in cut_pcts]
+        sc = StatCalculator(
+            df=df_model_pl,
+            statistics=Statistics(stats=stats, columns=["___prediction"]),
+            weight=self.weight,
+            round_output=False,
+            display=False,
+        )
+        df_est = nw.from_native(sc.df_estimates).lazy().collect().to_native()
+        cuts = sorted(set(df_est.select(stats).row(0)))
+        if round_digits > 0:
+            cuts = sorted(
+                set(
+                    drb_round_table(
+                        pl.DataFrame({"cut": cuts}), digits=round_digits
+                    )["cut"].to_list()
+                )
+            )
+
+        if save_percentile_cuts and cuts_path != "":
+            create_folders_if_needed([path_save])
+            pl.DataFrame({"cut": cuts}).write_csv(cuts_path)
+            self.logging.info(f"     Froze percentile cutoffs to {cuts_path}")
+
+        return cuts
+
+    def _two_sample_apply_bins(self, df_pl: pl.DataFrame, cuts: list[float]) -> pl.DataFrame:
+        """
+        Bin ___prediction into cuts's percentile groups. Cast straight to
+        a plain string label (e.g. "(3, 6]") rather than leaving it as a
+        Categorical/using .to_physical() - a Categorical's physical codes
+        are assigned in first-ENCOUNTER order within each .cut() call,
+        not bin-rank order, so they aren't comparable/joinable across the
+        separate calls this makes for df_model/df_impute/a reloaded
+        recipient sample (each with its own row order). The string label
+        is a deterministic function of cuts alone, so it's stable and
+        directly joinable/CSV-round-trippable across all of them.
+        """
+        return df_pl.with_columns(
+            pl.col("___prediction")
+            .cut(breaks=cuts, left_closed=False)
+            .cast(pl.String)
+            .alias("___prediction_cat")
+        )
+
+    def _two_sample_distribution_boolean(
+        self, df_model_pl: pl.DataFrame, bin_by: list[str], include_n: bool = False
+    ) -> pl.DataFrame:
+        """
+        Per (bin_by, ___prediction_cat) P(impute_var=1), for a Bernoulli
+        draw - the boolean-impute_var equivalent of
+        _two_sample_build_distribution's continuous quantile table.
+        include_n also carries each cell's raw (unweighted) record count
+        through as "n" - see save_disclosure_support's docstring on
+        Parameters.TwoSampleRegression().
+        """
+        stats = ["mean", "n"] if include_n else ["mean"]
+        sc = StatCalculator(
+            df=df_model_pl.filter(pl.col(self.variable.impute_var).is_not_null()),
+            statistics=Statistics(stats=stats, columns=[self.variable.impute_var]),
+            by={"q": bin_by + ["___prediction_cat"]},
+            weight=self.weight,
+            round_output=False,
+            display=False,
+        )
+        df_est = nw.from_native(sc.df_estimates).lazy().collect().to_native()
+        return df_est.drop("Variable").rename({"mean": "p_hat"})
+
+    def _two_sample_quantile_distribution(
+        self,
+        df_model_pl: pl.DataFrame,
+        y_col: str,
+        stats: list[str],
+        bin_by: list[str],
+        interval_adjustment: float = 1.0,
+        include_n: bool = False,
+    ) -> pl.DataFrame:
+        """
+        Per (bin_by, ___prediction_cat) empirical quantile table of y_col
+        (Census-style linear interpolation - see
+        Statistics(quantile_interpolated=True)). The interpolation
+        interval is derived from df_model_pl's own spread (half the std,
+        or 1/500th of the range, whichever is smaller) - if any requested
+        quantile comes back null (interval too coarse relative to how
+        sparse a bin is), halve it and retry, same recursive fallback
+        _draw_interpolated_percentiles's callers already rely on
+        elsewhere in this file for LightGBM's quantile draws. include_n
+        also carries each cell's raw (unweighted) record count through as
+        "n" - see save_disclosure_support's docstring on
+        Parameters.TwoSampleRegression().
+        """
+        c_y = pl.col(y_col)
+        std = df_model_pl.select(c_y.std())[0, 0] or 0.0
+        span = df_model_pl.select(c_y.max() - c_y.min())[0, 0] or 0.0
+        #   max(..., 1e-9): a completely degenerate bin (every value
+        #       identical) gives std=span=0 - floor the interval rather
+        #       than pass 0 into the interpolated-quantile machinery.
+        interval = max(interval_adjustment * min(std / 2, span / 500), 1e-9)
+
+        stats_request = stats + ["n"] if include_n else stats
+        sc = StatCalculator(
+            df=df_model_pl,
+            statistics=Statistics(
+                stats=stats_request,
+                columns=[y_col],
+                quantile_interpolated=True,
+                quantile_interpolated_interval=interval,
+            ),
+            by={"q": bin_by + ["___prediction_cat"]},
+            weight=self.weight,
+            round_output=False,
+            display=False,
+        )
+        df_est = nw.from_native(sc.df_estimates).lazy().collect().to_native()
+
+        #   Only the quantile stats themselves can legitimately come back
+        #       null (interval too coarse) - "n" never does.
+        any_missing = df_est.select(pl.any_horizontal(pl.col(stats).is_null())).to_series().any()
+        if any_missing:
+            self.logging.info(
+                f"     two_sample_regression: a quantile came back null - "
+                f"halving the interpolation interval to "
+                f"{interval_adjustment / 2} and retrying"
+            )
+            return self._two_sample_quantile_distribution(
+                df_model_pl=df_model_pl,
+                y_col=y_col,
+                stats=stats,
+                bin_by=bin_by,
+                interval_adjustment=interval_adjustment / 2,
+                include_n=include_n,
+            )
+
+        return df_est.drop("Variable")
+
+    def _two_sample_build_distribution(
+        self,
+        df_model_pl: pl.DataFrame,
+        y_col: str,
+        stats: list[str],
+        bin_by: list[str],
+        interpolate_by_bin: bool,
+        include_n: bool = False,
+    ) -> pl.DataFrame:
+        """
+        Dispatches to _two_sample_quantile_distribution either once,
+        globally (the interpolation interval is derived from the WHOLE
+        model sample's spread, then reused for every bin's own quantile
+        calculation), or once per ___prediction_cat bin (each bin gets an
+        interval derived from just its own spread - more accurate when
+        bins vary a lot, at the cost of one StatCalculator call per bin).
+        Either way, the actual per-bin (and per-bin_by) grouping happens
+        inside _two_sample_quantile_distribution itself.
+        """
+        if not interpolate_by_bin:
+            return self._two_sample_quantile_distribution(
+                df_model_pl=df_model_pl,
+                y_col=y_col,
+                stats=stats,
+                bin_by=bin_by,
+                include_n=include_n,
+            )
+
+        bin_ids = df_model_pl["___prediction_cat"].unique().sort().to_list()
+        parts = [
+            self._two_sample_quantile_distribution(
+                df_model_pl=df_model_pl.filter(pl.col("___prediction_cat") == bini),
+                y_col=y_col,
+                stats=stats,
+                bin_by=bin_by,
+                include_n=include_n,
+            )
+            for bini in bin_ids
+        ]
+        return pl.concat(parts, how="diagonal")
+
+    def _two_sample_n_at_cuts(
+        self, predictions_pl: pl.DataFrame, cuts: list[float], round_digits: int
+    ) -> pl.DataFrame:
+        """
+        For save_disclosure_support: how many records (pooled across the
+        model AND recipient samples - both matter for reviewing whether a
+        cutoff sits on top of a heaped/rounded value) land EXACTLY on
+        each bin cutoff, after the same DRB rounding applied to the
+        cutoffs themselves - relevant when the underlying data has
+        heaping/rounding that could pile many records onto one boundary.
+        """
+        col = predictions_pl.select("___prediction")
+        if round_digits > 0:
+            col = drb_round_table(col, digits=round_digits)
+        exprs = [
+            (pl.col("___prediction") == cuti).sum().alias(f"n_at_{i}")
+            for i, cuti in enumerate(cuts)
+        ]
+        counts = list(col.select(exprs).row(0))
+        return pl.DataFrame({"cut": cuts, "n_at_cut": counts})
+
+    def _two_sample_save(
+        self,
+        path_save: str,
+        predictors: list[str],
+        df_betas: pl.DataFrame,
+        regmodel: Parameters.RegressionModel,
+        cuts: list[float],
+        df_distribution: pl.DataFrame,
+        bin_by: list[str],
+        is_boolean: bool,
+        draw_error: bool,
+        continuous_qtiles_y_cuts: list[float],
+        bin_counts: pl.DataFrame | None = None,
+        n_at_cuts: pl.DataFrame | None = None,
+    ) -> None:
+        """
+        Persist everything two_sample_regression() needs to impute a
+        SEPARATE sample later with no access to this run's model sample -
+        plain CSV/JSON files in a variable-specific folder
+        (path_save/{impute_var}/), never pickle (not reliably portable
+        across machines/environments/library versions) and never a
+        bundled archive either - a reviewer should be able to open any
+        one file directly, without an extraction step first. See
+        Parameters.TwoSampleRegression()'s docstring.
+
+        bin_counts/n_at_cuts are the optional disclosure-review audit
+        trail (save_disclosure_support) - written as extra files in the
+        same folder when given, never required to reload/impute later
+        (see _two_sample_load, which doesn't read them back at all -
+        they're for a human reviewer to open directly).
+        """
+        var_path = os.path.normpath(f"{path_save}/{self.variable.impute_var}")
+        create_folders_if_needed([var_path])
+
+        meta = {
+            "impute_var": self.variable.impute_var,
+            "predictors": list(predictors),
+            "model": regmodel.name,
+            "bin_by": list(bin_by),
+            "is_boolean": is_boolean,
+            "draw_error": draw_error,
+            "continuous_qtiles_y_cuts": list(continuous_qtiles_y_cuts),
+        }
+        with open(f"{var_path}/meta.json", "w", encoding="utf-8") as f:
+            json.dump(meta, f, indent=2)
+
+        df_betas.write_csv(f"{var_path}/betas.csv")
+        pl.DataFrame({"cut": cuts}).write_csv(f"{var_path}/cuts.csv")
+        df_distribution.write_csv(f"{var_path}/distribution.csv")
+        if bin_counts is not None:
+            bin_counts.write_csv(f"{var_path}/disclosure_support_bin_counts.csv")
+        if n_at_cuts is not None:
+            n_at_cuts.write_csv(f"{var_path}/disclosure_support_n_at_cuts.csv")
+
+        self.logging.info(f"     Saved two-sample regression model to {var_path}")
+
+    def _two_sample_load(self, path_load: str) -> dict:
+        """
+        Read back a model previously persisted by _two_sample_save - no
+        access to (or knowledge of) the original model sample needed.
+        """
+        var_path = os.path.normpath(f"{path_load}/{self.variable.impute_var}")
+        if not os.path.isdir(var_path):
+            message = (
+                f"{self.variable.impute_var}: TwoSampleRegression's "
+                f"load_from_save is True, but no saved model found at "
+                f"{var_path}."
+            )
+            self.logging.error(message)
+            raise FileNotFoundError(message)
+
+        with open(f"{var_path}/meta.json", "r", encoding="utf-8") as f:
+            meta = json.load(f)
+        df_betas = pl.read_csv(f"{var_path}/betas.csv")
+        cuts = pl.read_csv(f"{var_path}/cuts.csv")["cut"].to_list()
+        df_distribution = pl.read_csv(f"{var_path}/distribution.csv")
+
+        self.logging.info(f"     Loaded two-sample regression model from {var_path}")
+
+        return {
+            "predictors": meta["predictors"],
+            "model": Parameters.RegressionModel[meta["model"]],
+            "bin_by": meta["bin_by"],
+            "is_boolean": meta["is_boolean"],
+            "draw_error": meta["draw_error"],
+            "continuous_qtiles_y_cuts": meta["continuous_qtiles_y_cuts"],
+            "betas": df_betas,
+            "cuts": cuts,
+            "distribution": df_distribution,
+        }
+
+    ##########################################################
+    ##########################################################
+    #   HELPERS - Two-sample regression - END
     ##########################################################
     ##########################################################
 

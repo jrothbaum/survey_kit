@@ -5,6 +5,7 @@ from enum import Enum
 import os
 import sys
 import polars as pl
+import joblib
 
 from .utilities import UpdateParams
 from .path_with_fallbacks import PathWithFallbacks
@@ -26,6 +27,8 @@ class RunBecause(Enum):
     UpdateByInputFileList = 5
     ParentSetToRun = 6
     UpdateByParameters = 7
+    OutputModified = 8
+    UpdateDateOlderThanLimit = 9
 
 
 def update_need_to_run(function: Function, update: UpdateParams) -> None:
@@ -47,6 +50,13 @@ def update_need_to_run(function: Function, update: UpdateParams) -> None:
         _check_if_output_listed_for_update(
             outputi,
             outputs_listed_for_update=update.update_by_output,
+            rerun_status=rerun_status,
+        )
+
+        #   Is the output too old (compared to a passed date/datetime)
+        _check_if_output_older_than(
+            outputi,
+            older_than=update.update_older_than,
             rerun_status=rerun_status,
         )
 
@@ -118,6 +128,25 @@ def _check_if_output_listed_for_update(
 
             if rerun_status.run_needed:
                 rerun_status.run_because = RunBecause.UpdateByOutput
+
+
+def _check_if_output_older_than(
+    path_output: str | PathWithFallbacks,
+    older_than,
+    rerun_status: RerunStatus,
+) -> None:
+    if not rerun_status.run_needed:
+        if older_than is not None:
+            if type(path_output) is PathWithFallbacks:
+                path_output = path_output.resolve_path().path
+
+            if os.path.isfile(path_output) or os.path.exists(path_output):
+                toutput = os.path.getmtime(path_output)
+                tcompare = older_than.timestamp()
+
+                if tcompare > toutput:
+                    rerun_status.run_needed = True
+                    rerun_status.run_because = RunBecause.UpdateDateOlderThanLimit
 
 
 def _check_inputs_for_output(
@@ -307,81 +336,25 @@ class InputChecker:
         if type(obj1) is not type(obj2):
             return False
 
-        if obj1 is None:
-            return obj2 is None
-        elif type(obj1) is dict:  #    Then so is obj 2
-            if len(obj1) != len(obj2):
-                #   not the same # of keys
-                if verbose:
-                    logger.info(f"{obj1} != {obj2}: keys do not match (different #)")
-                return False
-            elif len(set(obj1.keys()).symmetric_difference(obj2.keys())):
-                #   Not the same keys
-                if verbose:
-                    logger.info(f"{obj1} != {obj2}: keys do not match")
-                return False
-            else:
-                for keyi in obj1.keys():
-                    match = cls._compare_objects_nested(obj1[keyi], obj2[keyi])
-                    #   Stop comparing if any object doesn't match
-                    if not match:
-                        if verbose:
-                            logger.info(
-                                f"{obj1} != {obj2}: {obj1[keyi]} != {obj2[keyi]}"
-                            )
-                        return False
-        elif type(obj1) in [str, int, float, bool]:
-            return obj1 == obj2
-        elif type(obj1) in [tuple, list, set]:
-            if len(obj1) != len(obj2):
-                if verbose:
-                    logger.info(f"{obj1} != {obj2}: lengths don't match")
-                return False
-            else:
-                if len(set(obj1).symmetric_difference(obj2)):
-                    obj1 = list(obj1)
-                    obj2 = list(obj2)
-
-                    #   Can they be sorted?
-                    try:
-                        obj1.sort()
-                        obj2.sort()
-                    except:
-                        if verbose:
-                            logger.info("Cannnot sort the objects in the list")
-                    for i in range(len(obj1)):
-                        match = cls._compare_objects_nested(obj1[i], obj2[i])
-
-                        if not match:
-                            if verbose:
-                                logger.info(f"{obj1} != {obj2}: {obj1[i]} != {obj2[i]}")
-                            return False
-        elif type(obj1) is PathWithFallbacks:
-            return (obj1.input_path == obj2.input_path) and (
+        if type(obj1) is PathWithFallbacks:
+            #   Compare the path spec itself, not resolution-cache state
+            #       (path/checked_order) that can differ between two
+            #       otherwise-identical specs depending on whether
+            #       resolve_path() happened to be called on one of them
+            match = (obj1.input_path == obj2.input_path) and (
                 obj1.fallback_options == obj2.fallback_options
             )
         else:
-            try:
-                obj1_comp = vars(obj1)
-                obj2_comp = vars(obj2)
-            except:
-                message = f"Comparison failure for {obj1}, {obj2}"
-                logger.error(message)
-                return False
+            #   joblib.hash() pickles the object and hashes the result -
+            #       handles nested dicts/lists/sets, numpy scalars, and
+            #       otherwise-unhashable objects like pl.Expr uniformly,
+            #       without hand-rolled per-type comparison logic
+            match = joblib.hash(obj1) == joblib.hash(obj2)
 
-            for keyi in obj1_comp.keys():
-                if not keyi.startswith("_"):
-                    match = cls._compare_objects_nested(
-                        obj1_comp[keyi], obj2_comp[keyi]
-                    )
-                    if not match:
-                        if verbose:
-                            logger.info(
-                                f"{obj1} != {obj2}: {obj1_comp[keyi]} != {obj2_comp[keyi]}"
-                            )
-                        return False
+        if not match and verbose:
+            logger.info(f"{obj1} != {obj2}")
 
-        return True
+        return match
 
     @classmethod
     def _check_inputs_csv(
@@ -454,6 +427,15 @@ class InputChecker:
         return tinput > toutput
 
     @classmethod
+    def _output_properties(cls, path: str) -> dict:
+        st = os.stat(path)
+
+        return dict(
+            size=st.st_size,
+            mtime_ns=str(st.st_mtime_ns),
+        )
+
+    @classmethod
     def save_inputs(
         cls,
         outputs: list[str],
@@ -467,20 +449,40 @@ class InputChecker:
                 inputi = inputi.resolve_path().path
             inputs_write.append(inputi)
 
-        d_save = SerializableDictionary(dict(inputs=inputs_write, parameters=args))
-
         #   In case I change my mind and want csv's again
         #   df_inputs = pl.DataFrame(list(set(inputs)),schema={"inputs":pl.String})
 
         for outputi in outputs:
             if outputi is not None and outputi != "":
                 if os.path.exists(outputi) or os.path.isdir(outputi):
+                    path_for_inputs = cls.path_inputs(outputi, for_writing=True)
+
+                    output_props = cls._output_properties(outputi)
+                    if os.path.isdir(path_for_inputs):
+                        d_prior = SerializableDictionary.load(path_for_inputs)
+
+                        if "output" in d_prior and d_prior["output"] == output_props:
+                            if not quietly:
+                                logger.info(
+                                    f"         {outputi} was not overwritten/changed"
+                                )
+                                logger.info(
+                                    "              Input tracking file not changed"
+                                )
+                            continue
+
                     if not quietly:
                         logger.info("     Updating input list for " + outputi)
 
-                    path_for_inputs = cls.path_inputs(outputi, for_writing=True)
                     cls.delete_existing_inputs(outputi, path_for_inputs)
 
+                    d_save = SerializableDictionary(
+                        dict(
+                            inputs=inputs_write,
+                            parameters=args,
+                            output=output_props,
+                        )
+                    )
                     d_save.save(path_for_inputs)
 
                 #   In case I change my mind and want csv's again

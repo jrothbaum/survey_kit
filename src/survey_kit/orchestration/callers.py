@@ -27,7 +27,7 @@ def run_function_list(
     run_all: bool = False,
     use_function_call_inputs: bool = False,
     no_print_log: bool = False,
-    # reset_log:bool=False,
+    reset_log: bool = False,
     on_complete_by_file=None,
     on_complete_by_file_params: dict | None = None,
     function_check_every=None,
@@ -168,7 +168,7 @@ def run_function_list(
     return function_tracker.run_list(
         function_ordering=function_ordering,
         testing=testing,
-        #    reset_log=reset_log,
+        reset_log=reset_log,
         function_check_every=function_check_every,
         params_check_every=params_check_every,
     )

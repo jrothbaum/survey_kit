@@ -39,6 +39,7 @@ dependencies = [
     "optuna",
     "numba",
     "numpy>=2.0.2",
+    "cachetools>=6.2.6",
 ]
 
 #   Optional extras for the regression/estimation adapters in

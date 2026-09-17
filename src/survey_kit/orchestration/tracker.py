@@ -11,8 +11,11 @@ from .need_to_run import InputChecker
 from .function import Function
 from .dependency_order import FunctionDependencyOrder
 from .config import Config
+from .call_status import State
 
 from .. import logger
+from ..utilities.logging import set_logging
+from ..utilities import logging as sk_logging
 
 
 class FunctionTracker:
@@ -161,9 +164,21 @@ class FunctionTracker:
         self,
         function_ordering: FunctionDependencyOrder,
         testing: bool = False,
+        reset_log: bool = False,
         function_check_every: Callable = None,
         params_check_every: dict | None = None,
     ):
+        if reset_log:
+            #   Reset to whatever logging config was last set up via set_logging(),
+            #       forcing it back on in case something else has reconfigured logging
+            params = getattr(sk_logging, "_survey_kit_log_params", None)
+            if params is not None:
+                params = dict(params)
+                params["force"] = True
+                set_logging(**params)
+            else:
+                set_logging(force=True)
+
         #   Loop over the functions and run them if they need to be run and they are ready
         #       Start with defaults, not all complete and anyChanged = True (to trigger run)
         if testing:
@@ -388,6 +403,9 @@ class FunctionTracker:
                         else:
                             #   Do this and swallow to delete the log files
                             functioni.full_log
+
+                        if functioni.call_status.state == State.FAILED:
+                            logger.error(f"Function {functioni.name} FAILED")
 
                         self.any_changed = True
 

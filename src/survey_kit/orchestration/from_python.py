@@ -27,6 +27,7 @@ def FunctionFromPython(
     on_complete: Callable | None = None,
     on_complete_args: dict | None = None,
     assign_to: str = "",
+    function_name_override: str = "",
 ) -> Function:
     """
     Convert a Python function into a Function object for parallel execution.
@@ -76,6 +77,9 @@ def FunctionFromPython(
         Arguments for on_complete function. Default is None.
     assign_to : str, optional
         Variable name to assign function result to. Default is "".
+    function_name_override : str, optional
+        If the call needs something different than function.__name__.
+        Default is "".
 
     Returns
     -------
@@ -164,6 +168,13 @@ def FunctionFromPython(
     inputs.extend(ParseParameters(findlist=inputs_parameters, indict=parse_check))
     outputs.extend(ParseParameters(findlist=outputs_parameters, indict=parse_check))
 
+    if function_name_override != "":
+        name = function_name_override
+        import_name = function_name_override.split(".")[0]
+    else:
+        name = function.__name__
+        import_name = name
+
     namespaceimport = ""
 
     if load_from_file != "":
@@ -174,11 +185,15 @@ def FunctionFromPython(
         if load_filename.endswith(".py"):
             load_filename = load_filename[0 : len(load_filename) - 3]
 
-        name = function.__name__
+        #   The generated load line always binds the function's real name -
+        #       that's what's actually defined in the source file, regardless
+        #       of function_name_override (which only affects this Function's
+        #       own tracking/display name and the namespace-import alias below)
+        actual_name = function.__name__
         namespaceimport = (
             "from survey_kit.orchestration.utilities import load_utility" + LINEBREAK
         )
-        namespaceimport += f"{name} = load_utility(folder='{Path(load_folder).as_posix()}',file='{load_filename}',module_only=True).{name}"
+        namespaceimport += f"{actual_name} = load_utility(folder='{Path(load_folder).as_posix()}',file='{load_filename}',module_only=True).{actual_name}"
     else:
         if namespace == "":
             namespace = function.__module__
@@ -187,7 +202,7 @@ def FunctionFromPython(
             if import_all_in_namespace:
                 namespaceimport = "from " + namespace + " import *"
             else:
-                namespaceimport = "from " + namespace + " import " + function.__name__
+                namespaceimport = "from " + namespace + " import " + import_name
 
     extra_args = {}
 
@@ -199,7 +214,7 @@ def FunctionFromPython(
 
     f = Function(
         language=Languages.Python,
-        name=function.__name__,
+        name=name,
         pre_functions=[namespaceimport],
         parameters=parameters,
         inputs=inputs,

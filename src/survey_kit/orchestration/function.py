@@ -2,20 +2,11 @@ from __future__ import annotations
 from typing import Callable
 
 from enum import Enum
-import sys
 import os
 import tempfile
-import multiprocessing
-from multiprocessing.managers import SharedMemoryManager
-import polars as pl
-import time
-import importlib.util
-import subprocess
 from pathlib import Path
 
 from .config import Config
-from ..utilities.logging import run_with_temporary_logging
-from .shared_memory import SharedMemoryUtility
 
 from .utilities import (
     Languages,
@@ -26,7 +17,7 @@ from .utilities import (
 )
 
 from .need_to_run import RunBecause
-from .call_status import CallStatus
+from .call_status import CallStatus, State
 
 from ..serializable import (
     Serializable,
@@ -400,162 +391,23 @@ class Function(Serializable):
         if (
             self.call_status.call_input.call_type.value
             == CallTypes.multiprocessing.value
-        ):
-            if self.language == Languages.Python:
-                mp_context = multiprocessing.get_context("spawn")
-
-                #   Get the shared memory items and pass them to the subprocess
-                memory_items = []
-
-                try:
-                    smm = SharedMemoryManager()
-                    smm.start()
-                    self.call_status.shared_memory_manager = smm
-                    if len(self.shared_memory_items):
-                        for keyi, valuei in self.shared_memory_items.items():
-                            #   We're only passing polars Lazy/DataFrames and paths to load them
-                            #       If it's something else, just make it an argument
-                            if type(valuei) is str:
-                                #   Confirm the file exists
-                                if not os.path.isfile(valuei):
-                                    sError = f"SharedMemoryItem {keyi}={valuei} is not a string, but not a file."
-                                    logger.error(sError)
-                                    raise Exception(sError)
-                            elif (
-                                type(valuei) is not pl.LazyFrame
-                                and type(valuei) is not pl.DataFrame
-                            ):
-                                sError = f"SharedMemoryItem {keyi} is not a string, polars LazyFrame, or polars DataFrame."
-                                logger.error(sError)
-                                raise Exception(sError)
-
-                            #   We're good, add it to the list of items getting passed
-                            memory_items.append(
-                                SharedMemoryUtility.df_to_arrow_shm(
-                                    df=valuei, smm=smm, name=keyi
-                                ).to_dict()
-                            )
-                except:
-                    smm.shutdown()
-
-                self.call_status.process = mp_context.Process(
-                    target=Function.multiprocess_function,
-                    args=(memory_items, self.call_status.logfile_pythonlogging, code),
-                )
-
-                self.call_status.process.start()
-                self.call_status.start_time = time.time()
-                #   Load the file and run
-            else:
-                logger.info(
-                    "CallType multiprocessing is python only, converting to a shell process"
-                )
-                self.call_status.call_input.call_type = CallTypes.shell
+        ) and self.language != Languages.Python:
+            logger.info(
+                "CallType multiprocessing is python only, converting to a shell process"
+            )
+            self.call_status.call_input.call_type = CallTypes.shell
 
         if (
             self.call_status.call_input.call_type.value == CallTypes.in_process.value
-        ) and not testing:
-            from .tracker import FunctionTracker
+        ) and self.language != Languages.Python:
+            logger.info("In process jobs must be python, defaulting to shell jobs")
+            self.call_status.call_input.call_type = CallTypes.shell
 
-            if self.language == Languages.Python:
-                #   Run the function
-                logger.info(f"Run the in-process call for {self.name} - BEGIN")
-                with run_with_temporary_logging():
-                    self.call_status.start_time = time.time()
-                    spec = importlib.util.spec_from_file_location(self.name, fPath)
-                    module = importlib.util.module_from_spec(spec)
-                    spec.loader.exec_module(module)
-                    self.module = module
-                self.call_status.end_time = time.time()
-                FunctionTracker.save_inputs_for_function(
-                    self=FunctionTracker, functioni=self
-                )
-                logger.info(f"                            {self.name} - COMPLETE")
+        from .job_managers import get_executor
 
-            else:
-                logger.info("In process jobs must be python, defaulting to shell jobs")
-                self.call_status.call_input.call_type = CallTypes.shell
-
-        if self.call_status.call_input.call_type.value == CallTypes.shell.value:
-            if self.language == Languages.SAS:
-                shellcommand = "sas " + fPath + " -log " + self.call_status.logfile
-            elif self.language == Languages.Python:
-                shellcommand = f"{sys.executable} " + fPath
-            elif self.language == Languages.Stata:
-                shellcommand = "stata-mp -q -b do " + fPath
-            elif self.language == Languages.R:
-                shellcommand = (
-                    'R CMD BATCH --no-save --quiet "'
-                    + fPath
-                    + '" "'
-                    + self.call_status.logfile
-                    + '"'
-                )
-
-            self.call_status.start_time = time.time()
-
-            if not testing:
-                self.call_status.stdout_file = Path(f"{fPath}.stdout").as_posix()
-                self.call_status.stderr_file = Path(f"{fPath}.stderr").as_posix()
-
-                self.call_status.stdout_handle = open(
-                    self.call_status.stdout_file, "w", encoding="utf-8"
-                )
-                self.call_status.stderr_handle = open(
-                    self.call_status.stderr_file, "w", encoding="utf-8"
-                )
-                self.call_status.process = subprocess.Popen(
-                    shellcommand,
-                    stdout=self.call_status.stdout_handle,
-                    stderr=self.call_status.stderr_handle,
-                    text=True,
-                    cwd=os.path.dirname(fPath),
-                    shell=True,
-                )
-
-            self.call_status.start_time = time.time()
-        elif self.call_status.call_input.call_type.value == CallTypes.PBS.value:
-            if self.language == Languages.SAS:
-                shellcommand = "qsas_news --sasprog=" + fPath
-            elif self.language == Languages.Python:
-                #   Different log file default for python qsub
-                self.call_status.logfile = fPath + ".log"
-                shellcommand = "qpy_news --programfile=" + fPath
-                #   --q=testq
-            elif self.language == Languages.Stata:
-                shellcommand = "qstata_news --nologo --dofile=" + fPath
-            elif self.language == Languages.R:
-                shellcommand = (
-                    "qR_news --program="
-                    + fPath
-                    + " --logfile="
-                    + self.call_status.logfile
-                    + "--quiet"
-                )
-            elif self.language == Languages.Bash:
-                shellcommand = f"qsub {fPath}"
-
-            #   Function-specific memory and CPUs?
-            mem_in_mb = self.call_status.call_input.mem_in_mb
-            n_cpu = self.call_status.call_input.n_cpu
-
-            if self.language != Languages.Bash:
-                shellcommand += (
-                    " --cpucount=" + str(n_cpu) + " --memsize=" + str(mem_in_mb)
-                )
-
-            #   PBS Pro call
-            self.call_status.start_time = time.time()
-            if not testing:
-                shellout = subprocess.run(
-                    shellcommand.split(),
-                    stdout=subprocess.PIPE,
-                    stderr=subprocess.PIPE,
-                    text=True,
-                )
-
-                #   Set the information needed to check if the command is complete
-                self.call_status.set_job_id(shellout.stdout)
+        get_executor(self.call_status.call_input.call_type).submit(
+            function=self, testing=testing
+        )
 
     def call_code(self, logpath: str = "", save_serialize_params: bool = True):
         function_call = ""
@@ -978,18 +830,23 @@ class Function(Serializable):
         elif self.language == Languages.Bash:
             return "bash"
 
-    def multiprocess_function(
-        shm_memory_items: list[dict], logpath: str = "", code: str = ""
-    ):
-        from .shared_memory import SharedMemoryUtility
+    def add_input(self, filenames: list = None, path: str = ""):
+        if filenames is None:
+            filenames = []
 
-        df_memory_items = SharedMemoryUtility.arrow_shm_list_to_dict_df(
-            shm_memory_items
-        )
-        del shm_memory_items
+        if path != "":
+            filenames = [path + sub for sub in filenames]
 
-        #   I know this is not great, but it's the easiest way...
-        exec(code)
+        self.inputs.extend(filenames)
+
+    def add_output(self, filenames: list = None, path: str = ""):
+        if filenames is None:
+            filenames = []
+
+        if path != "":
+            filenames = [path + sub for sub in filenames]
+
+        self.outputs.extend(filenames)
 
     def add_pre_function(self, func=None):
         if type(func) is list:
@@ -1040,6 +897,8 @@ class Function(Serializable):
         if self.call_status.complete:
             self.call_status.get_output()
             fullresults = ""
+            if self.call_status.state == State.FAILED:
+                fullresults += "\nFUNCTION FAILED:\n"
             fullresults += "\nLOGGING INFORMATION FOR:\n"
             fullresults += "    FILE:       " + self.call_status.callfile + "\n"
             if self.call_status.call_input.call_type.value == CallTypes.PBS.value:

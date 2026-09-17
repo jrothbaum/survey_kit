@@ -66,7 +66,17 @@ class Variable(Serializable):
 
         #   Predict y by regression, then impute according to passed parameters
         Regression = 5
-        #   TwoSampleRegression = 6
+
+        #   Fit an OLS/Logit regression on one sample, bin the predicted
+        #       yhat into percentile groups, and impute by drawing from
+        #       the EMPIRICAL distribution of y within each bin - never a
+        #       value donated from another recipient row (unlike
+        #       pmm/leaf). The fitted model can be persisted (plain
+        #       CSV/JSON, never pickle) and reloaded to impute a second,
+        #       genuinely separate sample later - see
+        #       Parameters.TwoSampleRegression() and
+        #       Impute.two_sample_regression().
+        TwoSampleRegression = 6
         #   rifreg = 7
         #   quantile_spacing = 8
 
@@ -590,8 +600,18 @@ class Variable(Serializable):
         #   Set later
         self.imputation_flag = ""
 
-        #   No selection/pre-selection on hot deck or stat match
-        if self.modeltype in [Variable.ModelType.HotDeck, Variable.ModelType.StatMatch]:
+        #   No selection/pre-selection on hot deck, stat match, or a
+        #       two-sample regression that's just reloading a previously
+        #       persisted model (load_from_save) - there's no model
+        #       sample present in this run at all to select against.
+        no_selection = self.modeltype in [
+            Variable.ModelType.HotDeck,
+            Variable.ModelType.StatMatch,
+        ] or (
+            self.modeltype == Variable.ModelType.TwoSampleRegression
+            and self.parameters.get("load_from_save", False)
+        )
+        if no_selection:
             #   logger.info(f"      Setting preselection to {Selection.Method.No} for {self.impute_var}, no selection for {self.modeltype}")
             self.preselection = Selection(method=Selection.Method.No)
             #   logger.info(f"      Setting selection to {Selection.Method.No} for {self.impute_var}, no selection for {self.modeltype}")
@@ -1369,6 +1389,9 @@ class Variable(Serializable):
             #   If impute_var is a dummy variable, can't run quantile gbm
             self._validate_lightgbm_boolean_quantile(df=df)
 
+        if self.modeltype == Variable.ModelType.TwoSampleRegression:
+            self._validate_two_sample_regression_numeric_only()
+
         if (
             self.modeltype == Variable.ModelType.HotDeck
             or self.modeltype == Variable.ModelType.StatMatch
@@ -1507,6 +1530,31 @@ class Variable(Serializable):
                 )
                 logger.error(message)
                 raise Exception(message)
+
+    def _validate_two_sample_regression_numeric_only(self):
+        """
+        TwoSampleRegression() persists its fitted model as plain CSV/JSON
+        (never pickle - see Parameters.TwoSampleRegression()'s docstring),
+        so a categorical predictor's fitted encoding (levels/contrasts)
+        has no portable plain-text representation to reload later -
+        model= has to already be numeric-only: either the list form
+        (raw, untouched columns) or a formula with no C(...)/factor
+        terms.
+        """
+        if type(self.model) is list:
+            return
+
+        if "C(" in self.model:
+            message = (
+                f"{self.impute_var}: TwoSampleRegression's model= can't "
+                f"contain C(...)/factor terms ({self.model!r}) - its "
+                f"fitted model is persisted as plain CSV/JSON, which has "
+                f"no portable way to carry a categorical encoding across "
+                f"runs. Pre-encode any categorical predictor into "
+                f"numeric/dummy columns yourself first."
+            )
+            logger.error(message)
+            raise ValueError(message)
 
     def union_required_predictors(self, formula: str) -> str:
         """

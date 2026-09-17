@@ -3,6 +3,8 @@ from __future__ import annotations
 import os
 import importlib
 import inspect
+from copy import copy
+from datetime import datetime, date
 from enum import Enum
 
 from .config import Config
@@ -179,6 +181,16 @@ class CallInputs(Serializable):
         self.n_cpu = n_cpu
         self.process_limit = process_limit
 
+    def set_cpus(self, n_cpu: int) -> CallInputs:
+        self = copy(self)
+        self.n_cpu = n_cpu
+        return self
+
+    def set_mem(self, mem_in_mb: int) -> CallInputs:
+        self = copy(self)
+        self.mem_in_mb = mem_in_mb
+        return self
+
     def __str__(self):
         return convert_to_constructor(self)
 
@@ -259,6 +271,9 @@ class UpdateParams(Serializable):
     update_by_date : bool, optional
         Check file timestamps to determine if inputs are newer than outputs.
         Default is False.
+    update_older_than : datetime | date, optional
+        Update if an output file is older than this date/datetime limit.
+        Default is None (do not update based on this).
     update_by_output : list, optional
         List of specific output files that should trigger re-execution.
         Default is None (empty list).
@@ -302,6 +317,7 @@ class UpdateParams(Serializable):
         self,
         update_run: bool = True,
         update_by_date: bool = False,
+        update_older_than: datetime | date | None = None,
         update_by_output: list = None,
         update_by_function_name: list = None,
         update_by_used_file_list: bool = False,
@@ -316,6 +332,12 @@ class UpdateParams(Serializable):
         self.update_by_function_name = update_by_function_name
         self.update_by_date = update_by_date
         self.update_by_used_file_list = update_by_used_file_list
+
+        if type(update_older_than) is date:
+            update_older_than = datetime(
+                update_older_than.year, update_older_than.month, update_older_than.day
+            )
+        self.update_older_than = update_older_than
 
 
 def convert_to_constructor(item, from_init: bool = False):

@@ -22,13 +22,11 @@ class Parameters:
         OLS = 0
         # Probit = 1
         Logit = 2
-        # TwoSampleRegression = 3
         """
 
         OLS = 0
         # Probit = 1
         Logit = 2
-        # TwoSampleRegression = 3
 
     class ErrorDraw(Enum):
         """
@@ -1292,111 +1290,167 @@ class Parameters:
             "knearest": knearest,
         }
 
-    # @staticmethod
-    # def TwoSampleRegression(parameters_regression:dict|None=None,
-    #                         is_boolean:bool=False,
-    #                         bins:int=10,
-    #                         bin_by:list[str] | None=None,
-    #                         percentile_cuts:list[float]|None=None,
-    #                         save_percentile_cuts:bool=False,
-    #                         round_impute_var_digits:int=4,
-    #                         continuous_qtiles_y_cuts:int | list[float] | None=None,
-    #                         continuous_qtiles_interpolate_by_bin:bool=False,
-    #                         #   cond_match_bins:list[float]|None=None,
-    #                         min_n_x_var:int=0,
-    #                         draw_error:bool=False,
-    #                         path_save:str="",
-    #                         path_load:str="",
-    #                         load_from_save:bool=False) -> dict:
-    #     """
-    #     Parameters for two-sample regression imputation.
+    @staticmethod
+    def TwoSampleRegression(
+        model: "Parameters.RegressionModel" = None,
+        is_boolean: bool = False,
+        bins: int = 10,
+        bin_by: list[str] | str | None = None,
+        percentile_cuts: list[float] | None = None,
+        save_percentile_cuts: bool = False,
+        round_impute_var_digits: int = 4,
+        continuous_qtiles_y_cuts: list[float] | None = None,
+        continuous_qtiles_interpolate_by_bin: bool = False,
+        min_n_x_var: int = 0,
+        draw_error: bool = False,
+        random_share: float = 1.0,
+        save_disclosure_support: bool = False,
+        path_save: str = "",
+        path_load: str = "",
+        load_from_save: bool = False,
+    ) -> dict:
+        """
+        Parameters for two-sample regression imputation.
 
-    #     Parameters
-    #     ----------
-    #     parameters_regression : dict | None, optional
-    #         Underlying regression parameters, by default None
-    #         (default for Parameters.Regression()).
-    #     is_boolean : bool, optional
-    #         Whether variable is binary, by default False
-    #     bins : int, optional
-    #         Number of prediction bins, by default 10
-    #         Separate the yhat into
+        Fits a regression (OLS/Logit) on one sample, then imputes a
+        (possibly different) sample by binning the predicted yhat into
+        percentile groups and drawing from the EMPIRICAL distribution of y
+        within each bin - never a value predicted directly by the model.
+        Unlike pmm/leaf error draws, nothing is donated from one recipient
+        row to another; every draw comes from the model sample's own
+        observed y values (or residuals, if draw_error=True), aggregated
+        per bin.
 
+        The fitted model (coefficients, bin cutoffs, per-bin distribution)
+        can be persisted to disk (path_save) and reloaded later
+        (path_load/load_from_save) to impute a genuinely separate sample
+        that was never in memory at the same time as the model sample -
+        the "two-sample" in the name. Persistence is plain CSV/JSON files
+        in a variable-specific folder (never pickle - not reliably
+        portable across machines/environments/library versions - and
+        never a bundled archive either, so every file can be opened
+        directly without an extraction step), so model= must resolve to
+        numeric-only predictors (a plain column list, or a formula with
+        no C(...)/factor terms) - a fitted categorical encoding has no
+        portable plain-text representation. Pre-encode any categorical
+        predictor into numeric/dummy columns yourself first.
 
-# 				bins and get the actual
-# 				p(y = 1|yhat) or impute for E(y|yhat) in bin
-# 				to get reasonable impute values
-# 				from the LPM. The default is 10.
-#     bin_by : list[str] | None, optional
-#         Variables for creating separate bins, by default None
-#             i.e. have a different expected value and draws by age or something
-#             The ddefault is None (ignore)
-#     percentile_cuts : list[float] | None, optional
-#         Custom percentile cut points, by default None
-#     save_percentile_cuts : bool, optional
-#         Whether to save cut point information, by default False
-#     round_impute_var_digits : int, optional
-#         Decimal places for rounding, by default 4
-#             For the cut endpoints and y cut quantiles to
-#             (for disclosure, generall)
-#     continuous_qtiles_y_cuts : int | list[float] | None, optional
-#         For continuous variables, what quantiles to run a quantile
-#             regression on to approximate the distribution of values
-#             to draw from.
-#             Default is [0.1,0.25,0.5,0.75,0.9] if None is passed
-#     continuous_qtiles_interpolate_by_bin : bool, optional
-#         Interpolate quantiles within bins, by default False
-#             If the interpolation range is too wide, it can cause problems
-#             Set the interpolation range by bin to ensure coverage (at the cost of time)
-#     min_n_x_var : int, optional
-#         Minimum observations required per predictor, by default 0
-#             For disclosure
-#     draw_error : bool, optional
-#         Draw errors rather than values, by default False
-#     path_save : str, optional
-#         Path for saving results, by default ""
-#     path_load : str, optional
-#         Path for loading existing results, by default ""
-#     load_from_save : bool, optional
-#         Use saved results instead of re-running, by default False
+        Parameters
+        ----------
+        model : Parameters.RegressionModel, optional
+            OLS or Logit, by default RegressionModel.OLS (Logit if
+            is_boolean=True and model isn't passed explicitly).
+        is_boolean : bool, optional
+            Whether impute_var is binary, by default False. Controls both
+            the default model choice and the draw mechanism: bin-level
+            P(y=1) + a Bernoulli draw, instead of a bin-level empirical
+            quantile distribution.
+        bins : int, optional
+            Number of percentile bins to split predicted yhat into, by
+            default 10 - each bin gets its own P(y=1) (boolean) or
+            empirical quantile distribution (continuous) to draw from.
+        bin_by : list[str] | str | None, optional
+            Additional grouping columns - compute a separate distribution
+            per (bin_by, prediction bin) cell instead of per prediction
+            bin alone, by default None.
+        percentile_cuts : list[float] | None, optional
+            Explicit bin cut points (0-100 scale) instead of `bins` evenly
+            spaced ones, by default None.
+        save_percentile_cuts : bool, optional
+            Freeze the bin cutoffs the first time they're computed under
+            path_save, reusing the same cutoffs on every later call (e.g.
+            across SRMI's repeated iterations) instead of recomputing them
+            fresh each time - keeps disclosure-reviewed bin boundaries
+            stable while the regression and distribution still refit every
+            call. Independent of load_from_save, which freezes everything.
+            By default False.
+        round_impute_var_digits : int, optional
+            Digits to DRB-round (see utilities.rounding.drb_round_table)
+            the predicted score and impute_var to before computing bin
+            cutoffs/distributions and before persisting them, by default
+            4.
+        continuous_qtiles_y_cuts : list[float] | None, optional
+            Quantile levels (0-1 scale) of the empirical y (or residual)
+            distribution to compute per bin, later interpolated between to
+            draw a value - see utilities.draw_from_quantiles. By default
+            [0.1, 0.25, 0.5, 0.75, 0.9] if None.
+        continuous_qtiles_interpolate_by_bin : bool, optional
+            Compute the Census-style interpolation interval
+            (Statistics(quantile_interpolated=True)) separately within
+            each bin instead of once globally, by default False - more
+            accurate when bins vary a lot in spread, at the cost of time.
+        min_n_x_var : int, optional
+            Minimum non-zero observations required per predictor to keep
+            it in the model, by default 0 (no restriction) - for
+            disclosure, same as _build_model_matrix's min_n_x_var.
+        draw_error : bool, optional
+            Draw from the bin's empirical distribution of residuals
+            (yhat - y) and add the draw to yhat, instead of drawing
+            directly from the bin's empirical distribution of y itself.
+            Only meaningful when is_boolean=False. By default False.
+        random_share : float, optional
+            Fraction of the model sample to fit on, by default 1.0.
+        save_disclosure_support : bool, optional
+            Also persist a disclosure-review audit trail alongside the
+            model (only when path_save is set): the exact record count in
+            every (bin_by, prediction bin) cell the distribution was
+            built from, and how many model+recipient records land
+            exactly on each bin cutoff (relevant when the underlying data
+            has heaping/rounding). Never affects the fitted model, the
+            cutoffs, or the draw itself - purely an extra file for a
+            human reviewer to check cell sizes with. By default False -
+            these are real record counts, so leave this off unless
+            someone is actually going to review them.
+        path_save : str, optional
+            Directory to persist the fitted model/cutoffs/distribution to
+            (as plain files under f"{path_save}/{impute_var}/"), by
+            default "" (don't persist).
+        path_load : str, optional
+            Directory to load a previously-persisted model from when
+            load_from_save=True, by default "" (falls back to path_save).
+        load_from_save : bool, optional
+            Skip fitting entirely and impute purely from a previously
+            persisted model (path_load/path_save) - the model sample
+            doesn't need to be present in this run at all. By default
+            False.
 
-#     Returns
-#     -------
-#     dict
-#         Two-sample regression parameter dictionary
-#     """
+        Returns
+        -------
+        dict
+            Two-sample regression parameter dictionary
+        """
+        if model is None:
+            model = (
+                Parameters.RegressionModel.Logit
+                if is_boolean
+                else Parameters.RegressionModel.OLS
+            )
 
-#     # if additional_match_vars is None:
-#     #     additional_match_vars = []
+        if model not in (
+            Parameters.RegressionModel.OLS,
+            Parameters.RegressionModel.Logit,
+        ):
+            message = (
+                "Parameters.TwoSampleRegression(): only OLS/Logit are "
+                "supported - a portable plain-text persisted model needs "
+                "linear coefficients, which tree/ensemble estimators "
+                "don't have."
+            )
+            logger.error(message)
+            raise ValueError(message)
 
-#     # if cond_match_vars is None:
-#     #     cond_match_vars = []
+        if percentile_cuts is None:
+            percentile_cuts = []
 
-#     if parameters_regression is None:
-#         parameters_regression = Parameters.Regression()
+        if bin_by is None:
+            bin_by = []
+        elif type(bin_by) is str:
+            bin_by = [bin_by]
 
-#     if parameters_regression["model"] == Parameters.RegressionModel.Probit:
-#         message = "Probit model not implemented, use Logit"
-#         logger.error(message)
-#         raise Exception(message)
-#     if percentile_cuts is None:
-#         percentile_cuts = []
+        if continuous_qtiles_y_cuts is None:
+            continuous_qtiles_y_cuts = [0.1, 0.25, 0.5, 0.75, 0.9]
 
+        if path_load == "":
+            path_load = path_save
 
-#     if bin_by is None:
-#         bin_by = []
-#     # if cond_match_bins is None:
-#     #     cond_match_bins = []
-
-#     if continuous_qtiles_y_cuts is None:
-#         continuous_qtiles_y_cuts = [0.1,0.25,0.5,0.75,0.9]
-
-#     params = deepcopy(locals())
-#     if parameters_regression is None:
-#         parameters_regression = Parameters.Regression()
-
-#     for keyi, valuei in parameters_regression.items():
-#         params[keyi] = valuei
-
-#     del params["parameters_regression"]
-#     return params
+        return deepcopy(locals())
