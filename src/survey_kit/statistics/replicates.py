@@ -291,8 +291,7 @@ class ReplicateStats(Serializable):
         #   Don't edit the underlying object
         self = self.copy()
 
-        select_expr = list_input(select_expr)
-        cols_keep = columns_from_list(self.df_estimates, columns=select_expr)
+        cols_keep = select_columns(self.df_estimates, select_expr)
 
         for dfi_name in self._df_attributes:
             if dfi_name == "df_replicates":
@@ -1160,6 +1159,30 @@ def _expression_kind(arg) -> str | None:
             "use one kind of expression per call."
         )
     return next(iter(kinds), None)
+
+
+def select_columns(df: IntoFrameT, select_expr) -> list[str]:
+    """
+    Resolve a select argument to column names: strings (with "*" wildcards)
+    as before; polars/narwhals expressions by running them against df's
+    schema and keeping the names they produce (so pl.col("^x.*$"),
+    pl.exclude(...), nw.col(...) etc. all work). Same pl/nw rules as
+    apply_as_attribute.
+    """
+    items = list_input(select_expr)
+    kind = _expression_kind(items)
+    if kind is None:
+        return columns_from_list(df, columns=items)
+
+    df_nw = nw.from_native(df)
+    if kind == "polars":
+        if df_nw.implementation != nw.Implementation.POLARS:
+            raise TypeError(
+                f"A polars expression can't be applied to a {df_nw.implementation} "
+                "frame - use a narwhals expression."
+            )
+        return df_nw.to_native().lazy().select(items).collect_schema().names()
+    return df_nw.lazy().select(items).collect_schema().names()
 
 
 def apply_as_attribute(obj, df_name: str, nw_expr, nw_method: str):

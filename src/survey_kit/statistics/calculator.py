@@ -17,6 +17,7 @@ from .replicates import (
     Replicates,
     ReplicateStats,
     print_se_table,
+    select_columns,
     replicates_ses_from_function,
     ses_from_replicates,
     _replicates_ses_batched,
@@ -1679,13 +1680,7 @@ class StatCalculator(Serializable):
     def select(
         self, select_expr: nw.Expr | str | list[str] | list[nw.Expr]
     ) -> StatCalculator:
-        cols_keep = (
-            nw.from_native(self.df_estimates)
-            .lazy()
-            .select(select_expr)
-            .collect_schema()
-            .names()
-        )
+        cols_keep = select_columns(self.df_estimates, select_expr)
         #   Order-preserving difference - list(set(...)) would reorder
         #   based on Python's per-process string hash randomization,
         #   breaking determinism/replicability across runs.

@@ -38,6 +38,7 @@ from .replicates import (
     apply_as_attribute,
     _invalidate_extras,
     match_eagerness,
+    select_columns,
     filter_values_in_df,
     rename_values_in_df,
 )
@@ -1126,8 +1127,7 @@ class MultipleImputation(Serializable):
         self, select_expr: nw.Expr | str | list[str] | list[nw.Expr]
     ) -> MultipleImputation:
         self = self.copy()
-        select_expr = list_input(select_expr)
-        cols_keep = columns_from_list(self.df_estimates, columns=select_expr)
+        cols_keep = select_columns(self.df_estimates, select_expr)
 
         select_df_p = []
         for coli in cols_keep:

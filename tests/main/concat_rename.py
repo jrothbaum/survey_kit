@@ -241,6 +241,21 @@ def test_polars_expression_mixed_and_non_polars_raise():
     _raises(lambda: a_pd.filter(pl.col("Variable") != "a"), TypeError)
 
 
+def test_select_with_polars_and_narwhals_expressions():
+    e = pl.DataFrame({"Variable": ["a", "b"], "x": [1.0, 2.0], "y": [3.0, 4.0]})
+    a = AdapterStats(e, e.clone(), display=False)
+    for arg in ("x", ["x"], nw.col("x"), pl.col("x"), pl.col("^x$"), pl.exclude("y")):
+        assert _collect(a.select(arg).df_estimates).columns == ["Variable", "x"], arg
+        assert _collect(a.select(arg).df_ses).columns == ["Variable", "x"], arg
+
+    mi = _mi(["a", "b"])
+    out = mi.select(pl.col("coef"))
+    assert _collect(out.df_estimates).columns == ["Variable", "coef"]
+    for imp in out.implicate_stats:
+        assert _collect(imp.df_estimates).columns == ["Variable", "coef"]
+    _raises(lambda: a.select([pl.col("x"), nw.col("y")]), TypeError)
+
+
 if __name__ == "__main__":
     for name, fn in list(globals().items()):
         if name.startswith("test_"):
