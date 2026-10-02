@@ -273,6 +273,109 @@ def test_mi_sort_by_value_follows_implicates():
         assert _collect(imp.df_vcov)["Variable_1"].to_list()[:3] == ["c"] * 3
 
 
+def _grouped_calculator(columns):
+    import numpy as np
+
+    rng = np.random.default_rng(0)
+    n = 300
+    df = pl.DataFrame(
+        {
+            "x": rng.normal(size=n),
+            "y": rng.normal(size=n) + 1,
+            "g": rng.integers(0, 3, n),
+            "w": np.ones(n),
+            **{f"w{i}": rng.uniform(0.5, 1.5, n) for i in range(7)},
+        }
+    )
+    return StatCalculator(
+        df,
+        statistics=Statistics(stats=["mean", "median"], columns=columns),
+        weight="w",
+        replicates=Replicates(weight_stub="w", n_replicates=6),
+        by={"Group": ["g"]},
+        display=False,
+    )
+
+
+def _paired(sc):
+    """estimate/SE pairs keyed by (Variable, g) - order-independent."""
+    return _collect(sc.df_estimates).join(
+        _collect(sc.df_ses), on=["Variable", "g"], suffix="_se"
+    )
+
+
+def _same_pairs(result, base):
+    pr = _paired(result)
+    m = pr.join(_paired(base), on=["Variable", "g"], suffix="_o")
+    return all(
+        (m[c] == m[c + "_o"]).all() for c in pr.columns if c not in ("Variable", "g")
+    )
+
+
+def test_grouped_calculator_operations_keep_groups_and_pairing():
+    sc = _grouped_calculator(["x", "y"])
+    for out in (
+        sc.sort("mean", descending=True),
+        sc.sort(["Variable", "g"], descending=[True, False]),
+        sc.filter_values("x"),
+        sc.filter(nw.col("g") > 0),
+        sc.select("mean"),
+    ):
+        assert "g" in _collect(out.df_estimates).columns
+        assert _same_pairs(out, sc)
+    #   select must keep the group column in every table
+    sel = sc.select("mean")
+    assert _collect(sel.df_replicates).columns == ["Variable", "g", "mean", "___replicate___"]
+
+    renamed = sc.rename_values({"x": "xx"})
+    assert sorted(set(_ids(renamed.df_replicates))) == ["xx", "y"]
+    assert sorted(set(_collect(renamed.df_estimates)["g"])) == [0, 1, 2]
+
+    both = _grouped_calculator(["x"]).concat_with(
+        _grouped_calculator(["y"]), how="vertical"
+    )
+    assert _collect(both.df_estimates).shape == (6, 4)
+    assert _collect(both.df_replicates).shape[0] == 42
+
+
+def test_grouped_mi_operations_follow_implicates():
+    def mk(names):
+        imps = []
+        for k in range(3):
+            rows = [(v, g) for v in names for g in (0, 1, 2)]
+            e = pl.DataFrame(
+                {
+                    "Variable": [r[0] for r in rows],
+                    "g": [r[1] for r in rows],
+                    "mean": [float(i) + k * 0.1 for i in range(len(rows))],
+                }
+            )
+            s = e.with_columns(pl.Series("mean", [0.1 + 0.01 * i for i in range(len(rows))]))
+            imps.append(ReplicateStats(df_estimates=e, df_ses=s))
+        mi = MultipleImputation(implicate_stats=imps, join_on=["Variable", "g"])
+        mi.calculate()
+        return mi
+
+    mi = mk(["x", "y"])
+    out = mi.sort("mean", descending=True)
+    top = _collect(out.df_estimates).row(0, named=True)
+    assert (top["Variable"], top["g"]) == ("y", 2)
+    pairs = _collect(out.df_estimates).join(
+        _collect(out.df_ses), on=["Variable", "g"], suffix="_se"
+    )
+    base = _collect(mi.df_estimates).join(
+        _collect(mi.df_ses), on=["Variable", "g"], suffix="_se"
+    )
+    m = pairs.join(base, on=["Variable", "g"], suffix="_o")
+    assert (m["mean_se"] == m["mean_se_o"]).all()
+    for imp in out.implicate_stats:
+        assert _collect(imp.df_estimates).row(0, named=True)["g"] == 2
+    assert _collect(mi.select("mean").df_estimates).columns == ["Variable", "g", "mean"]
+    assert _collect(mi.filter_values("x").df_estimates).shape == (3, 3)
+    both = mi.concat_with(mk(["z"]), how="vertical")
+    assert _collect(both.df_estimates).shape == (9, 3)
+
+
 def test_polars_expression_mixed_and_non_polars_raise():
     a = _adapter(["a", "b"], vcov=False)
     _raises(

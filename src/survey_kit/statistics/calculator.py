@@ -1684,7 +1684,7 @@ class StatCalculator(Serializable):
         #   Order-preserving difference - list(set(...)) would reorder
         #   based on Python's per-process string hash randomization,
         #   breaking determinism/replicability across runs.
-        add_join_on = [v for v in self.variable_ids if v not in cols_keep]
+        add_join_on = [v for v in self.variable_ids + self.summarize_vars if v not in cols_keep]
         cols_keep = add_join_on + cols_keep
 
         self = self.copy()
