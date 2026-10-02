@@ -47,18 +47,6 @@ from .. import logger
 from .adapter_stats import AdapterStats
 
 
-_BY_DOC = """
-
-    by : dict[str, list[str]] | list | str | None, optional
-        Run the adapter separately within each group of these column(s) -
-        same formats as StatCalculator's own `by`. The group columns are
-        added to every returned table (df_estimates, df_ses, df_tidy and
-        df_vcov) and set as the result's `by`. Covariances *across* groups
-        are not computed (each group is its own fit). Default is None (one
-        fit on all of df).
-"""
-
-
 def _by_columns(by) -> list[str]:
     """Flat list of the group columns in a `by` (dict / list / str / None)."""
     if by is None:
@@ -136,7 +124,11 @@ def _run_by_groups(adapter, df, by, args, kwargs) -> AdapterStats:
 
 
 def _with_by(adapter):
-    """Give a direct adapter an optional `by=` that fits it once per group."""
+    """
+    Make a direct adapter fit once per group when called with `by=`. The
+    adapter declares `by` in its own signature (for docs/IDE hints) but never
+    sees it - this intercepts it first.
+    """
 
     @functools.wraps(adapter)
     def wrapper(df, *args, by=None, **kwargs):
@@ -144,7 +136,6 @@ def _with_by(adapter):
             return adapter(df, *args, **kwargs)
         return _run_by_groups(adapter, df, by, args, kwargs)
 
-    wrapper.__doc__ = (adapter.__doc__ or "") + _BY_DOC
     return wrapper
 
 
@@ -266,7 +257,7 @@ def _mi_ses_replicates_delegate(
     join_on_name: str,
     replicates,
     convert=None,
-    by=None,
+    by: dict[str, list[str]] | list | str | None = None,
 ):
     """
     Build an `mi_ses_from_function` delegate (called once per implicate)
@@ -336,6 +327,7 @@ def statsmodels_adapter(
     cov_kwds: dict | None = None,
     model_kwargs: dict | None = None,
     fit_kwargs: dict | None = None,
+    by: dict[str, list[str]] | list | str | None = None,
 ) -> AdapterStats:
     """
     Fit an OLS/WLS regression with statsmodels and return its coefficient
@@ -366,6 +358,19 @@ def statsmodels_adapter(
         (`sm.OLS`/`sm.WLS`). Default is None.
     fit_kwargs : extra keywords forwarded to `.fit()` besides cov_type/
         cov_kwds (e.g. `{"maxiter": 200}`). Default is None.
+
+    by : dict[str, list[str]] | list | str | None, optional
+        Fit separately within each group of these column(s) - same formats
+        as StatCalculator's own `by`. The group columns are added to every
+        returned table (df_estimates, df_ses, df_tidy and df_vcov) and set
+        as the result's `by`. Covariances *across* groups are not computed
+        (each group is its own fit). Default is None (one fit on all of df).
+
+    by : dict[str, list[str]] | list | str | None, optional
+        Fit separately within each group of these column(s) (see the
+        delegate adapter's `by`). The group columns are added to `join_on`
+        and kept in every combined table. Covariances *across* groups are
+        not computed. Default is None.
 
     Returns
     -------
@@ -435,7 +440,7 @@ def mi_ses_from_statsmodels(
     parallel_inputs=None,
     rounding=None,
     round_output: bool = True,
-    by=None,
+    by: dict[str, list[str]] | list | str | None = None,
 ):
     """
     `mi_ses_from_function(delegate=statsmodels_adapter, ...)`, with
@@ -459,6 +464,12 @@ def mi_ses_from_statsmodels(
         column) - the implicate is converted to pandas once, not once per
         replicate. Default is None (use `statsmodels_adapter`'s own
         cov_type/cov_kwds).
+
+    by : dict[str, list[str]] | list | str | None, optional
+        Fit separately within each group of these column(s) (see the
+        delegate adapter's `by`). The group columns are added to `join_on`
+        and kept in every combined table. Covariances *across* groups are
+        not computed. Default is None.
 
     Returns
     -------
@@ -540,6 +551,7 @@ def linearmodels_adapter(
     cov_kwds: dict | None = None,
     model_kwargs: dict | None = None,
     fit_kwargs: dict | None = None,
+    by: dict[str, list[str]] | list | str | None = None,
 ) -> AdapterStats:
     """
     Fit a linearmodels model (IV/panel) and return its coefficient table in
@@ -581,6 +593,13 @@ def linearmodels_adapter(
         Default is None.
     fit_kwargs : extra keywords forwarded to `.fit()` besides cov_type/
         cov_kwds. Default is None.
+
+    by : dict[str, list[str]] | list | str | None, optional
+        Fit separately within each group of these column(s) - same formats
+        as StatCalculator's own `by`. The group columns are added to every
+        returned table (df_estimates, df_ses, df_tidy and df_vcov) and set
+        as the result's `by`. Covariances *across* groups are not computed
+        (each group is its own fit). Default is None (one fit on all of df).
 
     Returns
     -------
@@ -662,7 +681,7 @@ def mi_ses_from_linearmodels(
     parallel_inputs=None,
     rounding=None,
     round_output: bool = True,
-    by=None,
+    by: dict[str, list[str]] | list | str | None = None,
 ):
     """
     `mi_ses_from_function(delegate=linearmodels_adapter, ...)`, with
@@ -685,6 +704,12 @@ def mi_ses_from_linearmodels(
         bootstrap approach `mi_ses_from_stata`'s `replicates=` uses.
         `weight` is ignored in this mode. Default is None (use
         `linearmodels_adapter`'s own cov_type/cov_kwds).
+
+    by : dict[str, list[str]] | list | str | None, optional
+        Fit separately within each group of these column(s) (see the
+        delegate adapter's `by`). The group columns are added to `join_on`
+        and kept in every combined table. Covariances *across* groups are
+        not computed. Default is None.
 
     Returns
     -------
@@ -756,6 +781,7 @@ def pyfixest_adapter(
     vcov: str | dict | None = "hetero",
     join_on_name: str = "Variable",
     value_name: str = "estimate",
+    by: dict[str, list[str]] | list | str | None = None,
     **kwargs,
 ) -> AdapterStats:
     """
@@ -793,6 +819,13 @@ def pyfixest_adapter(
     **kwargs : any other argument the chosen estimator takes (`ssc`,
         `fixef_rm`, `split`/`fsplit`, `offset` for fepois, ...) - forwarded
         verbatim, no conversion needed since this stays in pure Python.
+
+    by : dict[str, list[str]] | list | str | None, optional
+        Fit separately within each group of these column(s) - same formats
+        as StatCalculator's own `by`. The group columns are added to every
+        returned table (df_estimates, df_ses, df_tidy and df_vcov) and set
+        as the result's `by`. Covariances *across* groups are not computed
+        (each group is its own fit). Default is None (one fit on all of df).
 
     Returns
     -------
@@ -897,7 +930,7 @@ class mi_ses_from_pyfixest:
         parallel_inputs=None,
         rounding=None,
         round_output: bool = True,
-        by=None,
+        by: dict[str, list[str]] | list | str | None = None,
         **kwargs,
     ):
         """
@@ -924,6 +957,12 @@ class mi_ses_from_pyfixest:
         **kwargs : any other `pyfixest.feols` argument (`ssc`, `fixef_rm`,
             `split`/`fsplit`, ...) - forwarded verbatim, see
             `pyfixest_adapter`.
+
+        by : dict[str, list[str]] | list | str | None, optional
+            Fit separately within each group of these column(s) (see the
+            delegate adapter's `by`). The group columns are added to `join_on`
+            and kept in every combined table. Covariances *across* groups are
+            not computed. Default is None.
 
         Returns
         -------
@@ -994,7 +1033,7 @@ class mi_ses_from_pyfixest:
         parallel_inputs=None,
         rounding=None,
         round_output: bool = True,
-        by=None,
+        by: dict[str, list[str]] | list | str | None = None,
         **kwargs,
     ):
         """
@@ -1015,6 +1054,12 @@ class mi_ses_from_pyfixest:
         **kwargs : any other `pyfixest.fepois` argument (`ssc`,
             `fixef_rm`, `offset`, `iwls_tol`/`iwls_maxiter`, ...) -
             forwarded verbatim, see `pyfixest_adapter`.
+
+        by : dict[str, list[str]] | list | str | None, optional
+            Fit separately within each group of these column(s) (see the
+            delegate adapter's `by`). The group columns are added to `join_on`
+            and kept in every combined table. Covariances *across* groups are
+            not computed. Default is None.
 
         Returns
         -------
@@ -1084,7 +1129,7 @@ class mi_ses_from_pyfixest:
         parallel_inputs=None,
         rounding=None,
         round_output: bool = True,
-        by=None,
+        by: dict[str, list[str]] | list | str | None = None,
         **kwargs,
     ):
         """
@@ -1105,6 +1150,12 @@ class mi_ses_from_pyfixest:
         **kwargs : any other `pyfixest.feglm` argument (`ssc`,
             `fixef_rm`, `iwls_tol`/`iwls_maxiter`, ...) - forwarded
             verbatim, see `pyfixest_adapter`.
+
+        by : dict[str, list[str]] | list | str | None, optional
+            Fit separately within each group of these column(s) (see the
+            delegate adapter's `by`). The group columns are added to `join_on`
+            and kept in every combined table. Covariances *across* groups are
+            not computed. Default is None.
 
         Returns
         -------
@@ -1152,6 +1203,7 @@ def polars_ds_adapter(
     value_name: str = "estimate",
     std_err: str = "hc3",
     null_policy: str = "raise",
+    by: dict[str, list[str]] | list | str | None = None,
 ) -> AdapterStats:
     """
     Fit an OLS/WLS regression with polars_ds's `lin_reg_report` and return
@@ -1188,6 +1240,13 @@ def polars_ds_adapter(
         parameter above.
     null_policy : how to handle nulls in the predictors, passed straight to
         polars_ds. Default is "raise".
+
+    by : dict[str, list[str]] | list | str | None, optional
+        Fit separately within each group of these column(s) - same formats
+        as StatCalculator's own `by`. The group columns are added to every
+        returned table (df_estimates, df_ses, df_tidy and df_vcov) and set
+        as the result's `by`. Covariances *across* groups are not computed
+        (each group is its own fit). Default is None (one fit on all of df).
 
     Returns
     -------
@@ -1270,7 +1329,7 @@ def mi_ses_from_polars_ds(
     parallel_inputs=None,
     rounding=None,
     round_output: bool = True,
-    by=None,
+    by: dict[str, list[str]] | list | str | None = None,
 ):
     """
     `mi_ses_from_function(delegate=polars_ds_adapter, ...)`, with
@@ -1294,6 +1353,12 @@ def mi_ses_from_polars_ds(
         implicate is converted to polars once (if it isn't already), not
         once per replicate. Default is None (use `polars_ds_adapter`'s own
         `std_err`).
+
+    by : dict[str, list[str]] | list | str | None, optional
+        Fit separately within each group of these column(s) (see the
+        delegate adapter's `by`). The group columns are added to `join_on`
+        and kept in every combined table. Covariances *across* groups are
+        not computed. Default is None.
 
     Returns
     -------
@@ -1357,6 +1422,7 @@ def r_lm_adapter(
     family: str | None = None,
     join_on_name: str = "Variable",
     value_name: str = "estimate",
+    by: dict[str, list[str]] | list | str | None = None,
     **r_kwargs,
 ) -> AdapterStats:
     """
@@ -1393,6 +1459,13 @@ def r_lm_adapter(
         R argument names with a "." (e.g. `na.action`) can't be Python
         keyword names - pass those via a dict: `r_kwargs={"na.action": ...}`
         merged into this call, or just use `**{"na.action": ...}`.
+
+    by : dict[str, list[str]] | list | str | None, optional
+        Fit separately within each group of these column(s) - same formats
+        as StatCalculator's own `by`. The group columns are added to every
+        returned table (df_estimates, df_ses, df_tidy and df_vcov) and set
+        as the result's `by`. Covariances *across* groups are not computed
+        (each group is its own fit). Default is None (one fit on all of df).
 
     Returns
     -------
@@ -1444,6 +1517,7 @@ def r_fixest_adapter(
     vcov: str | None = None,
     join_on_name: str = "Variable",
     value_name: str = "estimate",
+    by: dict[str, list[str]] | list | str | None = None,
     **r_kwargs,
 ) -> AdapterStats:
     """
@@ -1492,6 +1566,13 @@ def r_fixest_adapter(
         `ssc=RRaw('ssc(fixef.K="full")')`). R argument names with a "."
         (e.g. `panel.id`) can't be Python keyword names directly - build the
         kwargs dict separately and splat it: `**{"panel.id": "~id+time"}`.
+
+    by : dict[str, list[str]] | list | str | None, optional
+        Fit separately within each group of these column(s) - same formats
+        as StatCalculator's own `by`. The group columns are added to every
+        returned table (df_estimates, df_ses, df_tidy and df_vcov) and set
+        as the result's `by`. Covariances *across* groups are not computed
+        (each group is its own fit). Default is None (one fit on all of df).
 
     Returns
     -------
@@ -1630,6 +1711,7 @@ def r_feols(
     verbose: int | None = None,
     join_on_name: str = "Variable",
     value_name: str = "estimate",
+    by: dict[str, list[str]] | list | str | None = None,
     **r_kwargs,
 ) -> AdapterStats:
     """
@@ -1652,6 +1734,13 @@ def r_feols(
             Default is "Variable".
         value_name : name of the coefficient/SE/covariance value column in the
             output. Default is "estimate".
+
+        by : dict[str, list[str]] | list | str | None, optional
+            Fit separately within each group of these column(s) - same formats
+            as StatCalculator's own `by`. The group columns are added to every
+            returned table (df_estimates, df_ses, df_tidy and df_vcov) and set
+            as the result's `by`. Covariances *across* groups are not computed
+            (each group is its own fit). Default is None (one fit on all of df).
 
         Returns
         -------
@@ -1684,6 +1773,7 @@ def r_feglm(
     verbose: int | None = None,
     join_on_name: str = "Variable",
     value_name: str = "estimate",
+    by: dict[str, list[str]] | list | str | None = None,
     **r_kwargs,
 ) -> AdapterStats:
     """
@@ -1711,6 +1801,13 @@ def r_feglm(
             Default is "Variable".
         value_name : name of the coefficient/SE/covariance value column in the
             output. Default is "estimate".
+
+        by : dict[str, list[str]] | list | str | None, optional
+            Fit separately within each group of these column(s) - same formats
+            as StatCalculator's own `by`. The group columns are added to every
+            returned table (df_estimates, df_ses, df_tidy and df_vcov) and set
+            as the result's `by`. Covariances *across* groups are not computed
+            (each group is its own fit). Default is None (one fit on all of df).
 
         Returns
         -------
@@ -1742,6 +1839,7 @@ def r_fepois(
     verbose: int | None = None,
     join_on_name: str = "Variable",
     value_name: str = "estimate",
+    by: dict[str, list[str]] | list | str | None = None,
     **r_kwargs,
 ) -> AdapterStats:
     """
@@ -1762,6 +1860,13 @@ def r_fepois(
             Default is "Variable".
         value_name : name of the coefficient/SE/covariance value column in the
             output. Default is "estimate".
+
+        by : dict[str, list[str]] | list | str | None, optional
+            Fit separately within each group of these column(s) - same formats
+            as StatCalculator's own `by`. The group columns are added to every
+            returned table (df_estimates, df_ses, df_tidy and df_vcov) and set
+            as the result's `by`. Covariances *across* groups are not computed
+            (each group is its own fit). Default is None (one fit on all of df).
 
         Returns
         -------
@@ -1793,6 +1898,7 @@ def r_femlm(
     verbose: int | None = None,
     join_on_name: str = "Variable",
     value_name: str = "estimate",
+    by: dict[str, list[str]] | list | str | None = None,
     **r_kwargs,
 ) -> AdapterStats:
     """
@@ -1816,6 +1922,13 @@ def r_femlm(
             Default is "Variable".
         value_name : name of the coefficient/SE/covariance value column in the
             output. Default is "estimate".
+
+        by : dict[str, list[str]] | list | str | None, optional
+            Fit separately within each group of these column(s) - same formats
+            as StatCalculator's own `by`. The group columns are added to every
+            returned table (df_estimates, df_ses, df_tidy and df_vcov) and set
+            as the result's `by`. Covariances *across* groups are not computed
+            (each group is its own fit). Default is None (one fit on all of df).
 
         Returns
         -------
@@ -1874,7 +1987,7 @@ class mi_ses_from_r_fixest:
         parallel_inputs=None,
         rounding=None,
         round_output: bool = True,
-        by=None,
+        by: dict[str, list[str]] | list | str | None = None,
         **r_kwargs,
     ):
         """
@@ -1898,6 +2011,12 @@ class mi_ses_from_r_fixest:
             ignored in this mode; the implicate is converted to an R
             data.frame once, not once per replicate. Default is None (use
             `r_feols`'s own `vcov`/`cluster`).
+
+        by : dict[str, list[str]] | list | str | None, optional
+            Fit separately within each group of these column(s) (see the
+            delegate adapter's `by`). The group columns are added to `join_on`
+            and kept in every combined table. Covariances *across* groups are
+            not computed. Default is None.
 
         Returns
         -------
@@ -1989,7 +2108,7 @@ class mi_ses_from_r_fixest:
         parallel_inputs=None,
         rounding=None,
         round_output: bool = True,
-        by=None,
+        by: dict[str, list[str]] | list | str | None = None,
         **r_kwargs,
     ):
         """
@@ -2008,6 +2127,12 @@ class mi_ses_from_r_fixest:
             replicate-weight-bootstrap option, `vcov` forced to "iid",
             `cluster` forced off, and `weight` ignored in this mode.
             Default is None.
+
+        by : dict[str, list[str]] | list | str | None, optional
+            Fit separately within each group of these column(s) (see the
+            delegate adapter's `by`). The group columns are added to `join_on`
+            and kept in every combined table. Covariances *across* groups are
+            not computed. Default is None.
 
         Returns
         -------
@@ -2099,7 +2224,7 @@ class mi_ses_from_r_fixest:
         parallel_inputs=None,
         rounding=None,
         round_output: bool = True,
-        by=None,
+        by: dict[str, list[str]] | list | str | None = None,
         **r_kwargs,
     ):
         """
@@ -2117,6 +2242,12 @@ class mi_ses_from_r_fixest:
             replicate-weight-bootstrap option, `vcov` forced to "iid",
             `cluster` forced off, and `weight` ignored in this mode.
             Default is None.
+
+        by : dict[str, list[str]] | list | str | None, optional
+            Fit separately within each group of these column(s) (see the
+            delegate adapter's `by`). The group columns are added to `join_on`
+            and kept in every combined table. Covariances *across* groups are
+            not computed. Default is None.
 
         Returns
         -------
@@ -2206,7 +2337,7 @@ class mi_ses_from_r_fixest:
         parallel_inputs=None,
         rounding=None,
         round_output: bool = True,
-        by=None,
+        by: dict[str, list[str]] | list | str | None = None,
         **r_kwargs,
     ):
         """
@@ -2224,6 +2355,12 @@ class mi_ses_from_r_fixest:
             [`mi_ses_from_function`][survey_kit.statistics.multiple_imputation.mi_ses_from_function].
         formula, family, vcov, cluster, panel_id, ssc, fixef, lean, notes,
             verbose, join_on_name, value_name, **r_kwargs : see `r_femlm`.
+
+        by : dict[str, list[str]] | list | str | None, optional
+            Fit separately within each group of these column(s) (see the
+            delegate adapter's `by`). The group columns are added to `join_on`
+            and kept in every combined table. Covariances *across* groups are
+            not computed. Default is None.
 
         Returns
         -------
@@ -2276,6 +2413,7 @@ def stata_adapter(
     stata_path: str | None = None,
     reuse_data: bool = False,
     quietly: bool = True,
+    by: dict[str, list[str]] | list | str | None = None,
 ) -> AdapterStats:
     """
     Run an arbitrary Stata e-class estimation command (regress, logit,
@@ -2324,6 +2462,13 @@ def stata_adapter(
         output on success too (failures always surface the real error
         text regardless - see `_stata_interop._run_in_stata`'s
         docstring). Default is True.
+
+    by : dict[str, list[str]] | list | str | None, optional
+        Fit separately within each group of these column(s) - same formats
+        as StatCalculator's own `by`. The group columns are added to every
+        returned table (df_estimates, df_ses, df_tidy and df_vcov) and set
+        as the result's `by`. Covariances *across* groups are not computed
+        (each group is its own fit). Default is None (one fit on all of df).
 
     Returns
     -------
@@ -2394,7 +2539,7 @@ def mi_ses_from_stata(
     parallel_inputs=None,
     rounding=None,
     round_output: bool = True,
-    by=None,
+    by: dict[str, list[str]] | list | str | None = None,
 ):
     """
     `mi_ses_from_function(delegate=stata_adapter, ...)`, with
@@ -2425,6 +2570,12 @@ def mi_ses_from_stata(
         Replicates/StatCalculator machinery (e.g. to match SEs computed
         the same way elsewhere in a project) instead. Default is None (use
         `command`'s own e(V), the `stata_adapter` path).
+
+    by : dict[str, list[str]] | list | str | None, optional
+        Fit separately within each group of these column(s) (see the
+        delegate adapter's `by`). The group columns are added to `join_on`
+        and kept in every combined table. Covariances *across* groups are
+        not computed. Default is None.
 
     Returns
     -------
