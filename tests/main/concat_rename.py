@@ -180,6 +180,26 @@ def test_mi_methods_propagate_to_implicates():
         assert _collect(imp.df_estimates).columns == ["Variable", "beta"]
 
 
+def test_adapter_filter_values_keeps_vcov():
+    out = _adapter(["a", "b", "c"], tidy=True).filter_values(["a", "c"])
+    rs = out.replicate_stats
+    assert _ids(out.df_estimates) == ["a", "c"]
+    assert _ids(out.df_ses) == ["a", "c"]
+    assert _ids(rs.df_tidy) == ["a", "c"]
+    assert _collect(rs.df_vcov).shape == (4, 3)
+    assert _ids(_adapter(["a", "b"]).filter_values("b").df_estimates) == ["b"]
+
+
+def test_mi_filter_values_everywhere():
+    out = _mi(["a", "b", "c"], vcov=True).filter_values(["a", "b"])
+    for df in (out.df_estimates, out.df_ses, out.df_p):
+        assert _ids(df) == ["a", "b"]
+    for imp in out.implicate_stats:
+        assert _ids(imp.df_estimates) == ["a", "b"]
+        assert _collect(imp.df_vcov).shape == (4, 3)
+    assert set(_collect(out.df_vcov)["Variable_1"]) <= {"a", "b"}
+
+
 if __name__ == "__main__":
     for name, fn in list(globals().items()):
         if name.startswith("test_"):

@@ -1851,6 +1851,28 @@ class StatCalculator(Serializable):
 
         return self
 
+    def filter_values(
+        self, values: list[str] | str, column: str | None = None
+    ) -> StatCalculator:
+        """
+        Keep only rows whose id-column value is in `values` (a name or list
+        of names) across every table, including df_vcov (rows where both
+        {column}_1 and {column}_2 are kept) - unlike filter(), which can't
+        keep df_vcov in sync generically.
+
+        Parameters
+        ----------
+        values : list[str] | str
+            Id values to keep.
+        column : str | None
+            The id column. Default: the first of variable_ids.
+        """
+        result = self.copy()
+        result.replicate_stats = result.replicate_stats.filter_values(
+            values=values, column=column or self.variable_ids[0]
+        )
+        return result
+
     def rename_values(
         self,
         mapping: dict[str, str] | None = None,

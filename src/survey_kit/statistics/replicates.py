@@ -362,6 +362,21 @@ class ReplicateStats(Serializable):
         _invalidate_extras(self, "rename")
         return self
 
+    def filter_values(self, values: list[str] | str, column: str) -> ReplicateStats:
+        """
+        Keep only rows of id column `column` in `values` - df_estimates,
+        df_ses, df_replicates, df_tidy (if it has the column) and df_vcov
+        (rows where both {column}_1 and {column}_2 are in `values`).
+        """
+        self = self.copy()
+        values = list_input(values)
+        for attr in ("df_estimates", "df_ses", "df_replicates", "df_tidy"):
+            setattr(self, attr, filter_values_in_df(getattr(self, attr), values, [column]))
+        self.df_vcov = filter_values_in_df(
+            self.df_vcov, values, [f"{column}_1", f"{column}_2"]
+        )
+        return self
+
     def rename_values(
         self,
         column: str,
@@ -1073,6 +1088,23 @@ def rename_values_in_df(
     if not exprs:
         return df
     return nw_df.with_columns(exprs).to_native()
+
+
+def filter_values_in_df(
+    df: IntoFrameT | None, values: list[str], columns: list[str]
+) -> IntoFrameT | None:
+    """
+    Keep rows where every one of `columns` that df has is in `values`;
+    df without any of them (or None) passes through untouched.
+    """
+    if df is None:
+        return None
+    nw_df = nw.from_native(df)
+    present = set(nw_df.lazy().collect_schema().names())
+    cols = [c for c in columns if c in present]
+    if not cols:
+        return df
+    return nw_df.filter(*[nw.col(c).is_in(values) for c in cols]).to_native()
 
 
 def match_eagerness(df: IntoFrameT, result: IntoFrameT) -> IntoFrameT:

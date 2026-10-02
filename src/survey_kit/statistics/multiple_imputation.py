@@ -38,6 +38,7 @@ from .replicates import (
     apply_as_attribute,
     _invalidate_extras,
     match_eagerness,
+    filter_values_in_df,
     rename_values_in_df,
 )
 from .comparisons import ComparisonItem
@@ -1186,6 +1187,39 @@ class MultipleImputation(Serializable):
 
         _invalidate_extras(self, "rename")
         return self
+
+    def filter_values(
+        self, values: list[str] | str, column: str | None = None
+    ) -> MultipleImputation:
+        """
+        Keep only rows whose id-column value is in `values` (a name or list
+        of names) across every table, including df_vcov (rows where both
+        {column}_1 and {column}_2 are kept) - unlike filter(), which can't
+        keep df_vcov in sync generically.
+
+        Parameters
+        ----------
+        values : list[str] | str
+            Id values to keep.
+        column : str | None
+            The id column. Default: the first of join_on.
+        """
+        column = column or self.join_on[0]
+        values = list_input(values)
+        result = self.copy()
+
+        for dfi in result._df_attributes:
+            setattr(
+                result, dfi, filter_values_in_df(getattr(result, dfi), values, [column])
+            )
+        result.df_vcov = filter_values_in_df(
+            result.df_vcov, values, [f"{column}_1", f"{column}_2"]
+        )
+        for repi in range(0, len(result.implicate_stats)):
+            result.implicate_stats[repi] = result.implicate_stats[repi].filter_values(
+                values=values, column=column
+            )
+        return result
 
     def rename_values(
         self,
