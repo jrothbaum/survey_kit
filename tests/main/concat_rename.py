@@ -226,6 +226,15 @@ def test_polars_expressions_on_adapter_and_mi():
     assert _collect(out.df_estimates)["coef"][0] > 1.5
 
 
+def test_adapter_sort_leaves_vcov_and_tidy_unsorted():
+    a = _adapter(["a", "b", "c"], tidy=True)
+    out = a.sort(pl.col("Variable").sort_by("coef", descending=True))
+    assert _ids(out.df_estimates) == ["c", "b", "a"]
+    assert _ids(out.df_ses) == ["c", "b", "a"]
+    assert _ids(out.replicate_stats.df_tidy) == ["a", "b", "c"]
+    assert _collect(out.replicate_stats.df_vcov).equals(_collect(a.replicate_stats.df_vcov))
+
+
 def test_polars_expression_mixed_and_non_polars_raise():
     a = _adapter(["a", "b"], vcov=False)
     _raises(

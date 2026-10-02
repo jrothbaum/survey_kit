@@ -49,6 +49,10 @@ class AdapterStats(StatCalculator):
     estimate columns are kept has no "selected columns" concept for
     either one to begin with.
 
+    sort() reorders df_estimates/df_ses only - df_vcov (keyed by term names,
+    so order doesn't matter to it) and df_tidy (the source package's own
+    table) are deliberately left in their original order, without raising.
+
     concat_with() raises for df_tidy and df_vcov on a horizontal concat (it adds a new value column,
     breaking df_vcov's single-value-column precondition) - but on a
     vertical concat with both sides carrying a df_vcov over disjoint
