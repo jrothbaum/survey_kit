@@ -245,6 +245,23 @@ def test_sort_by_value_column_stays_aligned_and_follows_into_vcov_tidy():
     assert _collect(out.df_ses)["coef"].to_list() == [0.1, 0.2, 0.3]
 
 
+def test_sort_descending():
+    a = _adapter(["a", "b", "c"], tidy=True)
+    for key in ("Variable", pl.col("Variable")):
+        out = a.sort(key, descending=True)
+        assert _ids(out.df_estimates) == ["c", "b", "a"]
+        assert _ids(out.df_ses) == ["c", "b", "a"]
+        assert _ids(out.replicate_stats.df_tidy) == ["c", "b", "a"]
+        assert _collect(out.replicate_stats.df_vcov)["Variable_1"][0] == "c"
+    #   narwhals-style column-name sort too, and a value column
+    out = a.sort("coef", descending=True)
+    assert _ids(out.df_estimates) == ["c", "b", "a"]
+    out = _mi(["a", "b", "c"]).sort("Variable", descending=True)
+    assert _ids(out.df_estimates) == ["c", "b", "a"]
+    for imp in out.implicate_stats:
+        assert _ids(imp.df_ses) == ["c", "b", "a"]
+
+
 def test_mi_sort_by_value_follows_implicates():
     mi = _mi(["a", "b", "c"], vcov=True)
     out = mi.sort(-pl.col("coef"))

@@ -1699,11 +1699,15 @@ class StatCalculator(Serializable):
         return self
 
     def sort(
-        self, sort_expr: nw.Expr | list[nw.Expr] | str | list[str]
+        self,
+        sort_expr: nw.Expr | list[nw.Expr] | str | list[str],
+        descending: bool | list[bool] = False,
     ) -> StatCalculator:
         self = self.copy()
         self.replicate_stats = self.replicate_stats.sort(
-            sort_expr, join_on=self.variable_ids + self.summarize_vars
+            sort_expr,
+            join_on=self.variable_ids + self.summarize_vars,
+            descending=descending,
         )
 
         return self

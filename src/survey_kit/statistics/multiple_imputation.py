@@ -1384,14 +1384,16 @@ class MultipleImputation(Serializable):
         return self
 
     def sort(
-        self, sort_expr: nw.Expr | list[nw.Expr] | str | list[str]
+        self,
+        sort_expr: nw.Expr | list[nw.Expr] | str | list[str],
+        descending: bool | list[bool] = False,
     ) -> MultipleImputation:
         """
         Sort by sort_expr, evaluated on the combined df_estimates; every other
         combined table, df_vcov and each implicate follow that same order.
         """
         self = self.copy()
-        order = sort_order(self.df_estimates, sort_expr, self.join_on)
+        order = sort_order(self.df_estimates, sort_expr, self.join_on, descending)
 
         for dfi in self._df_attributes + ["df_vcov"]:
             setattr(

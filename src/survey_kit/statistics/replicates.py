@@ -325,13 +325,15 @@ class ReplicateStats(Serializable):
         sort_expr: nw.Expr | list[nw.Expr] | str | list[str],
         join_on: list[str] | None = None,
         order: pl.DataFrame | None = None,
+        descending: bool | list[bool] = False,
     ) -> ReplicateStats:
         """
         Sort by sort_expr, evaluated on df_estimates only; every other table
         (df_ses, df_replicates, df_tidy if it has the join_on columns,
         df_vcov's {id}_1/{id}_2) is reordered to follow it, so rows stay
-        aligned even when sorting by a value column. `order` (from
-        sort_order()) can be passed to follow an order computed elsewhere.
+        aligned even when sorting by a value column. `descending` is a bool
+        (or one per sort key). `order` (from sort_order()) can be passed to
+        follow an order computed elsewhere.
         Without join_on (or order) each table is sorted independently by
         the expression, which only keeps them aligned when sorting by id
         columns.
@@ -342,12 +344,16 @@ class ReplicateStats(Serializable):
         if join_on is None and order is None:
             for dfi_name in self._df_attributes:
                 apply_as_attribute(
-                    obj=self, df_name=dfi_name, nw_expr=sort_expr, nw_method="sort"
+                    obj=self,
+                    df_name=dfi_name,
+                    nw_expr=sort_expr,
+                    nw_method="sort",
+                    descending=descending,
                 )
             return self
 
         if order is None:
-            order = sort_order(self.df_estimates, sort_expr, join_on)
+            order = sort_order(self.df_estimates, sort_expr, join_on, descending)
         join_on = [c for c in order.columns if c != _SORT_ORDER]
 
         for dfi_name in ("df_estimates", "df_ses", "df_replicates", "df_tidy", "df_vcov"):
@@ -1211,14 +1217,21 @@ def select_columns(df: IntoFrameT, select_expr) -> list[str]:
 _SORT_ORDER = "___sort_order___"
 
 
-def sort_order(df_estimates: IntoFrameT, sort_expr, join_on: list[str]) -> pl.DataFrame:
+def sort_order(
+    df_estimates: IntoFrameT,
+    sort_expr,
+    join_on: list[str],
+    descending: bool | list[bool] = False,
+) -> pl.DataFrame:
     """
     Sort df_estimates by sort_expr and return its join_on keys in that order
     (plus a row-order column), to reorder every other table to match.
     """
     holder = type("_Holder", (), {})()
     holder.df_estimates = df_estimates
-    apply_as_attribute(holder, "df_estimates", sort_expr, "sort")
+    apply_as_attribute(
+        holder, "df_estimates", sort_expr, "sort", descending=descending
+    )
     keys = nw.from_native(holder.df_estimates).lazy().select(join_on).collect()
     return keys.to_polars().with_row_index(_SORT_ORDER)
 
@@ -1265,7 +1278,7 @@ def reorder_by_order(
     return match_eagerness(df, nw_out.to_native())
 
 
-def apply_as_attribute(obj, df_name: str, nw_expr, nw_method: str):
+def apply_as_attribute(obj, df_name: str, nw_expr, nw_method: str, **kwargs):
     dfi = getattr(obj, df_name)
 
     if dfi is not None:
@@ -1279,6 +1292,10 @@ def apply_as_attribute(obj, df_name: str, nw_expr, nw_method: str):
                     f"A polars expression can't be applied to {df_name}, which is a "
                     f"{df_nw.implementation} frame - use a narwhals expression."
                 )
-            setattr(obj, df_name, getattr(df_nw.to_native(), nw_method)(nw_expr))
+            setattr(
+                obj, df_name, getattr(df_nw.to_native(), nw_method)(nw_expr, **kwargs)
+            )
         else:
-            setattr(obj, df_name, getattr(df_nw, nw_method)(nw_expr).to_native())
+            setattr(
+                obj, df_name, getattr(df_nw, nw_method)(nw_expr, **kwargs).to_native()
+            )
