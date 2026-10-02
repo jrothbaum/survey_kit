@@ -38,6 +38,8 @@ from .replicates import (
     apply_as_attribute,
     _invalidate_extras,
     match_eagerness,
+    sort_order,
+    reorder_by_order,
     select_columns,
     filter_values_in_df,
     rename_values_in_df,
@@ -1384,14 +1386,22 @@ class MultipleImputation(Serializable):
     def sort(
         self, sort_expr: nw.Expr | list[nw.Expr] | str | list[str]
     ) -> MultipleImputation:
+        """
+        Sort by sort_expr, evaluated on the combined df_estimates; every other
+        combined table, df_vcov and each implicate follow that same order.
+        """
         self = self.copy()
-        for dfi in self._df_attributes:
-            apply_as_attribute(
-                obj=self, df_name=dfi, nw_expr=sort_expr, nw_method="sort"
+        order = sort_order(self.df_estimates, sort_expr, self.join_on)
+
+        for dfi in self._df_attributes + ["df_vcov"]:
+            setattr(
+                self, dfi, reorder_by_order(getattr(self, dfi), order, self.join_on)
             )
 
         for repi in range(0, len(self.implicate_stats)):
-            self.implicate_stats[repi] = self.implicate_stats[repi].sort(sort_expr)
+            self.implicate_stats[repi] = self.implicate_stats[repi].sort(
+                sort_expr, join_on=self.join_on, order=order
+            )
 
         return self
 

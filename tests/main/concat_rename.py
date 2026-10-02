@@ -226,13 +226,34 @@ def test_polars_expressions_on_adapter_and_mi():
     assert _collect(out.df_estimates)["coef"][0] > 1.5
 
 
-def test_adapter_sort_leaves_vcov_and_tidy_unsorted():
-    a = _adapter(["a", "b", "c"], tidy=True)
-    out = a.sort(pl.col("Variable").sort_by("Variable", descending=True))
+def test_sort_by_value_column_stays_aligned_and_follows_into_vcov_tidy():
+    n = ["a", "b", "c"]
+    e = pl.DataFrame({"Variable": n, "coef": [1.0, 2.0, 3.0]})
+    s = pl.DataFrame({"Variable": n, "coef": [0.3, 0.2, 0.1]})
+    v = pl.DataFrame(
+        [{"Variable_1": x, "Variable_2": y, "coef": 0.01} for x in n for y in n]
+    )
+    a = AdapterStats(e, s, df_vcov=v, df_tidy=e.clone(), display=False)
+    out = a.sort(pl.col("coef").sort_by("coef", descending=True))
     assert _ids(out.df_estimates) == ["c", "b", "a"]
     assert _ids(out.df_ses) == ["c", "b", "a"]
-    assert _ids(out.replicate_stats.df_tidy) == ["a", "b", "c"]
-    assert _collect(out.replicate_stats.df_vcov).equals(_collect(a.replicate_stats.df_vcov))
+    assert _ids(out.replicate_stats.df_tidy) == ["c", "b", "a"]
+    vc = _collect(out.replicate_stats.df_vcov)
+    assert vc["Variable_1"].to_list() == ["c"] * 3 + ["b"] * 3 + ["a"] * 3
+    assert vc["Variable_2"].to_list() == ["c", "b", "a"] * 3
+    #   SEs still pair with the right variable
+    assert _collect(out.df_ses)["coef"].to_list() == [0.1, 0.2, 0.3]
+
+
+def test_mi_sort_by_value_follows_implicates():
+    mi = _mi(["a", "b", "c"], vcov=True)
+    out = mi.sort(pl.col("Variable").sort_by("coef", descending=True))
+    for df in (out.df_estimates, out.df_ses, out.df_p):
+        assert _ids(df) == ["c", "b", "a"]
+    for imp in out.implicate_stats:
+        assert _ids(imp.df_estimates) == ["c", "b", "a"]
+        assert _ids(imp.df_ses) == ["c", "b", "a"]
+        assert _collect(imp.df_vcov)["Variable_1"].to_list()[:3] == ["c"] * 3
 
 
 def test_polars_expression_mixed_and_non_polars_raise():

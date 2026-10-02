@@ -1702,7 +1702,9 @@ class StatCalculator(Serializable):
         self, sort_expr: nw.Expr | list[nw.Expr] | str | list[str]
     ) -> StatCalculator:
         self = self.copy()
-        self.replicate_stats = self.replicate_stats.sort(sort_expr)
+        self.replicate_stats = self.replicate_stats.sort(
+            sort_expr, join_on=self.variable_ids + self.summarize_vars
+        )
 
         return self
 

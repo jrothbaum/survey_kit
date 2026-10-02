@@ -321,18 +321,41 @@ class ReplicateStats(Serializable):
         return self
 
     def sort(
-        self, sort_expr: nw.Expr | list[nw.Expr] | str | list[str]
+        self,
+        sort_expr: nw.Expr | list[nw.Expr] | str | list[str],
+        join_on: list[str] | None = None,
+        order: pl.DataFrame | None = None,
     ) -> ReplicateStats:
+        """
+        Sort by sort_expr, evaluated on df_estimates only; every other table
+        (df_ses, df_replicates, df_tidy if it has the join_on columns,
+        df_vcov's {id}_1/{id}_2) is reordered to follow it, so rows stay
+        aligned even when sorting by a value column. `order` (from
+        sort_order()) can be passed to follow an order computed elsewhere.
+        Without join_on (or order) each table is sorted independently by
+        the expression, which only keeps them aligned when sorting by id
+        columns.
+        """
         #   Don't edit the underlying object
         self = self.copy()
 
-        for dfi_name in self._df_attributes:
-            apply_as_attribute(
-                obj=self, df_name=dfi_name, nw_expr=sort_expr, nw_method="sort"
-            )
+        if join_on is None and order is None:
+            for dfi_name in self._df_attributes:
+                apply_as_attribute(
+                    obj=self, df_name=dfi_name, nw_expr=sort_expr, nw_method="sort"
+                )
+            return self
 
-        #   Row order in df_vcov is keyed by term names, not positional -
-        #   reordering df_estimates/df_ses doesn't invalidate it.
+        if order is None:
+            order = sort_order(self.df_estimates, sort_expr, join_on)
+        join_on = [c for c in order.columns if c != _SORT_ORDER]
+
+        for dfi_name in ("df_estimates", "df_ses", "df_replicates", "df_tidy", "df_vcov"):
+            setattr(
+                self,
+                dfi_name,
+                reorder_by_order(getattr(self, dfi_name), order, join_on),
+            )
         return self
 
     def drop(
@@ -1183,6 +1206,63 @@ def select_columns(df: IntoFrameT, select_expr) -> list[str]:
             )
         return df_nw.to_native().lazy().select(items).collect_schema().names()
     return df_nw.lazy().select(items).collect_schema().names()
+
+
+_SORT_ORDER = "___sort_order___"
+
+
+def sort_order(df_estimates: IntoFrameT, sort_expr, join_on: list[str]) -> pl.DataFrame:
+    """
+    Sort df_estimates by sort_expr and return its join_on keys in that order
+    (plus a row-order column), to reorder every other table to match.
+    """
+    holder = type("_Holder", (), {})()
+    holder.df_estimates = df_estimates
+    apply_as_attribute(holder, "df_estimates", sort_expr, "sort")
+    keys = nw.from_native(holder.df_estimates).lazy().select(join_on).collect()
+    return keys.to_polars().with_row_index(_SORT_ORDER)
+
+
+def _attach_order(df, order, left_keys, right_keys, name):
+    order_sub = order.select(right_keys + [_SORT_ORDER]).rename({_SORT_ORDER: name})
+    return join_wrapper(
+        df, order_sub, on=None, left_on=left_keys, right_on=right_keys, how="left"
+    )
+
+
+def reorder_by_order(
+    df: IntoFrameT | None, order: pl.DataFrame, join_on: list[str]
+) -> IntoFrameT | None:
+    """
+    Reorder df's rows to follow `order` (from sort_order()). Frames without
+    the join_on columns, and None, pass through untouched. For a df_vcov-style
+    long matrix (join_on columns suffixed "_1"/"_2") rows are ordered by the
+    row term and then the column term. Rows whose keys aren't in `order` go last.
+    """
+    if df is None:
+        return None
+    cols = nw.from_native(df).lazy().collect_schema().names()
+
+    if all(k in cols for k in join_on):
+        out = _attach_order(df, order, join_on, join_on, "___o1___")
+        sort_by = ["___o1___"]
+    elif any(f"{k}_1" in cols for k in join_on):
+        #   keys without a _1/_2 version (e.g. group columns) are shared
+        left_1 = [f"{k}_1" if f"{k}_1" in cols else k for k in join_on]
+        left_2 = [f"{k}_2" if f"{k}_2" in cols else k for k in join_on]
+        out = _attach_order(df, order, left_1, join_on, "___o1___")
+        out = _attach_order(out, order, left_2, join_on, "___o2___")
+        sort_by = ["___o1___", "___o2___"]
+    else:
+        return df
+
+    nw_out = nw.from_native(out).lazy()
+    if "___replicate___" in cols:
+        sort_by = sort_by + ["___replicate___"]
+    nw_out = nw_out.sort(sort_by, nulls_last=True).drop(
+        [c for c in ("___o1___", "___o2___") if c in sort_by]
+    )
+    return match_eagerness(df, nw_out.to_native())
 
 
 def apply_as_attribute(obj, df_name: str, nw_expr, nw_method: str):
