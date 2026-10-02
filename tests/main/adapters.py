@@ -151,7 +151,13 @@ for backend_name, one_implicate in [
 ]:
     for adapter_fn, kwargs, expected_vcov_type in _direct_call_cases:
         label = f"{adapter_fn.__name__}({backend_name} input)"
-        df_estimates, df_ses, df_vcov, df_tidy = adapter_fn(one_implicate, **kwargs)
+        rs = adapter_fn(one_implicate, **kwargs).replicate_stats
+        df_estimates, df_ses, df_vcov, df_tidy = (
+            rs.df_estimates,
+            rs.df_ses,
+            rs.df_vcov,
+            rs.df_tidy,
+        )
         assert isinstance(df_estimates, pl.DataFrame), f"{label}: df_estimates is {type(df_estimates)}"
         assert isinstance(df_ses, pl.DataFrame), f"{label}: df_ses is {type(df_ses)}"
         assert isinstance(df_vcov, expected_vcov_type), (
