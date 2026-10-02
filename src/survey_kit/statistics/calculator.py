@@ -1851,6 +1851,38 @@ class StatCalculator(Serializable):
 
         return self
 
+    def rename_values(
+        self,
+        mapping: dict[str, str] | None = None,
+        expr_fn=None,
+        column: str | None = None,
+    ) -> StatCalculator:
+        """
+        Rename the *values* of an id column (e.g. Variable == "x1" ->
+        "new_name") consistently across df_estimates, df_ses,
+        df_replicates, df_tidy (if it has that column) and df_vcov's
+        {column}_1/{column}_2 (whichever of these exist).
+        (rename() renames column names; this renames the entries.)
+
+        Parameters
+        ----------
+        mapping : dict[str,str] | None
+            old value -> new value; unmatched values are left as-is.
+        expr_fn : Callable[[nw.Expr], nw.Expr] | None
+            Alternative to mapping, for arbitrary logic: receives
+            nw.col(<column>) and returns the new expression, e.g.
+            lambda c: nw.when(c == "a").then(nw.lit("b")).otherwise(c)
+            Applied to every column it targets (the _1/_2 vcov columns
+            included), so write it on the passed-in column, not nw.col("...").
+        column : str | None
+            The id column. Default: the first of variable_ids.
+        """
+        result = self.copy()
+        result.replicate_stats = result.replicate_stats.rename_values(
+            column=column or self.variable_ids[0], mapping=mapping, expr_fn=expr_fn
+        )
+        return result
+
     def drb_round_table(
         self,
         columns: list | str | None = None,

@@ -33,7 +33,13 @@ from ..utilities.dataframe import (
 from ..utilities.rounding import drb_round_table
 from .rounding import Rounding
 from .calculator import StatCalculator, print_se_table
-from .replicates import ReplicateStats, apply_as_attribute, _invalidate_extras
+from .replicates import (
+    ReplicateStats,
+    apply_as_attribute,
+    _invalidate_extras,
+    match_eagerness,
+    rename_values_in_df,
+)
 from .comparisons import ComparisonItem
 import survey_kit.statistics.comparisons as kit_comparisons
 from ..imputation.srmi import SRMI
@@ -1110,7 +1116,7 @@ class MultipleImputation(Serializable):
             )
 
         for repi in range(0, len(self.implicate_stats)):
-            self.implicate_stats[repi].filter(filter_expr)
+            self.implicate_stats[repi] = self.implicate_stats[repi].filter(filter_expr)
 
         _invalidate_extras(self, "filter")
         return self
@@ -1150,7 +1156,7 @@ class MultipleImputation(Serializable):
                 )
 
             for repi in range(0, len(self.implicate_stats)):
-                self.implicate_stats[repi].select(cols_keep)
+                self.implicate_stats[repi] = self.implicate_stats[repi].select(cols_keep)
         _invalidate_extras(self, "select")
         return self
 
@@ -1163,7 +1169,7 @@ class MultipleImputation(Serializable):
             )
 
         for repi in range(0, len(self.implicate_stats)):
-            self.implicate_stats[repi].with_columns(with_expr)
+            self.implicate_stats[repi] = self.implicate_stats[repi].with_columns(with_expr)
         _invalidate_extras(self, "with_columns")
         return self
 
@@ -1176,10 +1182,52 @@ class MultipleImputation(Serializable):
             )
 
         for repi in range(0, len(self.implicate_stats)):
-            self.implicate_stats[repi].rename(d_rename)
+            self.implicate_stats[repi] = self.implicate_stats[repi].rename(d_rename)
 
         _invalidate_extras(self, "rename")
         return self
+
+    def rename_values(
+        self,
+        mapping: dict[str, str] | None = None,
+        expr_fn=None,
+        column: str | None = None,
+    ) -> MultipleImputation:
+        """
+        Rename the *values* of an id column (e.g. Variable == "x1" ->
+        "new_name") in the combined results (df_estimates, df_ses, df_df,
+        df_t, df_p, df_rate_of_missing_information, df_vcov's
+        {column}_1/{column}_2) and in every implicate's own tables.
+        (rename() renames column names; this renames the entries.)
+
+        Parameters
+        ----------
+        mapping : dict[str,str] | None
+            old value -> new value; unmatched values are left as-is.
+        expr_fn : Callable[[nw.Expr], nw.Expr] | None
+            Alternative to mapping: receives nw.col(<column>) and returns
+            the new expression, e.g.
+            lambda c: nw.when(c == "a").then(nw.lit("b")).otherwise(c)
+        column : str | None
+            The id column. Default: the first of join_on.
+        """
+        column = column or self.join_on[0]
+        result = self.copy()
+
+        for dfi in result._df_attributes:
+            setattr(
+                result,
+                dfi,
+                rename_values_in_df(getattr(result, dfi), mapping, expr_fn, [column]),
+            )
+        result.df_vcov = rename_values_in_df(
+            result.df_vcov, mapping, expr_fn, [f"{column}_1", f"{column}_2"]
+        )
+        for repi in range(0, len(result.implicate_stats)):
+            result.implicate_stats[repi] = result.implicate_stats[repi].rename_values(
+                column=column, mapping=mapping, expr_fn=expr_fn
+            )
+        return result
 
     def scale_by(
         self, factor: float, columns: list[str] | str | None = None
@@ -1225,7 +1273,7 @@ class MultipleImputation(Serializable):
                 )
 
         for repi in range(0, len(self.implicate_stats)):
-            self.implicate_stats[repi].pipe(function, *args, **kwargs)
+            self.implicate_stats[repi] = self.implicate_stats[repi].pipe(function, *args, **kwargs)
 
         _invalidate_extras(self, "pipe")
         return self
@@ -1258,12 +1306,15 @@ class MultipleImputation(Serializable):
                 return join_wrapper(
                     df=df,
                     df_to=df_join,
+                    on=None,
                     how="left",
                     left_on=self.join_on,
                     right_on=mi_concat.join_on,
                 )
             elif how == "vertical":
-                return concat_wrapper([df, df_join], how="horizontal")
+                return match_eagerness(
+                    df, concat_wrapper([df, df_join], how="diagonal")
+                )
 
         for dfi in self._df_attributes:
             setattr(
@@ -1273,13 +1324,27 @@ class MultipleImputation(Serializable):
             )
 
         for repi in range(0, len(self.implicate_stats)):
-            self.implicate_stats[repi].concat_with(
+            self.implicate_stats[repi] = self.implicate_stats[repi].concat_with(
                 rs_concat=mi_concat.implicate_stats[repi],
                 join_on_self=self.join_on,
                 join_on_concat=mi_concat.join_on,
+                how=how,
             )
 
         _invalidate_extras(self, "concat_with")
+
+        if how == "vertical":
+            #   Each implicate's df_vcov was stacked block-diagonally by
+            #   ReplicateStats.concat_with - re-combine them (Rubin's
+            #   rules) into the MI-level df_vcov.
+            self.df_vcov = _combine_vcov(
+                implicate_stats=self.implicate_stats,
+                join_on=self.join_on,
+                df_estimates=self.df_estimates,
+                cols_stats=[
+                    c for c in safe_columns(self.df_estimates) if c not in self.join_on
+                ],
+            )
         return self
 
     def sort(
@@ -1292,7 +1357,7 @@ class MultipleImputation(Serializable):
             )
 
         for repi in range(0, len(self.implicate_stats)):
-            self.implicate_stats[repi].sort(sort_expr)
+            self.implicate_stats[repi] = self.implicate_stats[repi].sort(sort_expr)
 
         return self
 
@@ -1306,7 +1371,7 @@ class MultipleImputation(Serializable):
             )
 
         for repi in range(0, len(self.implicate_stats)):
-            self.implicate_stats[repi].drop(drop_expr)
+            self.implicate_stats[repi] = self.implicate_stats[repi].drop(drop_expr)
 
         _invalidate_extras(self, "drop")
         return self

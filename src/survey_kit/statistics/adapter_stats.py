@@ -6,7 +6,7 @@ from narwhals.typing import IntoFrameT
 from .. import logger
 from ..utilities.dataframe import concat_wrapper
 from .calculator import StatCalculator
-from .replicates import ReplicateStats
+from .replicates import ReplicateStats, match_eagerness
 
 
 class AdapterStats(StatCalculator):
@@ -49,14 +49,15 @@ class AdapterStats(StatCalculator):
     estimate columns are kept has no "selected columns" concept for
     either one to begin with.
 
-    concat_with() also raises for df_tidy (same reasoning as above) and
-    for df_vcov on a horizontal concat (it adds a new value column,
+    concat_with() raises for df_tidy and df_vcov on a horizontal concat (it adds a new value column,
     breaking df_vcov's single-value-column precondition) - but on a
     vertical concat with both sides carrying a df_vcov over disjoint
     terms, it stacks them block-diagonally instead of dropping either
     one, logging a warning that cross-object covariance is assumed
     zero/unknown (the same independence assumption .compare() already
-    makes between two separate objects).
+    makes between two separate objects). df_tidy is stacked too (columns
+    not shared are null). concat_with() returns a NEW object. Use
+    rename_values() (inherited) to rename id values consistently across all tables.
 
     .compare() (inherited from StatCalculator) computes a difference/
     ratio SE from df_ses under an independence assumption between the
@@ -247,13 +248,13 @@ class AdapterStats(StatCalculator):
         other_replicate_stats = getattr(sc_concat, "replicate_stats", None)
         self_vcov = self.replicate_stats.df_vcov
         other_vcov = getattr(other_replicate_stats, "df_vcov", None)
-        if self.replicate_stats.df_tidy is not None or (
-            getattr(other_replicate_stats, "df_tidy", None) is not None
-        ):
+        self_tidy = self.replicate_stats.df_tidy
+        other_tidy = getattr(other_replicate_stats, "df_tidy", None)
+        if how == "horizontal" and (self_tidy is not None or other_tidy is not None):
             raise ValueError(
-                "AdapterStats.concat_with(): df_tidy can't be reshaped "
-                "generically and won't be silently dropped - clear it on "
-                "whichever side has it first (e.g. "
+                "AdapterStats.concat_with(how='horizontal'): df_tidy can't "
+                "be joined generically and won't be silently dropped - "
+                "clear it on whichever side has it first (e.g. "
                 "self.replicate_stats.df_tidy = None) if you don't need it."
             )
 
@@ -282,9 +283,38 @@ class AdapterStats(StatCalculator):
         #   sc_concat term treated as unknown/zero (the same
         #   independence assumption StatCalculator.compare() already
         #   makes between two separate objects).
-        if self_vcov is None and other_vcov is None:
-            return super().concat_with(sc_concat, how=how)
+        #   Build df_vcov/df_tidy here and hand the base class stripped
+        #   copies - its own concat_with() would otherwise warn that it's
+        #   dropping both.
+        new_vcov = None
+        if self_vcov is not None or other_vcov is not None:
+            new_vcov = self._stack_vcov(sc_concat, self_vcov, other_vcov)
 
+        #   df_tidy is the source package's own table - stacking rows
+        #   (columns the two don't share filled with null) is the only
+        #   sensible vertical meaning. If only one side has one, keep it.
+        tidys = [t for t in (self_tidy, other_tidy) if t is not None]
+        new_tidy = None
+        if len(tidys) == 2:
+            new_tidy = match_eagerness(
+                tidys[0], concat_wrapper(tidys, how="diagonal")
+            )
+        elif len(tidys) == 1:
+            new_tidy = tidys[0]
+
+        left = self.copy()
+        left.replicate_stats.df_vcov = None
+        left.replicate_stats.df_tidy = None
+        right = sc_concat.copy()
+        right.replicate_stats.df_vcov = None
+        right.replicate_stats.df_tidy = None
+
+        result = StatCalculator.concat_with(left, right, how=how)
+        result.replicate_stats.df_vcov = new_vcov
+        result.replicate_stats.df_tidy = new_tidy
+        return result
+
+    def _stack_vcov(self, sc_concat, self_vcov, other_vcov):
         if (self_vcov is None) != (other_vcov is None):
             raise ValueError(
                 "AdapterStats.concat_with(how='vertical'): only one side "
@@ -321,7 +351,8 @@ class AdapterStats(StatCalculator):
                 "stacking their df_vcov block-diagonally would be "
                 "ambiguous for those shared terms (which side's "
                 "covariance would apply?). Rename the overlapping terms "
-                "on one side first if you need to keep both."
+                "on one side first (see rename_values()) if you need to "
+                "keep both."
             )
 
         logger.warning(
@@ -332,11 +363,9 @@ class AdapterStats(StatCalculator):
             "self term and a sc_concat term will be wrong; joint SEs "
             "within either original object's own terms remain correct."
         )
-        new_vcov = concat_wrapper([self_vcov, other_vcov], how="diagonal")
-
-        result = super().concat_with(sc_concat, how=how)
-        result.replicate_stats.df_vcov = new_vcov
-        return result
+        return match_eagerness(
+            self_vcov, concat_wrapper([self_vcov, other_vcov], how="diagonal")
+        )
 
     def _raise_if_vcov_or_tidy(self, method_name: str) -> None:
         present = [

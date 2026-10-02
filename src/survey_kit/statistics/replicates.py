@@ -362,6 +362,29 @@ class ReplicateStats(Serializable):
         _invalidate_extras(self, "rename")
         return self
 
+    def rename_values(
+        self,
+        column: str,
+        mapping: dict[str, str] | None = None,
+        expr_fn: Callable | None = None,
+    ) -> ReplicateStats:
+        """
+        Rename the values of id column `column` in df_estimates, df_ses,
+        df_replicates, df_tidy (if it has the column) and df_vcov's
+        {column}_1/{column}_2.
+        """
+        self = self.copy()
+        for attr in ("df_estimates", "df_ses", "df_replicates", "df_tidy"):
+            setattr(
+                self,
+                attr,
+                rename_values_in_df(getattr(self, attr), mapping, expr_fn, [column]),
+            )
+        self.df_vcov = rename_values_in_df(
+            self.df_vcov, mapping, expr_fn, [f"{column}_1", f"{column}_2"]
+        )
+        return self
+
     def pipe(self, function: Callable, *args, **kwargs) -> None:
         """
         Pipe a function to df_estimates, df_ses, and df_replicates (as necessary)
@@ -405,18 +428,6 @@ class ReplicateStats(Serializable):
         #   Don't edit the underlying object
         self = self.copy()
 
-        def _match_eagerness(df: IntoFrameT, result: IntoFrameT) -> IntoFrameT:
-            #   join_wrapper()/concat_wrapper() run their work through a
-            #   narwhals .lazy() pipeline internally - for a bare native
-            #   df (not already narwhals-wrapped, the normal case here),
-            #   they hand that lazy result straight back rather than
-            #   collecting, so an eager df would otherwise silently come
-            #   back lazy. Re-collect to match df's own eager/lazy-ness
-            #   instead (a no-op if df was already lazy).
-            if isinstance(nw.from_native(df), nw.LazyFrame):
-                return result
-            return nw.from_native(result).lazy().collect().to_native()
-
         def _concat_df(df: IntoFrameT, df_join: IntoFrameT) -> IntoFrameT:
             #   AdapterStats (and any StatCalculator not built from
             #   replicate weights) has df_replicates=None - nothing to
@@ -441,10 +452,10 @@ class ReplicateStats(Serializable):
                     right_on=join_on_concat + replicate_col,
                     how="left",
                 )
-                return _match_eagerness(df, result)
+                return match_eagerness(df, result)
             elif how == "vertical":
                 result = concat_wrapper([df, df_join], how="diagonal")
-                return _match_eagerness(df, result)
+                return match_eagerness(df, result)
 
         for dfi in self._df_attributes:
             setattr(
@@ -452,7 +463,24 @@ class ReplicateStats(Serializable):
                 dfi,
                 _concat_df(df=getattr(self, dfi), df_join=getattr(rs_concat, dfi)),
             )
+        #   A vertical concat of two df_vcov's is well-defined: stack them
+        #   block-diagonally (terms in one object are taken as uncorrelated
+        #   with terms in the other, the same independence assumption
+        #   .compare() makes between separate objects).
+        stacked_vcov = None
+        if (
+            how == "vertical"
+            and self.df_vcov is not None
+            and rs_concat.df_vcov is not None
+        ):
+            stacked_vcov = match_eagerness(
+                self.df_vcov,
+                concat_wrapper([self.df_vcov, rs_concat.df_vcov], how="diagonal"),
+            )
+            self.df_vcov = None  # already handled; don't warn about dropping it
+
         _invalidate_extras(self, "concat_with")
+        self.df_vcov = stacked_vcov if stacked_vcov is not None else self.df_vcov
         return self
 
     @property
@@ -1014,6 +1042,48 @@ def ses_from_replicates(
     df_estimates = fill_missing(df_estimates, None)
     df_ses = fill_missing(df_ses, None)
     return df_estimates, df_ses
+
+
+def rename_values_in_df(
+    df: IntoFrameT | None,
+    mapping: dict[str, str] | None,
+    expr_fn: Callable | None,
+    columns: list[str],
+) -> IntoFrameT | None:
+    """
+    Rename the values of whichever of `columns` df has, via mapping
+    (old -> new) or expr_fn (nw.Expr -> nw.Expr); None passes through.
+    """
+    if df is None:
+        return None
+    if (mapping is None) == (expr_fn is None):
+        raise ValueError("rename_values(): pass exactly one of mapping/expr_fn.")
+
+    if expr_fn is None:
+
+        def expr_fn(c):
+            out = c
+            for old, new in mapping.items():
+                out = nw.when(c == nw.lit(old)).then(nw.lit(new)).otherwise(out)
+            return out
+
+    nw_df = nw.from_native(df)
+    present = set(nw_df.lazy().collect_schema().names())
+    exprs = [expr_fn(nw.col(c)).alias(c) for c in columns if c in present]
+    if not exprs:
+        return df
+    return nw_df.with_columns(exprs).to_native()
+
+
+def match_eagerness(df: IntoFrameT, result: IntoFrameT) -> IntoFrameT:
+    """
+    join_wrapper()/concat_wrapper() run through a narwhals .lazy() pipeline
+    and, for a bare native df, hand back a lazy result - re-collect to
+    match df's own eager/lazy-ness (a no-op if df was already lazy).
+    """
+    if isinstance(nw.from_native(df), nw.LazyFrame):
+        return result
+    return nw.from_native(result).lazy().collect().to_native()
 
 
 def _invalidate_extras(obj, method_name: str) -> None:
