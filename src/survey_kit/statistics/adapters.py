@@ -76,23 +76,12 @@ def _normalize_by(by):
     return out
 
 
-def _run_by_groups(adapter, df, by, args, kwargs) -> AdapterStats:
-    by = _normalize_by(by)
-    by_cols = _by_columns(by)
-    nw_df = nw.from_native(df)
-    keys = (
-        nw_df.lazy().select(by_cols).unique().sort(by_cols).collect().to_polars()
-    )
-    if keys.height == 0:
-        raise ValueError("by=: no groups found (df is empty).")
+def _combine_filters(user_filter: str | None, group_filter: str) -> str:
+    return f"({user_filter}) & ({group_filter})" if user_filter else group_filter
 
-    parts = []
-    for row in keys.iter_rows(named=True):
-        cond = None
-        for col, value in row.items():
-            expr = nw.col(col).is_null() if value is None else nw.col(col) == value
-            cond = expr if cond is None else cond & expr
-        parts.append((row, adapter(nw_df.filter(cond).to_native(), *args, **kwargs)))
+
+def _stack_by_groups(parts, by, by_cols, group_types) -> AdapterStats:
+    """Stack per-group AdapterStats results, adding the group columns."""
 
     def _stack(attr: str, position: int):
         frames = []
@@ -102,14 +91,12 @@ def _run_by_groups(adapter, df, by, args, kwargs) -> AdapterStats:
                 return None
             table = nw.from_native(table).lazy().collect().to_polars()
             group_cols = [
-                pl.lit(value, dtype=keys.schema[col]).alias(col)
+                pl.lit(value, dtype=group_types[col]).alias(col)
                 for col, value in row.items()
             ]
             table = table.with_columns(group_cols)
             names = [c for c in table.columns if c not in by_cols]
-            frames.append(
-                table.select(names[:position] + by_cols + names[position:])
-            )
+            frames.append(table.select(names[:position] + by_cols + names[position:]))
         return pl.concat(frames, how="diagonal_relaxed")
 
     return AdapterStats(
@@ -123,20 +110,100 @@ def _run_by_groups(adapter, df, by, args, kwargs) -> AdapterStats:
     )
 
 
-def _with_by(adapter):
+def _run_by_groups(run, df, by, filter, runtime, kwargs) -> AdapterStats:
+    """
+    Run `run(data, filter)` once per group. Python adapters partition df
+    with narwhals; R/Stata adapters load df into the runtime once (unless
+    it's already a handle) and run each group as a per-run `filter=`.
+    """
+    by = _normalize_by(by)
+    by_cols = _by_columns(by)
+
+    if runtime is None:
+        nw_df = nw.from_native(df)
+        keys = nw_df.lazy().select(by_cols).unique().sort(by_cols).collect().to_polars()
+        if keys.height == 0:
+            raise ValueError("by=: no groups found (df is empty).")
+        parts = []
+        for row in keys.iter_rows(named=True):
+            cond = None
+            for col, value in row.items():
+                expr = nw.col(col).is_null() if value is None else nw.col(col) == value
+                cond = expr if cond is None else cond & expr
+            parts.append((row, run(nw_df.filter(cond).to_native(), None)))
+        return _stack_by_groups(parts, by, by_cols, keys.schema)
+
+    from ._data_handle import DataHandle
+
+    owns = not isinstance(df, DataHandle)
+    if owns:
+        if runtime == "r":
+            from ._r_interop import load_to_r
+
+            handle = load_to_r(df)
+        else:
+            from ._stata_interop import load_to_stata
+
+            handle = load_to_stata(
+                df,
+                edition=kwargs.get("edition"),
+                stata_path=kwargs.get("stata_path"),
+            )
+    else:
+        handle = df
+    try:
+        keys = handle.unique_values(by_cols, filter)
+        if keys.height == 0:
+            raise ValueError("by=: no groups found (no rows).")
+        keys = keys.sort(by_cols)
+        parts = [
+            (
+                row,
+                run(handle, _combine_filters(filter, handle.equals_condition(row))),
+            )
+            for row in keys.iter_rows(named=True)
+        ]
+    finally:
+        if owns:
+            handle.close()
+    return _stack_by_groups(parts, by, by_cols, keys.schema)
+
+
+def _with_by(runtime: str | None = None):
     """
     Make a direct adapter fit once per group when called with `by=`. The
-    adapter declares `by` in its own signature (for docs/IDE hints) but never
-    sees it - this intercepts it first.
+    adapter declares `by` (and, for R/Stata, `filter`) in its own signature
+    for docs/IDE hints, but this intercepts them first.
+
+    runtime: None for adapters that work on a Python dataframe; "r" or
+    "stata" for the ones that run in an embedded runtime, which also get a
+    per-run `filter=` (a condition string in that runtime's syntax) - R
+    subsets inside R before fitting; Stata's own `filter=` argument is
+    passed through to the run (preserve / keep if / restore).
     """
 
-    @functools.wraps(adapter)
-    def wrapper(df, *args, by=None, **kwargs):
-        if by is None:
-            return adapter(df, *args, **kwargs)
-        return _run_by_groups(adapter, df, by, args, kwargs)
+    def decorate(adapter):
+        @functools.wraps(adapter)
+        def wrapper(df, *args, by=None, filter=None, **kwargs):
+            if filter is not None and runtime is None:
+                raise TypeError(f"{adapter.__name__}() doesn't take filter=.")
 
-    return wrapper
+            def run(data, flt):
+                if runtime == "r":
+                    from ._r_interop import filter_in_r
+
+                    return adapter(filter_in_r(data, flt), *args, **kwargs)
+                if runtime == "stata":
+                    return adapter(data, *args, filter=flt, **kwargs)
+                return adapter(data, *args, **kwargs)
+
+            if by is None:
+                return run(df, filter)
+            return _run_by_groups(run, df, by, filter, runtime, kwargs)
+
+        return wrapper
+
+    return decorate
 
 
 def _adapter_stats(
@@ -292,14 +359,14 @@ def _mi_ses_replicates_delegate(
 
         def _point_estimate(df, weight):
             if convert is not None:
-                #   memoizing is only valid when every replicate call sees the
-                #   same df - with `by`, each group is a different subset.
-                if by is not None:
-                    df = convert(df)
-                else:
-                    if not converted:
-                        converted["df"] = convert(df)
-                    df = converted["df"]
+                #   Memoize on the df object itself (a strong reference, so
+                #   its identity can't be recycled): every replicate call for
+                #   one implicate - or one `by` group of it - passes the same
+                #   object, and the next group a new one.
+                if converted.get("source") is not df:
+                    converted["source"] = df
+                    converted["df"] = convert(df)
+                df = converted["df"]
             return adapter(df, weight=weight, **base_arguments).df_estimates
 
         return StatCalculator.from_function(
@@ -314,7 +381,7 @@ def _mi_ses_replicates_delegate(
     return delegate
 
 
-@_with_by
+@_with_by()
 def statsmodels_adapter(
     df,
     y: str,
@@ -539,7 +606,7 @@ def mi_ses_from_statsmodels(
     )
 
 
-@_with_by
+@_with_by()
 def linearmodels_adapter(
     df,
     formula: str,
@@ -771,7 +838,7 @@ def mi_ses_from_linearmodels(
     )
 
 
-@_with_by
+@_with_by()
 def pyfixest_adapter(
     df,
     formula: str,
@@ -1192,7 +1259,7 @@ class mi_ses_from_pyfixest:
         )
 
 
-@_with_by
+@_with_by()
 def polars_ds_adapter(
     df,
     y: str,
@@ -1414,7 +1481,7 @@ def mi_ses_from_polars_ds(
     )
 
 
-@_with_by
+@_with_by("r")
 def r_lm_adapter(
     df,
     formula: str,
@@ -1423,6 +1490,7 @@ def r_lm_adapter(
     join_on_name: str = "Variable",
     value_name: str = "estimate",
     by: dict[str, list[str]] | list | str | None = None,
+    filter: str | None = None,
     **r_kwargs,
 ) -> AdapterStats:
     """
@@ -1466,6 +1534,12 @@ def r_lm_adapter(
         returned table (df_estimates, df_ses, df_tidy and df_vcov) and set
         as the result's `by`. Covariances *across* groups are not computed
         (each group is its own fit). Default is None (one fit on all of df).
+    filter : str | None, optional
+        A R condition (e.g. "g == 1 & age > 18") restricting this run to the rows it
+        keeps. R subsets a copy inside R with `subset()` (rows where it is NA
+        are dropped), so the loaded data is never changed.
+        Combines (AND) with each group's own condition when `by` is used. Default is
+        None (all rows).
 
     Returns
     -------
@@ -1507,7 +1581,7 @@ def r_lm_adapter(
     return _adapter_stats(df_estimates, df_ses, df_vcov, df_tidy, join_on_name)
 
 
-@_with_by
+@_with_by("r")
 def r_fixest_adapter(
     df,
     formula: str,
@@ -1518,6 +1592,7 @@ def r_fixest_adapter(
     join_on_name: str = "Variable",
     value_name: str = "estimate",
     by: dict[str, list[str]] | list | str | None = None,
+    filter: str | None = None,
     **r_kwargs,
 ) -> AdapterStats:
     """
@@ -1573,6 +1648,12 @@ def r_fixest_adapter(
         returned table (df_estimates, df_ses, df_tidy and df_vcov) and set
         as the result's `by`. Covariances *across* groups are not computed
         (each group is its own fit). Default is None (one fit on all of df).
+    filter : str | None, optional
+        A R condition (e.g. "g == 1 & age > 18") restricting this run to the rows it
+        keeps. R subsets a copy inside R with `subset()` (rows where it is NA
+        are dropped), so the loaded data is never changed.
+        Combines (AND) with each group's own condition when `by` is used. Default is
+        None (all rows).
 
     Returns
     -------
@@ -1696,7 +1777,7 @@ _FIXEST_COMMON_PARAMS_DOC = """\
 """
 
 
-@_with_by
+@_with_by("r")
 def r_feols(
     df,
     formula: str,
@@ -1712,6 +1793,7 @@ def r_feols(
     join_on_name: str = "Variable",
     value_name: str = "estimate",
     by: dict[str, list[str]] | list | str | None = None,
+    filter: str | None = None,
     **r_kwargs,
 ) -> AdapterStats:
     """
@@ -1741,6 +1823,12 @@ def r_feols(
             returned table (df_estimates, df_ses, df_tidy and df_vcov) and set
             as the result's `by`. Covariances *across* groups are not computed
             (each group is its own fit). Default is None (one fit on all of df).
+        filter : str | None, optional
+            A R condition (e.g. "g == 1 & age > 18") restricting this run to the rows it
+            keeps. R subsets a copy inside R with `subset()` (rows where it is NA
+            are dropped), so the loaded data is never changed.
+            Combines (AND) with each group's own condition when `by` is used. Default is
+            None (all rows).
 
         Returns
         -------
@@ -1757,7 +1845,7 @@ def r_feols(
     )
 
 
-@_with_by
+@_with_by("r")
 def r_feglm(
     df,
     formula: str,
@@ -1774,6 +1862,7 @@ def r_feglm(
     join_on_name: str = "Variable",
     value_name: str = "estimate",
     by: dict[str, list[str]] | list | str | None = None,
+    filter: str | None = None,
     **r_kwargs,
 ) -> AdapterStats:
     """
@@ -1808,6 +1897,12 @@ def r_feglm(
             returned table (df_estimates, df_ses, df_tidy and df_vcov) and set
             as the result's `by`. Covariances *across* groups are not computed
             (each group is its own fit). Default is None (one fit on all of df).
+        filter : str | None, optional
+            A R condition (e.g. "g == 1 & age > 18") restricting this run to the rows it
+            keeps. R subsets a copy inside R with `subset()` (rows where it is NA
+            are dropped), so the loaded data is never changed.
+            Combines (AND) with each group's own condition when `by` is used. Default is
+            None (all rows).
 
         Returns
         -------
@@ -1824,7 +1919,7 @@ def r_feglm(
     )
 
 
-@_with_by
+@_with_by("r")
 def r_fepois(
     df,
     formula: str,
@@ -1840,6 +1935,7 @@ def r_fepois(
     join_on_name: str = "Variable",
     value_name: str = "estimate",
     by: dict[str, list[str]] | list | str | None = None,
+    filter: str | None = None,
     **r_kwargs,
 ) -> AdapterStats:
     """
@@ -1867,6 +1963,12 @@ def r_fepois(
             returned table (df_estimates, df_ses, df_tidy and df_vcov) and set
             as the result's `by`. Covariances *across* groups are not computed
             (each group is its own fit). Default is None (one fit on all of df).
+        filter : str | None, optional
+            A R condition (e.g. "g == 1 & age > 18") restricting this run to the rows it
+            keeps. R subsets a copy inside R with `subset()` (rows where it is NA
+            are dropped), so the loaded data is never changed.
+            Combines (AND) with each group's own condition when `by` is used. Default is
+            None (all rows).
 
         Returns
         -------
@@ -1883,7 +1985,7 @@ def r_fepois(
     )
 
 
-@_with_by
+@_with_by("r")
 def r_femlm(
     df,
     formula: str,
@@ -1899,6 +2001,7 @@ def r_femlm(
     join_on_name: str = "Variable",
     value_name: str = "estimate",
     by: dict[str, list[str]] | list | str | None = None,
+    filter: str | None = None,
     **r_kwargs,
 ) -> AdapterStats:
     """
@@ -1929,6 +2032,12 @@ def r_femlm(
             returned table (df_estimates, df_ses, df_tidy and df_vcov) and set
             as the result's `by`. Covariances *across* groups are not computed
             (each group is its own fit). Default is None (one fit on all of df).
+        filter : str | None, optional
+            A R condition (e.g. "g == 1 & age > 18") restricting this run to the rows it
+            keeps. R subsets a copy inside R with `subset()` (rows where it is NA
+            are dropped), so the loaded data is never changed.
+            Combines (AND) with each group's own condition when `by` is used. Default is
+            None (all rows).
 
         Returns
         -------
@@ -2403,7 +2512,7 @@ class mi_ses_from_r_fixest:
         )
 
 
-@_with_by
+@_with_by("stata")
 def stata_adapter(
     df,
     command: str | list[str],
@@ -2414,6 +2523,7 @@ def stata_adapter(
     reuse_data: bool = False,
     quietly: bool = True,
     by: dict[str, list[str]] | list | str | None = None,
+    filter: str | None = None,
 ) -> AdapterStats:
     """
     Run an arbitrary Stata e-class estimation command (regress, logit,
@@ -2469,6 +2579,13 @@ def stata_adapter(
         returned table (df_estimates, df_ses, df_tidy and df_vcov) and set
         as the result's `by`. Covariances *across* groups are not computed
         (each group is its own fit). Default is None (one fit on all of df).
+    filter : str | None, optional
+        A Stata condition (e.g. "g == 1 & age > 18") restricting this run to the rows it
+        keeps. The run is wrapped in `preserve` / `keep if` / `restore`, so the
+        loaded data is never changed. Stata's rules apply (a missing value
+        counts as larger than any number - add `& !missing(x)` if needed).
+        Combines (AND) with each group's own condition when `by` is used. Default is
+        None (all rows).
 
     Returns
     -------
@@ -2488,6 +2605,7 @@ def stata_adapter(
         stata_path=stata_path,
         reuse_data=reuse_data,
         quietly=quietly,
+        filter=filter,
     )
 
     df_estimates = pl.DataFrame({join_on_name: b_names, value_name: b})
@@ -2638,8 +2756,7 @@ def mi_ses_from_stata(
                     #   replicate weight in this loop - only `weight`
                     #   changes - so re-exporting/re-`use`-ing it every
                     #   call would be pure waste.
-                    #   (but not with `by`: each group is a different subset)
-                    "reuse_data": by is None,
+                    "reuse_data": True,
                     "quietly": quietly,
                 },
                 replicates=replicates,
@@ -2677,6 +2794,7 @@ def stata_results_adapter(
     stata_path: str | None = None,
     reuse_data: bool = False,
     quietly: bool = True,
+    filter: str | None = None,
 ) -> pl.DataFrame:
     """
     Run an arbitrary Stata command (r-class or e-class) and return a flat
@@ -2740,6 +2858,11 @@ def stata_results_adapter(
         text regardless - see `_stata_interop._run_in_stata`'s
         docstring). Default is True.
 
+    filter : str | None, optional
+        A Stata condition (e.g. "g == 1 & age > 18") restricting this run to
+        the rows it keeps - the run is wrapped in `preserve` / `keep if` /
+        `restore`, so the loaded data is never changed. Default is None.
+
     Returns
     -------
     pl.DataFrame
@@ -2766,6 +2889,7 @@ def stata_results_adapter(
         edition=edition,
         stata_path=stata_path,
         quietly=quietly,
+        filter=filter,
     )
 
     import numpy as np

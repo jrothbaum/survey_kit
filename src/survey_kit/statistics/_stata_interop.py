@@ -25,6 +25,9 @@ import os
 import sys
 import tempfile
 
+import polars as pl
+
+from ._data_handle import DataHandle
 from .. import config, logger
 
 _stata_initialized = False
@@ -221,6 +224,112 @@ def dataframe_to_dta(df, path: str) -> None:
 _stata_loaded_df: object | None = None
 
 
+#   The StataData whose dataset is currently in Stata's memory - a strong
+#   reference, for the same reason as _stata_loaded_df.
+_stata_loaded_handle: object | None = None
+#   True while a run's `preserve` (from filter=) is waiting for its `restore`.
+_stata_preserved = False
+
+
+class StataData(DataHandle):
+    """
+    A dataset exported to a .dta once (kept in a temp directory until
+    close()) and reused across adapter calls: pass it as `df` to
+    stata_adapter / stata_results_adapter. The first run `use`s the .dta
+    (from local disk - no export from Python); later runs on the same handle
+    find the data already in Stata's memory. Only a *different* handle or a
+    plain dataframe replaces it. A run's `filter=` doesn't change that: it
+    is wrapped in `preserve` / `keep if` / `restore`. Commands that change
+    the data (gen, drop, ...) persist in Stata's memory for later runs on the
+    same handle. See `_data_handle.DataHandle`.
+    """
+
+    _language = "Stata"
+
+    def __init__(self, df, edition: str | None = None, stata_path: str | None = None):
+        self._edition = edition
+        self._stata_path = stata_path
+        super().__init__(df)
+
+    def _load(self, df) -> None:
+        self._tmp = tempfile.TemporaryDirectory()
+        self._dta_path = os.path.join(self._tmp.name, "survey_kit_data.dta")
+        dataframe_to_dta(df, self._dta_path)
+
+    def _ensure_loaded(self, stata) -> None:
+        global _stata_loaded_handle, _stata_loaded_df
+        self._check_open()
+        if _stata_loaded_handle is self:
+            return
+        path = self._dta_path.replace(os.sep, "/")
+        stata.run(f'use "{path}", clear', quietly=True)
+        _stata_loaded_handle = self
+        _stata_loaded_df = None
+
+    def unique_values(self, columns: list[str], filter: str | None = None) -> pl.DataFrame:
+        stata = require_pystata(self._edition, self._stata_path)
+        self._ensure_loaded(stata)
+        if filter:
+            stata.run("preserve", quietly=True)
+            stata.run(f"keep if {filter}", quietly=True)
+        try:
+            from sfi import Data
+
+            rows = Data.get(var=columns)
+        finally:
+            if filter:
+                stata.run("restore", quietly=True)
+        #   sfi returns Stata's missing as None/NaN for numerics
+        clean = [
+            tuple(
+                None if v is None or (isinstance(v, float) and v != v) else v
+                for v in row
+            )
+            for row in rows
+        ]
+        return pl.DataFrame(clean, schema=columns, orient="row").unique(
+            maintain_order=True
+        )
+
+    def _equals(self, column: str, value) -> str:
+        if value is None:
+            return f"missing({column})"
+        if isinstance(value, (int, float)) and not isinstance(value, bool):
+            return f"{column} == {value!r}"
+        text = str(value)
+        if '"' in text:
+            raise ValueError(
+                f"Can't filter on a string value containing a double quote: {text!r}"
+            )
+        return f'{column} == "{text}"'
+
+    def _release(self) -> None:
+        global _stata_loaded_handle
+        if _stata_loaded_handle is self:
+            _stata_loaded_handle = None
+        self._tmp.cleanup()
+
+
+def load_to_stata(
+    df, edition: str | None = None, stata_path: str | None = None
+) -> StataData:
+    """
+    Export df to a .dta once and return a handle to pass to the Stata
+    adapters in place of `df` (use `filter="<Stata condition>"` on an adapter
+    to run on a subset without exporting again). Close it (or use `with`)
+    when done.
+    """
+    return StataData(df, edition=edition, stata_path=stata_path)
+
+
+def _finish_stata_run() -> None:
+    """Undo a filtered run's `preserve` - call once its results have been read back."""
+    global _stata_preserved
+    if _stata_preserved:
+        _stata_preserved = False
+        require_pystata().run("restore", quietly=True)
+
+
 def _run_in_stata(
     df,
     command: str | list[str],
@@ -228,6 +337,7 @@ def _run_in_stata(
     stata_path: str | None,
     reuse_data: bool = False,
     quietly: bool = True,
+    filter: str | None = None,
 ):
     """
     Write df to a temp .dta, `use` it in the running (persistent, embedded)
@@ -266,6 +376,11 @@ def _run_in_stata(
         shared in-memory dataset, so this needs an explicit opt-in from a
         caller who knows the same object will really be reused - call
         clear_stata_cache() once done to free it.
+    filter : a Stata condition (e.g. "g == 1 & age > 18") restricting this
+        one run to those rows: `preserve`, `keep if <filter>`, the
+        command(s) - and the caller's `restore` (via _finish_stata_run)
+        once it has read its results back. Never changes the loaded data,
+        so it composes with reuse_data/StataData.
     quietly : suppresses Stata's own console output for `command` on
         success (default True) - avoids dumping a full regression
         table/iteration log per implicate/replicate. Has no effect on
@@ -274,7 +389,7 @@ def _run_in_stata(
         `quietly` prefix would otherwise suppress that error text too,
         collapsing it to a bare "r(####);".
     """
-    global _stata_loaded_df
+    global _stata_loaded_df, _stata_loaded_handle, _stata_preserved
 
     def run_line(cmd: str, line_quietly: bool):
         try:
@@ -290,7 +405,9 @@ def _run_in_stata(
 
     stata = require_pystata(edition, stata_path)
 
-    if not (reuse_data and _stata_loaded_df is not None and _stata_loaded_df is df):
+    if isinstance(df, StataData):
+        df._ensure_loaded(stata)
+    elif not (reuse_data and _stata_loaded_df is not None and _stata_loaded_df is df):
         with tempfile.TemporaryDirectory() as tmp_dir:
             dta_path = os.path.join(tmp_dir, "survey_kit_implicate.dta")
             dataframe_to_dta(df, dta_path)
@@ -300,12 +417,22 @@ def _run_in_stata(
             stata_path_str = dta_path.replace(os.sep, "/")
             run_line(f'use "{stata_path_str}", clear', True)
         _stata_loaded_df = df if reuse_data else None
+        _stata_loaded_handle = None
 
-    run_line("ereturn clear", True)
-    run_line("return clear", True)
+    if filter:
+        run_line("preserve", True)
+        _stata_preserved = True
+        run_line(f"keep if {filter}", True)
 
-    for cmd in commands:
-        run_line(cmd, quietly)
+    try:
+        run_line("ereturn clear", True)
+        run_line("return clear", True)
+
+        for cmd in commands:
+            run_line(cmd, quietly)
+    except BaseException:
+        _finish_stata_run()
+        raise
 
     return stata
 
@@ -334,6 +461,7 @@ def run_stata_model(
     stata_path: str | None = None,
     reuse_data: bool = False,
     quietly: bool = True,
+    filter: str | None = None,
 ):
     """
     Write df to a temp .dta, `use` it in a running Stata instance, run
@@ -373,15 +501,26 @@ def run_stata_model(
           b/se/t-or-z/pvalue/ll/ul/..., columns are terms).
         - table_row_names, table_col_names : r(table)'s row/column names.
     """
-    _run_in_stata(df, command, edition, stata_path, reuse_data=reuse_data, quietly=quietly)
+    _run_in_stata(
+        df,
+        command,
+        edition,
+        stata_path,
+        reuse_data=reuse_data,
+        quietly=quietly,
+        filter=filter,
+    )
     import sfi
 
-    b = sfi.Matrix.get("e(b)")[0]
-    b_names = sfi.Matrix.getColNames("e(b)")
-    V = sfi.Matrix.get("e(V)")
-    table = sfi.Matrix.get("r(table)")
-    table_row_names = sfi.Matrix.getRowNames("r(table)")
-    table_col_names = sfi.Matrix.getColNames("r(table)")
+    try:
+        b = sfi.Matrix.get("e(b)")[0]
+        b_names = sfi.Matrix.getColNames("e(b)")
+        V = sfi.Matrix.get("e(V)")
+        table = sfi.Matrix.get("r(table)")
+        table_row_names = sfi.Matrix.getRowNames("r(table)")
+        table_col_names = sfi.Matrix.getColNames("r(table)")
+    finally:
+        _finish_stata_run()
 
     return b, b_names, V, table, table_row_names, table_col_names
 
@@ -394,6 +533,7 @@ def run_stata_results(
     stata_path: str | None = None,
     reuse_data: bool = False,
     quietly: bool = True,
+    filter: str | None = None,
 ) -> dict[str, object]:
     """
     Write df to a temp .dta, `use` it, run `command` (a single command, or
@@ -438,27 +578,38 @@ def run_stata_results(
         name -> float (scalar) or (values, row_names, col_names) (matrix,
         as returned by sfi.Matrix.get/getRowNames/getColNames).
     """
-    _run_in_stata(df, command, edition, stata_path, reuse_data=reuse_data, quietly=quietly)
+    _run_in_stata(
+        df,
+        command,
+        edition,
+        stata_path,
+        reuse_data=reuse_data,
+        quietly=quietly,
+        filter=filter,
+    )
     import sfi
 
     out: dict[str, object] = {}
-    for name in results:
-        #   sfi.Scalar.getValue(name) doesn't raise for a name that's
-        #   actually a matrix (e.g. "e(b)") - it just returns None, so
-        #   that's the signal to fall back to sfi.Matrix.get, not an
-        #   exception.
-        value = None
-        try:
-            value = sfi.Scalar.getValue(name)
-        except Exception:
-            pass
+    try:
+        for name in results:
+            #   sfi.Scalar.getValue(name) doesn't raise for a name that's
+            #   actually a matrix (e.g. "e(b)") - it just returns None, so
+            #   that's the signal to fall back to sfi.Matrix.get, not an
+            #   exception.
+            value = None
+            try:
+                value = sfi.Scalar.getValue(name)
+            except Exception:
+                pass
 
-        if value is None:
-            out[name] = (
-                sfi.Matrix.get(name),
-                sfi.Matrix.getRowNames(name),
-                sfi.Matrix.getColNames(name),
-            )
-        else:
-            out[name] = value
+            if value is None:
+                out[name] = (
+                    sfi.Matrix.get(name),
+                    sfi.Matrix.getRowNames(name),
+                    sfi.Matrix.getColNames(name),
+                )
+            else:
+                out[name] = value
+    finally:
+        _finish_stata_run()
     return out

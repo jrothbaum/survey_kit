@@ -456,6 +456,59 @@ def test_mi_ses_by_group_with_vcov_and_replicates():
     assert _collect(mi_rep.df_ses).height == 4
 
 
+def _r_available() -> bool:
+    from survey_kit.statistics._r_interop import check_r_setup
+
+    setup = check_r_setup(["fixest"])
+    return bool(
+        setup.get("rscript_found")
+        and setup.get("rpy2_installed")
+        and setup.get("rpy2_arrow_installed")
+        and setup["r_packages"].get("fixest")
+    )
+
+
+def _slope_rows(out):
+    est = _collect(out.df_estimates)
+    return est.sort([c for c in est.columns if c != "estimate"])
+
+
+def test_r_adapters_handle_filter_and_by():
+    if not _r_available():
+        print("skip: R not available")
+        return
+    from survey_kit.statistics.adapters import r_lm_adapter
+    from survey_kit.statistics._r_interop import load_to_r
+
+    df = _regression_data(2)
+    kwargs = {"formula": "y ~ x1"}
+
+    plain_g1 = r_lm_adapter(df.filter(pl.col("g") == 1), **kwargs)
+    with load_to_r(df) as handle:
+        #   filter= restricts the one run (R syntax) and equals fitting the subset
+        filtered = r_lm_adapter(handle, filter="g == 1", **kwargs)
+        assert _slope_rows(filtered).equals(_slope_rows(plain_g1))
+        #   ...without changing the loaded data
+        full = r_lm_adapter(handle, **kwargs)
+        assert _slope_rows(full).equals(_slope_rows(r_lm_adapter(df, **kwargs)))
+        #   by on a handle, and combined with a filter
+        by_handle = r_lm_adapter(handle, by="g", **kwargs)
+        by_filtered = r_lm_adapter(handle, by="g", filter="x1 > 0", **kwargs)
+    by_plain = r_lm_adapter(df, by="g", **kwargs)
+    assert _slope_rows(by_handle).equals(_slope_rows(by_plain))
+    assert _collect(by_plain.df_estimates).columns[:3] == ["Variable", "g", "estimate"]
+    assert _collect(by_filtered.df_estimates).height == 4
+    g1 = _collect(by_plain.df_estimates).filter(pl.col("g") == 1).sort("Variable")
+    assert g1["estimate"].to_list() == _collect(plain_g1.df_estimates).sort("Variable")["estimate"].to_list()
+    #   a closed handle can't be used
+    try:
+        r_lm_adapter(handle, **kwargs)
+    except ValueError:
+        pass
+    else:
+        raise AssertionError("closed handle should raise")
+
+
 def test_polars_expression_mixed_and_non_polars_raise():
     a = _adapter(["a", "b"], vcov=False)
     _raises(

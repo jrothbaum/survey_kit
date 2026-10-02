@@ -18,6 +18,7 @@ import subprocess
 
 import polars as pl
 
+from ._data_handle import DataHandle
 from .. import logger
 
 
@@ -299,6 +300,82 @@ def require_rpy2_arrow():
     return pyra
 
 
+class RData(DataHandle):
+    """
+    A dataset converted to an R data.frame once and reused across adapter
+    calls: pass it as `df` to any R adapter. See `_data_handle.DataHandle`.
+    """
+
+    _language = "R"
+
+    def _load(self, df) -> None:
+        self._r_base = dataframe_to_r(df)
+
+    def to_r(self):
+        self._check_open()
+        return self._r_base
+
+    def unique_values(self, columns: list[str], filter: str | None = None) -> pl.DataFrame:
+        ro = require_rpy2()
+        import rpy2.rinterface as rinterface
+
+        na_types = (
+            type(rinterface.NA_Integer),
+            type(rinterface.NA_Real),
+            type(rinterface.NA_Character),
+            type(rinterface.NA_Logical),
+        )
+        unique = ro.r("function(d, cols) unique(d[, cols, drop = FALSE])")(
+            filter_in_r(self, filter), ro.StrVector(columns)
+        )
+        return pl.DataFrame(
+            {
+                col: [None if isinstance(v, na_types) else v for v in unique.rx2(col)]
+                for col in columns
+            }
+        )
+
+    def _equals(self, column: str, value) -> str:
+        name = f"`{column}`"
+        if value is None:
+            return f"is.na({name})"
+        if isinstance(value, bool):
+            return f"{name} == {'TRUE' if value else 'FALSE'}"
+        if isinstance(value, (int, float)):
+            return f"{name} == {value!r}"
+        return f"{name} == {json.dumps(str(value))}"
+
+    def _release(self) -> None:
+        self._r_base = None
+        ro = require_rpy2()
+        ro.r("invisible(gc())")
+
+
+def load_to_r(df) -> RData:
+    """
+    Convert df to an R data.frame once and return a handle to pass to R
+    adapters in place of `df` (use `filter="<R condition>"` on an adapter to
+    run on a subset without converting again). Close it (or use `with`)
+    when done to free R's copy.
+    """
+    return RData(df)
+
+
+def filter_in_r(df, condition: str | None):
+    """
+    df as an R data.frame, restricted (inside R, with base `subset()`, so
+    rows where the condition is NA are dropped) to the rows where
+    `condition` - an R expression over the columns, e.g. "g == 1 & age > 18" -
+    holds. No condition returns the R data.frame unchanged. Never alters df
+    itself (including an RData handle's loaded data).
+    """
+    df_r = dataframe_to_r(df)
+    if not condition:
+        return df_r
+    ro = require_rpy2()
+    return ro.r(f"function(.d) subset(.d, {condition})")(df_r)
+
+
 def dataframe_to_r(df):
     """
     Convert a polars/pandas/narwhals-native dataframe to an R data.frame via
@@ -318,6 +395,9 @@ def dataframe_to_r(df):
     original polars/narwhals df - no separate cache to manage, since
     Python's own variable scoping already owns the object's lifetime.
     """
+    if isinstance(df, RData):
+        return df.to_r()
+
     ro = require_rpy2()
     import rpy2.rinterface as rinterface
 
