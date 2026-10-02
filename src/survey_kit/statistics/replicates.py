@@ -1141,10 +1141,41 @@ def _invalidate_extras(obj, method_name: str) -> None:
             setattr(obj, attr, None)
 
 
+def _expression_kind(arg) -> str | None:
+    """
+    "polars" if arg is (or, for a list/tuple, contains) a pl.Expr, "narwhals"
+    for an nw.Expr, None otherwise (strings, dicts, ...). Raises if both
+    kinds are mixed in one argument.
+    """
+    items = arg if isinstance(arg, (list, tuple)) else [arg]
+    kinds = set()
+    for item in items:
+        if isinstance(item, pl.Expr):
+            kinds.add("polars")
+        elif isinstance(item, nw.Expr):
+            kinds.add("narwhals")
+    if len(kinds) > 1:
+        raise TypeError(
+            "Mixed polars and narwhals expressions in one argument - "
+            "use one kind of expression per call."
+        )
+    return next(iter(kinds), None)
+
+
 def apply_as_attribute(obj, df_name: str, nw_expr, nw_method: str):
     dfi = getattr(obj, df_name)
 
     if dfi is not None:
         df_nw = nw.from_native(dfi)
-        nw_method_callable = getattr(df_nw, nw_method)
-        setattr(obj, df_name, (nw_method_callable(nw_expr).to_native()))
+
+        if _expression_kind(nw_expr) == "polars":
+            #   polars expressions only run on a polars frame - no
+            #   conversion between backends here.
+            if df_nw.implementation != nw.Implementation.POLARS:
+                raise TypeError(
+                    f"A polars expression can't be applied to {df_name}, which is a "
+                    f"{df_nw.implementation} frame - use a narwhals expression."
+                )
+            setattr(obj, df_name, getattr(df_nw.to_native(), nw_method)(nw_expr))
+        else:
+            setattr(obj, df_name, getattr(df_nw, nw_method)(nw_expr).to_native())

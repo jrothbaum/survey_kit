@@ -200,6 +200,47 @@ def test_mi_filter_values_everywhere():
     assert set(_collect(out.df_vcov)["Variable_1"]) <= {"a", "b"}
 
 
+def _raises(fn, exc):
+    try:
+        fn()
+    except exc:
+        return
+    raise AssertionError(f"expected {exc.__name__}")
+
+
+def test_polars_expressions_on_adapter_and_mi():
+    a = _adapter(["a", "b", "c"])
+    assert _ids(a.filter(pl.col("Variable") != "c").df_estimates) == ["a", "b"]
+    a_novcov = _adapter(["a", "b", "c"], vcov=False)
+    out = a_novcov.with_columns(pl.col("coef") * 2)
+    assert _collect(out.df_estimates)["coef"].to_list() == [2.0, 4.0, 6.0]
+    out = a_novcov.sort(pl.col("Variable").sort_by(pl.col("coef"), descending=True))
+    assert _ids(out.df_estimates) == ["c", "b", "a"]
+
+    mi = _mi(["a", "b", "c"])
+    out = mi.filter(pl.col("Variable") != "c")
+    assert _ids(out.df_estimates) == ["a", "b"]
+    for imp in out.implicate_stats:
+        assert _ids(imp.df_estimates) == ["a", "b"]
+    out = mi.with_columns(pl.col("coef") + 1)
+    assert _collect(out.df_estimates)["coef"][0] > 1.5
+
+
+def test_polars_expression_mixed_and_non_polars_raise():
+    a = _adapter(["a", "b"], vcov=False)
+    _raises(
+        lambda: a.with_columns([pl.col("coef") * 2, nw.col("coef") * 3]), TypeError
+    )
+
+    pd_est = _collect(a.df_estimates).to_pandas()
+    pd_ses = _collect(a.df_ses).to_pandas()
+    a_pd = AdapterStats(pd_est, pd_ses, display=False)
+    #   narwhals expression is fine on a pandas-backed frame...
+    assert len(a_pd.filter(nw.col("Variable") != "a").df_estimates) == 1
+    #   ...a polars one is not
+    _raises(lambda: a_pd.filter(pl.col("Variable") != "a"), TypeError)
+
+
 if __name__ == "__main__":
     for name, fn in list(globals().items()):
         if name.startswith("test_"):
