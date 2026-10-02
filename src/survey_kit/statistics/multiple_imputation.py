@@ -102,24 +102,87 @@ def _combine_vcov(
         raise Exception(message)
 
     value_col = cols_stats[0]
-    col_1 = [f"{c}_1" for c in join_on]
-    col_2 = [f"{c}_2" for c in join_on]
-
     nw_type = NarwhalsType(df_estimates)
-    df_terms = nw_type.to_polars().lazy().select(join_on).collect()
+
+    def _polars(df, cols=None):
+        out = NarwhalsType(df).to_polars().lazy()
+        return (out.select(cols) if cols else out).collect()
+
+    df_terms_all = _polars(df_estimates, join_on)
+    estimate_frames = [
+        _polars(imp.df_estimates, join_on + [value_col]) for imp in implicate_stats
+    ]
+    vcov_frames = [_polars(imp.df_vcov) for imp in implicate_stats]
+
+    #   Terms are the join_on columns that df_vcov carries as {c}_1/{c}_2
+    #   pairs; any other join_on column is a group (`by`) column, shared by
+    #   both terms. Each group is its own fit, so combine within group only -
+    #   covariances across groups aren't represented.
+    vcov_columns = set(vcov_frames[0].columns)
+    id_cols = [c for c in join_on if f"{c}_1" in vcov_columns]
+    group_cols = [c for c in join_on if c not in id_cols]
+
+    if group_cols:
+        groups = df_terms_all.select(group_cols).unique(maintain_order=True).rows()
+    else:
+        groups = [()]
+
+    def _in_group(df, values):
+        for col, value in zip(group_cols, values):
+            df = df.filter(
+                pl.col(col).is_null() if value is None else pl.col(col) == value
+            )
+        return df
+
+    pieces = []
+    for values in groups:
+        df_T = _combine_vcov_terms(
+            df_terms=_in_group(df_terms_all, values).select(id_cols),
+            estimate_frames=[
+                _in_group(f, values).select(id_cols + [value_col])
+                for f in estimate_frames
+            ],
+            vcov_frames=[_in_group(f, values).drop(group_cols) for f in vcov_frames],
+            id_cols=id_cols,
+            value_col=value_col,
+        )
+        if group_cols:
+            df_T = df_T.with_columns(
+                [
+                    pl.lit(value, dtype=df_terms_all.schema[col]).alias(col)
+                    for col, value in zip(group_cols, values)
+                ]
+            )
+        pieces.append(df_T)
+
+    df_T = pl.concat(pieces, how="vertical_relaxed")
+    if group_cols:
+        df_T = df_T.select(
+            [f"{c}_1" for c in id_cols]
+            + [f"{c}_2" for c in id_cols]
+            + group_cols
+            + [value_col]
+        )
+
+    return nw_type.from_polars(df_T)
+
+
+def _combine_vcov_terms(
+    df_terms: pl.DataFrame,
+    estimate_frames: list[pl.DataFrame],
+    vcov_frames: list[pl.DataFrame],
+    id_cols: list[str],
+    value_col: str,
+) -> pl.DataFrame:
+    """T = U + (1 + 1/m)B for one block of terms (see _combine_vcov)."""
+    col_1 = [f"{c}_1" for c in id_cols]
+    col_2 = [f"{c}_2" for c in id_cols]
     n_terms = df_terms.height
 
-    m = len(implicate_stats)
+    m = len(estimate_frames)
     q_matrix = np.full((m, n_terms), float("nan"))
-    for i, imp in enumerate(implicate_stats):
-        dfi = (
-            NarwhalsType(imp.df_estimates)
-            .to_polars()
-            .lazy()
-            .select(join_on + [value_col])
-            .collect()
-        )
-        dfi = df_terms.join(dfi, on=join_on, how="left")
+    for i, dfi in enumerate(estimate_frames):
+        dfi = df_terms.join(dfi, on=id_cols, how="left")
         q_matrix[i, :] = dfi[value_col].to_numpy()
 
     if n_terms == 1:
@@ -132,7 +195,7 @@ def _combine_vcov(
     for i in range(n_terms):
         for j in range(n_terms):
             record = {}
-            for idx, c in enumerate(join_on):
+            for idx, c in enumerate(id_cols):
                 record[f"{c}_1"] = term_rows[i][idx]
                 record[f"{c}_2"] = term_rows[j][idx]
             record[f"{value_col}__B"] = float(b_matrix[i, j])
@@ -140,7 +203,7 @@ def _combine_vcov(
     df_B = pl.DataFrame(b_records)
 
     df_vcov_stacked = NarwhalsType(
-        concat_wrapper([imp.df_vcov for imp in implicate_stats], how="diagonal")
+        concat_wrapper(vcov_frames, how="diagonal")
     ).to_polars()
 
     df_U = (
@@ -150,7 +213,7 @@ def _combine_vcov(
         .collect()
     )
 
-    df_T = (
+    return (
         df_U.join(df_B, on=col_1 + col_2, how="left")
         .with_columns(
             (
@@ -159,8 +222,6 @@ def _combine_vcov(
         )
         .select(col_1 + col_2 + [value_col])
     )
-
-    return nw_type.from_polars(df_T)
 
 
 class MultipleImputation(Serializable):

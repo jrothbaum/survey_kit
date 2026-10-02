@@ -38,10 +38,114 @@ built from:
 
 from __future__ import annotations
 
+import functools
+
+import narwhals as nw
 import polars as pl
 
 from .. import logger
 from .adapter_stats import AdapterStats
+
+
+_BY_DOC = """
+
+    by : dict[str, list[str]] | list | str | None, optional
+        Run the adapter separately within each group of these column(s) -
+        same formats as StatCalculator's own `by`. The group columns are
+        added to every returned table (df_estimates, df_ses, df_tidy and
+        df_vcov) and set as the result's `by`. Covariances *across* groups
+        are not computed (each group is its own fit). Default is None (one
+        fit on all of df).
+"""
+
+
+def _by_columns(by) -> list[str]:
+    """Flat list of the group columns in a `by` (dict / list / str / None)."""
+    if by is None:
+        return []
+    if isinstance(by, str):
+        return [by]
+    if isinstance(by, dict):
+        items = [c for cols in by.values() for c in cols]
+    else:
+        items = [c for item in by for c in (item if isinstance(item, list) else [item])]
+    return list(dict.fromkeys(items))
+
+
+def _normalize_by(by):
+    """
+    StatCalculator.from_function wants `by` as {name: [columns]} - accept a
+    bare column name or a list of names/lists too.
+    """
+    if by is None or isinstance(by, dict):
+        return by
+    if isinstance(by, str):
+        return {by: [by]}
+    out = {}
+    for item in by:
+        cols = item if isinstance(item, list) else [item]
+        out["_".join(cols)] = cols
+    return out
+
+
+def _run_by_groups(adapter, df, by, args, kwargs) -> AdapterStats:
+    by = _normalize_by(by)
+    by_cols = _by_columns(by)
+    nw_df = nw.from_native(df)
+    keys = (
+        nw_df.lazy().select(by_cols).unique().sort(by_cols).collect().to_polars()
+    )
+    if keys.height == 0:
+        raise ValueError("by=: no groups found (df is empty).")
+
+    parts = []
+    for row in keys.iter_rows(named=True):
+        cond = None
+        for col, value in row.items():
+            expr = nw.col(col).is_null() if value is None else nw.col(col) == value
+            cond = expr if cond is None else cond & expr
+        parts.append((row, adapter(nw_df.filter(cond).to_native(), *args, **kwargs)))
+
+    def _stack(attr: str, position: int):
+        frames = []
+        for row, result in parts:
+            table = getattr(result.replicate_stats, attr)
+            if table is None:
+                return None
+            table = nw.from_native(table).lazy().collect().to_polars()
+            group_cols = [
+                pl.lit(value, dtype=keys.schema[col]).alias(col)
+                for col, value in row.items()
+            ]
+            table = table.with_columns(group_cols)
+            names = [c for c in table.columns if c not in by_cols]
+            frames.append(
+                table.select(names[:position] + by_cols + names[position:])
+            )
+        return pl.concat(frames, how="diagonal_relaxed")
+
+    return AdapterStats(
+        df_estimates=_stack("df_estimates", 1),
+        df_ses=_stack("df_ses", 1),
+        variable_ids=parts[0][1].variable_ids,
+        by=by,
+        df_vcov=_stack("df_vcov", 2),
+        df_tidy=_stack("df_tidy", 1),
+        display=False,
+    )
+
+
+def _with_by(adapter):
+    """Give a direct adapter an optional `by=` that fits it once per group."""
+
+    @functools.wraps(adapter)
+    def wrapper(df, *args, by=None, **kwargs):
+        if by is None:
+            return adapter(df, *args, **kwargs)
+        return _run_by_groups(adapter, df, by, args, kwargs)
+
+    wrapper.__doc__ = (adapter.__doc__ or "") + _BY_DOC
+    return wrapper
 
 
 def _adapter_stats(
@@ -162,6 +266,7 @@ def _mi_ses_replicates_delegate(
     join_on_name: str,
     replicates,
     convert=None,
+    by=None,
 ):
     """
     Build an `mi_ses_from_function` delegate (called once per implicate)
@@ -196,9 +301,14 @@ def _mi_ses_replicates_delegate(
 
         def _point_estimate(df, weight):
             if convert is not None:
-                if not converted:
-                    converted["df"] = convert(df)
-                df = converted["df"]
+                #   memoizing is only valid when every replicate call sees the
+                #   same df - with `by`, each group is a different subset.
+                if by is not None:
+                    df = convert(df)
+                else:
+                    if not converted:
+                        converted["df"] = convert(df)
+                    df = converted["df"]
             return adapter(df, weight=weight, **base_arguments).df_estimates
 
         return StatCalculator.from_function(
@@ -206,12 +316,14 @@ def _mi_ses_replicates_delegate(
             estimate_ids=[join_on_name],
             df=df,
             replicates=replicates,
+            by=_normalize_by(by),
             display=False,
         )
 
     return delegate
 
 
+@_with_by
 def statsmodels_adapter(
     df,
     y: str,
@@ -323,6 +435,7 @@ def mi_ses_from_statsmodels(
     parallel_inputs=None,
     rounding=None,
     round_output: bool = True,
+    by=None,
 ):
     """
     `mi_ses_from_function(delegate=statsmodels_adapter, ...)`, with
@@ -371,6 +484,7 @@ def mi_ses_from_statsmodels(
     if replicates is None:
         delegate = statsmodels_adapter
         arguments = {
+            "by": by,
             **base_arguments,
             "weight": weight,
             "cov_type": cov_type,
@@ -395,13 +509,14 @@ def mi_ses_from_statsmodels(
             join_on_name,
             replicates,
             convert=_to_pandas,
+            by=by,
         )
         arguments = {}
 
     return mi_ses_from_function(
         delegate=delegate,
         df_implicates=df_implicates,
-        join_on=[join_on_name],
+        join_on=[join_on_name] + _by_columns(by),
         path_srmi=path_srmi,
         index=index,
         df_noimputes=df_noimputes,
@@ -413,6 +528,7 @@ def mi_ses_from_statsmodels(
     )
 
 
+@_with_by
 def linearmodels_adapter(
     df,
     formula: str,
@@ -546,6 +662,7 @@ def mi_ses_from_linearmodels(
     parallel_inputs=None,
     rounding=None,
     round_output: bool = True,
+    by=None,
 ):
     """
     `mi_ses_from_function(delegate=linearmodels_adapter, ...)`, with
@@ -592,6 +709,7 @@ def mi_ses_from_linearmodels(
     if replicates is None:
         delegate = linearmodels_adapter
         arguments = {
+            "by": by,
             **base_arguments,
             "weight": weight,
             "cov_type": cov_type,
@@ -609,13 +727,14 @@ def mi_ses_from_linearmodels(
             join_on_name,
             replicates,
             convert=_to_pandas,
+            by=by,
         )
         arguments = {}
 
     return mi_ses_from_function(
         delegate=delegate,
         df_implicates=df_implicates,
-        join_on=[join_on_name],
+        join_on=[join_on_name] + _by_columns(by),
         path_srmi=path_srmi,
         index=index,
         df_noimputes=df_noimputes,
@@ -627,6 +746,7 @@ def mi_ses_from_linearmodels(
     )
 
 
+@_with_by
 def pyfixest_adapter(
     df,
     formula: str,
@@ -777,6 +897,7 @@ class mi_ses_from_pyfixest:
         parallel_inputs=None,
         rounding=None,
         round_output: bool = True,
+        by=None,
         **kwargs,
     ):
         """
@@ -839,13 +960,14 @@ class mi_ses_from_pyfixest:
                 join_on_name,
                 replicates,
                 convert=_to_pandas,
+                by=by,
             )
             arguments = {}
 
         return mi_ses_from_function(
             delegate=delegate,
             df_implicates=df_implicates,
-            join_on=[join_on_name],
+            join_on=[join_on_name] + _by_columns(by),
             path_srmi=path_srmi,
             index=index,
             df_noimputes=df_noimputes,
@@ -872,6 +994,7 @@ class mi_ses_from_pyfixest:
         parallel_inputs=None,
         rounding=None,
         round_output: bool = True,
+        by=None,
         **kwargs,
     ):
         """
@@ -928,13 +1051,14 @@ class mi_ses_from_pyfixest:
                 join_on_name,
                 replicates,
                 convert=_to_pandas,
+                by=by,
             )
             arguments = {}
 
         return mi_ses_from_function(
             delegate=delegate,
             df_implicates=df_implicates,
-            join_on=[join_on_name],
+            join_on=[join_on_name] + _by_columns(by),
             path_srmi=path_srmi,
             index=index,
             df_noimputes=df_noimputes,
@@ -960,6 +1084,7 @@ class mi_ses_from_pyfixest:
         parallel_inputs=None,
         rounding=None,
         round_output: bool = True,
+        by=None,
         **kwargs,
     ):
         """
@@ -995,11 +1120,12 @@ class mi_ses_from_pyfixest:
         return mi_ses_from_function(
             delegate=pyfixest_adapter,
             df_implicates=df_implicates,
-            join_on=[join_on_name],
+            join_on=[join_on_name] + _by_columns(by),
             path_srmi=path_srmi,
             index=index,
             df_noimputes=df_noimputes,
             arguments={
+                "by": by,
                 "func": "feglm",
                 "formula": fml,
                 "family": family,
@@ -1015,6 +1141,7 @@ class mi_ses_from_pyfixest:
         )
 
 
+@_with_by
 def polars_ds_adapter(
     df,
     y: str,
@@ -1143,6 +1270,7 @@ def mi_ses_from_polars_ds(
     parallel_inputs=None,
     rounding=None,
     round_output: bool = True,
+    by=None,
 ):
     """
     `mi_ses_from_function(delegate=polars_ds_adapter, ...)`, with
@@ -1202,13 +1330,14 @@ def mi_ses_from_polars_ds(
             join_on_name,
             replicates,
             convert=_to_polars,
+            by=by,
         )
         arguments = {}
 
     return mi_ses_from_function(
         delegate=delegate,
         df_implicates=df_implicates,
-        join_on=[join_on_name],
+        join_on=[join_on_name] + _by_columns(by),
         path_srmi=path_srmi,
         index=index,
         df_noimputes=df_noimputes,
@@ -1220,6 +1349,7 @@ def mi_ses_from_polars_ds(
     )
 
 
+@_with_by
 def r_lm_adapter(
     df,
     formula: str,
@@ -1304,6 +1434,7 @@ def r_lm_adapter(
     return _adapter_stats(df_estimates, df_ses, df_vcov, df_tidy, join_on_name)
 
 
+@_with_by
 def r_fixest_adapter(
     df,
     formula: str,
@@ -1484,6 +1615,7 @@ _FIXEST_COMMON_PARAMS_DOC = """\
 """
 
 
+@_with_by
 def r_feols(
     df,
     formula: str,
@@ -1536,6 +1668,7 @@ def r_feols(
     )
 
 
+@_with_by
 def r_feglm(
     df,
     formula: str,
@@ -1594,6 +1727,7 @@ def r_feglm(
     )
 
 
+@_with_by
 def r_fepois(
     df,
     formula: str,
@@ -1644,6 +1778,7 @@ def r_fepois(
     )
 
 
+@_with_by
 def r_femlm(
     df,
     formula: str,
@@ -1739,6 +1874,7 @@ class mi_ses_from_r_fixest:
         parallel_inputs=None,
         rounding=None,
         round_output: bool = True,
+        by=None,
         **r_kwargs,
     ):
         """
@@ -1790,6 +1926,7 @@ class mi_ses_from_r_fixest:
         if replicates is None:
             delegate = r_feols
             arguments = {
+                "by": by,
                 **base_arguments,
                 "weight": weight,
                 "vcov": vcov,
@@ -1810,13 +1947,14 @@ class mi_ses_from_r_fixest:
                 join_on_name,
                 replicates,
                 convert=_r.dataframe_to_r,
+                by=by,
             )
             arguments = {}
 
         return mi_ses_from_function(
             delegate=delegate,
             df_implicates=df_implicates,
-            join_on=[join_on_name],
+            join_on=[join_on_name] + _by_columns(by),
             path_srmi=path_srmi,
             index=index,
             df_noimputes=df_noimputes,
@@ -1851,6 +1989,7 @@ class mi_ses_from_r_fixest:
         parallel_inputs=None,
         rounding=None,
         round_output: bool = True,
+        by=None,
         **r_kwargs,
     ):
         """
@@ -1898,6 +2037,7 @@ class mi_ses_from_r_fixest:
         if replicates is None:
             delegate = r_feglm
             arguments = {
+                "by": by,
                 **base_arguments,
                 "weight": weight,
                 "vcov": vcov,
@@ -1918,13 +2058,14 @@ class mi_ses_from_r_fixest:
                 join_on_name,
                 replicates,
                 convert=_r.dataframe_to_r,
+                by=by,
             )
             arguments = {}
 
         return mi_ses_from_function(
             delegate=delegate,
             df_implicates=df_implicates,
-            join_on=[join_on_name],
+            join_on=[join_on_name] + _by_columns(by),
             path_srmi=path_srmi,
             index=index,
             df_noimputes=df_noimputes,
@@ -1958,6 +2099,7 @@ class mi_ses_from_r_fixest:
         parallel_inputs=None,
         rounding=None,
         round_output: bool = True,
+        by=None,
         **r_kwargs,
     ):
         """
@@ -2003,6 +2145,7 @@ class mi_ses_from_r_fixest:
         if replicates is None:
             delegate = r_fepois
             arguments = {
+                "by": by,
                 **base_arguments,
                 "weight": weight,
                 "vcov": vcov,
@@ -2023,13 +2166,14 @@ class mi_ses_from_r_fixest:
                 join_on_name,
                 replicates,
                 convert=_r.dataframe_to_r,
+                by=by,
             )
             arguments = {}
 
         return mi_ses_from_function(
             delegate=delegate,
             df_implicates=df_implicates,
-            join_on=[join_on_name],
+            join_on=[join_on_name] + _by_columns(by),
             path_srmi=path_srmi,
             index=index,
             df_noimputes=df_noimputes,
@@ -2062,6 +2206,7 @@ class mi_ses_from_r_fixest:
         parallel_inputs=None,
         rounding=None,
         round_output: bool = True,
+        by=None,
         **r_kwargs,
     ):
         """
@@ -2094,11 +2239,12 @@ class mi_ses_from_r_fixest:
         return mi_ses_from_function(
             delegate=r_femlm,
             df_implicates=df_implicates,
-            join_on=[join_on_name],
+            join_on=[join_on_name] + _by_columns(by),
             path_srmi=path_srmi,
             index=index,
             df_noimputes=df_noimputes,
             arguments={
+                "by": by,
                 "formula": formula,
                 "family": family,
                 "vcov": vcov,
@@ -2120,6 +2266,7 @@ class mi_ses_from_r_fixest:
         )
 
 
+@_with_by
 def stata_adapter(
     df,
     command: str | list[str],
@@ -2247,6 +2394,7 @@ def mi_ses_from_stata(
     parallel_inputs=None,
     rounding=None,
     round_output: bool = True,
+    by=None,
 ):
     """
     `mi_ses_from_function(delegate=stata_adapter, ...)`, with
@@ -2312,6 +2460,7 @@ def mi_ses_from_stata(
     if replicates is None:
         delegate = stata_adapter
         arguments = {
+            "by": by,
             "command": command,
             "join_on_name": join_on_name,
             "value_name": value_name,
@@ -2338,10 +2487,12 @@ def mi_ses_from_stata(
                     #   replicate weight in this loop - only `weight`
                     #   changes - so re-exporting/re-`use`-ing it every
                     #   call would be pure waste.
-                    "reuse_data": True,
+                    #   (but not with `by`: each group is a different subset)
+                    "reuse_data": by is None,
                     "quietly": quietly,
                 },
                 replicates=replicates,
+                by=_normalize_by(by),
                 display=False,
             )
             _st.clear_stata_cache()
@@ -2352,7 +2503,7 @@ def mi_ses_from_stata(
     return mi_ses_from_function(
         delegate=delegate,
         df_implicates=df_implicates,
-        join_on=[join_on_name],
+        join_on=[join_on_name] + _by_columns(by),
         path_srmi=path_srmi,
         index=index,
         df_noimputes=df_noimputes,

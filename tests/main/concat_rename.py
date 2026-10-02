@@ -376,6 +376,86 @@ def test_grouped_mi_operations_follow_implicates():
     assert _collect(both.df_estimates).shape == (9, 3)
 
 
+def _regression_data(seed, n=400):
+    import numpy as np
+
+    rng = np.random.default_rng(seed)
+    g = rng.integers(0, 2, n)
+    x1 = rng.normal(size=n)
+    slope = np.where(g == 0, 2.0, -1.0)
+    y = 0.5 + slope * x1 + rng.normal(scale=0.3, size=n)
+    reps = {f"w{i}": rng.uniform(0.5, 1.5, n) for i in range(8)}
+    return pl.DataFrame({"y": y, "x1": x1, "g": g, "w": np.ones(n), **reps})
+
+
+def test_adapters_by_group_direct():
+    from survey_kit.statistics.adapters import polars_ds_adapter, statsmodels_adapter
+
+    df = _regression_data(0)
+    for adapter, kwargs in (
+        (statsmodels_adapter, {"y": "y", "x": ["x1"]}),
+        (polars_ds_adapter, {"y": "y", "x": ["x1"]}),
+    ):
+        out = adapter(df, by="g", **kwargs)
+        est = _collect(out.df_estimates)
+        assert est.columns[:3] == ["Variable", "g", "estimate"], est.columns
+        assert est.height == 4
+        slopes = {
+            r["g"]: r["estimate"] for r in est.filter(pl.col("Variable") == "x1").to_dicts()
+        }
+        assert abs(slopes[0] - 2.0) < 0.2 and abs(slopes[1] + 1.0) < 0.2
+        assert _collect(out.df_ses).height == 4
+        assert out.summarize_vars == ["g"]
+        if adapter is statsmodels_adapter:
+            vcov = _collect(out.replicate_stats.df_vcov)
+            assert vcov.columns == ["Variable_1", "Variable_2", "g", "estimate"]
+            assert vcov.height == 8  # 2 groups x 2x2 terms - no cross-group pairs
+        #   same as running each group on its own
+        one = adapter(df.filter(pl.col("g") == 1), **kwargs)
+        est1 = _collect(one.df_estimates).sort("Variable")["estimate"].to_list()
+        got = est.filter(pl.col("g") == 1).sort("Variable")["estimate"].to_list()
+        assert est1 == got
+        #   downstream operations keep working with the group column
+        sorted_out = out.sort("estimate", descending=True)
+        assert _collect(sorted_out.df_estimates).row(0, named=True)["g"] == 0
+
+
+def test_mi_ses_by_group_with_vcov_and_replicates():
+    from survey_kit.statistics.adapters import mi_ses_from_statsmodels
+
+    implicates = [_regression_data(seed) for seed in range(3)]
+    mi = mi_ses_from_statsmodels(
+        df_implicates=implicates, y="y", x=["x1"], by="g", round_output=False
+    )
+    est = _collect(mi.df_estimates)
+    assert est.height == 4 and "g" in est.columns
+    ses = _collect(mi.df_ses)
+    assert ses.height == 4 and "g" in ses.columns
+    vcov = _collect(mi.df_vcov)
+    assert vcov.columns == ["Variable_1", "Variable_2", "g", "estimate"]
+    assert vcov.height == 8
+    #   within-group variances on the diagonal match df_ses squared
+    diag = vcov.filter(pl.col("Variable_1") == pl.col("Variable_2")).rename(
+        {"Variable_1": "Variable"}
+    )
+    m = diag.join(ses, on=["Variable", "g"], suffix="_se")
+    assert ((m["estimate"] ** 0.5 - m["estimate_se"]).abs() < 1e-9).all()
+
+    from survey_kit.statistics.replicates import Replicates
+
+    mi_rep = mi_ses_from_statsmodels(
+        df_implicates=implicates,
+        y="y",
+        x=["x1"],
+        by="g",
+        replicates=Replicates(weight_stub="w", n_replicates=7),
+        round_output=False,
+    )
+    est_rep = _collect(mi_rep.df_estimates)
+    assert est_rep.height == 4 and "g" in est_rep.columns
+    assert _collect(mi_rep.df_ses).height == 4
+
+
 def test_polars_expression_mixed_and_non_polars_raise():
     a = _adapter(["a", "b"], vcov=False)
     _raises(
