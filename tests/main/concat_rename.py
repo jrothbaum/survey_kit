@@ -228,7 +228,7 @@ def test_polars_expressions_on_adapter_and_mi():
 
 def test_adapter_sort_leaves_vcov_and_tidy_unsorted():
     a = _adapter(["a", "b", "c"], tidy=True)
-    out = a.sort(pl.col("Variable").sort_by("coef", descending=True))
+    out = a.sort(pl.col("Variable").sort_by("Variable", descending=True))
     assert _ids(out.df_estimates) == ["c", "b", "a"]
     assert _ids(out.df_ses) == ["c", "b", "a"]
     assert _ids(out.replicate_stats.df_tidy) == ["a", "b", "c"]
