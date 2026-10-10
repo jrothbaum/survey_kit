@@ -17,15 +17,16 @@ uv add "survey-kit[pyfixest]"    # or [statsmodels], [linearmodels], [polars-ds]
 uv add "survey-kit[all-stats]"   # everything at once
 ```
 
+For R and Stata, there's some additional setup you need to do to get them working with python. See [rpy2's installation instructions](https://rpy2.github.io/doc/latest/html/overview.html) and [pystata's documentation](https://www.stata.com/python/pystata/).
+
+
 ### Older Linux (e.g., RHEL 7)
 
-Many dependencies (mkl, pyarrow, lightgbm, numba, igraph, ...) have stopped publishing wheels for old glibc versions (< 2.28). `uv add` locks the newest versions for every platform, so on these systems a plain `uv add survey-kit` fails with "doesn't have a source distribution or wheel for the current platform". Use the `old-linux` extra, which pins the last versions that still have compatible wheels:
+Many dependencies (mkl, pyarrow, lightgbm, numba, igraph, ...) have stopped publishing wheels for old glibc versions (< 2.28). Use the `old-linux` extra, which pins the last versions that still have compatible wheels:
 ```bash
 uv add "survey-kit[old-linux]"
 ```
-(Tested on glibc 2.17 with Python 3.9. LightGBM also needs the system `libgomp` library.)
 
-For R and Stata, there's some additional setup you need to do to get them working with python. See [rpy2's installation instructions](https://rpy2.github.io/doc/latest/html/overview.html) and [pystata's documentation](https://www.stata.com/python/pystata/).
 
 ## Features
 
