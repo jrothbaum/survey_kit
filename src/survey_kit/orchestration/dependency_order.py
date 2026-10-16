@@ -144,7 +144,10 @@ class FunctionDependencyOrder:
             if not fi.run:
                 update_need_to_run(fi, self.update)
 
-        for fi in self.function_list:
+        #   Propagate in topological order (parents before children) so a
+        #       rerun cascades through whole chains regardless of the order
+        #       the functions were passed in
+        for fi in self.run_initial + self.run_on_parent_complete:
             if not fi.run:
                 fi.run = any([f_parent.run for f_parent in fi.parent_functions])
                 if fi.run:
