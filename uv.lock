@@ -7500,7 +7500,7 @@ wheels = [
 
 [[package]]
 name = "survey-kit"
-version = "0.2.0"
+version = "0.2.1"
 source = { editable = "." }
 dependencies = [
     { name = "cachetools", version = "6.2.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.10' or (extra == 'extra-10-survey-kit-old-linux' and extra == 'group-10-survey-kit-dev')" },

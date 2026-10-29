@@ -454,6 +454,12 @@ class Calibration(Serializable):
         #   Fill in the missing values left by submoment subgroups
         m_combined.model_matrix = fill_missing(m_combined.model_matrix, value=0)
 
+        #   Row order matters: weights are aligned to the model matrix by position
+        #       (_moment_inputs sorts by index, _merge_on_weights concatenates)
+        m_combined.model_matrix = (
+            nw.from_native(m_combined.model_matrix).sort(self.index).to_native()
+        )
+
         #   m_combined.df = m_combined.df.sort(self.index)
         #   m_combined.ModelMatrix = m_combined.ModelMatrix.sort(self.index)
 
